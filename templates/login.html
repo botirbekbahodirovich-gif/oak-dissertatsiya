@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="uz" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kirish — OAK Dissertatsiya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --oak-accent: #4a9eff;
+      --oak-surface: #1a1d23;
+      --oak-surface-2: #22262f;
+      --oak-border: rgba(255,255,255,0.07);
+    }
+    body {
+      background: #13151a;
+      color: #c9d1e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .brand {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 2rem;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; color: #fff;
+    }
+    .brand-text h1 { font-size: 1.1rem; font-weight: 700; color: #e8edf5; margin: 0; }
+    .brand-text p  { font-size: 0.72rem; color: #6b7a99; margin: 0; }
+
+    .auth-card {
+      width: 100%; max-width: 380px;
+      background: var(--oak-surface);
+      border: 1px solid var(--oak-border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    .auth-card h2 {
+      font-size: 1.05rem; font-weight: 700; color: #e8edf5;
+      margin-bottom: 0.25rem;
+    }
+    .auth-card .subtitle {
+      font-size: 0.8rem; color: #6b7a99; margin-bottom: 1.6rem;
+    }
+
+    .form-label {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #6b7a99; margin-bottom: 5px;
+    }
+    .form-control {
+      background: var(--oak-surface-2);
+      border: 1px solid var(--oak-border);
+      color: #c9d1e0; border-radius: 8px;
+      font-size: 0.88rem; padding: 0.55rem 0.9rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      background: var(--oak-surface-2);
+      border-color: var(--oak-accent);
+      color: #e8edf5;
+      box-shadow: 0 0 0 3px rgba(74,158,255,0.15);
+    }
+    .form-control::placeholder { color: #3a445a; }
+
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .bi {
+      position: absolute; left: 11px; top: 50%;
+      transform: translateY(-50%);
+      color: #4a556a; font-size: 0.85rem; pointer-events: none;
+    }
+    .input-icon-wrap .form-control { padding-left: 34px; }
+
+    .btn-primary-auth {
+      width: 100%; padding: 0.6rem;
+      background: var(--oak-accent); border: none;
+      border-radius: 9px; color: #fff;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+      margin-top: 0.25rem;
+    }
+    .btn-primary-auth:hover { opacity: 0.88; }
+
+    .alert-error {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 8px; color: #f87171;
+      font-size: 0.82rem; padding: 0.65rem 0.9rem;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .alert-success {
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: 8px; color: #34d399;
+      font-size: 0.82rem; padding: 0.65rem 0.9rem;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .divider {
+      border: none; border-top: 1px solid var(--oak-border);
+      margin: 1.4rem 0;
+    }
+    .auth-link {
+      font-size: 0.82rem; color: #6b7a99; text-align: center;
+    }
+    .auth-link a {
+      color: var(--oak-accent); font-weight: 600; text-decoration: none;
+    }
+    .auth-link a:hover { text-decoration: underline; }
+
+    .show-pw-btn {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; color: #4a556a;
+      font-size: 0.9rem; cursor: pointer; padding: 0;
+      transition: color 0.15s;
+    }
+    .show-pw-btn:hover { color: #8899b4; }
+
+    /* Theme toggle */
+    html, body { transition: background-color 0.25s ease, color 0.25s ease; }
+    .btn-theme-toggle {
+      position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+      background: none; border: 1px solid transparent;
+      color: #8899b4; font-size: 1rem; cursor: pointer;
+      border-radius: 6px; padding: 4px 9px;
+      transition: color 0.2s, background 0.15s, border-color 0.2s;
+      display: flex; align-items: center; line-height: 1;
+    }
+    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: var(--oak-accent); background: rgba(74,158,255,0.08); }
+  </style>
+</head>
+<body>
+<button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"></button>
+
+  <div class="brand">
+    <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="brand-text">
+      <h1>OAK Dissertatsiya Tahlil</h1>
+      <p>O'zbekiston Oliy Attestatsiya Komissiyasi</p>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <h2>Tizimga kirish</h2>
+    <p class="subtitle">Dissertatsiyalar bazasiga kirish uchun hisobingizga kiring</p>
+
+    {% if registered %}
+    <div class="alert-success">
+      <i class="bi bi-check-circle-fill"></i>
+      Ro'yxatdan muvaffaqiyatli o'tdingiz! Endi kirishingiz mumkin.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert-error">
+      <i class="bi bi-exclamation-triangle-fill"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login" autocomplete="on">
+      <div class="mb-3">
+        <label class="form-label">Foydalanuvchi nomi</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-person"></i>
+          <input type="text" name="username" class="form-control"
+                 placeholder="foydalanuvchi_nomi" autocomplete="username" required />
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Parol</label>
+        <div class="input-icon-wrap" style="position:relative;">
+          <i class="bi bi-lock"></i>
+          <input type="password" name="password" id="pw-input" class="form-control"
+                 placeholder="••••••••" autocomplete="current-password"
+                 style="padding-right:36px;" required />
+          <button type="button" class="show-pw-btn" id="toggle-pw" tabindex="-1">
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary-auth mt-1">
+        <i class="bi bi-box-arrow-in-right me-1"></i>Kirish
+      </button>
+    </form>
+
+    <hr class="divider" />
+    <p class="auth-link">
+      Hisobingiz yo'qmi? <a href="/register">Ro'yxatdan o'ting</a>
+    </p>
+  </div>
+
+<script>
+  document.getElementById('toggle-pw').addEventListener('click', function() {
+    const inp = document.getElementById('pw-input');
+    const ico = document.getElementById('eye-icon');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      ico.className = 'bi bi-eye-slash';
+    } else {
+      inp.type = 'password';
+      ico.className = 'bi bi-eye';
+    }
+  });
+</script>
+<script>
+(function(){
+  var h=document.documentElement,b=document.getElementById('theme-toggle');
+  var t=localStorage.getItem('oak-theme')||'dark';
+  h.setAttribute('data-bs-theme',t);
+  b.innerHTML=t==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
+  b.addEventListener('click',function(){
+    var n=h.getAttribute('data-bs-theme')==='dark'?'light':'dark';
+    h.setAttribute('data-bs-theme',n);
+    localStorage.setItem('oak-theme',n);
+    b.innerHTML=n==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="uz" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ro'yxatdan o'tish — OAK Dissertatsiya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    :root {
+      --oak-accent: #4a9eff;
+      --oak-surface: #1a1d23;
+      --oak-surface-2: #22262f;
+      --oak-border: rgba(255,255,255,0.07);
+    }
+    body {
+      background: #13151a;
+      color: #c9d1e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 2rem;
+    }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; color: #fff;
+    }
+    .brand-text h1 { font-size: 1.1rem; font-weight: 700; color: #e8edf5; margin: 0; }
+    .brand-text p  { font-size: 0.72rem; color: #6b7a99; margin: 0; }
+
+    .auth-card {
+      width: 100%; max-width: 400px;
+      background: var(--oak-surface);
+      border: 1px solid var(--oak-border);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    .auth-card h2 {
+      font-size: 1.05rem; font-weight: 700; color: #e8edf5; margin-bottom: 0.25rem;
+    }
+    .auth-card .subtitle {
+      font-size: 0.8rem; color: #6b7a99; margin-bottom: 1.6rem;
+    }
+    .form-label {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #6b7a99; margin-bottom: 5px;
+    }
+    .form-control {
+      background: var(--oak-surface-2);
+      border: 1px solid var(--oak-border);
+      color: #c9d1e0; border-radius: 8px;
+      font-size: 0.88rem; padding: 0.55rem 0.9rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      background: var(--oak-surface-2);
+      border-color: var(--oak-accent);
+      color: #e8edf5;
+      box-shadow: 0 0 0 3px rgba(74,158,255,0.15);
+    }
+    .form-control::placeholder { color: #3a445a; }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .bi-icon {
+      position: absolute; left: 11px; top: 50%;
+      transform: translateY(-50%);
+      color: #4a556a; font-size: 0.85rem; pointer-events: none;
+    }
+    .input-icon-wrap .form-control { padding-left: 34px; }
+
+    .pw-wrap { position: relative; }
+    .pw-wrap .form-control { padding-left: 34px; padding-right: 36px; }
+    .show-pw-btn {
+      position: absolute; right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; color: #4a556a;
+      font-size: 0.9rem; cursor: pointer; padding: 0;
+      transition: color 0.15s;
+    }
+    .show-pw-btn:hover { color: #8899b4; }
+
+    .pw-strength {
+      height: 3px; border-radius: 2px; margin-top: 5px;
+      background: var(--oak-surface-2); overflow: hidden;
+    }
+    .pw-strength-bar {
+      height: 100%; border-radius: 2px; width: 0;
+      transition: width 0.3s, background 0.3s;
+    }
+    .pw-hint {
+      font-size: 0.7rem; color: #4a556a; margin-top: 3px;
+    }
+
+    .btn-primary-auth {
+      width: 100%; padding: 0.6rem;
+      background: var(--oak-accent); border: none;
+      border-radius: 9px; color: #fff;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-primary-auth:hover { opacity: 0.88; }
+
+    .alert-error {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 8px; color: #f87171;
+      font-size: 0.82rem; padding: 0.65rem 0.9rem;
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .divider { border: none; border-top: 1px solid var(--oak-border); margin: 1.4rem 0; }
+    .auth-link { font-size: 0.82rem; color: #6b7a99; text-align: center; }
+    .auth-link a { color: var(--oak-accent); font-weight: 600; text-decoration: none; }
+    .auth-link a:hover { text-decoration: underline; }
+
+    /* Theme toggle */
+    html, body { transition: background-color 0.25s ease, color 0.25s ease; }
+    .btn-theme-toggle {
+      position: fixed; top: 1rem; right: 1rem; z-index: 9999;
+      background: none; border: 1px solid transparent;
+      color: #8899b4; font-size: 1rem; cursor: pointer;
+      border-radius: 6px; padding: 4px 9px;
+      transition: color 0.2s, background 0.15s, border-color 0.2s;
+      display: flex; align-items: center; line-height: 1;
+    }
+    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: var(--oak-accent); background: rgba(74,158,255,0.08); }
+  </style>
+</head>
+<body>
+<button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"></button>
+
+  <div class="brand">
+    <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="brand-text">
+      <h1>OAK Dissertatsiya Tahlil</h1>
+      <p>O'zbekiston Oliy Attestatsiya Komissiyasi</p>
+    </div>
+  </div>
+
+  <div class="auth-card">
+    <h2>Ro'yxatdan o'tish</h2>
+    <p class="subtitle">Yangi hisob yarating va dissertatsiyalar bazasiga kiring</p>
+
+    {% if error %}
+    <div class="alert-error">
+      <i class="bi bi-exclamation-triangle-fill"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/register" autocomplete="on" id="reg-form">
+      <div class="mb-3">
+        <label class="form-label">Foydalanuvchi nomi</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-person bi-icon"></i>
+          <input type="text" name="username" class="form-control"
+                 placeholder="kamida 3 ta belgi" autocomplete="username"
+                 minlength="3" required />
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email manzil</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-envelope bi-icon"></i>
+          <input type="email" name="email" class="form-control"
+                 placeholder="email@example.com" autocomplete="email" required />
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Parol</label>
+        <div class="input-icon-wrap pw-wrap">
+          <i class="bi bi-lock bi-icon"></i>
+          <input type="password" name="password" id="pw-input" class="form-control"
+                 placeholder="kamida 6 ta belgi" autocomplete="new-password"
+                 minlength="6" required />
+          <button type="button" class="show-pw-btn" id="toggle-pw" tabindex="-1">
+            <i class="bi bi-eye" id="eye-icon"></i>
+          </button>
+        </div>
+        <div class="pw-strength"><div class="pw-strength-bar" id="pw-bar"></div></div>
+        <div class="pw-hint" id="pw-hint">Parol kuchini tekshirish…</div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label">Parolni tasdiqlang</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-shield-lock bi-icon"></i>
+          <input type="password" name="confirm" id="pw-confirm" class="form-control"
+                 placeholder="parolni qayta kiriting" autocomplete="new-password" required />
+        </div>
+        <div class="pw-hint" id="confirm-hint"></div>
+      </div>
+      <button type="submit" class="btn-primary-auth">
+        <i class="bi bi-person-plus me-1"></i>Ro'yxatdan o'tish
+      </button>
+    </form>
+
+    <hr class="divider" />
+    <p class="auth-link">
+      Hisobingiz bormi? <a href="/login">Tizimga kiring</a>
+    </p>
+  </div>
+
+<script>
+  const pwInput   = document.getElementById('pw-input');
+  const pwConfirm = document.getElementById('pw-confirm');
+  const pwBar     = document.getElementById('pw-bar');
+  const pwHint    = document.getElementById('pw-hint');
+  const confirmHint = document.getElementById('confirm-hint');
+
+  function checkStrength(pw) {
+    let score = 0;
+    if (pw.length >= 6)  score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    return score;
+  }
+
+  pwInput.addEventListener('input', function() {
+    const v = this.value;
+    const s = checkStrength(v);
+    const pct = Math.min(100, s * 22);
+    pwBar.style.width = pct + '%';
+    if (s <= 1) { pwBar.style.background = '#f87171'; pwHint.textContent = 'Juda oddiy parol'; pwHint.style.color = '#f87171'; }
+    else if (s <= 2) { pwBar.style.background = '#fbbf24'; pwHint.textContent = 'O\'rtacha parol'; pwHint.style.color = '#fbbf24'; }
+    else if (s <= 3) { pwBar.style.background = '#34d399'; pwHint.textContent = 'Yaxshi parol'; pwHint.style.color = '#34d399'; }
+    else { pwBar.style.background = '#4a9eff'; pwHint.textContent = 'Juda kuchli parol!'; pwHint.style.color = '#4a9eff'; }
+    if (!v) { pwBar.style.width = '0'; pwHint.textContent = 'Parol kuchini tekshirish…'; pwHint.style.color = '#4a556a'; }
+    checkMatch();
+  });
+
+  function checkMatch() {
+    if (!pwConfirm.value) { confirmHint.textContent = ''; return; }
+    if (pwInput.value === pwConfirm.value) {
+      confirmHint.textContent = '✓ Parollar mos'; confirmHint.style.color = '#34d399';
+    } else {
+      confirmHint.textContent = '✗ Parollar mos emas'; confirmHint.style.color = '#f87171';
+    }
+  }
+
+  pwConfirm.addEventListener('input', checkMatch);
+
+  document.getElementById('toggle-pw').addEventListener('click', function() {
+    const ico = document.getElementById('eye-icon');
+    if (pwInput.type === 'password') { pwInput.type = 'text'; ico.className = 'bi bi-eye-slash'; }
+    else { pwInput.type = 'password'; ico.className = 'bi bi-eye'; }
+  });
+</script>
+<script>
+(function(){
+  var h=document.documentElement,b=document.getElementById('theme-toggle');
+  var t=localStorage.getItem('oak-theme')||'dark';
+  h.setAttribute('data-bs-theme',t);
+  b.innerHTML=t==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
+  b.addEventListener('click',function(){
+    var n=h.getAttribute('data-bs-theme')==='dark'?'light':'dark';
+    h.setAttribute('data-bs-theme',n);
+    localStorage.setItem('oak-theme',n);
+    b.innerHTML=n==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
+  });
+})();
+</script>
+</body>
+</html>

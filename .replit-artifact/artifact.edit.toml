@@ -1,0 +1,13 @@
+kind = "web"
+previewPath = "/"
+title = "OAK Dissertatsiya Tahlil"
+version = "1.0.0"
+id = "oak-dissertatsiya-main"
+
+[[services]]
+localPort = 8000
+name = "OAK Dissertatsiya Tahlil"
+paths = ["/"]
+
+[services.development]
+run = "cd artifacts/oak-dissertatsiya && python app.py"
