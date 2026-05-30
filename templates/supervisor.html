@@ -16,13 +16,14 @@
   <div class="table-panel">
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0">
-        <thead><tr><th>#</th><th>Sana</th><th>Daraja</th><th>Mavzu</th><th>Ixtisoslik</th><th>Muassasa</th><th>Havola</th></tr></thead>
+        <thead><tr><th>#</th><th>Sana</th><th>Daraja</th><th>Olim</th><th>Mavzu</th><th>Ixtisoslik</th><th>Muassasa</th><th>Havola</th></tr></thead>
         <tbody>
           {% for row in rows %}
             <tr>
               <td>{{ loop.index }}</td>
               <td>{{ row.Sana }}</td>
               <td>{{ row.Daraja }}</td>
+              <td><a href="/dissertation/{{ row.id if row.id is defined else loop.index }}">{{ row.Olim }}</a></td>
               <td class="mavzu-cell">{{ row.Mavzu }}</td>
               <td><a href="/specialization/{{ row.Ixtisoslik | urlencode }}">{{ row.Ixtisoslik }}</a></td>
               <td><a href="/university/{{ row.Muassasa | urlencode }}">{{ row.Muassasa }}</a></td>
