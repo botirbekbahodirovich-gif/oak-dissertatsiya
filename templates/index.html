@@ -199,4 +199,22 @@
   }));
   document.addEventListener('DOMContentLoaded', () => { loadFilters(); updateData(); });
 </script>
+
+  <script>
+    async function loadAndRenderStats(){
+      try{
+        const res = await fetch('/stats-json');
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const fmt = (n)=> typeof n === 'number' ? n.toLocaleString('uz') : n;
+        document.getElementById('stat-total').textContent = fmt(data.total);
+        document.getElementById('stat-phd').textContent = fmt(data.phd);
+        document.getElementById('stat-dsc').textContent = fmt(data.dsc);
+        document.getElementById('stat-muassasalar').textContent = fmt(data.muassasalar);
+      }catch(err){
+        console.error('Failed to load stats:', err);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadAndRenderStats);
+  </script>
 {% endblock %}
