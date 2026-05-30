@@ -1,15 +1,26 @@
 import os
 import io
+from dotenv import load_dotenv
+from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import bcrypt
 import pandas as pd
 from flask import (Flask, render_template, request, jsonify,
                    send_file, redirect, url_for)
+from urllib.parse import urlparse
 from flask_login import (LoginManager, UserMixin, login_user,
                          logout_user, login_required, current_user)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "oak-dissertatsiya-secret-2024")
+load_dotenv()
+session_secret = os.environ.get("SESSION_SECRET")
+if not session_secret:
+    raise RuntimeError(
+        "SESSION_SECRET is not set. Add it to a .env file or set the environment variable."
+    )
+app.secret_key = session_secret
+# Enable CSRF protection for all POST forms
+csrf = CSRFProtect(app)
 
 BASE_DIR   = os.path.dirname(__file__)
 DB_PATH    = os.path.join(BASE_DIR, "users.db")
@@ -34,6 +45,18 @@ def init_db():
     con.close()
 
 init_db()
+
+
+def is_safe_relative_url(target: str) -> bool:
+    """Allow only relative URLs for redirects to prevent open redirect attacks.
+
+    Return True only if the target is a relative path starting with '/'
+    and contains no scheme or network location.
+    """
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return parsed.scheme == "" and parsed.netloc == "" and target.startswith("/")
 
 # ---------------------------------------------------------------------------
 # Flask-Login
@@ -84,7 +107,10 @@ def login():
             con.close()
             if row and bcrypt.checkpw(password.encode(), row[3].encode()):
                 login_user(User(row[0], row[1], row[2]), remember=True)
-                return redirect(request.args.get("next") or url_for("index"))
+                next_url = request.args.get("next")
+                if next_url and is_safe_relative_url(next_url):
+                    return redirect(next_url)
+                return redirect(url_for("index"))
             error = "Foydalanuvchi nomi yoki parol noto'g'ri."
     return render_template("login.html", error=error, registered=registered)
 
