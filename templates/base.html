@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -33,10 +33,26 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-    a { color: inherit; text-decoration: none; }
-    /* Table/link hover styles */
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.15s ease, text-decoration 0.15s ease;
+    }
+    a:hover, .nav-link:hover, .btn-logout:hover, .btn:hover {
+      color: #4a9eff;
+      text-decoration: underline;
+    }
+    button, .btn, .nav-link, .btn-logout, input, select {
+      transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .profile a:hover, .profile button:hover, .profile .nav-link:hover {
+      color: #4a9eff;
+      text-decoration: underline;
+    }
     table a { color: inherit; text-decoration: none; }
-    table a:hover { text-decoration: underline; color: #0d6efd; cursor: pointer; }
+    table a:hover { text-decoration: underline; color: #4a9eff; cursor: pointer; }
+    .table tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.03); }
+    .table tbody tr:hover td { background: rgba(74,158,255,0.08); }
 
     .site-header {
       background: var(--oak-surface);
@@ -164,12 +180,29 @@
     .btn-primary, .btn-action {
       border-radius: 11px;
       font-weight: 600;
-      transition: transform 0.15s, opacity 0.15s;
+      transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     }
     .btn-primary { background: var(--oak-accent); color: #fff; border: 1px solid transparent; }
     .btn-primary:hover { opacity: 0.92; }
     .btn-action { background: rgba(74,158,255,0.1); color: var(--oak-accent); border: 1px solid rgba(74,158,255,0.22); }
     .btn-action:hover { background: rgba(74,158,255,0.16); }
+    #btn-reset {
+      padding: 0.45rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 10px;
+      background: rgba(148,163,184,0.14);
+      border-color: rgba(148,163,184,0.22);
+      color: #94a3b8;
+    }
+    #btn-reset:hover { background: rgba(148,163,184,0.2); color: #4a9eff; }
+    .stat-card {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 35px rgba(0,0,0,0.17);
+      border-color: rgba(255,255,255,0.12);
+    }
     .alert-inline { border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.92rem; }
     .alert-inline.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
     .alert-inline.success { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); color: #34d399; }
