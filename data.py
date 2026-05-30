@@ -1,8 +1,12 @@
+import io
 import os
 import pandas as pd
+import openpyxl
 
 BASE_DIR = os.path.dirname(__file__)
 CSV_PATH = os.path.join(BASE_DIR, "data", "dissertatsiyalar.csv")
+
+SORTABLE_COLUMNS = {"Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "id"}
 
 # Simple in-memory cache for CSV data
 _csv_cache_df = None
@@ -52,6 +56,18 @@ def apply_filters(df, search, daraja, muassasa, ixtisoslik):
     return df
 
 
+def apply_sort(df, sort_by, sort_dir):
+    if not sort_by or sort_by not in SORTABLE_COLUMNS:
+        return df
+    asc = (sort_dir or "asc").lower() != "desc"
+    if sort_by == "id":
+        return df.sort_values(by=sort_by, ascending=asc, kind="mergesort")
+
+    if df[sort_by].dtype == object:
+        return df.sort_values(by=sort_by, ascending=asc, kind="mergesort", key=lambda col: col.str.lower())
+    return df.sort_values(by=sort_by, ascending=asc, kind="mergesort")
+
+
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 import io
@@ -76,7 +92,12 @@ def data():
     except ValueError:
         per_page = 50
 
+    sort_by = request.args.get("sort_by", "Sana")
+    sort_dir = request.args.get("sort_dir", "asc")
     df = apply_filters(df, search, daraja, muassasa, ixtisoslik)
+    df = df.reset_index(drop=False).rename(columns={"index": "id"})
+    df["id"] = df["id"] + 1
+    df = apply_sort(df, sort_by, sort_dir)
     total = len(df)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
@@ -113,21 +134,39 @@ def export():
         request.args.get("muassasa", "").strip(),
         request.args.get("ixtisoslik", "").strip()
     )
+    sort_by = request.args.get("sort_by", "Sana")
+    sort_dir = request.args.get("sort_dir", "asc")
+    df = df.reset_index(drop=False).rename(columns={"index": "id"})
+    df["id"] = df["id"] + 1
+    df = apply_sort(df, sort_by, sort_dir)
     buf = io.BytesIO(df.to_csv(index=False).encode("utf-8-sig"))
     buf.seek(0)
     return send_file(buf, mimetype="text/csv", as_attachment=True,
                      download_name="dissertatsiyalar_filtrlangan.csv")
 
 
-def _prepare_rows(df):
-    rows = []
-    for idx, row in df.iterrows():
-        record = row.to_dict()
-        record['id'] = idx + 1
-        rows.append(record)
-    return rows
-
-
+@data_bp.route('/export-xlsx')
+@login_required
+ def export_xlsx():
+    df = load_data()
+    df = apply_filters(
+        df,
+        request.args.get("search", "").strip(),
+        request.args.get("daraja", "").strip(),
+        request.args.get("muassasa", "").strip(),
+        request.args.get("ixtisoslik", "").strip()
+    )
+    sort_by = request.args.get("sort_by", "Sana")
+    sort_dir = request.args.get("sort_dir", "asc")
+    df = df.reset_index(drop=False).rename(columns={"index": "id"})
+    df["id"] = df["id"] + 1
+    df = apply_sort(df, sort_by, sort_dir)
+    buf = io.BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+    return send_file(buf, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                     as_attachment=True,
+                     download_name="dissertatsiyalar_filtrlangan.xlsx")
 def _summary_stats(rows):
     return {
         'total': len(rows),
