@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OAK Dissertatsiya Tahlil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
   <style>
@@ -16,10 +17,12 @@
     }
 
     body {
-      background-color: #13151a;
-      color: #c9d1e0;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #0f1114;
+      color: #cbd5e1;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
       min-height: 100vh;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
 
     /* Header */
@@ -88,7 +91,8 @@
     }
     .icon-blue { background: rgba(74,158,255,0.15); color: #4a9eff; }
     .icon-green { background: rgba(52,211,153,0.15); color: #34d399; }
-    .icon-purple { background: rgba(167,139,250,0.15); color: #a78bfa; }
+    /* Softer purple for chatbot and accents */
+    .icon-purple { background: rgba(167,139,250,0.08); color: #9b8ef6; }
     .icon-amber { background: rgba(251,191,36,0.15); color: #fbbf24; }
 
     /* Filter panel */
@@ -179,9 +183,11 @@
     .table tbody tr {
       transition: background-color 0.12s;
     }
-    .table tbody tr:hover td {
-      background-color: var(--oak-accent-soft);
-    }
+    .table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+    .table tbody tr:hover td { background-color: rgba(250,235,140,0.06); }
+
+    /* Search highlight */
+    .search-highlight { background: #fff3a7; color: #1a1a1a; padding: 0 3px; border-radius: 2px; }
     .badge-phd {
       background: rgba(52,211,153,0.15);
       color: #34d399;
@@ -638,6 +644,15 @@
       return;
     }
 
+    const searchTerm = (document.getElementById('search-input')?.value || '').trim();
+    function highlight(s, term) {
+      if (!term) return s;
+      try {
+        const re = new RegExp('('+term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')+')','ig');
+        return s.replace(re, '<span class="search-highlight">$1</span>');
+      } catch(e) { return s; }
+    }
+
     tbody.innerHTML = records.map((r, i) => {
       const rowNum = startIndex + i + 1;
       const darajaBadge = r.Daraja && r.Daraja.toUpperCase() === 'PHD'
@@ -647,21 +662,28 @@
           : `<span style="font-size:0.78rem;color:#6b7a99;">${escHtml(r.Daraja)}</span>`;
 
       const linkCell = r.Link && r.Link !== ''
-        ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer">
+        ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
              <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>Ko'rish
            </a>`
         : `<span style="color:#3a445a;font-size:0.78rem;">—</span>`;
 
+      // apply highlights to key fields
+      const mavzu = highlight(escHtml(r.Mavzu), searchTerm);
+      const olim = highlight(escHtml(r.Olim), searchTerm);
+      const muassasa = highlight(escHtml(r.Muassasa), searchTerm);
+      const ixt = highlight(escHtml(r.Ixtisoslik), searchTerm);
+      const rahbar = highlight(escHtml(r.Ilmiy_rahbar), searchTerm);
+
       return `
-        <tr>
+        <tr onclick="window.location.href='/dissertation/${rowNum}'" style="cursor:pointer">
           <td style="color:#3a445a;font-size:0.78rem;font-variant-numeric:tabular-nums;">${rowNum}</td>
           <td class="sana-cell">${escHtml(r.Sana)}</td>
           <td>${darajaBadge}</td>
-          <td class="olim-cell">${escHtml(r.Olim)}</td>
-          <td class="mavzu-cell">${escHtml(r.Mavzu)}</td>
-          <td style="white-space:nowrap;font-size:0.8rem;color:#8899b4;">${escHtml(r.Ixtisoslik)}</td>
-          <td class="muassasa-cell">${escHtml(r.Muassasa)}</td>
-          <td style="font-size:0.8rem;white-space:nowrap;">${escHtml(r.Ilmiy_rahbar)}</td>
+          <td class="olim-cell">${olim}</td>
+          <td class="mavzu-cell">${mavzu}</td>
+          <td style="white-space:nowrap;font-size:0.8rem;color:#8899b4;">${ixt}</td>
+          <td class="muassasa-cell">${muassasa}</td>
+          <td style="font-size:0.8rem;white-space:nowrap;">${rahbar}</td>
           <td class="link-cell">${linkCell}</td>
         </tr>`;
     }).join('');
