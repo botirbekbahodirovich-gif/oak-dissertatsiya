@@ -1,819 +1,202 @@
-<!DOCTYPE html>
-<html lang="uz" data-bs-theme="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OAK Dissertatsiya Tahlil</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-  <style>
-    :root {
-      --oak-accent: #4a9eff;
-      --oak-accent-soft: rgba(74, 158, 255, 0.12);
-      --oak-surface: #1a1d23;
-      --oak-surface-2: #22262f;
-      --oak-border: rgba(255,255,255,0.07);
-    }
-
-    body {
-      background-color: #0f1114;
-      color: #cbd5e1;
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-      min-height: 100vh;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-
-    /* Header */
-    .app-header {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 1rem 0;
-    }
-    .app-header .brand-icon {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem;
-      color: #fff;
-      flex-shrink: 0;
-    }
-    .app-header h1 {
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: #e8edf5;
-      margin: 0;
-      letter-spacing: -0.2px;
-    }
-    .app-header small {
-      font-size: 0.72rem;
-      color: #6b7a99;
-    }
-
-    /* Stat cards */
-    .stat-card {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 14px;
-      padding: 1.1rem 1.3rem;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .stat-card:hover {
-      border-color: rgba(74, 158, 255, 0.3);
-      transform: translateY(-1px);
-    }
-    .stat-card .stat-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-    }
-    .stat-card .stat-value {
-      font-size: 1.75rem;
-      font-weight: 800;
-      color: #e8edf5;
-      line-height: 1.1;
-    }
-    .stat-card .stat-label {
-      font-size: 0.73rem;
-      color: #6b7a99;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin-top: 2px;
-    }
-    .icon-blue { background: rgba(74,158,255,0.15); color: #4a9eff; }
-    .icon-green { background: rgba(52,211,153,0.15); color: #34d399; }
-    /* Softer purple for chatbot and accents */
-    .icon-purple { background: rgba(167,139,250,0.08); color: #9b8ef6; }
-    .icon-amber { background: rgba(251,191,36,0.15); color: #fbbf24; }
-
-    /* Filter panel */
-    .filter-panel {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 14px;
-      padding: 1.1rem 1.3rem;
-    }
-    .filter-panel .form-control,
-    .filter-panel .form-select {
-      background: var(--oak-surface-2);
-      border-color: var(--oak-border);
-      color: #c9d1e0;
-      font-size: 0.875rem;
-    }
-    .filter-panel .form-control:focus,
-    .filter-panel .form-select:focus {
-      background: var(--oak-surface-2);
-      border-color: var(--oak-accent);
-      color: #e8edf5;
-      box-shadow: 0 0 0 2px rgba(74,158,255,0.18);
-    }
-    .filter-panel .form-control::placeholder { color: #4a556a; }
-    .filter-panel .form-select option { background: #22262f; }
-    .search-icon-wrapper {
-      position: relative;
-    }
-    .search-icon-wrapper .bi-search {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #4a556a;
-      font-size: 0.85rem;
-      pointer-events: none;
-    }
-    .search-icon-wrapper .form-control {
-      padding-left: 34px;
-    }
-
-    /* Table */
-    .table-panel {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .table-panel .table-header-bar {
-      padding: 0.9rem 1.3rem;
-      border-bottom: 1px solid var(--oak-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-    .table-panel .table-header-bar .result-count {
-      font-size: 0.82rem;
-      color: #6b7a99;
-    }
-    .table-panel .table-header-bar .result-count span {
-      color: var(--oak-accent);
-      font-weight: 600;
-    }
-    .table-scroll { overflow-x: auto; }
-    .table {
-      margin: 0;
-      font-size: 0.84rem;
-    }
-    .table thead th {
-      background: var(--oak-surface-2);
-      color: #6b7a99;
-      font-weight: 600;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      border-color: var(--oak-border);
-      padding: 0.7rem 1rem;
-      white-space: nowrap;
-    }
-    .table tbody td {
-      border-color: var(--oak-border);
-      padding: 0.65rem 1rem;
-      color: #c9d1e0;
-      vertical-align: middle;
-    }
-    .table tbody tr {
-      transition: background-color 0.12s;
-    }
-    .table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
-    .table tbody tr:hover td { background-color: rgba(250,235,140,0.06); }
-
-    /* Search highlight */
-    .search-highlight { background: #fff3a7; color: #1a1a1a; padding: 0 3px; border-radius: 2px; }
-    .badge-phd {
-      background: rgba(52,211,153,0.15);
-      color: #34d399;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 5px;
-      letter-spacing: 0.3px;
-    }
-    .badge-dsc {
-      background: rgba(167,139,250,0.15);
-      color: #a78bfa;
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 5px;
-      letter-spacing: 0.3px;
-    }
-    .mavzu-cell {
-      max-width: 300px;
-      white-space: normal;
-      line-height: 1.4;
-    }
-    .link-cell a {
-      color: var(--oak-accent);
-      text-decoration: none;
-      font-size: 0.78rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border: 1px solid rgba(74,158,255,0.3);
-      border-radius: 5px;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    .link-cell a:hover {
-      background: var(--oak-accent-soft);
-      border-color: var(--oak-accent);
-    }
-    .muassasa-cell {
-      max-width: 200px;
-      white-space: normal;
-      line-height: 1.35;
-      font-size: 0.8rem;
-    }
-    .olim-cell {
-      white-space: nowrap;
-      font-weight: 500;
-      color: #d0d9ee;
-    }
-    .sana-cell {
-      white-space: nowrap;
-      font-variant-numeric: tabular-nums;
-      color: #8899b4;
-      font-size: 0.8rem;
-    }
-
-    /* Pagination */
-    .pagination-bar {
-      padding: 0.85rem 1.3rem;
-      border-top: 1px solid var(--oak-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-    .pagination-info {
-      font-size: 0.8rem;
-      color: #6b7a99;
-    }
-    .pagination .page-link {
-      background: var(--oak-surface-2);
-      border-color: var(--oak-border);
-      color: #8899b4;
-      font-size: 0.82rem;
-      padding: 5px 11px;
-      transition: all 0.15s;
-    }
-    .pagination .page-link:hover {
-      background: var(--oak-accent-soft);
-      border-color: rgba(74,158,255,0.3);
-      color: var(--oak-accent);
-    }
-    .pagination .page-item.active .page-link {
-      background: var(--oak-accent);
-      border-color: var(--oak-accent);
-      color: #fff;
-      font-weight: 600;
-    }
-    .pagination .page-item.disabled .page-link {
-      background: var(--oak-surface);
-      border-color: var(--oak-border);
-      color: #3a445a;
-    }
-
-    /* Export btn */
-    .btn-export {
-      background: rgba(52,211,153,0.12);
-      border: 1px solid rgba(52,211,153,0.3);
-      color: #34d399;
-      font-size: 0.8rem;
-      padding: 5px 12px;
-      border-radius: 7px;
-      font-weight: 500;
-      transition: all 0.15s;
-    }
-    .btn-export:hover {
-      background: rgba(52,211,153,0.22);
-      border-color: #34d399;
-      color: #34d399;
-    }
-
-    /* Loading / empty states */
-    .loading-state, .empty-state {
-      padding: 3.5rem 1rem;
-      text-align: center;
-      color: #4a556a;
-    }
-    .loading-state .spinner-border { color: var(--oak-accent); }
-    .empty-state .bi { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; }
-
-    /* Skeleton loader rows */
-    .skeleton-row td {
-      padding: 0.85rem 1rem;
-    }
-    .skeleton-bar {
-      height: 13px;
-      border-radius: 5px;
-      background: linear-gradient(90deg, #22262f 25%, #2a2f3a 50%, #22262f 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    /* Nav tabs */
-    .nav-tabs-custom {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 0 1.5rem;
-    }
-    .nav-tabs-custom .nav-link {
-      color: #6b7a99;
-      border: none;
-      border-bottom: 2px solid transparent;
-      padding: 0.65rem 1rem;
-      font-size: 0.84rem;
-      font-weight: 500;
-      border-radius: 0;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .nav-tabs-custom .nav-link:hover { color: #c9d1e0; }
-    .nav-tabs-custom .nav-link.active {
-      color: var(--oak-accent);
-      border-bottom-color: var(--oak-accent);
-      background: transparent;
-    }
-    .nav-tabs-custom .nav-link i { margin-right: 6px; }
-    .btn-nav-upload {
-      font-size: 0.78rem; font-weight: 600;
-      padding: 4px 12px; border-radius: 7px;
-      background: rgba(74,158,255,0.12);
-      border: 1px solid rgba(74,158,255,0.3);
-      color: var(--oak-accent);
-      transition: all 0.15s; white-space: nowrap;
-      align-self: center; margin-left: auto;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
-    }
-    .btn-nav-upload:hover { background: rgba(74,158,255,0.22); border-color: var(--oak-accent); color: var(--oak-accent); }
-    .nav-user {
-      display: flex; align-items: center; gap: 10px;
-      border-left: 1px solid var(--oak-border);
-      padding-left: 0.75rem; margin-left: 0.5rem;
-    }
-    .nav-user .username {
-      font-size: 0.78rem; color: #8899b4;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .btn-nav-logout {
-      font-size: 0.75rem; font-weight: 600;
-      padding: 3px 10px; border-radius: 6px;
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.25);
-      color: #f87171; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 4px;
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .btn-nav-logout:hover { background: rgba(248,113,113,0.2); border-color: #f87171; color: #f87171; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2d3343; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3d4a60; }
-
-    @media (max-width: 576px) {
-      .stat-card .stat-value { font-size: 1.4rem; }
-    }
-
-    /* Theme toggle */
-    html, body { transition: background-color 0.25s ease, color 0.25s ease; }
-    .btn-theme-toggle {
-      background: none; border: 1px solid transparent;
-      color: #8899b4; font-size: 1rem; cursor: pointer;
-      border-radius: 6px; padding: 4px 9px;
-      transition: color 0.2s, background 0.15s, border-color 0.2s;
-      display: flex; align-items: center; line-height: 1;
-    }
-    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: var(--oak-accent); background: rgba(74,158,255,0.08); }
-  </style>
-</head>
-<body>
-
-<!-- Header -->
-<header class="app-header">
-  <div class="container-xl">
-    <div class="d-flex align-items-center gap-3">
-      <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
-      <div>
-        <h1>OAK Dissertatsiya Tahlil</h1>
-        <small>O'zbekiston Oliy Attestatsiya Komissiyasi — Dissertatsiyalar bazasi</small>
-      </div>
+{% extends "base.html" %}
+{% block title %}OAK Dissertatsiya Tahlil{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <h1>Dissertatsiyalar jadvali</h1>
+      <p>Mualliflar, muassasalar, ilmiy rahbarlar va ixtisoslik bo'yicha qidiruv.</p>
     </div>
-  </div>
-</header>
-
-<!-- Nav tabs -->
-<div class="nav-tabs-custom">
-  <div class="container-xl d-flex align-items-stretch">
-    <ul class="nav flex-grow-1">
-      <li class="nav-item">
-        <a class="nav-link active" href="/"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="/stats"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
-      </li>
-    </ul>
-    <a href="/upload" class="btn-nav-upload">
-      <i class="bi bi-cloud-upload-fill"></i>CSV yuklash
-    </a>
-    <div class="nav-user">
-      <span class="username"><i class="bi bi-person-circle"></i>{{ current_user.username }}</span>
-      <a href="/logout" class="btn-nav-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
-      <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"></button>
-    </div>
-  </div>
-</div>
-
-<main class="container-xl py-4">
-
-  <!-- Stats row -->
-  <div class="row g-3 mb-4" id="stats-row">
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div class="stat-icon icon-blue"><i class="bi bi-collection-fill"></i></div>
-        </div>
-        <div class="stat-value" id="stat-total"><span class="skeleton-bar" style="width:60px;display:inline-block;"></span></div>
-        <div class="stat-label">Jami dissertatsiyalar</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div class="stat-icon icon-green"><i class="bi bi-award-fill"></i></div>
-        </div>
-        <div class="stat-value" id="stat-phd"><span class="skeleton-bar" style="width:50px;display:inline-block;"></span></div>
-        <div class="stat-label">PhD dissertatsiyalar</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div class="stat-icon icon-purple"><i class="bi bi-patch-star-fill"></i></div>
-        </div>
-        <div class="stat-value" id="stat-dsc"><span class="skeleton-bar" style="width:50px;display:inline-block;"></span></div>
-        <div class="stat-label">DSc dissertatsiyalar</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-          <div class="stat-icon icon-amber"><i class="bi bi-building-fill"></i></div>
-        </div>
-        <div class="stat-value" id="stat-muassasalar"><span class="skeleton-bar" style="width:50px;display:inline-block;"></span></div>
-        <div class="stat-label">Noyob muassasalar</div>
-      </div>
-    </div>
+    <button id="btn-export" class="btn btn-action"><i class="bi bi-download me-1"></i>CSV eksport</button>
   </div>
 
-  <!-- Filters -->
-  <div class="filter-panel mb-3">
-    <div class="row g-2 align-items-end">
+  <div class="row row-cols-1 row-cols-md-4 g-3 mb-3" id="stats-row">
+    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd" style="background:rgba(74,158,255,0.12);color:#4a9eff;"><i class="bi bi-collection-fill"></i></span></div><div class="h3 mb-1" id="stat-total">—</div><div class="text-muted">Jami dissertatsiyalar</div></div></div>
+    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd">PhD</span></div><div class="h3 mb-1" id="stat-phd">—</div><div class="text-muted">PhD dissertatsiyalar</div></div></div>
+    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-dsc">DSc</span></div><div class="h3 mb-1" id="stat-dsc">—</div><div class="text-muted">DSc dissertatsiyalar</div></div></div>
+    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-action" style="background:rgba(251,191,36,0.14);color:#fbbf24;">Muassasa</span></div><div class="h3 mb-1" id="stat-muassasalar">—</div><div class="text-muted">Noyob muassasalar</div></div></div>
+  </div>
+
+  <div class="content-card mb-3 filter-panel">
+    <div class="row g-3 align-items-end">
       <div class="col-12 col-md-5">
-        <label class="form-label text-secondary mb-1" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Qidirish</label>
-        <div class="search-icon-wrapper">
-          <i class="bi bi-search"></i>
-          <input type="text" id="search-input" class="form-control" placeholder="Olim, mavzu, muassasa, ixtisoslik bo'yicha qidiring..." />
+        <label class="form-label" for="search-input">Qidirish</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa, ixtisoslik bo'yicha qidiring..." />
         </div>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label text-secondary mb-1" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Daraja</label>
-        <select id="filter-daraja" class="form-select">
-          <option value="">Barcha darajalar</option>
-        </select>
+        <label class="form-label" for="filter-daraja">Daraja</label>
+        <select id="filter-daraja" class="form-select"><option value="">Barcha darajalar</option></select>
       </div>
       <div class="col-6 col-md-3">
-        <label class="form-label text-secondary mb-1" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Muassasa</label>
-        <select id="filter-muassasa" class="form-select">
-          <option value="">Barcha muassasalar</option>
-        </select>
+        <label class="form-label" for="filter-muassasa">Muassasa</label>
+        <select id="filter-muassasa" class="form-select"><option value="">Barcha muassasalar</option></select>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label text-secondary mb-1" style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Ixtisoslik</label>
-        <select id="filter-ixtisoslik" class="form-select">
-          <option value="">Barcha ixtisosliklar</option>
-        </select>
+        <label class="form-label" for="filter-ixtisoslik">Ixtisoslik</label>
+        <select id="filter-ixtisoslik" class="form-select"><option value="">Barcha ixtisosliklar</option></select>
       </div>
-      <div class="col-6 col-md-0 d-flex align-items-end">
-        <button id="btn-reset" class="btn btn-outline-secondary btn-sm w-100" style="font-size:0.8rem;">
-          <i class="bi bi-x-circle me-1"></i>Tozalash
-        </button>
+      <div class="col-6 col-md-0">
+        <button id="btn-reset" class="btn btn-secondary w-100">Tozalash</button>
       </div>
     </div>
   </div>
 
-  <!-- Table panel -->
   <div class="table-panel">
     <div class="table-header-bar">
-      <div class="result-count">
-        Topildi: <span id="result-count">—</span> ta natija
-      </div>
-      <button id="btn-export" class="btn btn-export">
-        <i class="bi bi-download me-1"></i>CSV yuklab olish
-      </button>
+      <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
+      <div class="d-flex gap-2 flex-wrap"><button id="btn-show-more" class="btn btn-action">Ko'proq</button></div>
     </div>
-
     <div class="table-scroll">
-      <table class="table table-hover align-middle">
-        <thead>
-          <tr>
-            <th style="width:50px;">#</th>
-            <th>Sana</th>
-            <th>Daraja</th>
-            <th>Olim</th>
-            <th>Mavzu</th>
-            <th>Ixtisoslik</th>
-            <th>Muassasa</th>
-            <th>Ilmiy rahbar</th>
-            <th>Havola</th>
-          </tr>
-        </thead>
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr>
+          <th>#</th>
+          <th data-sort="Sana">Sana</th>
+          <th data-sort="Daraja">Daraja</th>
+          <th data-sort="Olim">Olim</th>
+          <th data-sort="Mavzu">Mavzu</th>
+          <th data-sort="Ixtisoslik">Ixtisoslik</th>
+          <th data-sort="Muassasa">Muassasa</th>
+          <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
+          <th>Havola</th>
+        </tr></thead>
         <tbody id="table-body">
-          <!-- Skeleton rows -->
-          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width:85%"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width:70%"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width:90%"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="9"><div class="skeleton-bar" style="width:75%"></div></td></tr>
+          <tr><td colspan="9"><div class="skeleton-bar"></div></td></tr>
         </tbody>
       </table>
     </div>
-
-    <div class="pagination-bar">
-      <div class="pagination-info" id="pagination-info"></div>
-      <nav>
-        <ul class="pagination pagination-sm mb-0" id="pagination-nav"></ul>
-      </nav>
-    </div>
+    <div class="table-header-bar"><div class="result-count" id="pagination-info"></div></div>
   </div>
-
-</main>
-
+{% endblock %}
+{% block scripts %}
 <script>
   const PER_PAGE = 50;
   let currentPage = 1;
-  let debounceTimer = null;
+  let currentSort = { key: 'Sana', dir: 'asc' };
+  let currentTotal = 0;
+  let currentRecords = [];
+  let currentFilters = { search: '', daraja: '', muassasa: '', ixtisoslik: '' };
+  const tableBody = document.getElementById('table-body');
+  const resultCount = document.getElementById('result-count');
+  const paginationInfo = document.getElementById('pagination-info');
+  const sortHeaders = document.querySelectorAll('th[data-sort]');
 
-  // Build query string from current filter state
-  function getParams(page) {
-    const params = new URLSearchParams();
-    const search = document.getElementById('search-input').value.trim();
-    const daraja = document.getElementById('filter-daraja').value;
-    const muassasa = document.getElementById('filter-muassasa').value;
-    const ixtisoslik = document.getElementById('filter-ixtisoslik').value;
-    if (search) params.set('search', search);
-    if (daraja) params.set('daraja', daraja);
-    if (muassasa) params.set('muassasa', muassasa);
-    if (ixtisoslik) params.set('ixtisoslik', ixtisoslik);
-    params.set('page', page || currentPage);
-    params.set('per_page', PER_PAGE);
-    return params;
+  function escHtml(value) {
+    return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  // Load stats
-  async function loadStats() {
-    try {
-      const res = await fetch('/stats-json');
-      const d = await res.json();
-      document.getElementById('stat-total').textContent = d.total.toLocaleString('uz');
-      document.getElementById('stat-phd').textContent = d.phd.toLocaleString('uz');
-      document.getElementById('stat-dsc').textContent = d.dsc.toLocaleString('uz');
-      document.getElementById('stat-muassasalar').textContent = d.muassasalar.toLocaleString('uz');
-    } catch (e) {
-      console.error('Stats error:', e);
+  function highlight(text, term) {
+    if (!term) return escHtml(text);
+    const escaped = term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
+    return escHtml(text).replace(new RegExp('('+escaped+')','ig'), '<span class="search-highlight">$1</span>');
+  }
+  function sortArray(records) {
+    return records.slice().sort((a,b) => {
+      const x = (a[currentSort.key] || '').toLowerCase();
+      const y = (b[currentSort.key] || '').toLowerCase();
+      if (x === y) return 0;
+      return currentSort.dir === 'asc' ? (x < y ? -1 : 1) : (x > y ? -1 : 1);
+    });
+  }
+  function renderRows(records, startIndex) {
+    if (!records.length) {
+      tableBody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
+      return;
     }
+    const term = currentFilters.search.trim();
+    tableBody.innerHTML = records.map((r,i) => {
+      const num = r.id || startIndex + i + 1;
+      const daraja = (r.Daraja || '').toUpperCase();
+      const darajaSpan = daraja === 'PHD' ? '<span class="badge-phd badge-role">PhD</span>' : daraja === 'DSC' ? '<span class="badge-dsc badge-role">DSc</span>' : escHtml(r.Daraja);
+      const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
+      const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
+      const link = r.Link ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i></a>` : '—';
+      return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;">
+        <td>${num}</td>
+        <td class="sana-cell">${highlight(r.Sana, term)}</td>
+        <td>${darajaSpan}</td>
+        <td class="olim-cell">${supervisorLink}</td>
+        <td class="mavzu-cell">${highlight(r.Mavzu, term)}</td>
+        <td>${highlight(r.Ixtisoslik, term)}</td>
+        <td class="muassasa-cell">${universityLink}</td>
+        <td>${highlight(r.Ilmiy_rahbar, term)}</td>
+        <td class="link-cell">${link}</td>
+      </tr>`;
+    }).join('');
   }
-
-  // Load filter options
+  function renderInfo(page, total) {
+    resultCount.textContent = total.toLocaleString('uz');
+    const start = Math.min((page-1)*PER_PAGE + 1, total);
+    const end = Math.min(page*PER_PAGE, total);
+    paginationInfo.textContent = total ? `${start}–${end} / ${total.toLocaleString('uz')} ta` : '';
+  }
   async function loadFilters() {
     try {
       const res = await fetch('/filters');
-      const d = await res.json();
-      const darajaEl = document.getElementById('filter-daraja');
-      d.darajalar.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v; opt.textContent = v;
-        darajaEl.appendChild(opt);
+      const data = await res.json();
+      const targets = {
+        daraja: document.getElementById('filter-daraja'),
+        muassasa: document.getElementById('filter-muassasa'),
+        ixtisoslik: document.getElementById('filter-ixtisoslik')
+      };
+      data.darajalar.forEach(value => {
+        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.daraja.append(opt);
       });
-      const muassasaEl = document.getElementById('filter-muassasa');
-      d.muassasalar.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v; opt.textContent = v;
-        muassasaEl.appendChild(opt);
+      data.muassasalar.forEach(value => {
+        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.muassasa.append(opt);
       });
-      const ixtisoslikEl = document.getElementById('filter-ixtisoslik');
-      d.ixtisosliklar.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v; opt.textContent = v;
-        ixtisoslikEl.appendChild(opt);
+      data.ixtisosliklar.forEach(value => {
+        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.ixtisoslik.append(opt);
       });
-    } catch (e) {
-      console.error('Filters error:', e);
+    } catch (error) {
+      console.warn('Filter values could not be loaded.', error);
     }
   }
-
-  // Render table rows
-  function renderRows(records, startIndex) {
-    const tbody = document.getElementById('table-body');
-    if (records.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="9">
-            <div class="empty-state">
-              <i class="bi bi-search"></i>
-              <div style="font-size:0.95rem;font-weight:600;color:#6b7a99;">Natija topilmadi</div>
-              <div style="font-size:0.8rem;color:#3a445a;margin-top:4px;">Filtrlarni o'zgartirib ko'ring</div>
-            </div>
-          </td>
-        </tr>`;
-      return;
-    }
-
-    const searchTerm = (document.getElementById('search-input')?.value || '').trim();
-    function highlight(s, term) {
-      if (!term) return s;
-      try {
-        const re = new RegExp('('+term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')+')','ig');
-        return s.replace(re, '<span class="search-highlight">$1</span>');
-      } catch(e) { return s; }
-    }
-
-    tbody.innerHTML = records.map((r, i) => {
-      const rowNum = startIndex + i + 1;
-      const darajaBadge = r.Daraja && r.Daraja.toUpperCase() === 'PHD'
-        ? `<span class="badge-phd">PhD</span>`
-        : r.Daraja && r.Daraja.toUpperCase() === 'DSC'
-          ? `<span class="badge-dsc">DSc</span>`
-          : `<span style="font-size:0.78rem;color:#6b7a99;">${escHtml(r.Daraja)}</span>`;
-
-      const linkCell = r.Link && r.Link !== ''
-        ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">
-             <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>Ko'rish
-           </a>`
-        : `<span style="color:#3a445a;font-size:0.78rem;">—</span>`;
-
-      // apply highlights to key fields
-      const mavzu = highlight(escHtml(r.Mavzu), searchTerm);
-      const olim = highlight(escHtml(r.Olim), searchTerm);
-      const muassasa = highlight(escHtml(r.Muassasa), searchTerm);
-      const ixt = highlight(escHtml(r.Ixtisoslik), searchTerm);
-      const rahbar = highlight(escHtml(r.Ilmiy_rahbar), searchTerm);
-
-      return `
-        <tr onclick="window.location.href='/dissertation/${rowNum}'" style="cursor:pointer">
-          <td style="color:#3a445a;font-size:0.78rem;font-variant-numeric:tabular-nums;">${rowNum}</td>
-          <td class="sana-cell">${escHtml(r.Sana)}</td>
-          <td>${darajaBadge}</td>
-          <td class="olim-cell">${olim}</td>
-          <td class="mavzu-cell">${mavzu}</td>
-          <td style="white-space:nowrap;font-size:0.8rem;color:#8899b4;">${ixt}</td>
-          <td class="muassasa-cell">${muassasa}</td>
-          <td style="font-size:0.8rem;white-space:nowrap;">${rahbar}</td>
-          <td class="link-cell">${linkCell}</td>
-        </tr>`;
-    }).join('');
-  }
-
-  // Render pagination
-  function renderPagination(page, totalPages, totalRecords) {
-    const nav = document.getElementById('pagination-nav');
-    const info = document.getElementById('pagination-info');
-
-    const start = Math.min((page - 1) * PER_PAGE + 1, totalRecords);
-    const end = Math.min(page * PER_PAGE, totalRecords);
-    info.textContent = totalRecords > 0 ? `${start}–${end} / ${totalRecords.toLocaleString('uz')} ta` : '';
-
-    if (totalPages <= 1) { nav.innerHTML = ''; return; }
-
-    let pages = [];
-    pages.push(1);
-    if (page > 3) pages.push('...');
-    for (let p = Math.max(2, page - 1); p <= Math.min(totalPages - 1, page + 1); p++) {
-      pages.push(p);
-    }
-    if (page < totalPages - 2) pages.push('...');
-    if (totalPages > 1) pages.push(totalPages);
-
-    nav.innerHTML = `
-      <li class="page-item ${page === 1 ? 'disabled' : ''}">
-        <a class="page-link" href="#" data-page="${page - 1}"><i class="bi bi-chevron-left" style="font-size:0.7rem;"></i></a>
-      </li>
-      ${pages.map(p => p === '...'
-        ? `<li class="page-item disabled"><span class="page-link" style="background:transparent;border-color:transparent;">…</span></li>`
-        : `<li class="page-item ${p === page ? 'active' : ''}">
-             <a class="page-link" href="#" data-page="${p}">${p}</a>
-           </li>`
-      ).join('')}
-      <li class="page-item ${page === totalPages ? 'disabled' : ''}">
-        <a class="page-link" href="#" data-page="${page + 1}"><i class="bi bi-chevron-right" style="font-size:0.7rem;"></i></a>
-      </li>`;
-
-    nav.querySelectorAll('a[data-page]').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const p = parseInt(a.dataset.page);
-        if (p >= 1 && p <= totalPages && p !== page) {
-          currentPage = p;
-          loadData();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      });
-    });
-  }
-
-  // Load data
-  async function loadData(resetPage) {
-    if (resetPage) currentPage = 1;
-    const params = getParams(currentPage);
+  async function updateData(reset=false) {
+    if (reset) currentPage = 1;
+    const params = new URLSearchParams({search: currentFilters.search, daraja: currentFilters.daraja, muassasa: currentFilters.muassasa, ixtisoslik: currentFilters.ixtisoslik, page: currentPage, per_page: PER_PAGE});
     try {
-      const res = await fetch('/data?' + params.toString());
-      const d = await res.json();
-      document.getElementById('result-count').textContent = d.total.toLocaleString('uz');
-      const startIndex = (d.page - 1) * PER_PAGE;
-      renderRows(d.records, startIndex);
-      renderPagination(d.page, d.total_pages, d.total);
-    } catch (e) {
-      document.getElementById('table-body').innerHTML = `
-        <tr><td colspan="9">
-          <div class="empty-state">
-            <i class="bi bi-exclamation-triangle"></i>
-            <div style="font-size:0.9rem;color:#6b7a99;">Ma'lumot yuklanishida xatolik</div>
-          </div>
-        </td></tr>`;
+      const res = await fetch('/data?' + params);
+      const data = await res.json();
+      currentTotal = data.total;
+      currentRecords = data.records;
+      if (currentSort.key) currentRecords = sortArray(currentRecords);
+      renderRows(currentRecords, (data.page-1)*PER_PAGE);
+      renderInfo(data.page, data.total);
+    } catch (err) {
+      tableBody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
   }
-
-  function escHtml(s) {
-    if (!s) return '';
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
-  // Filter change handlers
-  function onFilterChange(resetPage) {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => loadData(resetPage !== false), 350);
-  }
-
-  document.getElementById('search-input').addEventListener('input', () => onFilterChange(true));
-  document.getElementById('filter-daraja').addEventListener('change', () => loadData(true));
-  document.getElementById('filter-muassasa').addEventListener('change', () => loadData(true));
-  document.getElementById('filter-ixtisoslik').addEventListener('change', () => loadData(true));
-
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    document.getElementById('search-input').value = '';
-    document.getElementById('filter-daraja').value = '';
-    document.getElementById('filter-muassasa').value = '';
-    document.getElementById('filter-ixtisoslik').value = '';
-    currentPage = 1;
-    loadData(true);
+  let filterTimer;
+  ['search-input','filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => {
+    document.getElementById(id)?.addEventListener(id === 'search-input' ? 'input' : 'change', function() {
+      const value = this.value.trim();
+      currentFilters[id.replace('filter-','')] = value;
+      if (id === 'search-input') {
+        clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => updateData(true), 300);
+      } else { updateData(true); }
+    });
   });
-
-  document.getElementById('btn-export').addEventListener('click', () => {
-    const params = getParams(1);
-    params.delete('page');
-    params.delete('per_page');
-    window.location.href = '/export?' + params.toString();
+  document.getElementById('btn-reset')?.addEventListener('click', function() {
+    ['search-input','filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => document.getElementById(id).value = '');
+    currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:''};
+    updateData(true);
   });
-
-  // Init
-  loadStats();
-  loadFilters();
-  loadData();
+  document.getElementById('btn-export')?.addEventListener('click', function() {
+    const params = new URLSearchParams(currentFilters);
+    window.location.href = '/export?' + params;
+  });
+  document.getElementById('btn-show-more')?.addEventListener('click', function() {
+    currentPage += 1;
+    updateData();
+  });
+  sortHeaders.forEach(header => header.addEventListener('click', function() {
+    const key = this.dataset.sort;
+    if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    else { currentSort.key = key; currentSort.dir = 'asc'; }
+    updateData();
+  }));
+  document.addEventListener('DOMContentLoaded', () => { loadFilters(); updateData(); });
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-(function(){
-  var h=document.documentElement,b=document.getElementById('theme-toggle');
-  var t=localStorage.getItem('oak-theme')||'dark';
-  h.setAttribute('data-bs-theme',t);
-  b.innerHTML=t==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  b.addEventListener('click',function(){
-    var n=h.getAttribute('data-bs-theme')==='dark'?'light':'dark';
-    h.setAttribute('data-bs-theme',n);
-    localStorage.setItem('oak-theme',n);
-    b.innerHTML=n==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  });
-})();
-</script>
-</body>
-</html>
+{% endblock %}

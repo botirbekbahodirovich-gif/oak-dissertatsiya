@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Profil — OAK Dissertatsiya{% endblock %}
+{% block content %}
+  <div class="page-heading">
+    <div>
+      <h1>Profil</h1>
+      <p>Shaxsiy ma'lumotlar va tizim statistikasi.</p>
+    </div>
+    <a href="/" class="btn btn-action"><i class="bi bi-table"></i> Jadvalga qaytish</a>
+  </div>
+  <div class="row g-3">
+    <div class="col-12 col-lg-4">
+      <div class="content-card">
+        <h2>Hisob</h2>
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Foydalanuvchi</dt><dd class="col-7">{{ user.username }}</dd>
+          <dt class="col-5 text-muted">Email</dt><dd class="col-7">{{ user.email }}</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="row g-3">
+        <div class="col-12 col-sm-6">
+          <div class="content-card stat-card"><div class="text-muted mb-2">Jami dissertatsiyalar</div><div class="h3">{{ stats.total }}</div></div>
+        </div>
+        <div class="col-12 col-sm-6">
+          <div class="content-card stat-card"><div class="text-muted mb-2">PhD</div><div class="h3">{{ stats.phd }}</div></div>
+        </div>
+        <div class="col-12 col-sm-6">
+          <div class="content-card stat-card"><div class="text-muted mb-2">DSc</div><div class="h3">{{ stats.dsc }}</div></div>
+        </div>
+        <div class="col-12 col-sm-6">
+          <div class="content-card stat-card"><div class="text-muted mb-2">Muassasalar</div><div class="h3">{{ stats.muassasalar }}</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

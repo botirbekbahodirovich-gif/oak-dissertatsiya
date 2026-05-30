@@ -1,416 +1,61 @@
-<!DOCTYPE html>
-<html lang="uz" data-bs-theme="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="csrf-token" content="{{ csrf_token() }}" />
-  <title>CSV Yuklash — OAK Dissertatsiya</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-  <style>
-    :root {
-      --oak-accent: #4a9eff;
-      --oak-accent-soft: rgba(74,158,255,0.12);
-      --oak-surface: #1a1d23;
-      --oak-surface-2: #22262f;
-      --oak-border: rgba(255,255,255,0.07);
-    }
-    body {
-      background-color: #0f1114;
-      color: #cbd5e1;
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
-      min-height: 100vh;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-    }
-
-    /* Header */
-    .app-header {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 1rem 0;
-    }
-    .app-header .brand-icon {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; color: #fff; flex-shrink: 0;
-    }
-    .app-header h1 { font-size: 1.2rem; font-weight: 700; color: #e8edf5; margin: 0; }
-    .app-header small { font-size: 0.72rem; color: #6b7a99; }
-
-    /* Nav */
-    .nav-tabs-custom {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 0 1.5rem;
-    }
-    .nav-tabs-custom .nav-link {
-      color: #6b7a99; border: none;
-      border-bottom: 2px solid transparent;
-      padding: 0.65rem 1rem; font-size: 0.84rem; font-weight: 500;
-      border-radius: 0; transition: color 0.15s, border-color 0.15s;
-    }
-    .nav-tabs-custom .nav-link:hover { color: #c9d1e0; }
-    .nav-tabs-custom .nav-link.active {
-      color: var(--oak-accent); border-bottom-color: var(--oak-accent); background: transparent;
-    }
-    .nav-tabs-custom .nav-link i { margin-right: 6px; }
-    .btn-nav-upload {
-      font-size: 0.78rem; font-weight: 600;
-      padding: 4px 12px; border-radius: 7px;
-      background: rgba(74,158,255,0.12);
-      border: 1px solid rgba(74,158,255,0.3);
-      color: var(--oak-accent);
-      transition: all 0.15s; white-space: nowrap;
-      align-self: center; margin-left: auto;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
-    }
-    .btn-nav-upload:hover { background: rgba(74,158,255,0.22); border-color: var(--oak-accent); color: var(--oak-accent); }
-    .nav-user {
-      display: flex; align-items: center; gap: 10px;
-      border-left: 1px solid var(--oak-border);
-      padding-left: 0.75rem; margin-left: 0.5rem;
-    }
-    .nav-user .username { font-size: 0.78rem; color: #8899b4; display: flex; align-items: center; gap: 5px; }
-    .btn-nav-logout {
-      font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 6px;
-      background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25);
-      color: #f87171; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 4px;
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .btn-nav-logout:hover { background: rgba(248,113,113,0.2); border-color: #f87171; color: #f87171; }
-    .btn-nav-upload.active-page {
-      background: rgba(74,158,255,0.22); border-color: var(--oak-accent);
-    }
-
-    /* Upload card */
-    .upload-card {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 16px;
-      padding: 2rem;
-      max-width: 640px;
-      margin: 0 auto;
-    }
-    .upload-card h2 {
-      font-size: 1.05rem; font-weight: 700; color: #e8edf5; margin-bottom: 0.25rem;
-    }
-    .upload-card p.subtitle {
-      font-size: 0.82rem; color: #6b7a99; margin-bottom: 1.5rem;
-    }
-
-    /* Drop zone */
-    .drop-zone {
-      border: 2px dashed rgba(74,158,255,0.3);
-      border-radius: 12px;
-      padding: 2.5rem 1.5rem;
-      text-align: center;
-      cursor: pointer;
-      background: rgba(74,158,255,0.04);
-      transition: border-color 0.2s, background 0.2s;
-      position: relative;
-    }
-    .drop-zone.drag-over {
-      border-color: var(--oak-accent);
-      background: rgba(74,158,255,0.1);
-    }
-    .drop-zone.has-file {
-      border-color: #34d399;
-      background: rgba(52,211,153,0.07);
-    }
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
-    .drop-icon {
-      width: 52px; height: 52px;
-      background: rgba(74,158,255,0.12);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; color: var(--oak-accent);
-      margin: 0 auto 1rem;
-      transition: background 0.2s;
-    }
-    .drop-zone.has-file .drop-icon { background: rgba(52,211,153,0.15); color: #34d399; }
-    .drop-title { font-size: 0.9rem; font-weight: 600; color: #c9d1e0; margin-bottom: 4px; }
-    .drop-subtitle { font-size: 0.78rem; color: #4a556a; }
-    .file-selected-name {
-      font-size: 0.82rem; color: #34d399; font-weight: 600; margin-top: 8px;
-      display: none;
-    }
-
-    /* Upload button */
-    .btn-upload-submit {
-      width: 100%; padding: 0.65rem;
-      background: var(--oak-accent);
-      border: none; border-radius: 9px;
-      color: #fff; font-size: 0.88rem; font-weight: 600;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-    }
-    .btn-upload-submit:hover:not(:disabled) { opacity: 0.88; }
-    .btn-upload-submit:active:not(:disabled) { transform: scale(0.99); }
-    .btn-upload-submit:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    /* Status messages */
-    .status-box {
-      border-radius: 10px; padding: 0.85rem 1rem;
-      font-size: 0.85rem; display: none;
-      align-items: flex-start; gap: 10px; margin-top: 1rem;
-    }
-    .status-box.show { display: flex; }
-    .status-box.success {
-      background: rgba(52,211,153,0.1);
-      border: 1px solid rgba(52,211,153,0.25);
-      color: #34d399;
-    }
-    .status-box.error {
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.25);
-      color: #f87171;
-    }
-    .status-box i { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-    .status-box .status-text { line-height: 1.45; }
-    .status-box .status-text strong { display: block; margin-bottom: 2px; }
-
-    /* Requirements table */
-    .req-card {
-      background: var(--oak-surface-2);
-      border: 1px solid var(--oak-border);
-      border-radius: 10px;
-      padding: 1rem 1.2rem;
-      margin-top: 1.5rem;
-    }
-    .req-card .req-title {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; color: #6b7a99; margin-bottom: 0.75rem;
-    }
-    .col-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: var(--oak-surface); border: 1px solid var(--oak-border);
-      border-radius: 6px; padding: 3px 9px;
-      font-size: 0.75rem; color: #8899b4; font-family: monospace;
-      margin: 2px;
-    }
-
-    /* Progress bar */
-    .upload-progress {
-      height: 4px; border-radius: 2px;
-      background: var(--oak-surface-2);
-      overflow: hidden; margin-top: 1rem; display: none;
-    }
-    .upload-progress.show { display: block; }
-    .upload-progress-bar {
-      height: 100%; background: var(--oak-accent);
-      border-radius: 2px;
-      animation: indeterminate 1.4s infinite linear;
-      width: 40%;
-    }
-    @keyframes indeterminate {
-      0%   { transform: translateX(-100%); }
-      100% { transform: translateX(350%); }
-    }
-
-    /* Theme toggle */
-    html, body { transition: background-color 0.25s ease, color 0.25s ease; }
-    .btn-theme-toggle {
-      background: none; border: 1px solid transparent;
-      color: #8899b4; font-size: 1rem; cursor: pointer;
-      border-radius: 6px; padding: 4px 9px;
-      transition: color 0.2s, background 0.15s, border-color 0.2s;
-      display: flex; align-items: center; line-height: 1;
-    }
-    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: var(--oak-accent); background: rgba(74,158,255,0.08); }
-  </style>
-</head>
-<body>
-
-<!-- Header -->
-<header class="app-header">
-  <div class="container-xl">
-    <div class="d-flex align-items-center gap-3">
-      <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+{% extends "base.html" %}
+{% block title %}CSV Yuklash — OAK Dissertatsiya{% endblock %}
+{% block content %}
+  <div class="content-card" style="max-width:700px;margin:0 auto;">
+    <div class="page-heading">
       <div>
-        <h1>OAK Dissertatsiya Tahlil</h1>
-        <small>O'zbekiston Oliy Attestatsiya Komissiyasi — Dissertatsiyalar bazasi</small>
+        <h1>CSV yuklash</h1>
+        <p>Mavjud dissertatsiyalar jadvalini yangi CSV bilan yangilang.</p>
       </div>
     </div>
+    <div id="drop-zone" class="content-card" style="border:1px dashed rgba(74,158,255,0.35);text-align:center;cursor:pointer;padding:2rem;">
+      <div class="mb-3"><i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:var(--oak-accent);"></i></div>
+      <div class="h5">CSV faylni bu yerga tashlang</div>
+      <p class="form-text">Yoki bosib<br>faqat <strong>.csv</strong> fayllar qabul qilinadi.</p>
+      <input id="file-input" type="file" accept=".csv" style="display:none;" />
+      <div id="file-name" class="form-text mt-2" style="color:#34d399;display:none;"></div>
+    </div>
+    <button id="btn-submit" class="btn btn-primary w-100 mt-3" disabled><i class="bi bi-cloud-upload me-1"></i>Yuklash</button>
+    <div id="status-box" class="alert-inline" style="display:none;margin-top:1rem;"></div>
   </div>
-</header>
-
-<!-- Nav tabs -->
-<div class="nav-tabs-custom">
-  <div class="container-xl d-flex align-items-stretch">
-    <ul class="nav flex-grow-1">
-      <li class="nav-item">
-        <a class="nav-link" href="/"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="/stats"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
-      </li>
-    </ul>
-    <a href="/upload" class="btn-nav-upload active-page">
-      <i class="bi bi-cloud-upload-fill"></i>CSV yuklash
-    </a>
-    <div class="nav-user">
-      <span class="username"><i class="bi bi-person-circle"></i>{{ current_user.username }}</span>
-      <a href="/logout" class="btn-nav-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
-      <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"></button>
-    </div>
-  </div>
-</div>
-
-<main class="container-xl py-5">
-  <div class="upload-card">
-    <h2><i class="bi bi-cloud-upload me-2" style="color:var(--oak-accent);"></i>Yangi CSV fayl yuklash</h2>
-    <p class="subtitle">Mavjud dissertatsiyalar bazasini yangi CSV fayl bilan almashtiring. Fayl bir zumda kuchga kiradi.</p>
-
-    <!-- Drop zone -->
-    <div class="drop-zone" id="drop-zone">
-      <input type="file" id="file-input" accept=".csv" />
-      <div class="drop-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-      <div class="drop-title">CSV faylni bu yerga tashlang</div>
-      <div class="drop-subtitle">yoki bosib tanlang</div>
-      <div class="file-selected-name" id="file-name-display"><i class="bi bi-check-circle me-1"></i><span id="file-name-text"></span></div>
-    </div>
-
-    <!-- Progress -->
-    <div class="upload-progress" id="upload-progress">
-      <div class="upload-progress-bar"></div>
-    </div>
-
-    <!-- Status -->
-    <div class="status-box" id="status-box">
-      <i id="status-icon"></i>
-      <div class="status-text" id="status-text"></div>
-    </div>
-
-    <!-- Submit -->
-    <button class="btn-upload-submit mt-3" id="btn-submit" disabled>
-      <i class="bi bi-cloud-upload"></i>Yuklash
-    </button>
-
-    <!-- Column requirements -->
-    <div class="req-card">
-      <div class="req-title"><i class="bi bi-info-circle me-1"></i>Talab qilinadigan ustunlar</div>
-      <div>
-        <span class="col-badge"><i class="bi bi-calendar3" style="color:#4a9eff;font-size:0.7rem;"></i>Sana</span>
-        <span class="col-badge"><i class="bi bi-award" style="color:#34d399;font-size:0.7rem;"></i>Daraja</span>
-        <span class="col-badge"><i class="bi bi-person" style="color:#a78bfa;font-size:0.7rem;"></i>Olim</span>
-        <span class="col-badge"><i class="bi bi-journal-text" style="color:#fbbf24;font-size:0.7rem;"></i>Mavzu</span>
-        <span class="col-badge"><i class="bi bi-tag" style="color:#38bdf8;font-size:0.7rem;"></i>Ixtisoslik</span>
-        <span class="col-badge"><i class="bi bi-building" style="color:#fb923c;font-size:0.7rem;"></i>Muassasa</span>
-        <span class="col-badge"><i class="bi bi-person-badge" style="color:#e879f9;font-size:0.7rem;"></i>Ilmiy_rahbar</span>
-        <span class="col-badge"><i class="bi bi-link-45deg" style="color:#67e8f9;font-size:0.7rem;"></i>Link</span>
-      </div>
-    </div>
-  </div>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}
+{% block scripts %}
 <script>
-  const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
+  const dropZone = document.getElementById('drop-zone');
   const btnSubmit = document.getElementById('btn-submit');
-  const fileNameDisplay = document.getElementById('file-name-display');
-  const fileNameText = document.getElementById('file-name-text');
+  const fileName = document.getElementById('file-name');
   const statusBox = document.getElementById('status-box');
-  const statusIcon = document.getElementById('status-icon');
-  const statusText = document.getElementById('status-text');
-  const progress = document.getElementById('upload-progress');
-
   let selectedFile = null;
 
-  function setFile(file) {
-    if (!file) return;
-    selectedFile = file;
-    fileNameText.textContent = file.name;
-    fileNameDisplay.style.display = 'flex';
-    dropZone.classList.add('has-file');
-    dropZone.querySelector('.drop-icon i').className = 'bi bi-check2-circle';
-    dropZone.querySelector('.drop-title').textContent = 'Fayl tanlandi';
-    btnSubmit.disabled = false;
-    hideStatus();
+  function updateStatus(type, message) {
+    statusBox.style.display = 'block';
+    statusBox.className = 'alert-inline ' + (type === 'success' ? 'success' : 'error');
+    statusBox.textContent = message;
   }
+  function clearStatus() { statusBox.style.display = 'none'; }
 
-  function showStatus(type, title, body) {
-    statusBox.className = 'status-box show ' + type;
-    statusIcon.className = type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill';
-    statusText.innerHTML = `<strong>${title}</strong>${body ? body : ''}`;
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) selectFile(fileInput.files[0]); });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--oak-accent)'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(74,158,255,0.35)'; });
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = 'rgba(74,158,255,0.35)'; selectFile(e.dataTransfer.files[0]); });
+  function selectFile(file) {
+    if (!file || !file.name.toLowerCase().endsWith('.csv')) { updateStatus('error', 'Faqat .csv fayl qabul qilinadi.'); return; }
+    selectedFile = file; btnSubmit.disabled = false;
+    fileName.textContent = file.name; fileName.style.display = 'block'; clearStatus();
   }
-
-  function hideStatus() {
-    statusBox.className = 'status-box';
-  }
-
-  // Drag events
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.toLowerCase().endsWith('.csv')) {
-      setFile(file);
-    } else {
-      showStatus('error', 'Noto\'g\'ri fayl turi', 'Faqat .csv fayl qabul qilinadi.');
-    }
-  });
-
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files[0]) setFile(fileInput.files[0]);
-  });
-
-  // Submit
   btnSubmit.addEventListener('click', async () => {
     if (!selectedFile) return;
-
+    const formData = new FormData(); formData.append('file', selectedFile);
     btnSubmit.disabled = true;
-    progress.classList.add('show');
-    hideStatus();
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
     try {
-      const csrfToken = document.querySelector('meta[name=csrf-token]').getAttribute('content');
-      const res = await fetch('/upload', { method: 'POST', body: formData, headers: { 'X-CSRFToken': csrfToken } });
+      const res = await fetch('/upload', { method:'POST', body: formData });
       const data = await res.json();
-      progress.classList.remove('show');
-
-      if (data.success) {
-        showStatus('success', 'Muvaffaqiyatli yuklandi!',
-          `<br><span style="font-size:0.8rem;opacity:0.85;">${data.rows.toLocaleString('uz')} ta yozuv saqlandi. Ma'lumotlar jadvali darhol yangilandi.</span>`);
-        btnSubmit.disabled = false;
-        // Offer to go back
-        statusText.innerHTML += `<br><a href="/" style="color:#34d399;font-size:0.78rem;font-weight:600;margin-top:6px;display:inline-block;">
-          <i class="bi bi-arrow-left me-1"></i>Jadvalga qaytish</a>`;
-      } else {
-        showStatus('error', 'Xatolik yuz berdi', `<br><span style="font-size:0.8rem;opacity:0.85;">${data.error}</span>`);
-        btnSubmit.disabled = false;
-      }
-    } catch (err) {
-      progress.classList.remove('show');
-      showStatus('error', 'Tarmoq xatoligi', '<br><span style="font-size:0.8rem;opacity:0.85;">Server bilan bog\'lanishda muammo yuz berdi.</span>');
-      btnSubmit.disabled = false;
-    }
+      if (data.success) { updateStatus('success', `Yuklandi: ${data.rows.toLocaleString('uz')} yozuv.`); }
+      else { updateStatus('error', data.error || 'Yuklashda xatolik yuz berdi.'); }
+    } catch (err) { updateStatus('error', 'Tarmoq xatoligi.'); }
+    btnSubmit.disabled = false;
   });
 </script>
-<script>
-(function(){
-  var h=document.documentElement,b=document.getElementById('theme-toggle');
-  var t=localStorage.getItem('oak-theme')||'dark';
-  h.setAttribute('data-bs-theme',t);
-  b.innerHTML=t==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  b.addEventListener('click',function(){
-    var n=h.getAttribute('data-bs-theme')==='dark'?'light':'dark';
-    h.setAttribute('data-bs-theme',n);
-    localStorage.setItem('oak-theme',n);
-    b.innerHTML=n==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  });
-})();
-</script>
-</body>
-</html>
+{% endblock %}

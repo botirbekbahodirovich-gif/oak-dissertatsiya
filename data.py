@@ -55,6 +55,7 @@ def apply_filters(df, search, daraja, muassasa, ixtisoslik):
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 import io
+from urllib.parse import unquote
 
 data_bp = Blueprint('data', __name__)
 
@@ -82,8 +83,10 @@ def data():
     page = max(1, min(page, total_pages))
     start, end = (page - 1) * per_page, page * per_page
 
+    records = df.iloc[start:end].copy()
+    records['id'] = records.index + 1
     return jsonify({
-        "records":     df.iloc[start:end].to_dict(orient="records"),
+        "records":     records.to_dict(orient="records"),
         "total":       total,
         "page":        page,
         "per_page":    per_page,
@@ -128,3 +131,30 @@ def dissertation(id):
     row = df.iloc[id - 1].to_dict()
     # Provide row id for back links
     return render_template('dissertation.html', row=row, id=id)
+
+
+@data_bp.route('/supervisor/<path:name>')
+@login_required
+def supervisor(name):
+    name = unquote(name)
+    df = load_data()
+    filtered = df[df['Ilmiy_rahbar'] == name] if name else df.iloc[0:0]
+    rows = filtered.to_dict(orient='records')
+    return render_template('supervisor.html', name=name, rows=rows, stats={
+        'total': len(filtered),
+        'phd': len(filtered[filtered['Daraja'].str.upper() == 'PHD']),
+        'dsc': len(filtered[filtered['Daraja'].str.upper() == 'DSC'])
+    })
+
+@data_bp.route('/university/<path:name>')
+@login_required
+def university(name):
+    name = unquote(name)
+    df = load_data()
+    filtered = df[df['Muassasa'] == name] if name else df.iloc[0:0]
+    rows = filtered.to_dict(orient='records')
+    return render_template('university.html', name=name, rows=rows, stats={
+        'total': len(filtered),
+        'phd': len(filtered[filtered['Daraja'].str.upper() == 'PHD']),
+        'dsc': len(filtered[filtered['Daraja'].str.upper() == 'DSC'])
+    })

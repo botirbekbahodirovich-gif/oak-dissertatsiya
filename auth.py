@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlite3
 import bcrypt
+from data import load_data
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -77,3 +78,14 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@auth_bp.route('/profile')
+@login_required
+def profile():
+    df = load_data()
+    return render_template('profile.html', user=current_user, stats={
+        'total': len(df),
+        'phd': len(df[df['Daraja'].str.upper() == 'PHD']),
+        'dsc': len(df[df['Daraja'].str.upper() == 'DSC']),
+        'muassasalar': df['Muassasa'].nunique()
+    })
