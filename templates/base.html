@@ -34,6 +34,10 @@
       -moz-osx-font-smoothing: grayscale;
     }
     a { color: inherit; text-decoration: none; }
+    /* Table/link hover styles */
+    table a { color: inherit; text-decoration: none; }
+    table a:hover { text-decoration: underline; color: #0d6efd; cursor: pointer; }
+
     .site-header {
       background: var(--oak-surface);
       border-bottom: 1px solid var(--oak-border);
@@ -232,7 +236,7 @@
       <div class="nav-links" id="nav-links">
         <a href="/" class="nav-link{% if request.path == '/' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
-        <a href="/upload" class="nav-link{% if request.path == '/upload' %} active{% endif %}"><i class="bi bi-cloud-upload-fill"></i>CSV yuklash</a>
+        {% if current_user.is_authenticated and current_user.username == 'admin' %}<a href="/upload" class="nav-link{% if request.path == '/upload' %} active{% endif %}"><i class="bi bi-cloud-upload-fill"></i>CSV yuklash</a>{% endif %}
         <a href="/profile" class="nav-link{% if request.path == '/profile' %} active{% endif %}"><i class="bi bi-person-badge"></i>Profil</a>
       </div>
       <div class="nav-actions">

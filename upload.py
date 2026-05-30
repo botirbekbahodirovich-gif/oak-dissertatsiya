@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask import Blueprint, render_template, request, jsonify, abort
+from flask_login import login_required, current_user
 import pandas as pd
 from data import REQUIRED_COLUMNS, CSV_PATH, load_data
 
@@ -9,12 +9,17 @@ upload_bp = Blueprint('upload', __name__)
 @upload_bp.route('/upload', methods=['GET'])
 @login_required
 def upload_page():
+    if not (current_user and getattr(current_user, 'username', '') == 'admin'):
+        abort(403)
     return render_template('upload.html')
 
 
 @upload_bp.route('/upload', methods=['POST'])
 @login_required
 def upload_csv():
+    if not (current_user and getattr(current_user, 'username', '') == 'admin'):
+        abort(403)
+    
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "Fayl tanlanmagan."}), 400
     file = request.files['file']

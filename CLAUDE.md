@@ -33,3 +33,11 @@ Rules / Conventions
 - Commit after each task.
 
 Contact: repo maintainer
+
+
+## Future roadmap
+- Migrate to PostgreSQL for reliable storage and proper indexing.
+- Add semantic search with embeddings and vector DB (e.g., FAISS or Pinecone).
+- Implement RAG chatbot for guided literature queries.
+- Build opponent/advisor graph for supervisors and examiners.
+- Add multi-language UI and content (UZ/EN/ RU) with i18n support.
