@@ -147,7 +147,7 @@ def export():
 
 @data_bp.route('/export-xlsx')
 @login_required
- def export_xlsx():
+def export_xlsx():
     df = load_data()
     df = apply_filters(
         df,
