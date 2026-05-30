@@ -52,7 +52,7 @@ def apply_filters(df, search, daraja, muassasa, ixtisoslik):
     return df
 
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 import io
 
@@ -117,3 +117,14 @@ def export():
     buf.seek(0)
     return send_file(buf, mimetype="text/csv", as_attachment=True,
                      download_name="dissertatsiyalar_filtrlangan.csv")
+
+
+@data_bp.route('/dissertation/<int:id>')
+@login_required
+def dissertation(id):
+    df = load_data()
+    if id < 1 or id > len(df):
+        abort(404)
+    row = df.iloc[id - 1].to_dict()
+    # Provide row id for back links
+    return render_template('dissertation.html', row=row, id=id)
