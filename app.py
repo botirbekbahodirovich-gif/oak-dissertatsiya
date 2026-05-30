@@ -26,6 +26,10 @@ BASE_DIR   = os.path.dirname(__file__)
 DB_PATH    = os.path.join(BASE_DIR, "users.db")
 CSV_PATH   = os.path.join(BASE_DIR, "data", "dissertatsiyalar.csv")
 
+# Simple in-memory cache for CSV data
+_csv_cache_df = None
+_csv_cache_mtime = None
+
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
@@ -161,16 +165,28 @@ def logout():
 # ---------------------------------------------------------------------------
 
 def load_data():
+    """Load CSV into a cached DataFrame and reload only when the file changes."""
+    global _csv_cache_df, _csv_cache_mtime
     try:
-        df = pd.read_csv(CSV_PATH, dtype=str).fillna("")
-        for col in df.columns:
-            df[col] = df[col].astype(str).str.strip()
-        return df
+        mtime = os.path.getmtime(CSV_PATH)
     except FileNotFoundError:
-        return pd.DataFrame(columns=[
+        # If file doesn't exist, clear cache and return empty df
+        _csv_cache_df = pd.DataFrame(columns=[
             "Sana", "Daraja", "Olim", "Mavzu",
             "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"
         ])
+        _csv_cache_mtime = None
+        return _csv_cache_df
+
+    # Reload if cache is empty or file modified since last load
+    if _csv_cache_df is None or _csv_cache_mtime != mtime:
+        df = pd.read_csv(CSV_PATH, dtype=str).fillna("")
+        for col in df.columns:
+            df[col] = df[col].astype(str).str.strip()
+        _csv_cache_df = df
+        _csv_cache_mtime = mtime
+
+    return _csv_cache_df
 
 
 def apply_filters(df, search, daraja, muassasa, ixtisoslik):
