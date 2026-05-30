@@ -21,7 +21,19 @@
       ] %}
       <div class="col-12 col-md-6">
         <div class="mb-2 text-muted" style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">{{ label }}</div>
-        <div style="color:#e8edf5;word-break:break-word;">{{ value }}</div>
+        <div style="color:#e8edf5;word-break:break-word;">
+          {% if label == 'Olim' %}
+            <a href="/author/{{ row.Olim | urlencode }}">{{ row.Olim }}</a>
+          {% elif label == 'Ixtisoslik' %}
+            <a href="/specialization/{{ row.Ixtisoslik | urlencode }}">{{ row.Ixtisoslik }}</a>
+          {% elif label == 'Muassasa' %}
+            <a href="/university/{{ row.Muassasa | urlencode }}">{{ row.Muassasa }}</a>
+          {% elif label == 'Ilmiy rahbar' %}
+            <a href="/supervisor/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a>
+          {% else %}
+            {{ value }}
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
       <div class="col-12">

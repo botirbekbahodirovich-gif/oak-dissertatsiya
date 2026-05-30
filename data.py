@@ -55,7 +55,6 @@ def apply_filters(df, search, daraja, muassasa, ixtisoslik):
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 import io
-from urllib.parse import unquote
 
 data_bp = Blueprint('data', __name__)
 
@@ -83,10 +82,8 @@ def data():
     page = max(1, min(page, total_pages))
     start, end = (page - 1) * per_page, page * per_page
 
-    records = df.iloc[start:end].copy()
-    records['id'] = records.index + 1
     return jsonify({
-        "records":     records.to_dict(orient="records"),
+        "records":     df.iloc[start:end].to_dict(orient="records"),
         "total":       total,
         "page":        page,
         "per_page":    per_page,
@@ -122,6 +119,23 @@ def export():
                      download_name="dissertatsiyalar_filtrlangan.csv")
 
 
+def _prepare_rows(df):
+    rows = []
+    for idx, row in df.iterrows():
+        record = row.to_dict()
+        record['id'] = idx + 1
+        rows.append(record)
+    return rows
+
+
+def _summary_stats(rows):
+    return {
+        'total': len(rows),
+        'phd': sum(1 for row in rows if str(row.get('Daraja', '')).strip().upper() == 'PHD'),
+        'dsc': sum(1 for row in rows if str(row.get('Daraja', '')).strip().upper() == 'DSC')
+    }
+
+
 @data_bp.route('/dissertation/<int:id>')
 @login_required
 def dissertation(id):
@@ -133,28 +147,41 @@ def dissertation(id):
     return render_template('dissertation.html', row=row, id=id)
 
 
+@data_bp.route('/author/<path:name>')
+@login_required
+def author(name):
+    df = load_data()
+    rows = _prepare_rows(df[df['Olim'] == name])
+    if not rows:
+        abort(404)
+    return render_template('author.html', name=name, rows=rows, stats=_summary_stats(rows))
+
+
 @data_bp.route('/supervisor/<path:name>')
 @login_required
 def supervisor(name):
-    name = unquote(name)
     df = load_data()
-    filtered = df[df['Ilmiy_rahbar'] == name] if name else df.iloc[0:0]
-    rows = filtered.to_dict(orient='records')
-    return render_template('supervisor.html', name=name, rows=rows, stats={
-        'total': len(filtered),
-        'phd': len(filtered[filtered['Daraja'].str.upper() == 'PHD']),
-        'dsc': len(filtered[filtered['Daraja'].str.upper() == 'DSC'])
-    })
+    rows = _prepare_rows(df[df['Ilmiy_rahbar'] == name])
+    if not rows:
+        abort(404)
+    return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
+
 
 @data_bp.route('/university/<path:name>')
 @login_required
 def university(name):
-    name = unquote(name)
     df = load_data()
-    filtered = df[df['Muassasa'] == name] if name else df.iloc[0:0]
-    rows = filtered.to_dict(orient='records')
-    return render_template('university.html', name=name, rows=rows, stats={
-        'total': len(filtered),
-        'phd': len(filtered[filtered['Daraja'].str.upper() == 'PHD']),
-        'dsc': len(filtered[filtered['Daraja'].str.upper() == 'DSC'])
-    })
+    rows = _prepare_rows(df[df['Muassasa'] == name])
+    if not rows:
+        abort(404)
+    return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
+
+
+@data_bp.route('/specialization/<path:code>')
+@login_required
+def specialization(code):
+    df = load_data()
+    rows = _prepare_rows(df[df['Ixtisoslik'] == code])
+    if not rows:
+        abort(404)
+    return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))

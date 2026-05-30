@@ -25,7 +25,7 @@
               <td>{{ row.Daraja }}</td>
               <td><a href="/dissertation/{{ row.id if row.id is defined else loop.index }}">{{ row.Olim }}</a></td>
               <td class="mavzu-cell">{{ row.Mavzu }}</td>
-              <td>{{ row.Ixtisoslik }}</td>
+              <td><a href="/specialization/{{ row.Ixtisoslik | urlencode }}">{{ row.Ixtisoslik }}</a></td>
               <td><a href="/supervisor/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a></td>
               <td>{% if row.Link %}<a href="{{ row.Link }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}—{% endif %}</td>
             </tr>

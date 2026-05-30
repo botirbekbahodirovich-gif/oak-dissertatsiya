@@ -108,20 +108,22 @@
       const num = r.id || startIndex + i + 1;
       const daraja = (r.Daraja || '').toUpperCase();
       const darajaSpan = daraja === 'PHD' ? '<span class="badge-phd badge-role">PhD</span>' : daraja === 'DSC' ? '<span class="badge-dsc badge-role">DSc</span>' : escHtml(r.Daraja);
+      const authorLink = r.Olim ? `<a href="/author/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()">${highlight(r.Olim, term)}</a>` : '—';
+      const specializationLink = r.Ixtisoslik ? `<a href="/specialization/${encodeURIComponent(r.Ixtisoslik)}" onclick="event.stopPropagation()">${highlight(r.Ixtisoslik, term)}</a>` : '—';
       const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
       const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
-      const link = r.Link ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i></a>` : '—';
+      const link = r.Link ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right"></i></a>` : '—';
       return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;">
-        <td>${num}</td>
-        <td class="sana-cell">${highlight(r.Sana, term)}</td>
-        <td>${darajaSpan}</td>
-        <td class="olim-cell">${supervisorLink}</td>
-        <td class="mavzu-cell">${highlight(r.Mavzu, term)}</td>
-        <td>${highlight(r.Ixtisoslik, term)}</td>
-        <td class="muassasa-cell">${universityLink}</td>
-        <td>${highlight(r.Ilmiy_rahbar, term)}</td>
-        <td class="link-cell">${link}</td>
-      </tr>`;
+          <td>${num}</td>
+          <td class="sana-cell">${highlight(r.Sana, term)}</td>
+          <td>${darajaSpan}</td>
+          <td class="olim-cell">${authorLink}</td>
+          <td class="mavzu-cell">${highlight(r.Mavzu, term)}</td>
+          <td>${specializationLink}</td>
+          <td class="muassasa-cell">${universityLink}</td>
+          <td>${supervisorLink}</td>
+          <td class="link-cell">${link}</td>
+        </tr>`;
     }).join('');
   }
   function renderInfo(page, total) {
