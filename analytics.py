@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_login import login_required
 from collections import Counter, defaultdict
 from datetime import datetime
-from data import query_dissertations
+from data import get_connection, query_dissertations
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -27,15 +27,29 @@ def _parse_month(date_text):
 
 @analytics_bp.route('/stats-json')
 def stats_json():
-    rows = query_dissertations("", "", "", "", "id", "asc")
-    daraja_values = [_normalize_text(row.get("Daraja")).upper() for row in rows if row.get("Daraja")]
-    return jsonify({
-        "total": len(rows),
-        "phd": sum(1 for value in daraja_values if value == "PHD"),
-        "dsc": sum(1 for value in daraja_values if value == "DSC"),
-        "muassasalar": len({_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa")} ),
-        "olim": len({_normalize_text(row.get("Olim")) for row in rows if row.get("Olim")} )
-    })
+    sql = '''
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD') AS phd,
+            COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC') AS dsc,
+            COUNT(DISTINCT NULLIF(TRIM(muassasa), '')) AS muassasalar,
+            COUNT(DISTINCT NULLIF(TRIM(olim), '')) AS olim
+        FROM dissertations
+    '''
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            row = cur.fetchone()
+            return jsonify({
+                "total": row[0] or 0,
+                "phd": row[1] or 0,
+                "dsc": row[2] or 0,
+                "muassasalar": row[3] or 0,
+                "olim": row[4] or 0
+            })
+    finally:
+        conn.close()
 
 
 @analytics_bp.route('/analytics-data')

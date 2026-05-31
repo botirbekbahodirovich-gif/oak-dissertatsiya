@@ -31,7 +31,7 @@ def get_database_url():
 def get_connection():
     if not psycopg2:
         raise RuntimeError('psycopg2 is required for PostgreSQL support.')
-    return psycopg2.connect(get_database_url(), cursor_factory=psycopg2_extras.RealDictCursor)
+    return psycopg2.connect(get_database_url())
 
 
 def normalize_row(row):
@@ -53,8 +53,8 @@ def normalize_row(row):
 def _query_rows(sql, params=None):
     conn = get_connection()
     try:
-        with conn.cursor() as cur:
-            cur.execute(sql, params or ())
+        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute(sql, tuple(params or ()))
             return [normalize_row(row) for row in cur.fetchall()]
     finally:
         conn.close()
@@ -64,7 +64,7 @@ def _query_scalar(sql, params=None):
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, params or ())
+            cur.execute(sql, tuple(params or ()))
             value = cur.fetchone()
             return value[0] if value else None
     finally:
@@ -72,6 +72,10 @@ def _query_scalar(sql, params=None):
 
 
 def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
+    search = (search or '').strip()
+    daraja = (daraja or '').strip()
+    muassasa = (muassasa or '').strip()
+    ixtisoslik = (ixtisoslik or '').strip()
     clauses = []
     params = []
     if search:
@@ -129,9 +133,17 @@ def count_dissertations(search, daraja, muassasa, ixtisoslik):
 def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir, page=None, per_page=None):
     clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
     sort_col = _map_sort_column(sort_by)
-    sort_dir = 'desc' if str(sort_dir).lower() == 'desc' else 'asc'
+    sort_dir = 'desc' if str(sort_dir or '').lower() == 'desc' else 'asc'
     pagination_clause = ''
     if page is not None and per_page is not None:
+        try:
+            page = max(1, int(page))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            per_page = max(1, int(per_page))
+        except (TypeError, ValueError):
+            per_page = 50
         pagination_clause = ' LIMIT %s OFFSET %s'
         params = params + [per_page, (page - 1) * per_page]
     sql = (
