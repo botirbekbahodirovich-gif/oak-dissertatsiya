@@ -190,7 +190,7 @@ def dissertation(id):
 @login_required
 def author(name):
     df = load_data()
-    rows = _prepare_rows(df[df['Olim'] == name])
+    rows = df[df['Olim'] == name].to_dict(orient="records")
     if not rows:
         abort(404)
     return render_template('author.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -200,7 +200,7 @@ def author(name):
 @login_required
 def supervisor(name):
     df = load_data()
-    rows = _prepare_rows(df[df['Ilmiy_rahbar'] == name])
+    rows = df[df['Ilmiy_rahbar'] == name].to_dict(orient="records")
     if not rows:
         abort(404)
     return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -210,7 +210,7 @@ def supervisor(name):
 @login_required
 def university(name):
     df = load_data()
-    rows = _prepare_rows(df[df['Muassasa'] == name])
+    rows = df[df['Muassasa'] == name].to_dict(orient="records")
     if not rows:
         abort(404)
     return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -220,7 +220,7 @@ def university(name):
 @login_required
 def specialization(code):
     df = load_data()
-    rows = _prepare_rows(df[df['Ixtisoslik'] == code])
+    rows = df[df['Ixtisoslik'] == code].to_dict(orient="records")
     if not rows:
         abort(404)
     return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))

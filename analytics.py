@@ -51,13 +51,13 @@ def analytics_data():
         .rename(columns={"Ixtisoslik": "ixtisoslik"}).to_dict(orient="records")
     )
 
-        top_supervisors = (
+    top_supervisors = (
         df[df["Ilmiy_rahbar"] != ""].groupby("Ilmiy_rahbar").size()
         .nlargest(10).reset_index(name="count")
         .rename(columns={"Ilmiy_rahbar": "supervisor"}).to_dict(orient="records")
     )
 
-top15_unis = (
+    top15_unis = (
         df[df["Muassasa"] != ""].groupby("Muassasa").size()
         .nlargest(15).index.tolist()
     )
