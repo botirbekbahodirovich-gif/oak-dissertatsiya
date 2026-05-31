@@ -1,7 +1,15 @@
 import io
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import pandas as pd
 import openpyxl
+try:
+    import psycopg2
+    import psycopg2.extras as psycopg2_extras
+except Exception:
+    psycopg2 = None
+    psycopg2_extras = None
 
 BASE_DIR = os.path.dirname(__file__)
 CSV_PATH = os.path.join(BASE_DIR, "data", "dissertatsiyalar.csv")
@@ -19,8 +27,33 @@ REQUIRED_COLUMNS = {
 
 
 def load_data():
-    """Load CSV into a cached DataFrame and reload only when the file changes."""
+    """Load data into a cached DataFrame. If DATABASE_URL is set, load from
+    PostgreSQL `dissertations` table using psycopg2; otherwise fall back to CSV.
+    """
     global _csv_cache_df, _csv_cache_mtime
+
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL and psycopg2:
+        try:
+            conn = psycopg2.connect(DATABASE_URL)
+            sql = (
+                'SELECT sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+                'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+                'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+                'FROM dissertations'
+            )
+            df = pd.read_sql_query(sql, conn)
+            conn.close()
+            for col in df.columns:
+                df[col] = df[col].astype(str).fillna("").str.strip()
+            _csv_cache_df = df
+            _csv_cache_mtime = None
+            return _csv_cache_df
+        except Exception:
+            # if DB read fails, fall back to CSV
+            pass
+
+    # CSV fallback: reload only when file changes
     try:
         mtime = os.path.getmtime(CSV_PATH)
     except FileNotFoundError:
@@ -190,7 +223,7 @@ def dissertation(id):
 @login_required
 def author(name):
     df = load_data()
-    rows = df[df['Olim'] == name].to_dict(orient="records")
+    rows = _prepare_rows(df[df['Olim'] == name])
     if not rows:
         abort(404)
     return render_template('author.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -200,7 +233,7 @@ def author(name):
 @login_required
 def supervisor(name):
     df = load_data()
-    rows = df[df['Ilmiy_rahbar'] == name].to_dict(orient="records")
+    rows = _prepare_rows(df[df['Ilmiy_rahbar'] == name])
     if not rows:
         abort(404)
     return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -210,7 +243,7 @@ def supervisor(name):
 @login_required
 def university(name):
     df = load_data()
-    rows = df[df['Muassasa'] == name].to_dict(orient="records")
+    rows = _prepare_rows(df[df['Muassasa'] == name])
     if not rows:
         abort(404)
     return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -220,7 +253,7 @@ def university(name):
 @login_required
 def specialization(code):
     df = load_data()
-    rows = df[df['Ixtisoslik'] == code].to_dict(orient="records")
+    rows = _prepare_rows(df[df['Ixtisoslik'] == code])
     if not rows:
         abort(404)
     return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))
