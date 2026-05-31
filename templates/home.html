@@ -180,17 +180,16 @@
       <span class="hero-badge"><i class="bi bi-lightning-fill"></i> Akademik ma'lumotlar uchun</span>
       <h1>IlmNet</h1>
       <p>CIS Academic Intelligence Platform — dissertatsiyalar, olimlar, muassasalar va tahlillar uchun yagona interfeys.</p>
-      <form id="hero-search-form" class="hero-form" action="/login" method="get" novalidate>
-        <input type="hidden" id="hero-next" name="next" value="/dashboard" />
+      <form id="hero-search-form" class="hero-form" action="/dashboard" method="get" novalidate>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-search"></i></span>
           <input id="hero-search" name="search" type="text" class="form-control" placeholder="Dissertatsiya, olim, mavzu yoki muassasa qidiring..." aria-label="Qidiruv" />
           <button type="submit" class="btn btn-primary">Qidirish</button>
         </div>
         <div class="hero-actions">
-          <a href="/login?next=/dashboard?daraja=PHD" class="btn btn-action">PhD himoyalar</a>
-          <a href="/login?next=/dashboard?daraja=DSC" class="btn btn-action">DSc himoyalar</a>
-          <a href="/login?next=/dashboard" class="btn btn-action">Barcha ma'lumotlar</a>
+          <a href="/dashboard?daraja=PHD" class="btn btn-action">PhD himoyalar</a>
+          <a href="/dashboard?daraja=DSC" class="btn btn-action">DSc himoyalar</a>
+          <a href="/dashboard" class="btn btn-action">Barcha ma'lumotlar</a>
         </div>
       </form>
     </div>
@@ -320,15 +319,6 @@
         stats.olmlar.textContent = '-';
       });
   }
-
-  document.getElementById('hero-search-form')?.addEventListener('submit', function(event) {
-    const searchInput = document.getElementById('hero-search');
-    const nextInput = document.getElementById('hero-next');
-    if (searchInput && nextInput) {
-      const query = searchInput.value.trim();
-      nextInput.value = '/dashboard' + (query ? '?search=' + encodeURIComponent(query) : '');
-    }
-  });
 
   loadStats();
 })();
