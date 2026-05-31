@@ -15,6 +15,7 @@
       <div class="alert-inline error"><i class="bi bi-exclamation-triangle-fill"></i>&nbsp;{{ error }}</div>
     {% endif %}
     <form method="POST" action="/login" autocomplete="on" novalidate>
+      {{ csrf_token()|safe }}
       <div class="mb-3">
         <label class="form-label" for="username">Foydalanuvchi nomi</label>
         <div class="input-group">

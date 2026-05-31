@@ -100,14 +100,46 @@ def _map_sort_column(sort_by):
 
 
 def load_data():
-    sql = (
-        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
-        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
-        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-        'FROM dissertations ORDER BY id'
-    )
-    return _query_rows(sql)
+    # Prefer database when available, but fall back to CSV file for simpler local setups.
+    try:
+        # Attempt to query the database if psycopg2 is present and DATABASE_URL set
+        database_url = os.environ.get('DATABASE_URL')
+        if psycopg2 and database_url:
+            sql = (
+                'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+                'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+                'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+                'FROM dissertations ORDER BY id'
+            )
+            return _query_rows(sql)
+    except Exception:
+        # fall through to CSV fallback
+        pass
 
+    # Fallback: load from the packaged CSV file `data/dissertatsiyalar.csv`.
+    csv_path = os.path.join(os.path.dirname(__file__), 'data', 'dissertatsiyalar.csv')
+    if not os.path.exists(csv_path):
+        return []
+    rows = []
+    try:
+        with open(csv_path, newline='', encoding='utf-8') as fh:
+            reader = csv.DictReader(fh)
+            for idx, r in enumerate(reader, start=1):
+                row = {
+                    'id': r.get('id') or idx,
+                    'Sana': r.get('Sana') or r.get('sana') or '',
+                    'Daraja': r.get('Daraja') or r.get('daraja') or '',
+                    'Olim': r.get('Olim') or r.get('olim') or '',
+                    'Mavzu': r.get('Mavzu') or r.get('mavzu') or '',
+                    'Ixtisoslik': r.get('Ixtisoslik') or r.get('ixtisoslik') or '',
+                    'Muassasa': r.get('Muassasa') or r.get('muassasa') or '',
+                    'Ilmiy_rahbar': r.get('Ilmiy_rahbar') or r.get('ilmiy_rahbar') or '',
+                    'Link': r.get('Link') or r.get('link') or ''
+                }
+                rows.append(normalize_row(row))
+    except Exception:
+        return []
+    return rows
 
 def apply_filters(rows, search, daraja, muassasa, ixtisoslik):
     if search:
