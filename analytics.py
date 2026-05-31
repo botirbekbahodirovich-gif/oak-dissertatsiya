@@ -1,76 +1,98 @@
 from flask import Blueprint, jsonify
 from flask_login import login_required
+from collections import Counter, defaultdict
+from datetime import datetime
 from data import load_data
-import pandas as pd
 
 analytics_bp = Blueprint('analytics', __name__)
 
 
+def _normalize_text(value):
+    return str(value or "").strip()
+
+
+def _parse_month(date_text):
+    if not date_text:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d.%m.%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(date_text, fmt).strftime("%Y-%m")
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(date_text).strftime("%Y-%m")
+    except Exception:
+        return None
+
+
 @analytics_bp.route('/stats-json')
 def stats_json():
-    df = load_data()
+    rows = load_data()
+    daraja_values = [_normalize_text(row.get("Daraja")).upper() for row in rows if row.get("Daraja")]
     return jsonify({
-        "total":      len(df),
-        "phd":        len(df[df["Daraja"].str.upper() == "PHD"]),
-        "dsc":        len(df[df["Daraja"].str.upper() == "DSC"]),
-        "muassasalar": df["Muassasa"].nunique(),
-        "olim":       df["Olim"].nunique()
+        "total": len(rows),
+        "phd": sum(1 for value in daraja_values if value == "PHD"),
+        "dsc": sum(1 for value in daraja_values if value == "DSC"),
+        "muassasalar": len({_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa")} ),
+        "olim": len({_normalize_text(row.get("Olim")) for row in rows if row.get("Olim")} )
     })
 
 
 @analytics_bp.route('/analytics-data')
 @login_required
 def analytics_data():
-    df = load_data()
+    rows = load_data()
+    muassasa_counter = Counter(_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa"))
+    daraja_counter = Counter(_normalize_text(row.get("Daraja")) for row in rows if row.get("Daraja"))
+    top_muassasalar = [
+        {"muassasa": name, "count": count}
+        for name, count in muassasa_counter.most_common(20)
+    ]
+    daraja_counts = [
+        {"daraja": name, "count": count}
+        for name, count in daraja_counter.most_common()
+    ]
 
-    top_muassasalar = (
-        df[df["Muassasa"] != ""].groupby("Muassasa").size()
-        .nlargest(20).reset_index(name="count")
-        .rename(columns={"Muassasa": "muassasa"}).to_dict(orient="records")
-    )
+    trend_counter = Counter()
+    for row in rows:
+        month = _parse_month(_normalize_text(row.get("Sana")))
+        if month:
+            trend_counter[month] += 1
+    trend_data = [
+        {"period": period, "count": trend_counter[period]}
+        for period in sorted(trend_counter)
+    ]
 
-    daraja_counts = (
-        df[df["Daraja"] != ""].groupby("Daraja").size()
-        .reset_index(name="count")
-        .rename(columns={"Daraja": "daraja"}).to_dict(orient="records")
-    )
+    ixtisoslik_counter = Counter(_normalize_text(row.get("Ixtisoslik")) for row in rows if row.get("Ixtisoslik"))
+    top_ixtisosliklar = [
+        {"ixtisoslik": name, "count": count}
+        for name, count in ixtisoslik_counter.most_common(15)
+    ]
 
-    trend_data = []
-    sana_series = pd.to_datetime(df["Sana"], errors="coerce").dropna()
-    if len(sana_series):
-        tmp = pd.DataFrame({"date": sana_series})
-        tmp["period"] = tmp["date"].dt.to_period("M").astype(str)
-        trend_data = (tmp.groupby("period").size()
-                      .reset_index(name="count")
-                      .sort_values("period")
-                      .to_dict(orient="records"))
+    top15_unis = [name for name, _ in muassasa_counter.most_common(15)]
+    heatmap_counts = defaultdict(lambda: defaultdict(int))
+    heatmap_darajalar = []
+    for row in rows:
+        muassasa = _normalize_text(row.get("Muassasa"))
+        daraja = _normalize_text(row.get("Daraja"))
+        if muassasa in top15_unis and daraja:
+            heatmap_counts[muassasa][daraja] += 1
+            if daraja not in heatmap_darajalar:
+                heatmap_darajalar.append(daraja)
 
-    top_ixtisosliklar = (
-        df[df["Ixtisoslik"] != ""].groupby("Ixtisoslik").size()
-        .nlargest(15).reset_index(name="count")
-        .rename(columns={"Ixtisoslik": "ixtisoslik"}).to_dict(orient="records")
-    )
-
-    top15_unis = (
-        df[df["Muassasa"] != ""].groupby("Muassasa").size()
-        .nlargest(15).index.tolist()
-    )
-    hm_df = df[df["Muassasa"].isin(top15_unis) & (df["Daraja"] != "")]
-    if len(hm_df):
-        pivot = pd.crosstab(hm_df["Muassasa"], hm_df["Daraja"])
-        pivot = pivot.reindex(top15_unis).fillna(0).astype(int)
-        heatmap = {
-            "muassasalar": pivot.index.tolist(),
-            "darajalar":   pivot.columns.tolist(),
-            "data":        pivot.values.tolist()
-        }
-    else:
-        heatmap = {"muassasalar": [], "darajalar": [], "data": []}
+    heatmap = {
+        "muassasalar": top15_unis,
+        "darajalar": heatmap_darajalar,
+        "data": [
+            [heatmap_counts[muassasa].get(daraja, 0) for daraja in heatmap_darajalar]
+            for muassasa in top15_unis
+        ]
+    }
 
     return jsonify({
-        "top_muassasalar":  top_muassasalar,
-        "daraja_ratio":     daraja_counts,
-        "trend":            trend_data,
+        "top_muassasalar": top_muassasalar,
+        "daraja_ratio": daraja_counts,
+        "trend": trend_data,
         "top_ixtisosliklar": top_ixtisosliklar,
-        "heatmap":          heatmap
+        "heatmap": heatmap
     })

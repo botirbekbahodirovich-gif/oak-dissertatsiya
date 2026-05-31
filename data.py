@@ -1,9 +1,11 @@
-import io
 import os
+import csv
+import io
 from dotenv import load_dotenv
 load_dotenv()
-import pandas as pd
 import openpyxl
+from flask import Blueprint, jsonify, request, send_file, render_template, abort
+from flask_login import login_required
 try:
     import psycopg2
     import psycopg2.extras as psycopg2_extras
@@ -11,99 +13,133 @@ except Exception:
     psycopg2 = None
     psycopg2_extras = None
 
-BASE_DIR = os.path.dirname(__file__)
-CSV_PATH = os.path.join(BASE_DIR, "data", "dissertatsiyalar.csv")
-
-SORTABLE_COLUMNS = {"Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "id"}
-
-# Simple in-memory cache for CSV data
-_csv_cache_df = None
-_csv_cache_mtime = None
-
 REQUIRED_COLUMNS = {
     "Sana", "Daraja", "Olim", "Mavzu",
     "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"
 }
 
+SORTABLE_COLUMNS = {"Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "id"}
+
+
+def get_database_url():
+    url = os.environ.get('DATABASE_URL')
+    if not url:
+        raise RuntimeError('DATABASE_URL is not configured.')
+    return url
+
+
+def get_connection():
+    if not psycopg2:
+        raise RuntimeError('psycopg2 is required for PostgreSQL support.')
+    return psycopg2.connect(get_database_url(), cursor_factory=psycopg2_extras.RealDictCursor)
+
+
+def normalize_row(row):
+    if row is None:
+        return None
+    return {
+        "id": row.get("id"),
+        "Sana": str(row.get("Sana") or "").strip(),
+        "Daraja": str(row.get("Daraja") or "").strip(),
+        "Olim": str(row.get("Olim") or "").strip(),
+        "Mavzu": str(row.get("Mavzu") or "").strip(),
+        "Ixtisoslik": str(row.get("Ixtisoslik") or "").strip(),
+        "Muassasa": str(row.get("Muassasa") or "").strip(),
+        "Ilmiy_rahbar": str(row.get("Ilmiy_rahbar") or "").strip(),
+        "Link": str(row.get("Link") or "").strip(),
+    }
+
+
+def _query_rows(sql, params=None):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params or ())
+            return [normalize_row(row) for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
+    clauses = []
+    params = []
+    if search:
+        text = f"%{search}%"
+        columns = [
+            "sana", "daraja", "olim", "mavzu",
+            "ixtisoslik", "muassasa", "ilmiy_rahbar", "link"
+        ]
+        clauses.append("(" + " OR ".join(f"{col} ILIKE %s" for col in columns) + ")")
+        params.extend([text] * len(columns))
+    if daraja:
+        clauses.append("daraja ILIKE %s")
+        params.append(daraja)
+    if muassasa:
+        clauses.append("muassasa ILIKE %s")
+        params.append(muassasa)
+    if ixtisoslik:
+        clauses.append("ixtisoslik ILIKE %s")
+        params.append(ixtisoslik)
+    clause = " WHERE " + " AND ".join(clauses) if clauses else ""
+    return clause, params
+
+
+def _map_sort_column(sort_by):
+    mapping = {
+        "Sana": "sana",
+        "Daraja": "daraja",
+        "Olim": "olim",
+        "Mavzu": "mavzu",
+        "Ixtisoslik": "ixtisoslik",
+        "Muassasa": "muassasa",
+        "Ilmiy_rahbar": "ilmiy_rahbar",
+        "Link": "link",
+        "id": "id"
+    }
+    return mapping.get(sort_by, "id")
+
 
 def load_data():
-    """Load data into a cached DataFrame. If DATABASE_URL is set, load from
-    PostgreSQL `dissertations` table using psycopg2; otherwise fall back to CSV.
-    """
-    global _csv_cache_df, _csv_cache_mtime
-
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    if DATABASE_URL and psycopg2:
-        try:
-            conn = psycopg2.connect(DATABASE_URL)
-            sql = (
-                'SELECT sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
-                'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
-                'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-                'FROM dissertations'
-            )
-            df = pd.read_sql_query(sql, conn)
-            conn.close()
-            for col in df.columns:
-                df[col] = df[col].astype(str).fillna("").str.strip()
-            _csv_cache_df = df
-            _csv_cache_mtime = None
-            return _csv_cache_df
-        except Exception:
-            # if DB read fails, fall back to CSV
-            pass
-
-    # CSV fallback: reload only when file changes
-    try:
-        mtime = os.path.getmtime(CSV_PATH)
-    except FileNotFoundError:
-        # If file doesn't exist, clear cache and return empty df
-        _csv_cache_df = pd.DataFrame(columns=[
-            "Sana", "Daraja", "Olim", "Mavzu",
-            "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"
-        ])
-        _csv_cache_mtime = None
-        return _csv_cache_df
-
-    # Reload if cache is empty or file modified since last load
-    if _csv_cache_df is None or _csv_cache_mtime != mtime:
-        df = pd.read_csv(CSV_PATH, dtype=str).fillna("")
-        for col in df.columns:
-            df[col] = df[col].astype(str).str.strip()
-        _csv_cache_df = df
-        _csv_cache_mtime = mtime
-
-    return _csv_cache_df
+    sql = (
+        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+        'FROM dissertations ORDER BY id'
+    )
+    return _query_rows(sql)
 
 
-def apply_filters(df, search, daraja, muassasa, ixtisoslik):
+def apply_filters(rows, search, daraja, muassasa, ixtisoslik):
     if search:
         lo = search.lower()
-        df = df[df.apply(lambda r: r.astype(str).str.lower().str.contains(lo).any(), axis=1)]
+        rows = [
+            row for row in rows
+            if any(lo in str(row.get(col, "")).lower() for col in [
+                "Sana", "Daraja", "Olim", "Mavzu",
+                "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"
+            ])
+        ]
     if daraja:
-        df = df[df["Daraja"].str.upper() == daraja.upper()]
+        rows = [row for row in rows if str(row.get("Daraja", "")).lower() == daraja.lower()]
     if muassasa:
-        df = df[df["Muassasa"] == muassasa]
+        rows = [row for row in rows if str(row.get("Muassasa", "")).lower() == muassasa.lower()]
     if ixtisoslik:
-        df = df[df["Ixtisoslik"] == ixtisoslik]
-    return df
+        rows = [row for row in rows if str(row.get("Ixtisoslik", "")).lower() == ixtisoslik.lower()]
+    return rows
 
 
-def apply_sort(df, sort_by, sort_dir):
+def apply_sort(rows, sort_by, sort_dir):
     if not sort_by or sort_by not in SORTABLE_COLUMNS:
-        return df
-    asc = (sort_dir or "asc").lower() != "desc"
+        return rows
+    reverse = (sort_dir or "asc").lower() == "desc"
     if sort_by == "id":
-        return df.sort_values(by=sort_by, ascending=asc, kind="mergesort")
-
-    if df[sort_by].dtype == object:
-        return df.sort_values(by=sort_by, ascending=asc, kind="mergesort", key=lambda col: col.str.lower())
-    return df.sort_values(by=sort_by, ascending=asc, kind="mergesort")
+        return sorted(rows, key=lambda row: int(row.get("id") or 0), reverse=reverse)
+    return sorted(rows, key=lambda row: str(row.get(sort_by, "")).lower(), reverse=reverse)
 
 
-from flask import Blueprint, jsonify, request, send_file, render_template, abort
-from flask_login import login_required
-import io
+def _prepare_rows(rows):
+    return [row for row in rows]
+
 
 data_bp = Blueprint('data', __name__)
 
@@ -111,7 +147,7 @@ data_bp = Blueprint('data', __name__)
 @data_bp.route('/data')
 @login_required
 def data():
-    df = load_data()
+    rows = load_data()
     search = request.args.get("search", "").strip()
     daraja = request.args.get("daraja", "").strip()
     muassasa = request.args.get("muassasa", "").strip()
@@ -127,20 +163,18 @@ def data():
 
     sort_by = request.args.get("sort_by", "Sana")
     sort_dir = request.args.get("sort_dir", "asc")
-    df = apply_filters(df, search, daraja, muassasa, ixtisoslik)
-    df = df.reset_index(drop=False).rename(columns={"index": "id"})
-    df["id"] = df["id"] + 1
-    df = apply_sort(df, sort_by, sort_dir)
-    total = len(df)
+    rows = apply_filters(rows, search, daraja, muassasa, ixtisoslik)
+    rows = apply_sort(rows, sort_by, sort_dir)
+    total = len(rows)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     start, end = (page - 1) * per_page, page * per_page
 
     return jsonify({
-        "records":     df.iloc[start:end].to_dict(orient="records"),
-        "total":       total,
-        "page":        page,
-        "per_page":    per_page,
+        "records": rows[start:end],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
         "total_pages": total_pages
     })
 
@@ -148,58 +182,67 @@ def data():
 @data_bp.route('/filters')
 @login_required
 def filters():
-    df = load_data()
+    rows = load_data()
+    darajalar = sorted({row.get("Daraja", "") for row in rows if row.get("Daraja", "")})
+    muassasalar = sorted({row.get("Muassasa", "") for row in rows if row.get("Muassasa", "")})
+    ixtisosliklar = sorted({row.get("Ixtisoslik", "") for row in rows if row.get("Ixtisoslik", "")})
     return jsonify({
-        "darajalar":    [d for d in sorted(df["Daraja"].unique()) if d],
-        "muassasalar":  [m for m in sorted(df["Muassasa"].unique()) if m],
-        "ixtisosliklar":[i for i in sorted(df["Ixtisoslik"].unique()) if i]
+        "darajalar": darajalar,
+        "muassasalar": muassasalar,
+        "ixtisosliklar": ixtisosliklar
     })
 
 
 @data_bp.route('/export')
 @login_required
 def export():
-    df = load_data()
-    df = apply_filters(
-        df,
+    rows = load_data()
+    rows = apply_filters(
+        rows,
         request.args.get("search", "").strip(),
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
         request.args.get("ixtisoslik", "").strip()
     )
-    sort_by = request.args.get("sort_by", "Sana")
-    sort_dir = request.args.get("sort_dir", "asc")
-    df = df.reset_index(drop=False).rename(columns={"index": "id"})
-    df["id"] = df["id"] + 1
-    df = apply_sort(df, sort_by, sort_dir)
-    buf = io.BytesIO(df.to_csv(index=False).encode("utf-8-sig"))
-    buf.seek(0)
-    return send_file(buf, mimetype="text/csv", as_attachment=True,
+    rows = apply_sort(rows, request.args.get("sort_by", "Sana"), request.args.get("sort_dir", "asc"))
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
+    writer.writeheader()
+    writer.writerows(rows)
+    data = buf.getvalue().encode("utf-8-sig")
+    return send_file(io.BytesIO(data), mimetype="text/csv", as_attachment=True,
                      download_name="dissertatsiyalar_filtrlangan.csv")
 
 
 @data_bp.route('/export-xlsx')
 @login_required
 def export_xlsx():
-    df = load_data()
-    df = apply_filters(
-        df,
+    rows = load_data()
+    rows = apply_filters(
+        rows,
         request.args.get("search", "").strip(),
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
         request.args.get("ixtisoslik", "").strip()
     )
-    sort_by = request.args.get("sort_by", "Sana")
-    sort_dir = request.args.get("sort_dir", "asc")
-    df = df.reset_index(drop=False).rename(columns={"index": "id"})
-    df["id"] = df["id"] + 1
-    df = apply_sort(df, sort_by, sort_dir)
+    rows = apply_sort(rows, request.args.get("sort_by", "Sana"), request.args.get("sort_dir", "asc"))
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
+    for row in rows:
+        ws.append([
+            row.get("id"), row.get("Sana"), row.get("Daraja"), row.get("Olim"),
+            row.get("Mavzu"), row.get("Ixtisoslik"), row.get("Muassasa"),
+            row.get("Ilmiy_rahbar"), row.get("Link")
+        ])
     buf = io.BytesIO()
-    df.to_excel(buf, index=False, engine="openpyxl")
+    wb.save(buf)
     buf.seek(0)
     return send_file(buf, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                      as_attachment=True,
                      download_name="dissertatsiyalar_filtrlangan.xlsx")
+
+
 def _summary_stats(rows):
     return {
         'total': len(rows),
@@ -211,19 +254,17 @@ def _summary_stats(rows):
 @data_bp.route('/dissertation/<int:id>')
 @login_required
 def dissertation(id):
-    df = load_data()
-    if id < 1 or id > len(df):
+    rows = load_data()
+    row = next((item for item in rows if item.get('id') == id), None)
+    if not row:
         abort(404)
-    row = df.iloc[id - 1].to_dict()
-    # Provide row id for back links
     return render_template('dissertation.html', row=row, id=id)
 
 
 @data_bp.route('/author/<path:name>')
 @login_required
 def author(name):
-    df = load_data()
-    rows = _prepare_rows(df[df['Olim'] == name])
+    rows = [row for row in load_data() if row.get('Olim') == name]
     if not rows:
         abort(404)
     return render_template('author.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -232,8 +273,7 @@ def author(name):
 @data_bp.route('/supervisor/<path:name>')
 @login_required
 def supervisor(name):
-    df = load_data()
-    rows = _prepare_rows(df[df['Ilmiy_rahbar'] == name])
+    rows = [row for row in load_data() if row.get('Ilmiy_rahbar') == name]
     if not rows:
         abort(404)
     return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -242,8 +282,7 @@ def supervisor(name):
 @data_bp.route('/university/<path:name>')
 @login_required
 def university(name):
-    df = load_data()
-    rows = _prepare_rows(df[df['Muassasa'] == name])
+    rows = [row for row in load_data() if row.get('Muassasa') == name]
     if not rows:
         abort(404)
     return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -252,8 +291,7 @@ def university(name):
 @data_bp.route('/specialization/<path:code>')
 @login_required
 def specialization(code):
-    df = load_data()
-    rows = _prepare_rows(df[df['Ixtisoslik'] == code])
+    rows = [row for row in load_data() if row.get('Ixtisoslik') == code]
     if not rows:
         abort(404)
     return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))

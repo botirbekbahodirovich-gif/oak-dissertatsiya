@@ -1,9 +1,30 @@
+import os
 from flask import Blueprint, render_template, request, redirect, url_for
 from flask_login import current_user, login_user, logout_user, login_required
-import sqlite3
 import bcrypt
+from dotenv import load_dotenv
+load_dotenv()
+try:
+    import psycopg2
+    from psycopg2 import errors as psycopg2_errors
+except Exception:
+    psycopg2 = None
+    psycopg2_errors = None
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def get_database_url():
+    url = os.environ.get('DATABASE_URL')
+    if not url:
+        raise RuntimeError('DATABASE_URL is not configured.')
+    return url
+
+
+def get_connection():
+    if not psycopg2:
+        raise RuntimeError('psycopg2 is required for PostgreSQL support.')
+    return psycopg2.connect(get_database_url())
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -18,31 +39,21 @@ def login():
         if not username or not password:
             error = "Foydalanuvchi nomi va parol kiritilishi shart."
         else:
-            # lazy import to avoid circular import
-            from app import DB_PATH, User, is_safe_relative_url
-            # prefer PostgreSQL if DATABASE_URL present
-            from dotenv import load_dotenv
-            load_dotenv()
-            DATABASE_URL = os.environ.get('DATABASE_URL')
+            from app import User, is_safe_relative_url
             user_row = None
-            if DATABASE_URL:
-                try:
-                    import psycopg2
-                    conn = psycopg2.connect(DATABASE_URL)
-                    cur = conn.cursor()
-                    cur.execute("SELECT id, username, email, password_hash FROM users WHERE username = %s", (username,))
-                    user_row = cur.fetchone()
-                    cur.close()
-                    conn.close()
-                except Exception:
-                    user_row = None
-            if not user_row:
-                con = sqlite3.connect(DB_PATH)
-                user_row = con.execute(
-                    "SELECT id, username, email, password_hash FROM users WHERE username = ?",
+            try:
+                conn = get_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id, username, email, password_hash FROM users WHERE username = %s",
                     (username,)
-                ).fetchone()
-                con.close()
+                )
+                user_row = cur.fetchone()
+                cur.close()
+                conn.close()
+            except Exception:
+                user_row = None
+
             if user_row and bcrypt.checkpw(password.encode(), user_row[3].encode()):
                 login_user(User(user_row[0], user_row[1], user_row[2]), remember=True)
                 next_url = request.args.get('next')
@@ -60,9 +71,9 @@ def register():
     error = None
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
-        email    = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
-        confirm  = request.form.get('confirm', '')
+        confirm = request.form.get('confirm', '')
         if not username or not email or not password:
             error = "Barcha maydonlarni to'ldiring."
         elif len(username) < 3:
@@ -74,47 +85,24 @@ def register():
         else:
             pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             try:
-                from app import DB_PATH
-                # prefer PostgreSQL if available
-                from dotenv import load_dotenv
-                load_dotenv()
-                DATABASE_URL = os.environ.get('DATABASE_URL')
-                inserted = False
-                if DATABASE_URL:
-                    try:
-                        import psycopg2
-                        conn = psycopg2.connect(DATABASE_URL)
-                        cur = conn.cursor()
-                        cur.execute("INSERT INTO users (username, email, password_hash) VALUES (%s,%s,%s) RETURNING id", (username, email, pw_hash))
-                        uid = cur.fetchone()[0]
-                        conn.commit()
-                        cur.close()
-                        conn.close()
-                        inserted = True
-                    except psycopg2.IntegrityError as e:
-                        # translate unique constraint
-                        if 'username' in str(e):
-                            error = "Bu foydalanuvchi nomi band."
-                        else:
-                            error = "Bu email allaqachon ro'yxatdan o'tgan."
-                        inserted = False
-                    except Exception:
-                        inserted = False
-                if not inserted:
-                    con = sqlite3.connect(DB_PATH)
-                    try:
-                        con.execute(
-                            "INSERT INTO users (username, email, password_hash) VALUES (?,?,?)",
-                            (username, email, pw_hash)
-                        )
-                        con.commit()
-                        con.close()
-                        return redirect(url_for('login') + '?registered=1')
-                    except sqlite3.IntegrityError as e:
-                        error = ("Bu foydalanuvchi nomi band." if "username" in str(e)
-                                 else "Bu email allaqachon ro'yxatdan o'tgan.")
+                conn = get_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
+                    (username, email, pw_hash)
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+                return redirect(url_for('login') + '?registered=1')
+            except psycopg2.IntegrityError as e:
+                message = str(e).lower()
+                if 'username' in message:
+                    error = "Bu foydalanuvchi nomi band."
+                elif 'email' in message:
+                    error = "Bu email allaqachon ro'yxatdan o'tgan."
                 else:
-                    return redirect(url_for('login') + '?registered=1')
+                    error = "Ro'yxatdan o'tishda xatolik yuz berdi."
             except Exception:
                 error = "Ro'yxatdan o'tishda xatolik yuz berdi."
     return render_template('register.html', error=error)

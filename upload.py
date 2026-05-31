@@ -1,9 +1,35 @@
+import os
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 import pandas as pd
-from data import REQUIRED_COLUMNS, CSV_PATH, load_data
+from dotenv import load_dotenv
+load_dotenv()
+try:
+    import psycopg2
+    from psycopg2.extras import execute_values
+except Exception:
+    psycopg2 = None
+    execute_values = None
+
+REQUIRED_COLUMNS = {
+    "Sana", "Daraja", "Olim", "Mavzu",
+    "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"
+}
 
 upload_bp = Blueprint('upload', __name__)
+
+
+def get_database_url():
+    url = os.environ.get('DATABASE_URL')
+    if not url:
+        raise RuntimeError('DATABASE_URL is not configured.')
+    return url
+
+
+def get_connection():
+    if not psycopg2:
+        raise RuntimeError('psycopg2 is required for PostgreSQL support.')
+    return psycopg2.connect(get_database_url())
 
 
 @upload_bp.route('/upload', methods=['GET'])
@@ -32,35 +58,30 @@ def upload_csv():
             "success": False,
             "error": f"Ustunlar topilmadi: {', '.join(sorted(missing))}"
         }), 400
-    # Try writing into PostgreSQL if available, otherwise save CSV file
-    from dotenv import load_dotenv
-    load_dotenv()
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    written = 0
-    if DATABASE_URL:
-        try:
-            import psycopg2
-            from psycopg2.extras import execute_values
-            conn = psycopg2.connect(DATABASE_URL)
-            cur = conn.cursor()
-            vals = []
-            for _, row in df.iterrows():
-                vals.append((row.get('Sana',''), row.get('Daraja',''), row.get('Olim',''), row.get('Mavzu',''), row.get('Ixtisoslik',''), row.get('Muassasa',''), row.get('Ilmiy_rahbar',''), row.get('Link','')))
-            if vals:
-                execute_values(cur, "INSERT INTO dissertations (sana,daraja,olim,mavzu,ixtisoslik,muassasa,ilmiy_rahbar,link) VALUES %s", vals)
-                conn.commit()
-                written = len(vals)
-            cur.close()
-            conn.close()
-        except Exception:
-            written = 0
-    if written == 0:
-        # fallback to CSV file
-        df.to_csv(CSV_PATH, index=False, encoding='utf-8-sig')
-        written = len(df)
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        values = [(
+            row.get('Sana', ''), row.get('Daraja', ''), row.get('Olim', ''),
+            row.get('Mavzu', ''), row.get('Ixtisoslik', ''), row.get('Muassasa', ''),
+            row.get('Ilmiy_rahbar', ''), row.get('Link', '')
+        ) for _, row in df.iterrows()]
+        if values:
+            execute_values(
+                cur,
+                "INSERT INTO dissertations (sana, daraja, olim, mavzu, ixtisoslik, muassasa, ilmiy_rahbar, link) VALUES %s",
+                values
+            )
+            conn.commit()
+        inserted = len(values)
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Ma'lumotlar bazasiga yozishda xatolik: {e}"}), 500
 
     return jsonify({
         "success": True,
-        "rows": written,
-        "message": f"Muvaffaqiyatli yuklandi! {written} ta yozuv saqlandi."
+        "rows": inserted,
+        "message": f"Muvaffaqiyatli yuklandi! {inserted} ta yozuv saqlandi."
     })
