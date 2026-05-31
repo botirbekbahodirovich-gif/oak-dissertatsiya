@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_login import login_required
 from collections import Counter, defaultdict
 from datetime import datetime
-from data import load_data
+from data import query_dissertations
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -27,7 +27,7 @@ def _parse_month(date_text):
 
 @analytics_bp.route('/stats-json')
 def stats_json():
-    rows = load_data()
+    rows = query_dissertations("", "", "", "", "id", "asc")
     daraja_values = [_normalize_text(row.get("Daraja")).upper() for row in rows if row.get("Daraja")]
     return jsonify({
         "total": len(rows),
@@ -41,7 +41,7 @@ def stats_json():
 @analytics_bp.route('/analytics-data')
 @login_required
 def analytics_data():
-    rows = load_data()
+    rows = query_dissertations("", "", "", "", "id", "asc")
     muassasa_counter = Counter(_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa"))
     daraja_counter = Counter(_normalize_text(row.get("Daraja")) for row in rows if row.get("Daraja"))
     top_muassasalar = [

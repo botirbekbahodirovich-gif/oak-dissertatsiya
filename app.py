@@ -49,8 +49,6 @@ def load_user(user_id):
     load_dotenv()
     database_url = os.environ.get('DATABASE_URL')
     if not database_url:
-        if str(user_id) == '1':
-            return User(1, 'admin', 'admin@example.com')
         return None
     try:
         import psycopg2
@@ -60,18 +58,12 @@ def load_user(user_id):
         row = cur.fetchone()
         cur.close()
         conn.close()
-        if row:
-            return User(*row)
-        if str(user_id) == '1':
-            return User(1, 'admin', 'admin@example.com')
-        return None
+        return User(*row) if row else None
     except Exception:
-        if str(user_id) == '1':
-            return User(1, 'admin', 'admin@example.com')
         return None
 
 from auth import auth_bp
-from data import data_bp, load_data
+from data import data_bp, query_dissertations
 from analytics import analytics_bp
 from upload import upload_bp
 
@@ -85,20 +77,15 @@ app.register_blueprint(upload_bp)
 def home():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
-    rows = load_data()
+    rows = query_dissertations("", "", "", "", "Sana", "desc", page=1, per_page=5)
     recent = []
     if rows:
-        recent = sorted(
-            rows,
-            key=lambda row: row.get("Sana", ""),
-            reverse=True
-        )[:5]
         recent = [{
             "Olim": row.get("Olim", ""),
             "Mavzu": row.get("Mavzu", ""),
             "Daraja": row.get("Daraja", ""),
             "Sana": row.get("Sana", "")
-        } for row in recent]
+        } for row in rows]
     return render_template("home.html", recent=recent)
 
 

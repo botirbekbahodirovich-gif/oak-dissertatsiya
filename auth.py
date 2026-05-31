@@ -38,13 +38,6 @@ def login():
         password = request.form.get('password', '')
         if not username or not password:
             error = "Foydalanuvchi nomi va parol kiritilishi shart."
-        elif username == 'admin' and password == 'admin':
-            from app import User, is_safe_relative_url
-            login_user(User(1, 'admin', 'admin@example.com'), remember=True)
-            next_url = request.args.get('next')
-            if next_url and is_safe_relative_url(next_url):
-                return redirect(next_url)
-            return redirect(url_for('index'))
         else:
             from app import User, is_safe_relative_url
             user_row = None

@@ -60,6 +60,17 @@ def _query_rows(sql, params=None):
         conn.close()
 
 
+def _query_scalar(sql, params=None):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params or ())
+            value = cur.fetchone()
+            return value[0] if value else None
+    finally:
+        conn.close()
+
+
 def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
     clauses = []
     params = []
@@ -100,46 +111,81 @@ def _map_sort_column(sort_by):
 
 
 def load_data():
-    # Prefer database when available, but fall back to CSV file for simpler local setups.
-    try:
-        # Attempt to query the database if psycopg2 is present and DATABASE_URL set
-        database_url = os.environ.get('DATABASE_URL')
-        if psycopg2 and database_url:
-            sql = (
-                'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
-                'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
-                'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-                'FROM dissertations ORDER BY id'
-            )
-            return _query_rows(sql)
-    except Exception:
-        # fall through to CSV fallback
-        pass
+    sql = (
+        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+        'FROM dissertations ORDER BY id'
+    )
+    return _query_rows(sql)
 
-    # Fallback: load from the packaged CSV file `data/dissertatsiyalar.csv`.
-    csv_path = os.path.join(os.path.dirname(__file__), 'data', 'dissertatsiyalar.csv')
-    if not os.path.exists(csv_path):
+
+def count_dissertations(search, daraja, muassasa, ixtisoslik):
+    clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
+    sql = 'SELECT COUNT(*) FROM dissertations' + clause
+    return _query_scalar(sql, params) or 0
+
+
+def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir, page=None, per_page=None):
+    clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
+    sort_col = _map_sort_column(sort_by)
+    sort_dir = 'desc' if str(sort_dir).lower() == 'desc' else 'asc'
+    pagination_clause = ''
+    if page is not None and per_page is not None:
+        pagination_clause = ' LIMIT %s OFFSET %s'
+        params = params + [per_page, (page - 1) * per_page]
+    sql = (
+        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+        f'FROM dissertations{clause} ORDER BY {sort_col} {sort_dir}' + pagination_clause
+    )
+    return _query_rows(sql, params)
+
+
+def _distinct_values(column):
+    valid_columns = {"daraja", "muassasa", "ixtisoslik"}
+    if column not in valid_columns:
         return []
-    rows = []
+    sql = f'SELECT DISTINCT {column} FROM dissertations WHERE {column} IS NOT NULL AND TRIM({column}) <> "" ORDER BY {column}'
+    conn = get_connection()
     try:
-        with open(csv_path, newline='', encoding='utf-8') as fh:
-            reader = csv.DictReader(fh)
-            for idx, r in enumerate(reader, start=1):
-                row = {
-                    'id': r.get('id') or idx,
-                    'Sana': r.get('Sana') or r.get('sana') or '',
-                    'Daraja': r.get('Daraja') or r.get('daraja') or '',
-                    'Olim': r.get('Olim') or r.get('olim') or '',
-                    'Mavzu': r.get('Mavzu') or r.get('mavzu') or '',
-                    'Ixtisoslik': r.get('Ixtisoslik') or r.get('ixtisoslik') or '',
-                    'Muassasa': r.get('Muassasa') or r.get('muassasa') or '',
-                    'Ilmiy_rahbar': r.get('Ilmiy_rahbar') or r.get('ilmiy_rahbar') or '',
-                    'Link': r.get('Link') or r.get('link') or ''
-                }
-                rows.append(normalize_row(row))
-    except Exception:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            return [row[0] for row in cur.fetchall() if row[0] is not None]
+    finally:
+        conn.close()
+
+
+def get_dissertation_by_id(dissertation_id):
+    sql = (
+        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+        'FROM dissertations WHERE id = %s'
+    )
+    rows = _query_rows(sql, (dissertation_id,))
+    return rows[0] if rows else None
+
+
+def get_dissertations_by_field(field_name, field_value):
+    valid_columns = {
+        "Olim": "olim",
+        "Ilmiy_rahbar": "ilmiy_rahbar",
+        "Muassasa": "muassasa",
+        "Ixtisoslik": "ixtisoslik"
+    }
+    column = valid_columns.get(field_name)
+    if not column:
         return []
-    return rows
+    sql = (
+        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
+        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
+        f'FROM dissertations WHERE {column} = %s ORDER BY id'
+    )
+    return _query_rows(sql, (field_value,))
+
 
 def apply_filters(rows, search, daraja, muassasa, ixtisoslik):
     if search:
@@ -179,7 +225,6 @@ data_bp = Blueprint('data', __name__)
 @data_bp.route('/data')
 @login_required
 def data():
-    rows = load_data()
     search = request.args.get("search", "").strip()
     daraja = request.args.get("daraja", "").strip()
     muassasa = request.args.get("muassasa", "").strip()
@@ -195,15 +240,17 @@ def data():
 
     sort_by = request.args.get("sort_by", "Sana")
     sort_dir = request.args.get("sort_dir", "asc")
-    rows = apply_filters(rows, search, daraja, muassasa, ixtisoslik)
-    rows = apply_sort(rows, sort_by, sort_dir)
-    total = len(rows)
+    total = count_dissertations(search, daraja, muassasa, ixtisoslik)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
-    start, end = (page - 1) * per_page, page * per_page
+    rows = query_dissertations(
+        search, daraja, muassasa, ixtisoslik,
+        sort_by, sort_dir,
+        page, per_page
+    )
 
     return jsonify({
-        "records": rows[start:end],
+        "records": rows,
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -214,10 +261,9 @@ def data():
 @data_bp.route('/filters')
 @login_required
 def filters():
-    rows = load_data()
-    darajalar = sorted({row.get("Daraja", "") for row in rows if row.get("Daraja", "")})
-    muassasalar = sorted({row.get("Muassasa", "") for row in rows if row.get("Muassasa", "")})
-    ixtisosliklar = sorted({row.get("Ixtisoslik", "") for row in rows if row.get("Ixtisoslik", "")})
+    darajalar = _distinct_values("daraja")
+    muassasalar = _distinct_values("muassasa")
+    ixtisosliklar = _distinct_values("ixtisoslik")
     return jsonify({
         "darajalar": darajalar,
         "muassasalar": muassasalar,
@@ -228,15 +274,14 @@ def filters():
 @data_bp.route('/export')
 @login_required
 def export():
-    rows = load_data()
-    rows = apply_filters(
-        rows,
+    rows = query_dissertations(
         request.args.get("search", "").strip(),
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
-        request.args.get("ixtisoslik", "").strip()
+        request.args.get("ixtisoslik", "").strip(),
+        request.args.get("sort_by", "Sana"),
+        request.args.get("sort_dir", "asc")
     )
-    rows = apply_sort(rows, request.args.get("sort_by", "Sana"), request.args.get("sort_dir", "asc"))
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
     writer.writeheader()
@@ -249,15 +294,14 @@ def export():
 @data_bp.route('/export-xlsx')
 @login_required
 def export_xlsx():
-    rows = load_data()
-    rows = apply_filters(
-        rows,
+    rows = query_dissertations(
         request.args.get("search", "").strip(),
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
-        request.args.get("ixtisoslik", "").strip()
+        request.args.get("ixtisoslik", "").strip(),
+        request.args.get("sort_by", "Sana"),
+        request.args.get("sort_dir", "asc")
     )
-    rows = apply_sort(rows, request.args.get("sort_by", "Sana"), request.args.get("sort_dir", "asc"))
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.append(["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
@@ -286,8 +330,7 @@ def _summary_stats(rows):
 @data_bp.route('/dissertation/<int:id>')
 @login_required
 def dissertation(id):
-    rows = load_data()
-    row = next((item for item in rows if item.get('id') == id), None)
+    row = get_dissertation_by_id(id)
     if not row:
         abort(404)
     return render_template('dissertation.html', row=row, id=id)
@@ -296,7 +339,7 @@ def dissertation(id):
 @data_bp.route('/author/<path:name>')
 @login_required
 def author(name):
-    rows = [row for row in load_data() if row.get('Olim') == name]
+    rows = get_dissertations_by_field('Olim', name)
     if not rows:
         abort(404)
     return render_template('author.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -305,7 +348,7 @@ def author(name):
 @data_bp.route('/supervisor/<path:name>')
 @login_required
 def supervisor(name):
-    rows = [row for row in load_data() if row.get('Ilmiy_rahbar') == name]
+    rows = get_dissertations_by_field('Ilmiy_rahbar', name)
     if not rows:
         abort(404)
     return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -314,7 +357,7 @@ def supervisor(name):
 @data_bp.route('/university/<path:name>')
 @login_required
 def university(name):
-    rows = [row for row in load_data() if row.get('Muassasa') == name]
+    rows = get_dissertations_by_field('Muassasa', name)
     if not rows:
         abort(404)
     return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
@@ -323,7 +366,7 @@ def university(name):
 @data_bp.route('/specialization/<path:code>')
 @login_required
 def specialization(code):
-    rows = [row for row in load_data() if row.get('Ixtisoslik') == code]
+    rows = get_dissertations_by_field('Ixtisoslik', code)
     if not rows:
         abort(404)
     return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))
