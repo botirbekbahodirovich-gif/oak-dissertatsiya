@@ -80,6 +80,22 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
+    # Prefer PostgreSQL if DATABASE_URL is set, otherwise use local SQLite
+    from dotenv import load_dotenv
+    load_dotenv()
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        try:
+            import psycopg2
+            conn = psycopg2.connect(DATABASE_URL)
+            cur = conn.cursor()
+            cur.execute("SELECT id, username, email FROM users WHERE id = %s", (int(user_id),))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            return User(*row) if row else None
+        except Exception:
+            pass
     con = sqlite3.connect(DB_PATH)
     row = con.execute(
         "SELECT id, username, email FROM users WHERE id = ?", (user_id,)
@@ -89,7 +105,7 @@ def load_user(user_id):
 
 # Register blueprints (auth, data, analytics, upload)
 from auth import auth_bp
-from data import data_bp
+from data import data_bp, load_data
 from analytics import analytics_bp
 from upload import upload_bp
 
@@ -100,9 +116,23 @@ app.register_blueprint(upload_bp)
 
 
 @app.route("/")
+def home():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    df = load_data()
+    recent = []
+    if len(df):
+        tmp = df.copy()
+        tmp['__sort_date'] = pd.to_datetime(tmp['Sana'], errors='coerce')
+        recent_df = tmp.sort_values(by='__sort_date', ascending=False).drop(columns='__sort_date')
+        recent = recent_df.head(5)[["Olim", "Mavzu", "Daraja", "Sana"]].to_dict(orient="records")
+    return render_template("home.html", recent=recent)
+
+
+@app.route("/dashboard")
 @login_required
 def index():
-    return render_template("index.html")
+    return render_template("dashboard.html")
 
 
 @app.route("/stats")
@@ -112,4 +142,4 @@ def stats_page():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=False)

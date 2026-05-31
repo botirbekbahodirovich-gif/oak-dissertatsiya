@@ -98,6 +98,17 @@
       return currentSort.dir === 'asc' ? (x < y ? -1 : 1) : (x > y ? -1 : 1);
     });
   }
+  function applyInitialFiltersFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    currentFilters.search = params.get('search') || '';
+    currentFilters.daraja = params.get('daraja') || '';
+    currentFilters.muassasa = params.get('muassasa') || '';
+    currentFilters.ixtisoslik = params.get('ixtisoslik') || '';
+    document.getElementById('search-input').value = currentFilters.search;
+    document.getElementById('filter-daraja').value = currentFilters.daraja;
+    document.getElementById('filter-muassasa').value = currentFilters.muassasa;
+    document.getElementById('filter-ixtisoslik').value = currentFilters.ixtisoslik;
+  }
   function renderRows(records, startIndex) {
     if (!records.length) {
       tableBody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
@@ -199,7 +210,11 @@
     else { currentSort.key = key; currentSort.dir = 'asc'; }
     updateData();
   }));
-  document.addEventListener('DOMContentLoaded', () => { loadFilters(); updateData(); });
+  document.addEventListener('DOMContentLoaded', async () => {
+    await loadFilters();
+    applyInitialFiltersFromUrl();
+    updateData(true);
+  });
 </script>
 
   <script>

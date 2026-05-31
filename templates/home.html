@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}IlmNet — CIS Academic Intelligence Platform{% endblock %}
+
+{% block extra_head %}
+<style>
+.home-hero {
+  padding: 4rem 0 2rem;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 2rem;
+  align-items: center;
+}
+.hero-copy {
+  max-width: 640px;
+}
+.hero-copy h1 {
+  font-size: clamp(3rem, 5vw, 4.5rem);
+  margin: 0;
+  line-height: 0.98;
+  letter-spacing: -1px;
+}
+.hero-copy p {
+  color: var(--oak-muted);
+  font-size: 1.05rem;
+  margin: 1rem 0 1.8rem;
+}
+.hero-form {
+  display: grid;
+  gap: 1rem;
+}
+.hero-form .input-group {
+  box-shadow: 0 20px 70px rgba(0,0,0,0.18);
+}
+.hero-form .form-control {
+  height: 58px;
+  border-radius: 16px 0 0 16px;
+  border-right: 0;
+}
+.hero-form .btn-primary {
+  border-radius: 0 16px 16px 0;
+  min-width: 160px;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.hero-actions .btn {
+  padding: 0.9rem 1.1rem;
+}
+.hero-stats {
+  display: grid;
+  gap: 1rem;
+}
+.hero-stat-card {
+  background: linear-gradient(180deg, rgba(26,29,35,0.95), rgba(26,29,35,0.9));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 1.5rem;
+}
+.hero-stat-card h3 {
+  margin: 0.35rem 0 0.3rem;
+  font-size: 2rem;
+}
+.hero-stat-card p {
+  margin: 0;
+  color: var(--oak-muted);
+  font-size: 0.87rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+.features-section {
+  padding: 2rem 0;
+}
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.feature-card {
+  background: var(--oak-surface);
+  border: 1px solid var(--oak-border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  transition: transform 0.22s ease, border-color 0.22s ease;
+}
+.feature-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(74,158,255,0.22);
+}
+.feature-card .feature-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 1rem;
+  border-radius: 14px;
+  background: rgba(74,158,255,0.12);
+  color: #4a9eff;
+}
+.feature-card h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.05rem;
+}
+.feature-card p {
+  margin: 0;
+  color: var(--oak-muted);
+  font-size: 0.935rem;
+  line-height: 1.6;
+}
+.recent-section {
+  padding: 2rem 0 4rem;
+}
+.recent-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.recent-table th,
+.recent-table td {
+  padding: 1rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.recent-table th {
+  color: var(--oak-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.recent-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+.recent-badge {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.recent-badge.phd { background: rgba(52,211,153,0.14); color: #34d399; }
+.recent-badge.dsc { background: rgba(167,139,250,0.14); color: #a78bfa; }
+.recent-mavzu { color: #e8eef8; max-width: 380px; word-break: break-word; }
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.4rem;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  background: rgba(74,158,255,0.14);
+  color: #c3d6ff;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+@media (max-width: 992px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .feature-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .home-hero { padding-top: 2rem; }
+  .hero-copy h1 { font-size: 2.7rem; }
+  .feature-cards { grid-template-columns: 1fr; }
+  .hero-form .input-group { grid-template-columns: 1fr; }
+  .hero-form .form-control { border-radius: 16px; }
+  .hero-form .btn-primary { border-radius: 16px; width: 100%; }
+  .hero-actions { flex-direction: column; }
+  .hero-stat-card { padding: 1.2rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="home-hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <span class="hero-badge"><i class="bi bi-lightning-fill"></i> Akademik ma'lumotlar uchun</span>
+      <h1>IlmNet</h1>
+      <p>CIS Academic Intelligence Platform — dissertatsiyalar, olimlar, muassasalar va tahlillar uchun yagona interfeys.</p>
+      <form id="hero-search-form" class="hero-form" action="/login" method="get" novalidate>
+        <input type="hidden" id="hero-next" name="next" value="/dashboard" />
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input id="hero-search" name="search" type="text" class="form-control" placeholder="Dissertatsiya, olim, mavzu yoki muassasa qidiring..." aria-label="Qidiruv" />
+          <button type="submit" class="btn btn-primary">Qidirish</button>
+        </div>
+        <div class="hero-actions">
+          <a href="/login?next=/dashboard?daraja=PHD" class="btn btn-action">PhD himoyalar</a>
+          <a href="/login?next=/dashboard?daraja=DSC" class="btn btn-action">DSc himoyalar</a>
+          <a href="/login?next=/dashboard" class="btn btn-action">Barcha ma'lumotlar</a>
+        </div>
+      </form>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat-card">
+        <p>Jami dissertatsiyalar</p>
+        <h3 id="hero-total">0</h3>
+      </div>
+      <div class="hero-stat-card">
+        <p>Universitetlar</p>
+        <h3 id="hero-muassasalar">0</h3>
+      </div>
+      <div class="hero-stat-card">
+        <p>Olimlar</p>
+        <h3 id="hero-olmlar">0</h3>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="features-section">
+  <div class="content-card">
+    <div class="page-heading">
+      <div>
+        <h2>Ilmiy ishlarni tez va oson toping</h2>
+        <p>IlmNet bilan ma'lumotlarni kashf eting, tahlil qiling va kelajakdagi tadqiqot yo'nalishini belgilang.</p>
+      </div>
+    </div>
+    <div class="feature-cards">
+      <div class="feature-card">
+        <div class="feature-icon"><i class="bi bi-search"></i></div>
+        <h3>Qidiruv</h3>
+        <p>Dissertatsiyalar bo'yicha tezkor qidiruv.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+        <h3>Tahlil</h3>
+        <p>Statistika va trend grafiklari.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="bi bi-brain"></i></div>
+        <h3>AI Yordamchi</h3>
+        <p>Sun'iy intellekt bilan ilmiy maslahat.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+        <h3>Rahbarlar</h3>
+        <p>Ilmiy rahbarlar va muassasalar profili.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="recent-section">
+  <div class="page-heading">
+    <div>
+      <h2>So'nggi qo'shilgan dissertatsiyalar</h2>
+      <p>Oxirgi yangiliklar bazamizdagi eng so'nggi yozuvlardan.</p>
+    </div>
+  </div>
+  <div class="content-card">
+    <div class="table-scroll">
+      <table class="recent-table">
+        <thead>
+          <tr>
+            <th>Olim</th>
+            <th>Mavzu</th>
+            <th>Daraja</th>
+            <th>Sana</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent %}
+            {% for row in recent %}
+            <tr>
+              <td>{{ row.Olim }}</td>
+              <td class="recent-mavzu">{{ row.Mavzu|truncate(80, True, '...') }}</td>
+              <td><span class="recent-badge {{ 'phd' if row.Daraja|upper == 'PHD' else 'dsc' if row.Daraja|upper == 'DSC' else '' }}">{{ row.Daraja }}</span></td>
+              <td>{{ row.Sana }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="text-muted" style="padding:2rem; text-align:center;">Hozircha ma'lumot mavjud emas.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const stats = { total: document.getElementById('hero-total'), muassasalar: document.getElementById('hero-muassasalar'), olmlar: document.getElementById('hero-olmlar') };
+  const duration = 900;
+  const animateValue = (el, value) => {
+    if (!el) return;
+    const start = 0;
+    const end = Number(value) || 0;
+    const stepTime = Math.max(Math.floor(duration / Math.max(end, 1)), 10);
+    let current = start;
+    const timer = setInterval(() => {
+      current += Math.max(1, Math.round(end / 20));
+      if (current >= end) {
+        el.textContent = end.toLocaleString('uz');
+        clearInterval(timer);
+      } else {
+        el.textContent = current.toLocaleString('uz');
+      }
+    }, stepTime);
+  };
+
+  function loadStats() {
+    fetch('/stats-json')
+      .then(response => response.json())
+      .then(data => {
+        animateValue(stats.total, data.total);
+        animateValue(stats.muassasalar, data.muassasalar);
+        animateValue(stats.olmlar, data.olim || 0);
+      })
+      .catch(() => {
+        stats.total.textContent = '-';
+        stats.muassasalar.textContent = '-';
+        stats.olmlar.textContent = '-';
+      });
+  }
+
+  document.getElementById('hero-search-form')?.addEventListener('submit', function(event) {
+    const searchInput = document.getElementById('hero-search');
+    const nextInput = document.getElementById('hero-next');
+    if (searchInput && nextInput) {
+      const query = searchInput.value.trim();
+      nextInput.value = '/dashboard' + (query ? '?search=' + encodeURIComponent(query) : '');
+    }
+  });
+
+  loadStats();
+})();
+</script>
+{% endblock %}

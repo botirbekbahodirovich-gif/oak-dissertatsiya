@@ -27,14 +27,24 @@ except Exception as e:
     print("[FAIL] GET /register failed: " + str(e))
 
 try:
-    # Test main page (should redirect to login)
+    # Test main page is now publicly accessible
     r = client.get('/', follow_redirects=False)
-    if r.status_code in [302, 307, 301]:
-        print("[PASS] GET /: " + str(r.status_code) + " Redirect (protected route)")
+    if r.status_code == 200:
+        print("[PASS] GET /: 200 OK (landing page)")
     else:
         print("[FAIL] GET /: status=" + str(r.status_code))
 except Exception as e:
     print("[FAIL] GET / failed: " + str(e))
+
+try:
+    # Test dashboard page should still redirect unauthenticated users
+    r = client.get('/dashboard', follow_redirects=False)
+    if r.status_code in [302, 307, 301]:
+        print("[PASS] GET /dashboard: " + str(r.status_code) + " Redirect (protected route)")
+    else:
+        print("[FAIL] GET /dashboard: status=" + str(r.status_code))
+except Exception as e:
+    print("[FAIL] GET /dashboard failed: " + str(e))
 
 try:
     # Test stats page (should also redirect)

@@ -7,14 +7,14 @@ analytics_bp = Blueprint('analytics', __name__)
 
 
 @analytics_bp.route('/stats-json')
-@login_required
 def stats_json():
     df = load_data()
     return jsonify({
         "total":      len(df),
         "phd":        len(df[df["Daraja"].str.upper() == "PHD"]),
         "dsc":        len(df[df["Daraja"].str.upper() == "DSC"]),
-        "muassasalar": df["Muassasa"].nunique()
+        "muassasalar": df["Muassasa"].nunique(),
+        "olim":       df["Olim"].nunique()
     })
 
 
@@ -51,12 +51,6 @@ def analytics_data():
         .rename(columns={"Ixtisoslik": "ixtisoslik"}).to_dict(orient="records")
     )
 
-    top_supervisors = (
-        df[df["Ilmiy_rahbar"] != ""].groupby("Ilmiy_rahbar").size()
-        .nlargest(10).reset_index(name="count")
-        .rename(columns={"Ilmiy_rahbar": "supervisor"}).to_dict(orient="records")
-    )
-
     top15_unis = (
         df[df["Muassasa"] != ""].groupby("Muassasa").size()
         .nlargest(15).index.tolist()
@@ -78,6 +72,5 @@ def analytics_data():
         "daraja_ratio":     daraja_counts,
         "trend":            trend_data,
         "top_ixtisosliklar": top_ixtisosliklar,
-        "top_supervisors":  top_supervisors,
         "heatmap":          heatmap
     })
