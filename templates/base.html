@@ -361,5 +361,5 @@
     })();
   </script>
   {% block scripts %}{% endblock %}
-</body>
+<button id="ai-btn" onclick="document.getElementById(chr(39)ai-panel').classList.toggle('open')" style="position:fixed;bottom:24px;right:24px;z-index:9999;width:56px;height:56px;border-radius:50%;background:#4a9eff;border:none;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 20px rgba(74,158,255,0.4)">R</button><aside id="ai-panel" style="position:fixed;right:0;top:0;height:100vh;width:320px;background:#1a1d23;border-left:1px solid rgba(255,255,255,0.1);z-index:9998;transform:translateX(100%);transition:transform 0.3s;padding:16px"><strong style="color:#4a9eff">IlmNet AI</strong><button onclick="this.parentElement.classList.remove('open')" style="float:right;background:none;border:none;color:#888;cursor:pointer">X</button><p style="color:#8899b4;margin-top:40px;font-size:13px">Tez orada ishga tushadi!</p></aside><style>#ai-panel.open{transform:translateX(0)!important}</style></body>
 </html>
