@@ -382,3 +382,117 @@ def specialization(code):
     if not rows:
         abort(404)
     return render_template('specialization.html', code=code, rows=rows, stats=_summary_stats(rows))
+
+
+@data_bp.route('/api/chat', methods=['POST'])
+def chat():
+    """AI chat endpoint that queries dissertations based on user message."""
+    try:
+        data = request.get_json() or {}
+        message = (data.get('message') or '').strip().lower()
+        
+        if not message:
+            return jsonify({"response": "Iltimos, savolingizni yozing."})
+        
+        # Handle specific queries
+        if 'eng faol rahbar' in message:
+            sql = '''
+                SELECT ilmiy_rahbar, COUNT(*) as count
+                FROM dissertations
+                WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+                GROUP BY ilmiy_rahbar
+                ORDER BY count DESC LIMIT 5
+            '''
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                    results = cur.fetchall()
+                    if results:
+                        html = '<div style="line-height:1.6;"><strong>Eng faol ilmiy rahbarlar:</strong><ol style="margin:8px 0 0 0;">'
+                        for name, count in results:
+                            html += f'<li>{name or "—"} ({count} ta)</li>'
+                        html += '</ol></div>'
+                    else:
+                        html = 'Ilmiy rahbarlar haqida ma\'lumot topilmadi.'
+            finally:
+                conn.close()
+            return jsonify({"response": html})
+        
+        elif 'phd' in message and 'statistik' in message:
+            sql = '''
+                SELECT
+                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD') AS phd_count,
+                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC') AS dsc_count
+                FROM dissertations
+            '''
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                    phd, dsc = cur.fetchone()
+                    html = f'''<div style="line-height:1.6;">
+                        <strong>Dissertatsiya statistikasi:</strong>
+                        <div style="margin:8px 0;">PhD: <strong>{phd or 0}</strong> ta</div>
+                        <div>DSc: <strong>{dsc or 0}</strong> ta</div>
+                    </div>'''
+            finally:
+                conn.close()
+            return jsonify({"response": html})
+        
+        elif 'mavzu tavsiya' in message:
+            sql = '''
+                SELECT mavzu FROM dissertations
+                WHERE mavzu IS NOT NULL AND TRIM(mavzu) <> ''
+                ORDER BY RANDOM() LIMIT 5
+            '''
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                    topics = [row[0] for row in cur.fetchall()]
+                    if topics:
+                        html = '<div style="line-height:1.6;"><strong>Tavsiya etilgan mavzular:</strong><ul style="margin:8px 0 0 0;">'
+                        for topic in topics:
+                            html += f'<li>{topic}</li>'
+                        html += '</ul></div>'
+                    else:
+                        html = 'Mavzular haqida ma\'lumot topilmadi.'
+            finally:
+                conn.close()
+            return jsonify({"response": html})
+        
+        else:
+            # Search dissertations for any other message
+            search_term = f"%{message}%"
+            sql = '''
+                SELECT olim, mavzu, daraja, muassasa
+                FROM dissertations
+                WHERE 
+                    olim ILIKE %s OR 
+                    mavzu ILIKE %s OR 
+                    muassasa ILIKE %s OR 
+                    ilmiy_rahbar ILIKE %s OR
+                    ixtisoslik ILIKE %s
+                LIMIT 3
+            '''
+            rows = _query_rows(sql, [search_term, search_term, search_term, search_term, search_term])
+            if rows:
+                html = '<div style="line-height:1.6;"><strong>Topilgan dissertatsiyalar:</strong><ol style="margin:8px 0 0 0;">'
+                for row in rows:
+                    olim = row.get('Olim', '—')
+                    mavzu = row.get('Mavzu', '—')
+                    daraja = row.get('Daraja', '—')
+                    muassasa = row.get('Muassasa', '—')
+                    html += f'''<li style="margin-bottom:8px;">
+                        <div><strong>{olim}</strong> ({daraja})</div>
+                        <div style="font-size:0.9em;color:#999;">"{mavzu}"</div>
+                        <div style="font-size:0.85em;color:#666;">{muassasa}</div>
+                    </li>'''
+                html += '</ol></div>'
+            else:
+                html = f'"{message}" uchun dissertatsiya topilmadi.'
+            return jsonify({"response": html})
+    
+    except Exception as e:
+        return jsonify({"response": f"Xatolik yuz berdi: {str(e)}"}), 500
