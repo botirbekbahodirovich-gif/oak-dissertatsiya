@@ -64,6 +64,7 @@ def load_user(user_id):
 
 from auth import auth_bp
 from data import data_bp, query_dissertations
+csrf.exempt(data_bp)
 from analytics import analytics_bp
 from upload import upload_bp
 

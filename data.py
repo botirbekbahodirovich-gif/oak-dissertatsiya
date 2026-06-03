@@ -1,9 +1,16 @@
 import os
 import csv
 import io
+import html as html_module
 from dotenv import load_dotenv
 load_dotenv()
 import openpyxl
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 try:
@@ -463,36 +470,56 @@ def chat():
             return jsonify({"response": html})
         
         else:
-            # Search dissertations for any other message
+            # Search PostgreSQL for relevant dissertations as context for Gemini
             search_term = f"%{message}%"
             sql = '''
-                SELECT olim, mavzu, daraja, muassasa
+                SELECT olim, mavzu, daraja, muassasa, ilmiy_rahbar, ixtisoslik, sana
                 FROM dissertations
-                WHERE 
-                    olim ILIKE %s OR 
-                    mavzu ILIKE %s OR 
-                    muassasa ILIKE %s OR 
+                WHERE
+                    olim ILIKE %s OR
+                    mavzu ILIKE %s OR
+                    muassasa ILIKE %s OR
                     ilmiy_rahbar ILIKE %s OR
                     ixtisoslik ILIKE %s
-                LIMIT 3
+                LIMIT 10
             '''
-            rows = _query_rows(sql, [search_term, search_term, search_term, search_term, search_term])
-            if rows:
-                html = '<div style="line-height:1.6;"><strong>Topilgan dissertatsiyalar:</strong><ol style="margin:8px 0 0 0;">'
-                for row in rows:
-                    olim = row.get('Olim', '—')
-                    mavzu = row.get('Mavzu', '—')
-                    daraja = row.get('Daraja', '—')
-                    muassasa = row.get('Muassasa', '—')
-                    html += f'''<li style="margin-bottom:8px;">
-                        <div><strong>{olim}</strong> ({daraja})</div>
-                        <div style="font-size:0.9em;color:#999;">"{mavzu}"</div>
-                        <div style="font-size:0.85em;color:#666;">{muassasa}</div>
-                    </li>'''
-                html += '</ol></div>'
+            conn = get_connection()
+            try:
+                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                    cur.execute(sql, [search_term] * 5)
+                    found_rows = cur.fetchall()
+            finally:
+                conn.close()
+
+            if found_rows:
+                context_lines = [
+                    f"- Olim: {r.get('olim','')}, Mavzu: {r.get('mavzu','')}, "
+                    f"Daraja: {r.get('daraja','')}, Muassasa: {r.get('muassasa','')}, "
+                    f"Ilmiy rahbar: {r.get('ilmiy_rahbar','')}, "
+                    f"Ixtisoslik: {r.get('ixtisoslik','')}, Sana: {r.get('sana','')}"
+                    for r in found_rows
+                ]
+                context = "Topilgan dissertatsiyalar:\n" + "\n".join(context_lines)
             else:
-                html = f'"{message}" uchun dissertatsiya topilmadi.'
-            return jsonify({"response": html})
+                context = "Ushbu so'rov bo'yicha dissertatsiya topilmadi."
+
+            if not GEMINI_API_KEY or not genai:
+                return jsonify({"response": "Gemini API kaliti sozlanmagan."})
+
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel(
+                model_name="gemini-2.0-flash",
+                system_instruction=(
+                    "Sen IlmNet platformasining AI yordamchisisan. "
+                    "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
+                    "Javobni ozbekcha, qisqa va aniq ber."
+                )
+            )
+            prompt = f"{context}\n\nFoydalanuvchi savoli: {message}"
+            gemini_response = model.generate_content(prompt)
+            reply = (gemini_response.text or "Javob olinmadi.").strip()
+            safe_reply = html_module.escape(reply).replace("\n", "<br>")
+            return jsonify({"response": f'<div style="line-height:1.6;">{safe_reply}</div>'})
     
     except Exception as e:
         return jsonify({"response": f"Xatolik yuz berdi: {str(e)}"}), 500
