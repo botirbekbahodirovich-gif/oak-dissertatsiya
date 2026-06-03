@@ -5,12 +5,7 @@ import html as html_module
 from dotenv import load_dotenv
 load_dotenv()
 import openpyxl
-try:
-    import google.generativeai as genai
-except ImportError:
-    genai = None
-
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 try:
@@ -470,7 +465,7 @@ def chat():
             return jsonify({"response": html})
         
         else:
-            # Search PostgreSQL for relevant dissertations as context for Gemini
+            # Search PostgreSQL for relevant dissertations as context for Groq
             search_term = f"%{message}%"
             sql = '''
                 SELECT olim, mavzu, daraja, muassasa, ilmiy_rahbar, ixtisoslik, sana
@@ -503,23 +498,29 @@ def chat():
             else:
                 context = "Ushbu so'rov bo'yicha dissertatsiya topilmadi."
 
-            if not GEMINI_API_KEY or not genai:
-                return jsonify({"response": "Gemini API kaliti sozlanmagan."})
+            if not GROQ_API_KEY:
+                return jsonify({"response": "Groq API kaliti sozlanmagan."})
 
-            genai.configure(api_key=GEMINI_API_KEY)
-            model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash",
-                system_instruction=(
-                    "Sen IlmNet platformasining AI yordamchisisan. "
-                    "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
-                    "Javobni ozbekcha, qisqa va aniq ber."
-                )
+            from groq import Groq
+            client = Groq(api_key=GROQ_API_KEY)
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Sen IlmNet platformasining AI yordamchisisan. "
+                            "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
+                            "Javobni ozbekcha, qisqa va aniq ber."
+                        )
+                    },
+                    {"role": "user", "content": message + "\n\n" + context}
+                ],
+                max_tokens=500
             )
-            prompt = f"{context}\n\nFoydalanuvchi savoli: {message}"
-            gemini_response = model.generate_content(prompt)
-            reply = (gemini_response.text or "Javob olinmadi.").strip()
-            safe_reply = html_module.escape(reply).replace("\n", "<br>")
-            return jsonify({"response": f'<div style="line-height:1.6;">{safe_reply}</div>'})
+            answer = (response.choices[0].message.content or "Javob olinmadi.").strip()
+            safe_answer = html_module.escape(answer).replace("\n", "<br>")
+            return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
     
     except Exception as e:
         return jsonify({"response": f"Xatolik yuz berdi: {str(e)}"}), 500
