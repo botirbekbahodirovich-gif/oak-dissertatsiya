@@ -161,7 +161,7 @@ def _distinct_values(column):
     valid_columns = {"daraja", "muassasa", "ixtisoslik"}
     if column not in valid_columns:
         return []
-    sql = f'SELECT DISTINCT {column} FROM dissertations WHERE {column} IS NOT NULL AND TRIM({column}) <> "" ORDER BY {column}'
+    sql = f"SELECT DISTINCT {column} FROM dissertations WHERE {column} IS NOT NULL AND TRIM({column}) <> '' ORDER BY {column}"
     conn = get_connection()
     try:
         with conn.cursor() as cur:

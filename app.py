@@ -102,5 +102,28 @@ def stats_page():
     return render_template("stats.html")
 
 
+@app.route("/profile")
+@login_required
+def profile():
+    from data import get_connection
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD') AS phd,
+                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC') AS dsc,
+                    COUNT(DISTINCT NULLIF(TRIM(muassasa), '')) AS muassasalar
+                FROM dissertations
+            ''')
+            row = cur.fetchone()
+            stats = {"total": row[0] or 0, "phd": row[1] or 0, "dsc": row[2] or 0, "muassasalar": row[3] or 0}
+        conn.close()
+    except Exception:
+        stats = {"total": 0, "phd": 0, "dsc": 0, "muassasalar": 0}
+    return render_template("profile.html", user=current_user, stats=stats)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=False)

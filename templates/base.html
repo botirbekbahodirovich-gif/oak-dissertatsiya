@@ -327,7 +327,8 @@
       </a>
       <button id="nav-toggle" class="nav-toggle" aria-label="Menyu"><i class="bi bi-list"></i></button>
       <div class="nav-links" id="nav-links">
-        <a href="/" class="nav-link{% if request.path == '/' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
+        <a href="/" class="nav-link"><i class="bi bi-house-fill"></i>Bosh sahifa</a>
+        <a href="/dashboard" class="nav-link{% if request.path == '/dashboard' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
         {% if current_user.is_authenticated and current_user.username == 'admin' %}<a href="/upload" class="nav-link{% if request.path == '/upload' %} active{% endif %}"><i class="bi bi-cloud-upload-fill"></i>CSV yuklash</a>{% endif %}
         <a href="/profile" class="nav-link{% if request.path == '/profile' %} active{% endif %}"><i class="bi bi-person-badge"></i>Profil</a>
@@ -346,7 +347,7 @@
     (function() {
       const root = document.documentElement;
       const btn = document.getElementById('theme-toggle');
-      const stored = localStorage.getItem('oak-theme') ; 'dark';
+      const stored = localStorage.getItem('oak-theme') || 'dark';
       root.setAttribute('data-bs-theme', stored);
       btn.innerHTML = stored === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-fill"></i>';
       btn.addEventListener('click', function() {
