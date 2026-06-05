@@ -76,12 +76,11 @@ app.register_blueprint(upload_bp)
 
 @app.route("/")
 def home():
-    if current_user.is_authenticated:
-        return redirect(url_for("index"))
-    rows = query_dissertations("", "", "", "", "Sana", "desc", page=1, per_page=5)
+    rows = query_dissertations("", "", "", "", "id", "desc", page=1, per_page=5)
     recent = []
     if rows:
         recent = [{
+            "id": row.get("id"),
             "Olim": row.get("Olim", ""),
             "Mavzu": row.get("Mavzu", ""),
             "Daraja": row.get("Daraja", ""),

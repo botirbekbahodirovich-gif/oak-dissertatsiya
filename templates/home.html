@@ -264,8 +264,8 @@
         <tbody>
           {% if recent %}
             {% for row in recent %}
-            <tr>
-              <td>{{ row.Olim }}</td>
+            <tr style="cursor:pointer;" onclick="location.href='/dissertation/{{ row.id }}'">
+              <td><a href="/author/{{ row.Olim | urlencode }}" onclick="event.stopPropagation()" style="color:var(--oak-accent);text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">{{ row.Olim }}</a></td>
               <td class="recent-mavzu">{{ row.Mavzu|truncate(80, True, '...') }}</td>
               <td><span class="recent-badge {{ 'phd' if row.Daraja|upper == 'PHD' else 'dsc' if row.Daraja|upper == 'DSC' else '' }}">{{ row.Daraja }}</span></td>
               <td>{{ row.Sana }}</td>

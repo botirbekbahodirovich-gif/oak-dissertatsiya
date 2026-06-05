@@ -226,7 +226,7 @@ def get_dissertations_by_field(field_name, field_value):
         'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-        f'FROM dissertations WHERE {column} = %s ORDER BY id'
+        f'FROM dissertations WHERE TRIM({column}) = TRIM(%s) ORDER BY id'
     )
     return _query_rows(sql, (field_value,))
 

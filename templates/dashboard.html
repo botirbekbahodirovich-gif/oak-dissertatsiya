@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block title %}IlmNet — Jadvali{% endblock %}
+{% block extra_head %}
+<style>
+  .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
+  .entity-link:hover { text-decoration: underline; }
+</style>
+{% endblock %}
 {% block content %}
   <div class="page-heading">
     <div>
@@ -118,10 +124,10 @@
       const num = r.id || startIndex + i + 1;
       const daraja = (r.Daraja || '').toUpperCase();
       const darajaSpan = daraja === 'PHD' ? '<span class="badge-phd badge-role">PhD</span>' : daraja === 'DSC' ? '<span class="badge-dsc badge-role">DSc</span>' : escHtml(r.Daraja);
-      const authorLink = r.Olim ? `<a href="/author/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()">${highlight(r.Olim, term)}</a>` : '—';
-      const specializationLink = r.Ixtisoslik ? `<a href="/specialization/${encodeURIComponent(r.Ixtisoslik)}" onclick="event.stopPropagation()">${highlight(r.Ixtisoslik, term)}</a>` : '—';
-      const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
-      const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
+      const authorLink = r.Olim ? `<a href="/author/${encodeURIComponent(r.Olim)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Olim, term)}</a>` : '—';
+      const specializationLink = r.Ixtisoslik ? `<a href="/specialization/${encodeURIComponent(r.Ixtisoslik)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Ixtisoslik, term)}</a>` : '—';
+      const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
+      const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
       return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;">
           <td>${num}</td>
           <td class="sana-cell">${highlight(r.Sana, term)}</td>
