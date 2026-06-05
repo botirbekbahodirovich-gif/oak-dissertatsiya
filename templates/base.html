@@ -297,18 +297,34 @@
 
     @media (max-width: 992px) { .page-heading { flex-direction: column; align-items: flex-start; } }
     @media (max-width: 768px) {
-      .nav-toggle { display: inline-flex; }
-      .nav-links { display: none; width: 100%; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+      /* header: brand + actions row, menu below */
+      .header-inner { flex-wrap: wrap; padding: 0.6rem 0; gap: 0.35rem 0.5rem; align-items: center; }
+      .brand-logo { flex: 1 1 auto; min-width: 0; }
+      .nav-toggle { display: inline-flex; flex-shrink: 0; order: 2; }
+      .nav-actions { flex-shrink: 0; order: 1; margin-left: auto; gap: 0.4rem; }
+      .username { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+      .btn-logout { font-size: 0.76rem; padding: 0.4rem 0.6rem; }
+      /* collapsible nav links drop to full-width row below */
+      .nav-links {
+        display: none;
+        order: 99;
+        flex: 0 0 100%;
+        flex-direction: column;
+        gap: 0.2rem;
+        padding: 0.5rem 0 0.4rem;
+        border-top: 1px solid rgba(255,255,255,0.07);
+        margin-top: 0.15rem;
+      }
       .nav-links.open { display: flex; }
-      .nav-actions { width: 100%; justify-content: space-between; }
-      .site-nav { padding: 0 0.75rem; }
-      .table thead th, .table tbody td { padding: 0.65rem 0.75rem; }
+      .nav-link { padding: 0.6rem 0.8rem; font-size: 0.88rem; }
+      .table thead th, .table tbody td { padding: 0.55rem 0.6rem; font-size: 0.82rem; }
     }
     @media (max-width: 576px) {
-      .content-main { padding: 1rem 0 2rem; }
-      .content-card { padding: 1rem; }
+      .content-main { padding: 0.75rem 0 2rem; }
+      .content-card { padding: 0.9rem; }
       .chart-container { min-height: 220px; }
-      .btn-theme-toggle { top: 0.75rem; right: 0.75rem; }
+      .btn-theme-toggle { top: 0.6rem; right: 0.6rem; width: 36px; height: 36px; }
+      .brand-subtitle { display: none; }
     }
   </style>
   {% block extra_head %}{% endblock %}
@@ -404,6 +420,10 @@
     overflow: hidden;
   }
   #ai-panel.open { transform: translateX(0) !important; }
+  @media (max-width: 768px) {
+    #ai-panel { width: 100%; }
+    #ai-btn { bottom: 16px; right: 16px; width: 48px; height: 48px; font-size: 20px; }
+  }
   #ai-panel-header {
     display: flex;
     align-items: center;

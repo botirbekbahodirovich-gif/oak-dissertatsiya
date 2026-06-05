@@ -4,6 +4,14 @@
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
   .entity-link:hover { text-decoration: underline; }
+  .mavzu-cell { max-width: 260px; white-space: normal; word-break: break-word; }
+  @media (max-width: 576px) {
+    .page-heading h1 { font-size: 1.05rem; }
+    .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    #btn-export { width: 100%; justify-content: center; }
+    .mavzu-cell { max-width: 140px; }
+    .olim-cell, .muassasa-cell, .sana-cell { white-space: nowrap; }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -15,7 +23,7 @@
     <button id="btn-export" class="btn btn-action"><i class="bi bi-download me-1"></i>CSV eksport</button>
   </div>
 
-  <div class="row row-cols-1 row-cols-md-4 g-3 mb-3" id="stats-row">
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-3" id="stats-row">
     <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd" style="background:rgba(74,158,255,0.12);color:#4a9eff;"><i class="bi bi-collection-fill"></i></span></div><div class="h3 mb-1" id="stat-total">—</div><div class="text-muted">Jami dissertatsiyalar</div></div></div>
     <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd">PhD</span></div><div class="h3 mb-1" id="stat-phd">—</div><div class="text-muted">PhD dissertatsiyalar</div></div></div>
     <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-dsc">DSc</span></div><div class="h3 mb-1" id="stat-dsc">—</div><div class="text-muted">DSc dissertatsiyalar</div></div></div>
@@ -28,23 +36,23 @@
         <label class="form-label" for="search-input">Qidirish</label>
         <div class="input-group">
           <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa, ixtisoslik bo'yicha qidiring..." />
+          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa..." />
         </div>
       </div>
-      <div class="col-6 col-md-2">
+      <div class="col-12 col-sm-4 col-md-2">
         <label class="form-label" for="filter-daraja">Daraja</label>
         <select id="filter-daraja" class="form-select"><option value="">Barcha darajalar</option></select>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-12 col-sm-8 col-md-3">
         <label class="form-label" for="filter-muassasa">Muassasa</label>
         <select id="filter-muassasa" class="form-select"><option value="">Barcha muassasalar</option></select>
       </div>
-      <div class="col-6 col-md-2">
+      <div class="col-9 col-sm-9 col-md-2">
         <label class="form-label" for="filter-ixtisoslik">Ixtisoslik</label>
         <select id="filter-ixtisoslik" class="form-select"><option value="">Barcha ixtisosliklar</option></select>
       </div>
-      <div class="col-6 col-md-0">
-        <button id="btn-reset" class="btn btn-secondary w-100">Tozalash</button>
+      <div class="col-3 col-sm-3 col-md-auto d-flex align-items-end">
+        <button id="btn-reset" class="btn btn-secondary w-100">✕</button>
       </div>
     </div>
   </div>

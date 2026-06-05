@@ -26,7 +26,13 @@
   .oak-link { display: inline-flex; align-items: center; gap: 0.4rem; padding: 8px 16px; border-radius: 10px; background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); color: #4a9eff; font-size: 0.88rem; font-weight: 600; text-decoration: none; transition: background 0.15s, border-color 0.15s; }
   .oak-link:hover { background: rgba(74,158,255,0.18); border-color: #4a9eff; color: #4a9eff; text-decoration: none; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.5rem; }
-  @media (max-width: 576px) { .grid-2 { grid-template-columns: 1fr; } }
+  @media (max-width: 991px) { .content-card.h-100 { height: auto !important; } }
+  @media (max-width: 576px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .title-card { padding: 1rem; }
+    .title-card .mavzu-text { font-size: 1rem; }
+    .oak-link { width: 100%; justify-content: center; }
+  }
 </style>
 {% endblock %}
 {% block content %}

@@ -162,13 +162,23 @@
 }
 @media (max-width: 680px) {
   .home-hero { padding-top: 2rem; }
-  .hero-copy h1 { font-size: 2.7rem; }
+  .hero-copy h1 { font-size: 2.5rem; }
   .feature-cards { grid-template-columns: 1fr; }
-  .hero-form .input-group { grid-template-columns: 1fr; }
-  .hero-form .form-control { border-radius: 16px; }
-  .hero-form .btn-primary { border-radius: 16px; width: 100%; }
+  .hero-form .form-control { border-radius: 12px 0 0 12px; }
+  .hero-form .btn-primary { min-width: 100px; }
   .hero-actions { flex-direction: column; }
-  .hero-stat-card { padding: 1.2rem; }
+  .hero-actions .btn { width: 100%; text-align: center; justify-content: center; }
+  .hero-stat-card { padding: 1rem; }
+  .hero-stat-card h3 { font-size: 1.6rem; }
+}
+@media (max-width: 420px) {
+  .hero-copy h1 { font-size: 2rem; letter-spacing: -0.5px; }
+  .hero-form .input-group { flex-wrap: wrap; }
+  .hero-form .input-group .input-group-text { border-radius: 12px 0 0 0; border-bottom: 0; }
+  .hero-form .input-group .form-control { border-radius: 0 12px 0 0; border-bottom: 0; flex: 1 1 150px; }
+  .hero-form .input-group .btn-primary { border-radius: 0 0 12px 12px; width: 100%; }
+  .recent-table { font-size: 0.82rem; }
+  .recent-table th, .recent-table td { padding: 0.6rem 0.5rem; }
 }
 </style>
 {% endblock %}
