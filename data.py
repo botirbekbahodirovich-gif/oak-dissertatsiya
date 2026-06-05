@@ -182,6 +182,36 @@ def get_dissertation_by_id(dissertation_id):
     return rows[0] if rows else None
 
 
+def get_dissertation_detail_by_id(dissertation_id):
+    sql = '''
+        SELECT
+            id,
+            sana AS "Sana", daraja AS "Daraja", olim AS "Olim",
+            mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa",
+            ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link",
+            COALESCE(ixtisoslik_nomi, '') AS "Ixtisoslik_nomi",
+            COALESCE(mavzu_raqami, '') AS "Mavzu_raqami",
+            COALESCE(ilmiy_rahbar_daraja, '') AS "Ilmiy_rahbar_daraja",
+            COALESCE(ilmiy_kengash, '') AS "Ilmiy_kengash",
+            COALESCE(ilmiy_kengash_raqami, '') AS "Ilmiy_kengash_raqami",
+            COALESCE(opponent_1, '') AS "Opponent_1",
+            COALESCE(opponent_2, '') AS "Opponent_2",
+            COALESCE(yetakchi_tashkilot, '') AS "Yetakchi_tashkilot",
+            oak_id AS "Oak_id"
+        FROM dissertations WHERE id = %s
+    '''
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute(sql, (dissertation_id,))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return {k: (str(v).strip() if v is not None else '') for k, v in row.items()}
+    finally:
+        conn.close()
+
+
 def get_dissertations_by_field(field_name, field_value):
     valid_columns = {
         "Olim": "olim",
@@ -344,7 +374,7 @@ def _summary_stats(rows):
 @data_bp.route('/dissertation/<int:id>')
 @login_required
 def dissertation(id):
-    row = get_dissertation_by_id(id)
+    row = get_dissertation_detail_by_id(id)
     if not row:
         abort(404)
     return render_template('dissertation.html', row=row, id=id)

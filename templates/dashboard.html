@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}OAK Dissertatsiya Tahlil{% endblock %}
+{% block title %}IlmNet — Jadvali{% endblock %}
 {% block content %}
   <div class="page-heading">
     <div>
@@ -59,10 +59,9 @@
           <th data-sort="Ixtisoslik">Ixtisoslik</th>
           <th data-sort="Muassasa">Muassasa</th>
           <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
-          <th>Havola</th>
         </tr></thead>
         <tbody id="table-body">
-          <tr><td colspan="9"><div class="skeleton-bar"></div></td></tr>
+          <tr><td colspan="8"><div class="skeleton-bar"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -111,7 +110,7 @@
   }
   function renderRows(records, startIndex) {
     if (!records.length) {
-      tableBody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
       return;
     }
     const term = currentFilters.search.trim();
@@ -123,7 +122,6 @@
       const specializationLink = r.Ixtisoslik ? `<a href="/specialization/${encodeURIComponent(r.Ixtisoslik)}" onclick="event.stopPropagation()">${highlight(r.Ixtisoslik, term)}</a>` : '—';
       const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
       const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
-      const link = r.Link ? `<a href="${escHtml(r.Link)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right"></i></a>` : '—';
       return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;">
           <td>${num}</td>
           <td class="sana-cell">${highlight(r.Sana, term)}</td>
@@ -133,7 +131,6 @@
           <td>${specializationLink}</td>
           <td class="muassasa-cell">${universityLink}</td>
           <td>${supervisorLink}</td>
-          <td class="link-cell">${link}</td>
         </tr>`;
     }).join('');
   }
@@ -177,7 +174,7 @@
       renderRows(currentRecords, (data.page-1)*PER_PAGE);
       renderInfo(data.page, data.total);
     } catch (err) {
-      tableBody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
   }
   let filterTimer;
