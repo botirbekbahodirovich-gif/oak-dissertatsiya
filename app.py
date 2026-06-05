@@ -76,7 +76,10 @@ app.register_blueprint(upload_bp)
 
 @app.route("/")
 def home():
-    rows = query_dissertations("", "", "", "", "id", "desc", page=1, per_page=5)
+    try:
+        rows = query_dissertations("", "", "", "", "id", "desc", page=1, per_page=6)
+    except Exception:
+        rows = []
     recent = []
     if rows:
         recent = [{
@@ -84,7 +87,8 @@ def home():
             "Olim": row.get("Olim", ""),
             "Mavzu": row.get("Mavzu", ""),
             "Daraja": row.get("Daraja", ""),
-            "Sana": row.get("Sana", "")
+            "Sana": row.get("Sana", ""),
+            "Muassasa": row.get("Muassasa", ""),
         } for row in rows]
     return render_template("home.html", recent=recent)
 
