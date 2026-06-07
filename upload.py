@@ -21,12 +21,9 @@ upload_bp = Blueprint('upload', __name__)
 
 def get_database_url():
     url = os.environ.get('DATABASE_URL', '')
-    if not url:
-        raise RuntimeError('DATABASE_URL is not set. Add it to Railway environment variables.')
-    if 'sqlite' in url.lower():
-        raise RuntimeError(
-            f'DATABASE_URL looks like SQLite ("{url[:40]}...") — set a PostgreSQL URL instead.'
-        )
+    if not url or url.startswith('sqlite'):
+        url = os.environ.get('POSTGRES_URL', '')
+    return url
     return url
 
 
