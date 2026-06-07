@@ -1,9 +1,15 @@
 import os
-from flask import Blueprint, render_template, request, redirect, url_for
+import hmac
+import hashlib
+import time
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 import bcrypt
 from dotenv import load_dotenv
 load_dotenv()
+
+TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', 'send_kod_bot')
+TELEGRAM_BOT_TOKEN    = os.environ.get('TELEGRAM_BOT_TOKEN', '')
 try:
     import psycopg2
     from psycopg2 import errors as psycopg2_errors
@@ -117,3 +123,54 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+
+@auth_bp.route('/login/telegram', methods=['POST'])
+def telegram_login():
+    from app import User, is_safe_relative_url
+    data = request.get_json(silent=True) or {}
+
+    if not TELEGRAM_BOT_TOKEN:
+        return jsonify({'error': 'TELEGRAM_BOT_TOKEN sozlanmagan'}), 500
+
+    # Verify Telegram hash
+    check_hash = data.pop('hash', '')
+    data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
+    secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+    computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
+
+    if computed != check_hash:
+        return jsonify({'error': 'Tasdiqlash xatosi'}), 403
+
+    if time.time() - int(data.get('auth_date', 0)) > 86400:
+        return jsonify({'error': "Muddati o'tgan"}), 403
+
+    tg_id    = str(data.get('id', ''))
+    username = data.get('username') or f"tg_{tg_id}"
+    email    = f"{tg_id}@telegram.uz"
+
+    try:
+        conn = get_connection()
+        cur  = conn.cursor()
+        cur.execute("SELECT id, username, email FROM users WHERE username = %s", (username,))
+        user_row = cur.fetchone()
+
+        if not user_row:
+            cur.execute(
+                "INSERT INTO users (username, email, password_hash, is_admin) "
+                "VALUES (%s, %s, %s, %s) RETURNING id",
+                (username, email, 'telegram_auth', False)
+            )
+            user_id = cur.fetchone()[0]
+            conn.commit()
+        else:
+            user_id = user_row[0]
+            email   = user_row[2] or email
+
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return jsonify({'error': f'DB xatolik: {str(e)}'}), 500
+
+    login_user(User(user_id, username, email), remember=True)
+    return jsonify({'redirect': '/dashboard'})

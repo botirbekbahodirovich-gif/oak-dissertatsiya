@@ -73,6 +73,9 @@ app.register_blueprint(data_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(upload_bp)
 
+# Telegram login uses HMAC hash verification — no CSRF token needed
+csrf.exempt(app.view_functions['auth.telegram_login'])
+
 
 @app.route("/")
 def home():
