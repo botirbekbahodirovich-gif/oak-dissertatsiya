@@ -94,7 +94,7 @@ def register():
                 conn.commit()
                 cur.close()
                 conn.close()
-                return redirect(url_for('login') + '?registered=1')
+                return redirect(url_for('auth.login', registered=1))
             except psycopg2.IntegrityError as e:
                 message = str(e).lower()
                 if 'username' in message:
