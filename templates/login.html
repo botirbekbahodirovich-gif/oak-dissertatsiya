@@ -33,9 +33,8 @@
       </div>
       <button type="submit" class="btn btn-primary w-100"> <i class="bi bi-box-arrow-in-right me-1"></i>Kirish</button>
 
-      <div class="text-center my-3"><span style="color:#8899b4">— yoki —</span></div>
-
-      <div class="d-flex justify-content-center">
+      <div class="text-center my-4">
+        <p style="color:#8899b4;margin-bottom:12px">— yoki Telegram orqali kiring —</p>
         <script async src="https://telegram.org/js/telegram-widget.js?22"
           data-telegram-login="send_kod_bot"
           data-size="large"
@@ -62,15 +61,12 @@
   function onTelegramAuth(user) {
     fetch('/login/telegram', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type':'application/json'},
       body: JSON.stringify(user)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.redirect) window.location.href = data.redirect;
-      else alert(data.error || 'Xatolik yuz berdi');
-    })
-    .catch(function() { alert('Tarmoq xatoligi'); });
+    }).then(r=>r.json()).then(d=>{
+      if(d.redirect) window.location.href=d.redirect;
+      else alert(d.error||'Xatolik yuz berdi');
+    });
   }
 </script>
 {% endblock %}
