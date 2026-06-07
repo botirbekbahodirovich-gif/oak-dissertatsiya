@@ -1,187 +1,225 @@
 {% extends "base.html" %}
-{% block title %}IlmNet — O'zbekiston ilmiy tadqiqotlari bazasi{% endblock %}
+{% block title %}Olimlar.uz — Olimlar uchun barcha qulayliklar{% endblock %}
 
 {% block extra_head %}
 <style>
-/* override base padding so hero can go edge-to-edge inside container */
-.content-main { padding-top: 0 !important; padding-bottom: 0 !important; }
+/* ── reset ──────────────────────────────── */
+.content-main { padding: 0 !important; }
 
-/* ── UTILITIES ─────────────────────────────────────── */
-.lp-section   { padding: 4rem 0; }
-.lp-section-sm{ padding: 2.5rem 0; }
-.lp-divider   { border: 0; border-top: 1px solid rgba(255,255,255,0.06); margin: 0; }
-.sec-label {
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 1.6px;
-  text-transform: uppercase; color: var(--oak-accent); margin-bottom: 0.45rem;
+/* ── animated mesh background ──────────── */
+.hero-bg {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  background: radial-gradient(ellipse 80% 60% at 20% 30%, rgba(74,158,255,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 80% 70%, rgba(168,85,247,0.07) 0%, transparent 55%),
+              linear-gradient(180deg, #0a0e17 0%, #131820 50%, #1a1d29 100%);
+  animation: mesh-shift 14s ease-in-out infinite alternate;
 }
-.sec-title { font-size: 1.55rem; font-weight: 800; margin: 0 0 0.35rem; letter-spacing: -0.3px; }
-.sec-sub   { color: var(--oak-muted); font-size: 0.93rem; margin: 0; }
+@keyframes mesh-shift {
+  0%   { background-position: 0% 0%, 100% 100%, 0 0; }
+  100% { background-position: 15% 15%, 85% 85%, 0 0; }
+}
 
-/* ── HERO ──────────────────────────────────────────── */
+/* ── floating particles ─────────────────── */
+.particles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.particles span {
+  position: absolute; border-radius: 50%;
+  background: rgba(74,158,255,0.55);
+  animation: float-p linear infinite;
+}
+@keyframes float-p {
+  0%   { transform: translateY(110vh) scale(0.4); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 0.25; }
+  100% { transform: translateY(-15vh) scale(1.2); opacity: 0; }
+}
+
+/* ── hero wrap ──────────────────────────── */
 .hero-wrap {
-  padding: 5rem 0 3.5rem;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+  position: relative; min-height: 92vh;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center;
+  padding: 5rem 1rem 4rem; overflow: hidden;
 }
-.hero-wrap::before {
-  content: '';
-  position: absolute; top: -180px; left: 50%; transform: translateX(-50%);
-  width: 900px; height: 900px;
-  background: radial-gradient(circle, rgba(74,158,255,0.07) 0%, transparent 65%);
-  pointer-events: none; z-index: 0;
-}
-.hero-wrap > * { position: relative; z-index: 1; }
+.hero-content { position: relative; z-index: 2; width: 100%; }
 
-.hero-logo-row {
-  display: inline-flex; align-items: center; gap: 1rem; margin-bottom: 1rem;
+/* logo */
+.hero-brand {
+  display: inline-flex; align-items: center; gap: 0.85rem;
+  margin-bottom: 0.85rem;
 }
-.hero-icon {
-  width: 66px; height: 66px; border-radius: 22px;
-  background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-  display: grid; place-items: center; font-size: 2rem; color: #fff;
-  box-shadow: 0 14px 44px rgba(74,158,255,0.32);
+.hero-brand-icon {
+  width: 72px; height: 72px; border-radius: 24px;
+  background: linear-gradient(135deg, #4a9eff, #a855f7);
+  display: grid; place-items: center; font-size: 2.2rem; color: #fff;
+  box-shadow: 0 16px 48px rgba(74,158,255,0.35);
 }
-.hero-wordmark {
-  font-size: 3.6rem; font-weight: 900; letter-spacing: -2.5px; line-height: 1;
-  background: linear-gradient(135deg, #ffffff 20%, #93c5fd 100%);
+.hero-site-name {
+  font-size: 4rem; font-weight: 900; letter-spacing: -3px; line-height: 1;
+  background: linear-gradient(135deg, #4a9eff 0%, #a855f7 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .hero-tagline {
-  color: var(--oak-muted); font-size: 1.1rem;
-  margin: 0 auto 2.2rem; max-width: 460px; line-height: 1.5;
+  font-size: 1.3rem; color: rgba(203,213,225,0.7);
+  margin: 0 auto 2.5rem; max-width: 480px; font-weight: 400;
 }
-/* search bar */
-.hero-search-box {
-  max-width: 700px; margin: 0 auto 2rem;
-}
-.hero-search-box .input-group {
-  border-radius: 18px; overflow: hidden;
-  box-shadow: 0 8px 48px rgba(74,158,255,0.16), 0 2px 12px rgba(0,0,0,0.25);
-}
-.hero-search-box .input-group-text {
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(74,158,255,0.28); border-right: 0;
-  color: #4a9eff; font-size: 1.1rem; padding: 0 1.1rem;
-}
-.hero-search-box .form-control {
-  height: 58px; font-size: 1rem;
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid rgba(74,158,255,0.28); border-left: 0; border-right: 0;
-}
-.hero-search-box .form-control:focus { box-shadow: none; background: rgba(255,255,255,0.06); }
-.hero-search-box .btn-search {
-  min-width: 130px; height: 58px; font-size: 0.95rem; font-weight: 700;
-  background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-  border: none; color: #fff; border-radius: 0 !important;
-  transition: opacity 0.15s;
-}
-.hero-search-box .btn-search:hover { opacity: 0.9; color: #fff; }
-/* animated counters */
-.hero-counters {
-  display: flex; justify-content: center; gap: 3rem;
-  margin-bottom: 2rem; flex-wrap: wrap;
-}
-.hc-item { text-align: center; }
-.hc-num  {
-  font-size: 2rem; font-weight: 800; color: #fff; letter-spacing: -1px; line-height: 1.1;
-}
-.hc-num .hc-plus { color: #4a9eff; }
-.hc-lbl  { font-size: 0.73rem; color: var(--oak-muted); text-transform: uppercase; letter-spacing: 0.9px; margin-top: 0.15rem; }
-/* quick buttons */
-.hero-quick {
-  display: flex; justify-content: center; gap: 0.7rem; flex-wrap: wrap;
-}
-.btn-hero-phd  { background: rgba(52,211,153,0.1);  color:#34d399; border:1px solid rgba(52,211,153,0.25);  border-radius:12px; padding:0.6rem 1.3rem; font-weight:600; font-size:0.88rem; transition:background 0.15s; }
-.btn-hero-phd:hover  { background:rgba(52,211,153,0.2);  color:#34d399; text-decoration:none; }
-.btn-hero-dsc  { background: rgba(167,139,250,0.1); color:#a78bfa; border:1px solid rgba(167,139,250,0.25); border-radius:12px; padding:0.6rem 1.3rem; font-weight:600; font-size:0.88rem; transition:background 0.15s; }
-.btn-hero-dsc:hover  { background:rgba(167,139,250,0.2); color:#a78bfa; text-decoration:none; }
-.btn-hero-all  { background: rgba(74,158,255,0.1);  color:#4a9eff; border:1px solid rgba(74,158,255,0.25);  border-radius:12px; padding:0.6rem 1.3rem; font-weight:600; font-size:0.88rem; transition:background 0.15s; }
-.btn-hero-all:hover  { background:rgba(74,158,255,0.18); color:#4a9eff; text-decoration:none; }
 
-/* ── AI PROMO ───────────────────────────────────────── */
-.ai-card {
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(74,158,255,0.07), rgba(124,92,252,0.09));
-  border: 1px solid rgba(74,158,255,0.2);
-  padding: 2rem 2rem 1.8rem;
-  display: flex; gap: 1.8rem; align-items: flex-start;
+/* AI card */
+.ai-main-card {
+  width: 100%; max-width: 700px; margin: 0 auto 2rem;
+  background: rgba(74,158,255,0.05);
+  border: 1px solid rgba(74,158,255,0.3);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-radius: 24px; padding: 2rem;
+  box-shadow: 0 16px 64px rgba(74,158,255,0.1), inset 0 1px 0 rgba(255,255,255,0.06);
 }
-.ai-card-icon {
-  width: 58px; height: 58px; flex-shrink: 0; border-radius: 18px;
-  background: linear-gradient(135deg,rgba(74,158,255,0.18),rgba(124,92,252,0.22));
-  border: 1px solid rgba(74,158,255,0.2);
-  display: grid; place-items: center; font-size: 1.9rem;
+.ai-robot-wrap {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg,rgba(74,158,255,0.18),rgba(168,85,247,0.2));
+  border: 1px solid rgba(74,158,255,0.3);
+  display: grid; place-items: center; font-size: 2.5rem;
+  margin: 0 auto 1rem;
+  animation: pulse-ring 2.5s ease-out infinite;
 }
-.ai-card-body { flex: 1; min-width: 0; }
-.ai-card-body h2 { font-size: 1.2rem; font-weight: 700; margin: 0 0 0.25rem; }
-.ai-card-body p  { color: var(--oak-muted); font-size: 0.88rem; margin: 0 0 1.1rem; }
-.ai-preview {
-  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 12px; padding: 0.85rem 1rem;
-  min-height: 50px; margin-bottom: 1.1rem;
-  font-size: 0.9rem; color: #cbd5e1; line-height: 1.5;
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(74,158,255,0.45); }
+  70%  { box-shadow: 0 0 0 22px rgba(74,158,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(74,158,255,0); }
+}
+.ai-main-title { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.3rem; }
+.ai-main-sub   { color: var(--oak-muted); font-size: 0.92rem; margin: 0 0 1.2rem; }
+.ai-typing-box {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 0.9rem 1rem;
+  min-height: 54px; text-align: left; margin-bottom: 1.2rem;
+  font-size: 0.95rem; color: #cbd5e1; line-height: 1.5;
 }
 .ai-cursor {
   display: inline-block; width: 2px; height: 1em;
-  background: #4a9eff; margin-left: 1px; vertical-align: text-bottom;
-  animation: cur-blink 1s step-end infinite;
+  background: #4a9eff; margin-left: 2px; vertical-align: text-bottom;
+  animation: blink-c 1s step-end infinite;
 }
-@keyframes cur-blink { 0%,100%{opacity:1} 50%{opacity:0} }
-.btn-ai-open {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.65rem 1.4rem; border-radius: 12px;
-  background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-  color: #fff; font-weight: 700; font-size: 0.9rem;
+@keyframes blink-c { 0%,100%{opacity:1} 50%{opacity:0} }
+.btn-ai-start {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  padding: 0.85rem 2rem; border-radius: 14px;
+  background: linear-gradient(135deg, #4a9eff, #a855f7);
+  color: #fff; font-weight: 700; font-size: 1rem;
   border: none; cursor: pointer;
-  transition: opacity 0.15s, transform 0.15s; text-decoration: none;
+  box-shadow: 0 8px 28px rgba(74,158,255,0.3);
+  transition: opacity 0.15s, transform 0.15s;
 }
-.btn-ai-open:hover { opacity: 0.88; transform: translateY(-1px); color: #fff; text-decoration: none; }
+.btn-ai-start:hover { opacity: 0.9; transform: translateY(-2px); color: #fff; text-decoration: none; }
 
-/* ── STATS TILES ────────────────────────────────────── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 1rem;
+/* secondary search */
+.hero-search-row {
+  margin-bottom: 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
 }
-.stat-tile {
-  background: var(--oak-surface); border: 1px solid var(--oak-border);
-  border-radius: 16px; padding: 1.25rem 1rem;
-  text-align: center;
-  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+.hero-search-label { font-size: 0.78rem; color: var(--oak-muted); letter-spacing: 0.5px; }
+.hero-search-form  { width: 100%; max-width: 500px; }
+.hero-search-form .input-group {
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.25);
 }
-.stat-tile:hover {
-  transform: translateY(-3px);
-  border-color: rgba(74,158,255,0.25);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+.hero-search-form .input-group-text {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-right: 0; color: var(--oak-muted);
 }
-.st-icon  { font-size: 1.5rem; margin-bottom: 0.55rem; display: block; }
-.st-num   { font-size: 1.65rem; font-weight: 800; display: block; letter-spacing: -0.5px; margin-bottom: 0.2rem; }
-.st-label { font-size: 0.68rem; color: var(--oak-muted); text-transform: uppercase; letter-spacing: 0.7px; }
+.hero-search-form .form-control {
+  height: 48px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1); border-left: 0; border-right: 0;
+  font-size: 0.92rem; color: var(--oak-text);
+}
+.hero-search-form .form-control:focus { box-shadow: none; background: rgba(255,255,255,0.06); }
+.hero-search-form .btn-search {
+  background: rgba(74,158,255,0.15); border: 1px solid rgba(74,158,255,0.3);
+  color: #4a9eff; font-weight: 600; padding: 0 1.2rem; font-size: 0.88rem;
+  transition: background 0.15s;
+}
+.hero-search-form .btn-search:hover { background: rgba(74,158,255,0.25); }
 
-/* ── RANKING (ixtisoslik + university) ──────────────── */
-.rank-item {
-  display: flex; align-items: center; gap: 0.9rem;
-  padding: 0.8rem 1rem; border-radius: 12px;
-  border: 1px solid var(--oak-border); background: var(--oak-surface);
-  margin-bottom: 0.55rem; color: inherit; text-decoration: none;
-  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+/* counters */
+.hero-counters {
+  display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;
+  margin-top: 2rem;
 }
-.rank-item:hover {
-  border-color: rgba(74,158,255,0.28); background: rgba(74,158,255,0.04);
-  transform: translateX(4px); color: inherit; text-decoration: none;
-}
-.rk-pos   { font-size: 0.7rem; font-weight: 700; color: var(--oak-muted); min-width: 18px; text-align: center; }
-.rk-code  { font-weight: 700; font-size: 0.88rem; color: #4a9eff; flex-shrink: 0; min-width: 70px; }
-.rk-name  { font-size: 0.78rem; color: var(--oak-text); flex-shrink: 0; min-width: 110px; max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rk-bar   { flex: 1; }
-.rk-bar-bg   { background: rgba(255,255,255,0.05); border-radius: 4px; height: 5px; overflow: hidden; }
-.rk-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; width: 0; }
-.rk-count { font-size: 0.78rem; font-weight: 700; color: var(--oak-muted); min-width: 34px; text-align: right; }
+.hc-item { text-align: center; }
+.hc-num  { font-size: 2rem; font-weight: 800; letter-spacing: -1px; color: #fff; }
+.hc-plus { color: #4a9eff; }
+.hc-lbl  { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.9px; color: var(--oak-muted); margin-top: 0.1rem; }
 
-/* ── RECENT CARDS ───────────────────────────────────── */
+/* scroll hint */
+.scroll-hint {
+  position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+  z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  color: rgba(255,255,255,0.25); font-size: 0.7rem; letter-spacing: 0.5px;
+  animation: bounce-down 2s ease-in-out infinite;
+}
+@keyframes bounce-down {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(6px); }
+}
+
+/* ── utilities ──────────────────────────── */
+.lp-divider { border: 0; border-top: 1px solid rgba(255,255,255,0.06); margin: 0; }
+.lp-section { padding: 4rem 0; }
+.lp-section-sm { padding: 2.5rem 0; }
+.sec-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase; color: var(--oak-accent); margin-bottom: 0.4rem; }
+.sec-title { font-size: 1.55rem; font-weight: 800; margin: 0 0 0.35rem; letter-spacing: -0.3px; }
+.sec-sub   { color: var(--oak-muted); font-size: 0.92rem; margin: 0; }
+
+/* ── faol cards ─────────────────────────── */
+.faol-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.2rem; }
+.faol-card {
+  background: linear-gradient(135deg, rgba(74,158,255,0.08), rgba(168,85,247,0.08));
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.5rem;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+  display: flex; flex-direction: column; gap: 0;
+}
+.faol-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(74,158,255,0.4);
+  box-shadow: 0 16px 40px rgba(74,158,255,0.12);
+}
+.faol-card-header { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.5rem; }
+.faol-icon {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: linear-gradient(135deg,#4a9eff,#a855f7);
+  display: grid; place-items: center; font-size: 1.4rem; flex-shrink: 0;
+}
+.faol-card-title { font-size: 1rem; font-weight: 700; margin: 0 0 0.15rem; }
+.faol-card-sub   { font-size: 0.75rem; color: var(--oak-muted); margin: 0; }
+.faol-list { margin: 1rem 0 0.75rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.faol-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.75rem; border-radius: 10px;
+  background: rgba(255,255,255,0.03); cursor: pointer;
+  text-decoration: none; color: inherit;
+  transition: background 0.15s;
+}
+.faol-item:hover { background: rgba(74,158,255,0.1); color: inherit; text-decoration: none; }
+.faol-rank { font-size: 1.1rem; flex-shrink: 0; width: 22px; text-align: center; }
+.faol-name { flex: 1; font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.faol-bar-col { width: 60px; }
+.faol-bar-bg   { background: rgba(255,255,255,0.06); border-radius: 3px; height: 4px; }
+.faol-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#4a9eff,#a855f7); transition: width 0.8s ease; width: 0; }
+.faol-count {
+  font-size: 0.73rem; font-weight: 700;
+  background: rgba(74,158,255,0.12); color: #4a9eff;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+}
+.faol-footer { margin-top: auto; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); }
+.faol-more {
+  font-size: 0.8rem; color: var(--oak-accent); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  transition: gap 0.15s;
+}
+.faol-more:hover { gap: 0.5rem; color: var(--oak-accent); }
+
+/* ── recent cards ───────────────────────── */
 .recent-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem;
 }
 .diss-card {
   background: var(--oak-surface); border: 1px solid var(--oak-border);
@@ -189,36 +227,27 @@
   display: flex; flex-direction: column; gap: 0.45rem;
   text-decoration: none; color: inherit;
   transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
-  cursor: pointer;
 }
 .diss-card:hover {
   border-color: rgba(74,158,255,0.3); box-shadow: 0 8px 28px rgba(0,0,0,0.2);
   transform: translateY(-2px); color: inherit; text-decoration: none;
 }
-.dc-top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.dc-top  { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .dc-badge { padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
 .dc-phd   { background: rgba(52,211,153,0.14); color: #34d399; }
 .dc-dsc   { background: rgba(167,139,250,0.14); color: #a78bfa; }
 .dc-other { background: rgba(255,255,255,0.06); color: var(--oak-muted); }
 .dc-date  { margin-left: auto; font-size: 0.7rem; color: var(--oak-muted); white-space: nowrap; }
 .dc-olim  { font-weight: 700; font-size: 0.93rem; color: #e8eef8; }
-.dc-mavzu {
-  font-size: 0.82rem; color: var(--oak-muted); line-height: 1.45;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.dc-muas  {
-  font-size: 0.75rem; color: #6b7a99; display: flex; align-items: center;
-  gap: 0.3rem; margin-top: auto; padding-top: 0.3rem;
-}
+.dc-mavzu { font-size: 0.82rem; color: var(--oak-muted); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dc-muas  { font-size: 0.75rem; color: #6b7a99; display: flex; align-items: center; gap: 0.3rem; margin-top: auto; padding-top: 0.3rem; }
 
-/* ── COMING SOON ────────────────────────────────────── */
-.cs-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
-}
+/* ── coming soon ────────────────────────── */
+.cs-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
 .cs-card {
   background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 16px; padding: 1.4rem; opacity: 0.55;
-  position: relative; overflow: hidden; cursor: not-allowed;
+  border-radius: 16px; padding: 1.4rem; opacity: 0.55; cursor: not-allowed;
+  position: relative; overflow: hidden;
 }
 .cs-tag {
   position: absolute; top: 10px; right: 10px;
@@ -226,26 +255,18 @@
   font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
   border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
 }
-.cs-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: rgba(255,255,255,0.04); display: grid; place-items: center;
-  font-size: 1.2rem; color: var(--oak-muted); margin-bottom: 0.75rem;
-}
+.cs-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.04); display: grid; place-items: center; font-size: 1.2rem; color: var(--oak-muted); margin-bottom: 0.75rem; }
 .cs-card h4 { font-size: 0.97rem; font-weight: 700; color: var(--oak-muted); margin: 0 0 0.35rem; }
 .cs-card p  { font-size: 0.82rem; color: #4a556a; margin: 0; line-height: 1.5; }
 
-/* ── LANDING FOOTER ─────────────────────────────────── */
-.lp-foot {
-  padding: 2rem 0 2.5rem;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  text-align: center;
-}
-.lp-foot-copy  { color: var(--oak-muted); font-size: 0.83rem; }
+/* ── footer ─────────────────────────────── */
+.lp-foot { padding: 2rem 0 2.5rem; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; }
+.lp-foot-copy  { color: var(--oak-muted); font-size: 0.85rem; }
 .lp-foot-links { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.7rem; }
 .lp-foot-links a { color: var(--oak-muted); font-size: 0.82rem; text-decoration: none; transition: color 0.15s; }
 .lp-foot-links a:hover { color: #4a9eff; }
 
-/* ── SCROLL-TO-TOP ──────────────────────────────────── */
+/* ── scroll-to-top ──────────────────────── */
 #lp-top-btn {
   position: fixed; right: 1rem; bottom: 5.5rem; z-index: 999;
   width: 40px; height: 40px; border-radius: 50%;
@@ -254,198 +275,224 @@
   color: var(--oak-muted); cursor: pointer;
   display: grid; place-items: center; font-size: 0.9rem;
   opacity: 0; visibility: hidden;
-  transition: opacity 0.2s, visibility 0.2s, color 0.15s, border-color 0.15s;
+  transition: opacity 0.2s, visibility 0.2s, color 0.15s;
 }
 #lp-top-btn.vis { opacity: 1; visibility: visible; }
 #lp-top-btn:hover { color: #4a9eff; border-color: rgba(74,158,255,0.35); }
 
-/* ── RESPONSIVE ─────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .stats-row { grid-template-columns: repeat(3, 1fr); }
-}
+/* ── responsive ─────────────────────────── */
 @media (max-width: 992px) {
-  .hero-wordmark  { font-size: 3rem; }
-  .recent-grid    { grid-template-columns: repeat(2, 1fr); }
-  .stats-row      { grid-template-columns: repeat(3, 1fr); }
-  .cs-grid        { grid-template-columns: 1fr 1fr; }
+  .hero-site-name { font-size: 3rem; }
+  .faol-grid { grid-template-columns: 1fr; }
+  .recent-grid { grid-template-columns: repeat(2,1fr); }
+  .cs-grid { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
-  .hero-wrap      { padding: 3rem 0 2.5rem; }
-  .hero-wordmark  { font-size: 2.4rem; letter-spacing: -1.5px; }
-  .hero-counters  { gap: 1.8rem; }
-  .hc-num         { font-size: 1.6rem; }
-  .ai-card        { flex-direction: column; gap: 1rem; }
-  .stats-row      { grid-template-columns: repeat(2, 1fr); }
-  .recent-grid    { grid-template-columns: 1fr; }
-  .cs-grid        { grid-template-columns: 1fr; }
-  .lp-section     { padding: 2.5rem 0; }
+  .hero-wrap { min-height: 80vh; padding: 4rem 1rem 3rem; }
+  .hero-site-name { font-size: 2.5rem; letter-spacing: -2px; }
+  .hero-brand-icon { width: 58px; height: 58px; font-size: 1.8rem; }
+  .ai-main-card { padding: 1.4rem; }
+  .hero-counters { gap: 1.8rem; }
+  .hc-num { font-size: 1.6rem; }
+  .recent-grid { grid-template-columns: 1fr; }
+  .cs-grid { grid-template-columns: 1fr; }
+  .lp-section { padding: 2.5rem 0; }
 }
 @media (max-width: 480px) {
-  .hero-wordmark  { font-size: 2rem; letter-spacing: -1px; }
-  .hero-icon      { width: 52px; height: 52px; font-size: 1.5rem; border-radius: 16px; }
-  .hero-search-box .btn-search { min-width: 90px; font-size: 0.85rem; }
-  .hero-counters  { gap: 1.2rem; }
-  .hc-num         { font-size: 1.4rem; }
-  .stats-row      { grid-template-columns: repeat(2, 1fr); gap: 0.7rem; }
-  .lp-section     { padding: 2rem 0; }
+  .hero-site-name { font-size: 2rem; letter-spacing: -1.5px; }
+  .hero-brand-icon { width: 50px; height: 50px; font-size: 1.5rem; border-radius: 16px; }
+  .ai-main-card { padding: 1.1rem; }
+  .hero-counters { gap: 1.3rem; }
+  .hc-num { font-size: 1.4rem; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ════════════════════════════════════════
-     SECTION 1 — HERO
-═════════════════════════════════════════ -->
+<!-- ════ HERO ════════════════════════════════════════ -->
 <section class="hero-wrap" id="top">
-  <div class="hero-logo-row">
-    <div class="hero-icon"><i class="bi bi-mortarboard-fill"></i></div>
-    <span class="hero-wordmark">IlmNet</span>
-  </div>
-  <p class="hero-tagline">O'zbekiston ilmiy tadqiqotlari bazasi</p>
+  <!-- animated background -->
+  <div class="hero-bg"></div>
 
-  <div class="hero-search-box">
-    <form action="/dashboard" method="get">
-      <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input name="search" type="text" class="form-control"
-               placeholder="Dissertatsiya, olim, mavzu yoki muassasa qidiring..." />
-        <button type="submit" class="btn-search">Qidirish</button>
-      </div>
-    </form>
+  <!-- floating particles -->
+  <div class="particles" aria-hidden="true">
+    <span style="left:5%;  width:3px;height:3px;animation-duration:18s;animation-delay:0s;"></span>
+    <span style="left:10%; width:2px;height:2px;animation-duration:22s;animation-delay:2s;"></span>
+    <span style="left:18%; width:4px;height:4px;animation-duration:15s;animation-delay:4s;background:rgba(168,85,247,0.5);"></span>
+    <span style="left:26%; width:2px;height:2px;animation-duration:20s;animation-delay:1s;"></span>
+    <span style="left:33%; width:3px;height:3px;animation-duration:17s;animation-delay:6s;"></span>
+    <span style="left:41%; width:2px;height:2px;animation-duration:25s;animation-delay:3s;background:rgba(168,85,247,0.4);"></span>
+    <span style="left:48%; width:5px;height:5px;animation-duration:13s;animation-delay:8s;opacity:0.3;"></span>
+    <span style="left:55%; width:2px;height:2px;animation-duration:19s;animation-delay:0.5s;"></span>
+    <span style="left:62%; width:3px;height:3px;animation-duration:23s;animation-delay:5s;background:rgba(168,85,247,0.45);"></span>
+    <span style="left:70%; width:2px;height:2px;animation-duration:16s;animation-delay:7s;"></span>
+    <span style="left:77%; width:4px;height:4px;animation-duration:21s;animation-delay:2.5s;"></span>
+    <span style="left:84%; width:2px;height:2px;animation-duration:24s;animation-delay:9s;background:rgba(168,85,247,0.5);"></span>
+    <span style="left:90%; width:3px;height:3px;animation-duration:14s;animation-delay:3.5s;"></span>
+    <span style="left:95%; width:2px;height:2px;animation-duration:20s;animation-delay:11s;"></span>
+    <span style="left:22%; width:2px;height:2px;animation-duration:28s;animation-delay:13s;background:rgba(168,85,247,0.4);"></span>
+    <span style="left:37%; width:3px;height:3px;animation-duration:26s;animation-delay:4.5s;"></span>
+    <span style="left:58%; width:2px;height:2px;animation-duration:30s;animation-delay:10s;"></span>
+    <span style="left:73%; width:4px;height:4px;animation-duration:18s;animation-delay:6.5s;opacity:0.3;"></span>
+    <span style="left:88%; width:2px;height:2px;animation-duration:22s;animation-delay:1.5s;background:rgba(168,85,247,0.35);"></span>
+    <span style="left:14%; width:3px;height:3px;animation-duration:19s;animation-delay:12s;"></span>
   </div>
 
-  <div class="hero-counters">
-    <div class="hc-item">
-      <div class="hc-num"><span id="hc-total">0</span><span class="hc-plus">+</span></div>
-      <div class="hc-lbl">Dissertatsiya</div>
+  <div class="hero-content">
+    <!-- Logo -->
+    <div class="hero-brand">
+      <div class="hero-brand-icon">🎓</div>
+      <span class="hero-site-name">Olimlar.uz</span>
     </div>
-    <div class="hc-item">
-      <div class="hc-num"><span id="hc-unis">0</span><span class="hc-plus">+</span></div>
-      <div class="hc-lbl">Universitet</div>
-    </div>
-    <div class="hc-item">
-      <div class="hc-num"><span id="hc-olim">0</span><span class="hc-plus">+</span></div>
-      <div class="hc-lbl">Olim</div>
-    </div>
-  </div>
+    <p class="hero-tagline">Olimlar uchun barcha qulayliklar</p>
 
-  <div class="hero-quick">
-    <a href="/dashboard?daraja=PHD" class="btn-hero-phd"><i class="bi bi-award me-1"></i>PhD himoyalar</a>
-    <a href="/dashboard?daraja=DSC" class="btn-hero-dsc"><i class="bi bi-patch-star me-1"></i>DSc himoyalar</a>
-    <a href="/dashboard"            class="btn-hero-all"><i class="bi bi-collection me-1"></i>Barchasi</a>
-  </div>
-</section>
-
-<hr class="lp-divider">
-
-<!-- ════════════════════════════════════════
-     SECTION 2 — AI YORDAMCHI PROMO
-═════════════════════════════════════════ -->
-<section class="lp-section" id="ai-section">
-  <div class="ai-card">
-    <div class="ai-card-icon">🤖</div>
-    <div class="ai-card-body">
-      <h2>IlmNet AI Yordamchi</h2>
-      <p>Dissertatsiya bazasi bo'yicha istalgan savolga sun'iy intellekt bilan javob oling</p>
-      <div class="ai-preview">
+    <!-- AI MAIN CARD -->
+    <div class="ai-main-card">
+      <div class="ai-robot-wrap">🤖</div>
+      <h2 class="ai-main-title">AI Yordamchi bilan suhbatlashing</h2>
+      <p class="ai-main-sub">Dissertatsiya, ilmiy rahbar, mavzu — har qanday savol bering</p>
+      <div class="ai-typing-box">
         <span id="ai-q-text"></span><span class="ai-cursor"></span>
       </div>
-      <button class="btn-ai-open" onclick="document.getElementById('ai-panel').classList.add('open')">
-        <i class="bi bi-chat-dots-fill"></i> AI bilan suhbat
+      <button class="btn-ai-start" onclick="document.getElementById('ai-panel').classList.add('open')">
+        <i class="bi bi-stars"></i> AI bilan boshlash
       </button>
     </div>
-  </div>
-</section>
 
-<hr class="lp-divider">
-
-<!-- ════════════════════════════════════════
-     SECTION 3 — STATISTIKA
-═════════════════════════════════════════ -->
-<section class="lp-section" id="stats-section">
-  <div class="sec-label">Statistika</div>
-  <h2 class="sec-title">Bazaning qisqacha ko'rinishi</h2>
-  <p class="sec-sub mb-4">Real vaqt ma'lumotlari</p>
-  <div class="stats-row">
-    <div class="stat-tile">
-      <span class="st-icon" style="color:#4a9eff"><i class="bi bi-collection-fill"></i></span>
-      <span class="st-num" id="st-total">—</span>
-      <span class="st-label">Jami dissertatsiyalar</span>
-    </div>
-    <div class="stat-tile">
-      <span class="st-icon" style="color:#34d399"><i class="bi bi-award-fill"></i></span>
-      <span class="st-num" id="st-phd">—</span>
-      <span class="st-label">PhD soni</span>
-    </div>
-    <div class="stat-tile">
-      <span class="st-icon" style="color:#a78bfa"><i class="bi bi-patch-star-fill"></i></span>
-      <span class="st-num" id="st-dsc">—</span>
-      <span class="st-label">DSc soni</span>
-    </div>
-    <div class="stat-tile">
-      <span class="st-icon" style="color:#fbbf24"><i class="bi bi-building-fill"></i></span>
-      <span class="st-num" id="st-unis">—</span>
-      <span class="st-label">Universitetlar</span>
-    </div>
-    <div class="stat-tile">
-      <span class="st-icon" style="color:#f87171"><i class="bi bi-tags-fill"></i></span>
-      <span class="st-num" id="st-ix">—</span>
-      <span class="st-label">Ixtisosliklar</span>
-    </div>
-  </div>
-</section>
-
-<hr class="lp-divider">
-
-<!-- ════════════════════════════════════════
-     SECTION 4 — KO'P HIMOYALANGAN MAVZULAR
-═════════════════════════════════════════ -->
-<section class="lp-section" id="ranking-section">
-  <div class="row g-4">
-    <div class="col-12 col-lg-6">
-      <div class="sec-label">Top ixtisosliklar</div>
-      <h2 class="sec-title">Ko'p himoyalangan ixtisosliklar</h2>
-      <p class="sec-sub mb-3">Eng ko'p dissertatsiya himoyalangan 5 ta soha</p>
-      <div id="ix-list">
-        {% for i in range(5) %}
-        <div class="rank-item" style="cursor:default;opacity:0.35">
-          <div class="rk-pos">{{ loop.index }}</div>
-          <div class="rk-code"><span class="skeleton-bar" style="width:68px;height:12px;display:inline-block;"></span></div>
-          <div class="rk-bar"><div class="rk-bar-bg"></div></div>
-          <div class="rk-count">—</div>
+    <!-- Secondary search -->
+    <div class="hero-search-row">
+      <span class="hero-search-label">Yoki to'g'ridan-to'g'ri qidiring</span>
+      <form action="/dashboard" method="get" class="hero-search-form">
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input name="search" type="text" class="form-control"
+                 placeholder="Olim, mavzu, muassasa..." />
+          <button type="submit" class="btn-search">Qidirish</button>
         </div>
-        {% endfor %}
+      </form>
+    </div>
+
+    <!-- Counters -->
+    <div class="hero-counters">
+      <div class="hc-item">
+        <div class="hc-num"><span id="hc-total">0</span><span class="hc-plus">+</span></div>
+        <div class="hc-lbl">Dissertatsiya</div>
       </div>
-    </div>
-    <div class="col-12 col-lg-6">
-      <div class="sec-label">Top universitetlar</div>
-      <h2 class="sec-title">Eng faol muassasalar</h2>
-      <p class="sec-sub mb-3">Eng ko'p dissertatsiya himoyalangan 5 ta universitet</p>
-      <div id="uni-list">
-        {% for i in range(5) %}
-        <div class="rank-item" style="cursor:default;opacity:0.35">
-          <div class="rk-pos">{{ loop.index }}</div>
-          <div class="rk-name"><span class="skeleton-bar" style="width:100px;height:12px;display:inline-block;"></span></div>
-          <div class="rk-bar"><div class="rk-bar-bg"></div></div>
-          <div class="rk-count">—</div>
-        </div>
-        {% endfor %}
+      <div class="hc-item">
+        <div class="hc-num"><span id="hc-unis">0</span></div>
+        <div class="hc-lbl">Universitet</div>
+      </div>
+      <div class="hc-item">
+        <div class="hc-num"><span id="hc-olim">0</span><span class="hc-plus">+</span></div>
+        <div class="hc-lbl">Olim</div>
       </div>
     </div>
   </div>
+
+  <!-- scroll hint -->
+  <div class="scroll-hint">
+    <i class="bi bi-chevron-down"></i>
+  </div>
 </section>
 
 <hr class="lp-divider">
 
-<!-- ════════════════════════════════════════
-     SECTION 5 — SO'NGGI HIMOYALAR
-═════════════════════════════════════════ -->
+<!-- ════ ENG FAOL ════════════════════════════════════ -->
+<section class="lp-section" id="faol-section">
+  <div class="container-xl" style="max-width:none;">
+    <div class="text-center mb-4">
+      <div class="sec-label">Statistika</div>
+      <h2 class="sec-title" style="font-size:2rem;">Eng faol</h2>
+      <p class="sec-sub">Universitetlar, ilmiy rahbarlar va ixtisosliklar bo'yicha statistika</p>
+    </div>
+    <div class="faol-grid">
+
+      <!-- Card 1: Universities -->
+      <div class="faol-card">
+        <div class="faol-card-header">
+          <div class="faol-icon">🏛️</div>
+          <div>
+            <div class="faol-card-title">Faol universitetlar</div>
+            <div class="faol-card-sub">Eng ko'p dissertatsiya himoyalangan</div>
+          </div>
+        </div>
+        <div class="faol-list" id="faol-unis">
+          {% for i in range(3) %}
+          <div class="faol-item" style="cursor:default;opacity:0.4;">
+            <span class="faol-rank">—</span>
+            <span class="faol-name"><span class="skeleton-bar" style="width:120px;height:12px;display:inline-block;"></span></span>
+            <div class="faol-bar-col"><div class="faol-bar-bg"></div></div>
+            <span class="faol-count">—</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="faol-footer">
+          <a href="/dashboard" class="faol-more">Barchasini ko'rish <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 2: Supervisors -->
+      <div class="faol-card">
+        <div class="faol-card-header">
+          <div class="faol-icon">👨‍🏫</div>
+          <div>
+            <div class="faol-card-title">Faol ilmiy rahbarlar</div>
+            <div class="faol-card-sub">Ko'p dissertatsiya boshqargan rahbarlar</div>
+          </div>
+        </div>
+        <div class="faol-list" id="faol-sups">
+          {% for i in range(3) %}
+          <div class="faol-item" style="cursor:default;opacity:0.4;">
+            <span class="faol-rank">—</span>
+            <span class="faol-name"><span class="skeleton-bar" style="width:130px;height:12px;display:inline-block;"></span></span>
+            <div class="faol-bar-col"><div class="faol-bar-bg"></div></div>
+            <span class="faol-count">—</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="faol-footer">
+          <a href="/dashboard" class="faol-more">Barchasini ko'rish <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <!-- Card 3: Ixtisosliklar -->
+      <div class="faol-card">
+        <div class="faol-card-header">
+          <div class="faol-icon">📊</div>
+          <div>
+            <div class="faol-card-title">Faol ixtisosliklar</div>
+            <div class="faol-card-sub">Mavjud ilmiy yo'nalishlar</div>
+          </div>
+        </div>
+        <div class="faol-list" id="faol-ix">
+          {% for i in range(3) %}
+          <div class="faol-item" style="cursor:default;opacity:0.4;">
+            <span class="faol-rank">—</span>
+            <span class="faol-name"><span class="skeleton-bar" style="width:110px;height:12px;display:inline-block;"></span></span>
+            <div class="faol-bar-col"><div class="faol-bar-bg"></div></div>
+            <span class="faol-count">—</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="faol-footer">
+          <a href="/dashboard" class="faol-more">Barchasini ko'rish <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<hr class="lp-divider">
+
+<!-- ════ HIMOYA E'LONLARI ════════════════════════════ -->
 <section class="lp-section" id="recent-section">
   <div class="d-flex align-items-end justify-content-between mb-4 flex-wrap gap-2">
     <div>
       <div class="sec-label">Oxirgi qo'shilganlar</div>
       <h2 class="sec-title mb-0">Himoya e'lonlari</h2>
+      <p class="sec-sub mt-1">Eng so'nggi e'lon qilingan dissertatsiyalar</p>
     </div>
     <a href="/dashboard" class="btn btn-action btn-sm">Barchasi <i class="bi bi-arrow-right ms-1"></i></a>
   </div>
@@ -481,9 +528,7 @@
 
 <hr class="lp-divider">
 
-<!-- ════════════════════════════════════════
-     SECTION 6 — TEZ KUNDA
-═════════════════════════════════════════ -->
+<!-- ════ TEZ KUNDA ═══════════════════════════════════ -->
 <section class="lp-section-sm" id="coming-section">
   <div class="sec-label">Kelajak</div>
   <h2 class="sec-title mb-1">Tez kunda</h2>
@@ -510,22 +555,18 @@
   </div>
 </section>
 
-<!-- ════════════════════════════════════════
-     LANDING FOOTER
-═════════════════════════════════════════ -->
+<!-- ════ FOOTER ══════════════════════════════════════ -->
 <div class="lp-foot">
-  <div class="lp-foot-copy">IlmNet &copy; 2025 &nbsp;&mdash;&nbsp; ilmnet.org</div>
+  <div class="lp-foot-copy">&copy; 2025 Olimlar.uz &mdash; Olimlar uchun barcha qulayliklar</div>
   <div class="lp-foot-links">
     <a href="#">Biz haqimizda</a>
     <a href="#">Bog'lanish</a>
-    <a href="https://github.com" target="_blank" rel="noopener noreferrer">
-      <i class="bi bi-github me-1"></i>GitHub
-    </a>
+    <a href="https://github.com" target="_blank" rel="noopener noreferrer"><i class="bi bi-github me-1"></i>GitHub</a>
   </div>
 </div>
 
-<!-- Scroll-to-top -->
-<button id="lp-top-btn" title="Tepaga qaytish" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+<button id="lp-top-btn" title="Tepaga qaytish"
+        onclick="window.scrollTo({top:0,behavior:'smooth'})">
   <i class="bi bi-chevron-up"></i>
 </button>
 
@@ -537,13 +578,10 @@
 (function () {
   'use strict';
 
-  /* ── helpers ───────────────────────────────── */
+  /* helpers */
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function fmt(n) { return typeof n === 'number' ? n.toLocaleString('uz') : (n || '—'); }
-
-  /* ── counter animation ─────────────────────── */
   function countUp(el, target, ms) {
     if (!el || !target) return;
     var step = Math.max(1, Math.ceil(target / (ms / 16)));
@@ -554,88 +592,71 @@
       if (cur >= target) clearInterval(t);
     }, 16);
   }
+  var RANKS = ['🥇','🥈','🥉'];
 
-  /* ── /stats-json (public) ──────────────────── */
+  /* /stats-json (public) */
   fetch('/stats-json')
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      countUp(document.getElementById('hc-total'), d.total  || 0, 1200);
-      countUp(document.getElementById('hc-unis'),  d.muassasalar || 0, 1200);
-      countUp(document.getElementById('hc-olim'),  d.olim   || 0, 1200);
-      document.getElementById('st-total').textContent = fmt(d.total);
-      document.getElementById('st-phd').textContent   = fmt(d.phd);
-      document.getElementById('st-dsc').textContent   = fmt(d.dsc);
-      document.getElementById('st-unis').textContent  = fmt(d.muassasalar);
-    })
-    .catch(function () {});
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      countUp(document.getElementById('hc-total'), d.total      || 0, 1400);
+      countUp(document.getElementById('hc-unis'),  d.muassasalar|| 0, 1400);
+      countUp(document.getElementById('hc-olim'),  d.olim       || 0, 1400);
+    }).catch(function(){});
 
-  /* ── /analytics-data (requires auth) ──────── */
-  fetch('/analytics-data')
-    .then(function (r) {
-      if (!r.ok) throw new Error('not ok');
-      return r.json();
-    })
-    .then(function (d) {
-      /* ixtisoslik count badge */
-      var ixArr = d.top_ixtisosliklar || [];
-      document.getElementById('st-ix').textContent = ixArr.length ? ixArr.length + '+' : '—';
+  /* /api/faol (public) */
+  fetch('/api/faol')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
 
-      /* top 5 ixtisoslik */
-      var ixTop  = ixArr.slice(0, 5);
-      var ixMax  = ixTop.length ? Math.max.apply(null, ixTop.map(function(r){return r.count;})) : 1;
-      var ixList = document.getElementById('ix-list');
-      if (ixList && ixTop.length) {
-        ixList.innerHTML = ixTop.map(function (r, i) {
-          var pct = Math.round((r.count / ixMax) * 100);
-          return '<a href="/specialization/' + encodeURIComponent(r.ixtisoslik || '') + '" class="rank-item">' +
-            '<div class="rk-pos">' + (i + 1) + '</div>' +
-            '<div class="rk-code">' + esc(r.ixtisoslik || '—') + '</div>' +
-            '<div class="rk-bar"><div class="rk-bar-bg">' +
-              '<div class="rk-bar-fill" style="background:linear-gradient(90deg,#4a9eff,#7c5cfc);" data-pct="' + pct + '"></div>' +
+      function renderList(listEl, items, urlFn, nameFn) {
+        if (!listEl || !items || !items.length) return;
+        var max = Math.max.apply(null, items.map(function(x){ return x.count; }));
+        listEl.innerHTML = items.map(function(item, i){
+          var pct = Math.round((item.count / max) * 100);
+          var url = urlFn(item);
+          var name = esc(nameFn(item));
+          return '<a href="' + url + '" class="faol-item">' +
+            '<span class="faol-rank">' + (RANKS[i]||'') + '</span>' +
+            '<span class="faol-name" title="' + name + '">' + name + '</span>' +
+            '<div class="faol-bar-col"><div class="faol-bar-bg">' +
+              '<div class="faol-bar-fill" data-pct="' + pct + '"></div>' +
             '</div></div>' +
-            '<div class="rk-count">' + r.count + '</div>' +
+            '<span class="faol-count">' + item.count + ' ta</span>' +
             '</a>';
         }).join('');
-        setTimeout(function () {
-          ixList.querySelectorAll('.rk-bar-fill').forEach(function (el) {
+        setTimeout(function(){
+          listEl.querySelectorAll('.faol-bar-fill').forEach(function(el){
             el.style.width = el.dataset.pct + '%';
           });
-        }, 120);
+        }, 80);
       }
 
-      /* top 5 universities */
-      var uniArr = (d.top_muassasalar || []).slice(0, 5);
-      var uniMax = uniArr.length ? Math.max.apply(null, uniArr.map(function(r){return r.count;})) : 1;
-      var uniList = document.getElementById('uni-list');
-      if (uniList && uniArr.length) {
-        uniList.innerHTML = uniArr.map(function (r, i) {
-          var pct  = Math.round((r.count / uniMax) * 100);
-          var name = esc(r.muassasa || '—');
-          var short = name.length > 32 ? name.slice(0, 30) + '…' : name;
-          return '<a href="/university/' + encodeURIComponent(r.muassasa || '') + '" class="rank-item">' +
-            '<div class="rk-pos">' + (i + 1) + '</div>' +
-            '<div class="rk-name" title="' + name + '">' + short + '</div>' +
-            '<div class="rk-bar"><div class="rk-bar-bg">' +
-              '<div class="rk-bar-fill" style="background:linear-gradient(90deg,#34d399,#4a9eff);" data-pct="' + pct + '"></div>' +
-            '</div></div>' +
-            '<div class="rk-count">' + r.count + '</div>' +
-            '</a>';
-        }).join('');
-        setTimeout(function () {
-          uniList.querySelectorAll('.rk-bar-fill').forEach(function (el) {
-            el.style.width = el.dataset.pct + '%';
-          });
-        }, 220);
-      }
-    })
-    .catch(function () { /* graceful: sections stay as skeleton for unauth users */ });
+      renderList(
+        document.getElementById('faol-unis'),
+        d.universities,
+        function(x){ return '/university/' + encodeURIComponent(x.name); },
+        function(x){ return x.name; }
+      );
+      renderList(
+        document.getElementById('faol-sups'),
+        d.supervisors,
+        function(x){ return '/supervisor/' + encodeURIComponent(x.name); },
+        function(x){ return x.name; }
+      );
+      renderList(
+        document.getElementById('faol-ix'),
+        d.ixtisosliklar,
+        function(x){ return '/specialization/' + encodeURIComponent(x.code); },
+        function(x){ return x.nomi ? x.code + ' — ' + x.nomi : x.code; }
+      );
+    }).catch(function(){});
 
-  /* ── AI typing animation ───────────────────── */
+  /* AI typing animation */
   var questions = [
-    "Iqtisodiyot bo’yicha eng faol ilmiy rahbar kim?",
-    "2024-yilda qancha PhD himoyalandi?",
-    "Mavzu tavsiya qil: raqamli iqtisodiyot",
-    "Toshkent universiteti dissertatsiyalari"
+    "Iqtisodiyot bo'yicha eng faol rahbarlar kimlar?",
+    "Toshkent davlat universitetidagi PhD himoyalar",
+    "2024-yilda eng ko’p himoya qilingan ixtisosliklar",
+    "Raqamli iqtisodiyot bo’yicha mavzu tavsiya qil"
   ];
   var qi = 0, ci = 0, typing = true;
   var qEl = document.getElementById('ai-q-text');
@@ -643,19 +664,19 @@
     if (!qEl) return;
     var q = questions[qi];
     if (typing) {
-      if (ci < q.length) { qEl.textContent = q.slice(0, ++ci); setTimeout(typeStep, 38 + Math.random() * 25); }
-      else { typing = false; setTimeout(typeStep, 2400); }
+      if (ci < q.length) { qEl.textContent = q.slice(0, ++ci); setTimeout(typeStep, 36 + Math.random()*24); }
+      else { typing = false; setTimeout(typeStep, 2600); }
     } else {
-      if (ci > 0) { qEl.textContent = q.slice(0, --ci); setTimeout(typeStep, 16); }
+      if (ci > 0) { qEl.textContent = q.slice(0, --ci); setTimeout(typeStep, 15); }
       else { typing = true; qi = (qi + 1) % questions.length; setTimeout(typeStep, 350); }
     }
   }
   typeStep();
 
-  /* ── scroll-to-top ─────────────────────────── */
+  /* scroll-to-top */
   var topBtn = document.getElementById('lp-top-btn');
   if (topBtn) {
-    window.addEventListener('scroll', function () {
+    window.addEventListener('scroll', function(){
       topBtn.classList.toggle('vis', window.scrollY > 420);
     }, { passive: true });
   }

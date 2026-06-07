@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}IlmNet — Jadvali{% endblock %}
+{% block title %}Olimlar.uz — Jadvali{% endblock %}
 {% block extra_head %}
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
@@ -65,17 +65,15 @@
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0">
         <thead><tr>
-          <th>#</th>
-          <th data-sort="Sana">Sana</th>
-          <th data-sort="Daraja">Daraja</th>
+          <th style="width:42px">#</th>
           <th data-sort="Olim">Olim</th>
           <th data-sort="Mavzu">Mavzu</th>
-          <th data-sort="Ixtisoslik">Ixtisoslik</th>
+          <th data-sort="Daraja" style="width:80px">Daraja</th>
+          <th data-sort="Sana" style="width:96px">Sana</th>
           <th data-sort="Muassasa">Muassasa</th>
-          <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
         </tr></thead>
         <tbody id="table-body">
-          <tr><td colspan="8"><div class="skeleton-bar"></div></td></tr>
+          <tr><td colspan="6"><div class="skeleton-bar"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -122,29 +120,40 @@
     document.getElementById('filter-muassasa').value = currentFilters.muassasa;
     document.getElementById('filter-ixtisoslik').value = currentFilters.ixtisoslik;
   }
+  function fmtSana(s) {
+    if (!s) return '—';
+    // YYYY-MM-DD → DD.MM.YYYY
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
+  }
   function renderRows(records, startIndex) {
     if (!records.length) {
-      tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
       return;
     }
     const term = currentFilters.search.trim();
     tableBody.innerHTML = records.map((r,i) => {
       const num = r.id || startIndex + i + 1;
       const daraja = (r.Daraja || '').toUpperCase();
-      const darajaSpan = daraja === 'PHD' ? '<span class="badge-phd badge-role">PhD</span>' : daraja === 'DSC' ? '<span class="badge-dsc badge-role">DSc</span>' : escHtml(r.Daraja);
-      const authorLink = r.Olim ? `<a href="/author/${encodeURIComponent(r.Olim)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Olim, term)}</a>` : '—';
-      const specializationLink = r.Ixtisoslik ? `<a href="/specialization/${encodeURIComponent(r.Ixtisoslik)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Ixtisoslik, term)}</a>` : '—';
-      const supervisorLink = r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Ilmiy_rahbar, term)}</a>` : '—';
-      const universityLink = r.Muassasa ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>` : '—';
-      return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;">
-          <td>${num}</td>
-          <td class="sana-cell">${highlight(r.Sana, term)}</td>
+      const darajaSpan = daraja === 'PHD'
+        ? '<span class="badge-phd badge-role">PhD</span>'
+        : daraja === 'DSC'
+        ? '<span class="badge-dsc badge-role">DSc</span>'
+        : escHtml(r.Daraja || '—');
+      const authorLink = r.Olim
+        ? `<a href="/author/${encodeURIComponent(r.Olim)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Olim, term)}</a>`
+        : '—';
+      const universityLink = r.Muassasa
+        ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>`
+        : '—';
+      const mavzuShort = (r.Mavzu||'').length > 80 ? escHtml(r.Mavzu.slice(0,78)) + '…' : escHtml(r.Mavzu||'—');
+      return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;" title="Batafsil ko'rish">
+          <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
+          <td class="olim-cell" style="white-space:nowrap;">${authorLink}</td>
+          <td class="mavzu-cell" style="max-width:320px;">${term ? highlight(r.Mavzu, term) : mavzuShort}</td>
           <td>${darajaSpan}</td>
-          <td class="olim-cell">${authorLink}</td>
-          <td class="mavzu-cell">${highlight(r.Mavzu, term)}</td>
-          <td>${specializationLink}</td>
+          <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
           <td class="muassasa-cell">${universityLink}</td>
-          <td>${supervisorLink}</td>
         </tr>`;
     }).join('');
   }
@@ -188,7 +197,7 @@
       renderRows(currentRecords, (data.page-1)*PER_PAGE);
       renderInfo(data.page, data.total);
     } catch (err) {
-      tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
   }
   let filterTimer;

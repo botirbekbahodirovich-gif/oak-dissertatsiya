@@ -110,3 +110,42 @@ def analytics_data():
         "top_ixtisosliklar": top_ixtisosliklar,
         "heatmap": heatmap
     })
+
+
+@analytics_bp.route('/api/faol')
+def faol():
+    """Public endpoint — top 3 universities, supervisors, ixtisosliklar."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT muassasa, COUNT(*) AS cnt
+                FROM dissertations
+                WHERE muassasa IS NOT NULL AND TRIM(muassasa) <> ''
+                GROUP BY muassasa ORDER BY cnt DESC LIMIT 3
+            """)
+            unis = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+
+            cur.execute("""
+                SELECT ilmiy_rahbar, COUNT(*) AS cnt
+                FROM dissertations
+                WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+                GROUP BY ilmiy_rahbar ORDER BY cnt DESC LIMIT 3
+            """)
+            supervisors = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+
+            cur.execute("""
+                SELECT ixtisoslik, COALESCE(MAX(ixtisoslik_nomi), '') AS nomi, COUNT(*) AS cnt
+                FROM dissertations
+                WHERE ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> ''
+                GROUP BY ixtisoslik ORDER BY cnt DESC LIMIT 3
+            """)
+            ixtisosliklar = [{"code": r[0], "nomi": r[1], "count": r[2]} for r in cur.fetchall()]
+
+        return jsonify({
+            "universities": unis,
+            "supervisors": supervisors,
+            "ixtisosliklar": ixtisosliklar
+        })
+    finally:
+        conn.close()
