@@ -71,9 +71,10 @@ def existing_oak_ids(conn):
 
 def max_oak_id(conn) -> int:
     with conn.cursor() as cur:
-        cur.execute("SELECT MAX(CAST(oak_id AS INTEGER)) FROM dissertations WHERE oak_id ~ '^[0-9]+$'")
+        cur.execute("SELECT COALESCE(MAX(oak_id), 0) FROM dissertations WHERE oak_id IS NOT NULL")
         row = cur.fetchone()
-        return row[0] if row and row[0] else 0
+        val = row[0] if row else None
+        return int(val) if val and str(val).isdigit() else 0
 
 
 def is_valid_record(data: dict) -> bool:
