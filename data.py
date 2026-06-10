@@ -697,7 +697,7 @@ def oak_ingest():
                 muassasa   = str(item.get('Bajarilgan muassasa', '') or '').strip()[:300]
 
                 # Extract & clean fields
-                olim     = _extract_olim(title)
+                olim     = str(item.get('Olim', '') or '').strip() or _extract_olim(title)
                 mavzu    = _extract_mavzu(mavzu_full)
                 daraja   = _extract_daraja(title, mavzu_full) or str(item.get('Daraja', '') or '').strip()
                 ixtisoslik = _extract_ixtisoslik(
