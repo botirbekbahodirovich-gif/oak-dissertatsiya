@@ -94,7 +94,12 @@
     .table tbody tr:hover td { background: rgba(74,158,255,0.08); }
 
     .site-header {
-      background: var(--oak-surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(26,29,35,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--oak-border);
     }
     .header-inner {
@@ -251,8 +256,35 @@
     .result-count { color: var(--oak-muted); font-size: 0.88rem; }
     .table-scroll { overflow-x: auto; }
     .table thead th { background: var(--oak-surface-2); color: var(--oak-muted); font-size: 0.72rem; letter-spacing: 0.5px; border-color: var(--oak-border); }
-    .table tbody tr:hover td { background: rgba(250,235,140,0.05); }
+    .table tbody tr { transition: background 0.15s ease; }
+    .table tbody tr:hover td { background: rgba(74,158,255,0.05) !important; }
+    .table tbody tr td { min-height: 48px; }
     .search-highlight { background: #fff3a7; color: #1a1a1a; padding: 0 3px; border-radius: 2px; }
+    /* Sticky table headers */
+    .table-sticky thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--oak-surface-2, #22262f);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+    /* Scrollable table wrapper */
+    .table-wrapper {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 70vh;
+      border-radius: 8px;
+    }
+    .table-wrapper .table-sticky thead th { top: 0; position: sticky; }
+    /* Skeleton rows */
+    .skeleton-row td { padding: 0.75rem 1rem; }
+    .skeleton-row .skeleton-bar { height: 14px; border-radius: 6px; }
+    /* Touch-friendly rows on mobile */
+    @media (max-width: 480px) {
+      .table tbody tr td { min-height: 48px; padding: 0.65rem 0.5rem; }
+      .col-ixtisoslik, .col-sana { display: none; }
+    }
     .badge-phd { background: rgba(52,211,153,0.16); color: #34d399; }
     .badge-dsc { background: rgba(167,139,250,0.16); color: #a78bfa; }
 

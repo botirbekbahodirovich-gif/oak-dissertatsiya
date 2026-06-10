@@ -71,12 +71,12 @@
   </div>
 
   <div class="table-panel">
-    <div class="table-header-bar">
+    <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
       <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
       <div class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></div>
     </div>
     <div class="table-scroll">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-hover align-middle mb-0 table-sticky">
         <thead><tr>
           <th style="width:36px">#</th>
           <th data-sort="Sana" style="width:90px">Sana</th>
@@ -87,7 +87,9 @@
           <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
         </tr></thead>
         <tbody id="table-body">
-          <tr><td colspan="7"><div class="skeleton-bar"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:85%"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:92%"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -162,7 +164,7 @@
   }
   function renderRows(records, startIndex) {
     if (!records.length) {
-      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i><div>Ma\'lumot topilmadi</div></div></td></tr>';
       return;
     }
     const term = currentFilters.search.trim();
@@ -275,8 +277,14 @@
       console.warn('Filter values could not be loaded.', error);
     }
   }
+  function showSkeleton() {
+    tableBody.innerHTML = [1,2,3].map(w =>
+      `<tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:${w*30+10}%"></div></td></tr>`
+    ).join('');
+  }
   async function updateData(reset=false) {
     if (reset) currentPage = 1;
+    showSkeleton();
     const params = new URLSearchParams({search: currentFilters.search, daraja: currentFilters.daraja, muassasa: currentFilters.muassasa, ixtisoslik: currentFilters.ixtisoslik, page: currentPage, per_page: PER_PAGE});
     try {
       const res = await fetch('/data?' + params);
@@ -288,9 +296,24 @@
       renderInfo(data.page, data.total);
       renderPagination(data.page, data.total);
     } catch (err) {
-      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
   }
+  // Scroll position memory
+  (function() {
+    const KEY = 'dashboard-scroll-y';
+    let scrollTimer;
+    window.addEventListener('scroll', function() {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function() {
+        sessionStorage.setItem(KEY, window.scrollY);
+      }, 500);
+    });
+    window.addEventListener('load', function() {
+      const saved = sessionStorage.getItem(KEY);
+      if (saved) window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' });
+    });
+  })();
   let filterTimer;
   ['search-input','filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => {
     document.getElementById(id)?.addEventListener(id === 'search-input' ? 'input' : 'change', function() {
