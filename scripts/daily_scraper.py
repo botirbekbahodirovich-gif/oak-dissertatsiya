@@ -155,24 +155,47 @@ def _cell_text(tag) -> str:
     return tag.get_text(" ", strip=True) if tag else ""
 
 
+_debug_first_page = True  # print raw text once per run
+
+
 def parse_dissertation(html: str, url: str) -> dict:
     """
     Parse a single dissertation page.
     Looks for the Umumiy ma'lumotlar / Умумий маълумотлар section
     and extracts key→value pairs from a definition-list or table.
     """
+    global _debug_first_page
     soup = BeautifulSoup(html, "html.parser")
+    raw_text = soup.get_text(" ", strip=True)
 
-    # Locate the info block — try <table>, then <dl>
+    if _debug_first_page:
+        print(f"\n[DEBUG] First 500 chars of page text:\n{raw_text[:500]}\n")
+        _debug_first_page = False
+
+    # Locate the info block — try <table> with Cyrillic/Latin markers
     info: dict[str, str] = {}
 
-    # Strategy 1: find a table whose header row contains Cyrillic "Умумий ма"
+    MARKERS = [
+        "Умумий ма",
+        "Умумий маълумотлар",
+        "диссертация",
+        "ҳимояси",
+        "Umumiy ma",
+    ]
+
     target_table = None
+    found_marker = None
     for table in soup.find_all("table"):
         text = table.get_text()
-        if "Умумий ма" in text or "Umumiy ma" in text:
-            target_table = table
+        for marker in MARKERS:
+            if marker in text:
+                target_table = table
+                found_marker = marker
+                break
+        if target_table:
             break
+
+    print(f"  [parse] marker={'\"' + found_marker + '\"' if found_marker else 'NO MARKER'}")
 
     if target_table:
         for tr in target_table.find_all("tr"):
@@ -183,11 +206,18 @@ def parse_dissertation(html: str, url: str) -> dict:
                 if key:
                     info[key] = val
     else:
-        # Strategy 2: look for a <dl> or any key:value pairs near the section
+        # Fallback: search all tables (no marker required)
+        for table in soup.find_all("table"):
+            for tr in table.find_all("tr"):
+                cells = tr.find_all(["td", "th"])
+                if len(cells) >= 2:
+                    key = _cell_text(cells[0]).strip(": ")
+                    val = _cell_text(cells[1]).strip()
+                    if key and len(key) < 80:
+                        info[key] = val
+        # Also try <dl>
         for dl in soup.find_all("dl"):
-            terms = dl.find_all("dt")
-            defs  = dl.find_all("dd")
-            for dt, dd in zip(terms, defs):
+            for dt, dd in zip(dl.find_all("dt"), dl.find_all("dd")):
                 info[dt.get_text(strip=True)] = dd.get_text(strip=True)
 
     # Helper: search by substring match in multiple languages
