@@ -102,16 +102,19 @@ def fetch(url: str):
 
 
 def get_page_links(html: str) -> list[str]:
-    """Return all /pages/ href values from the listing page."""
+    """Return /pages/ links sorted by oak_id DESC, top 20 newest."""
     soup = BeautifulSoup(html, "html.parser")
-    links = []
+    seen = {}
     for a in soup.find_all("a", href=True):
         href = a["href"]
         if "/pages/" in href:
             if href.startswith("/"):
                 href = BASE_URL + href
-            links.append(href)
-    return list(dict.fromkeys(links))  # deduplicate, preserve order
+            oid = oak_id_from_url(href)
+            seen[oid] = href
+    # Sort numeric oak_ids descending, take top 20
+    sorted_ids = sorted(seen.keys(), key=lambda x: int(x) if x.isdigit() else 0, reverse=True)
+    return [seen[k] for k in sorted_ids[:20]]
 
 
 def oak_id_from_url(url: str) -> str:
@@ -176,10 +179,20 @@ def parse_dissertation(html: str, url: str) -> dict:
                 mavzu = t
                 break
 
+    # Olim name — extract from h1 using "нинг" possessive suffix pattern
+    olim = get("Olim", "Илм", "olim", "Диссертант", "диссертант")
+    if not olim:
+        title_tag = soup.find("h1")
+        if title_tag:
+            t = title_tag.get_text(strip=True)
+            m = re.search(r'([А-ЯЎҚҒҲа-яўқғҳёЁ\s]+?)нинг', t)
+            if m:
+                olim = m.group(1).strip().split('\n')[-1].strip()
+
     return {
         "oak_id":               oak_id_from_url(url),
         "link":                 url,
-        "olim":                 get("Olim", "Илм", "olim", "Диссертант", "диссертант"),
+        "olim":                 olim,
         "daraja":               get("Daraja", "Ilmiy daraja", "daraja", "Учёная степень"),
         "mavzu":                mavzu,
         "ixtisoslik":           get("Ixtisoslik shifri", "Ixtisoslik kodi", "Ихтисослик шифри", "Специальность"),
@@ -214,7 +227,7 @@ def main():
         sys.exit(f"Failed to fetch listing page: {e}")
 
     links = get_page_links(html)
-    print(f"Found {len(links)} dissertation links on page 1")
+    print(f"Found {len(links)} dissertation links (top 20 newest by oak_id)")
 
     if not links:
         print("No links found — check selector or site structure")
