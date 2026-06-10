@@ -11,6 +11,12 @@
   .detail-item span { font-size: 0.88rem; }
   .detail-actions { margin-top: .75rem; display: flex; gap: .5rem; flex-wrap: wrap; }
   tr.expanded-row > td { border-bottom: none; }
+  .pagination-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:0.75rem 0 0.25rem; }
+  .pg-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--oak-text,#cbd5e1); font-size:0.85rem; cursor:pointer; transition:background .15s,border-color .15s; }
+  .pg-btn:hover:not(:disabled):not(.active) { background:rgba(74,158,255,0.12); border-color:rgba(74,158,255,0.4); }
+  .pg-btn.active { background:#4a9eff; border-color:#4a9eff; color:#fff; font-weight:600; cursor:default; }
+  .pg-btn:disabled { opacity:0.35; cursor:default; }
+  .pg-info { font-size:0.82rem; color:var(--oak-muted,#8892a4); margin-left:4px; }
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
@@ -67,7 +73,6 @@
   <div class="table-panel">
     <div class="table-header-bar">
       <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
-      <div class="d-flex gap-2 flex-wrap"><button id="btn-show-more" class="btn btn-action">Ko'proq</button></div>
     </div>
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0">
@@ -85,7 +90,7 @@
         </tbody>
       </table>
     </div>
-    <div class="table-header-bar"><div class="result-count" id="pagination-info"></div></div>
+    <div class="pagination-bar" id="pagination-bar"></div>
   </div>
 {% endblock %}
 {% block scripts %}
@@ -98,7 +103,6 @@
   let currentFilters = { search: '', daraja: '', muassasa: '', ixtisoslik: '' };
   const tableBody = document.getElementById('table-body');
   const resultCount = document.getElementById('result-count');
-  const paginationInfo = document.getElementById('pagination-info');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
   function escHtml(value) {
@@ -220,9 +224,29 @@
   }
   function renderInfo(page, total) {
     resultCount.textContent = total.toLocaleString('uz');
-    const start = Math.min((page-1)*PER_PAGE + 1, total);
-    const end = Math.min(page*PER_PAGE, total);
-    paginationInfo.textContent = total ? `${start}–${end} / ${total.toLocaleString('uz')} ta` : '';
+  }
+  function renderPagination(page, total) {
+    const bar = document.getElementById('pagination-bar');
+    if (!bar) return;
+    const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+    const start = total ? (page - 1) * PER_PAGE + 1 : 0;
+    const end = Math.min(page * PER_PAGE, total);
+    // Compute window of 5 page buttons centred on current page
+    let winStart = Math.max(1, page - 2);
+    let winEnd = Math.min(totalPages, winStart + 4);
+    if (winEnd - winStart < 4) winStart = Math.max(1, winEnd - 4);
+    const btn = (label, pg, disabled, active) =>
+      `<button class="pg-btn${active?' active':''}" data-pg="${pg}" ${disabled?'disabled':''} aria-label="${label}">${label}</button>`;
+    let html = `<span class="pg-info">${start}–${end} / ${total.toLocaleString('uz')} ta natija</span>`;
+    html += btn('←', page - 1, page <= 1, false);
+    if (winStart > 1) { html += btn('1', 1, false, false); if (winStart > 2) html += `<span class="pg-info">…</span>`; }
+    for (let p = winStart; p <= winEnd; p++) html += btn(p, p, false, p === page);
+    if (winEnd < totalPages) { if (winEnd < totalPages - 1) html += `<span class="pg-info">…</span>`; html += btn(totalPages, totalPages, false, false); }
+    html += btn('→', page + 1, page >= totalPages, false);
+    bar.innerHTML = html;
+    bar.querySelectorAll('.pg-btn:not([disabled]):not(.active)').forEach(b =>
+      b.addEventListener('click', () => { currentPage = +b.dataset.pg; updateData(); window.scrollTo({top:0,behavior:'smooth'}); })
+    );
   }
   async function loadFilters() {
     try {
@@ -257,6 +281,7 @@
       if (currentSort.key) currentRecords = sortArray(currentRecords);
       renderRows(currentRecords, (data.page-1)*PER_PAGE);
       renderInfo(data.page, data.total);
+      renderPagination(data.page, data.total);
     } catch (err) {
       tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
@@ -281,11 +306,7 @@
     const params = new URLSearchParams(currentFilters);
     window.location.href = '/export?' + params;
   });
-  document.getElementById('btn-show-more')?.addEventListener('click', function() {
-    currentPage += 1;
-    updateData();
-  });
-  sortHeaders.forEach(header => header.addEventListener('click', function() {
+sortHeaders.forEach(header => header.addEventListener('click', function() {
     const key = this.dataset.sort;
     if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
     else { currentSort.key = key; currentSort.dir = 'asc'; }
