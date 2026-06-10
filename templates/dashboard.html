@@ -78,7 +78,7 @@
           <th data-sort="Daraja" style="width:72px">Daraja</th>
           <th data-sort="Ixtisoslik" class="col-ixtisoslik" style="width:96px">Ixtisoslik</th>
           <th data-sort="Sana" style="width:90px">Sana</th>
-          <th data-sort="Muassasa">Muassasa</th>
+          <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
         </tr></thead>
         <tbody id="table-body">
           <tr><td colspan="7"><div class="skeleton-bar"></div></td></tr>
@@ -134,6 +134,22 @@
     const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
   }
+  function getBadgeColor(n) {
+    const colors = ['','','#4ade80','#86efac','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c'];
+    return n >= 10 ? '#991b1b' : (colors[n] || '');
+  }
+  function supervisorBadge(name, count) {
+    const nameShort = (name||'').length > 30 ? escHtml((name||'').slice(0,29)) + '…' : escHtml(name||'—');
+    const supervisorLink = name
+      ? `<a href="/supervisor/${encodeURIComponent(name)}" class="entity-link" onclick="event.stopPropagation()" title="${escHtml(name)}">${nameShort}</a>`
+      : '—';
+    if (!name || count <= 1) return supervisorLink;
+    const color = getBadgeColor(count);
+    const badge = color
+      ? `<span style="display:inline-block;min-width:20px;height:20px;border-radius:10px;text-align:center;font-size:11px;font-weight:600;color:#fff;padding:0 5px;margin-left:6px;vertical-align:middle;line-height:20px;background:${color}">${count}</span>`
+      : '';
+    return supervisorLink + badge;
+  }
   function ixtisoslikShifr(val) {
     if (!val) return '—';
     const m = String(val).match(/^\d{2}\.\d{2}\.\d{2}/);
@@ -164,10 +180,7 @@
       const mavzuFull = r.Mavzu || '';
       const mavzuShort = mavzuFull.length > 60 ? escHtml(mavzuFull.slice(0, 59)) + '…' : escHtml(mavzuFull || '—');
       const muassasaFull = r.Muassasa || '';
-      const muassasaShort = muassasaFull.length > 30 ? escHtml(muassasaFull.slice(0, 29)) + '…' : escHtml(muassasaFull || '—');
-      const muassasaCell = muassasaFull
-        ? `<a href="/university/${encodeURIComponent(muassasaFull)}" class="entity-link" onclick="event.stopPropagation()" title="${escHtml(muassasaFull)}">${muassasaShort}</a>`
-        : '—';
+      const supervisorCount = r.supervisor_count || 1;
       rows.push(`<tr class="data-row" data-row-id="${rowId}" style="cursor:pointer;" title="Batafsil ko'rish">
           <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
           <td class="olim-cell" style="white-space:nowrap;">${authorLink}</td>
@@ -175,7 +188,7 @@
           <td>${darajaSpan}</td>
           <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;"><a href="/specialization/${encodeURIComponent(ixtisoslikShifr(r.Ixtisoslik))}" class="entity-link" onclick="event.stopPropagation()" style="cursor:pointer;" title="Bu ixtisoslik bo'yicha filtrlash">${ixtisoslikShifr(r.Ixtisoslik)}</a></td>
           <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
-          <td class="muassasa-cell">${muassasaCell}</td>
+          <td class="muassasa-cell">${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
           <td colspan="7">

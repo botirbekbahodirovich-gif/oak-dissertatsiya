@@ -54,6 +54,7 @@ def normalize_row(row):
         "Muassasa": str(row.get("Muassasa") or "").strip(),
         "Ilmiy_rahbar": str(row.get("Ilmiy_rahbar") or "").strip(),
         "Link": link,
+        "supervisor_count": int(row.get("supervisor_count") or 1),
     }
 
 
@@ -154,10 +155,11 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
         pagination_clause = ' LIMIT %s OFFSET %s'
         params = params + [per_page, (page - 1) * per_page]
     sql = (
-        'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
-        'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
-        'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-        f'FROM dissertations{clause} ORDER BY {sort_col} {sort_dir}' + pagination_clause
+        'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
+        'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
+        'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link", '
+        'COUNT(*) OVER (PARTITION BY TRIM(d.ilmiy_rahbar)) AS supervisor_count '
+        f'FROM dissertations d{clause} ORDER BY {sort_col} {sort_dir}' + pagination_clause
     )
     return _query_rows(sql, params)
 
