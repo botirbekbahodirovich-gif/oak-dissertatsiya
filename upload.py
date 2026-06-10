@@ -24,7 +24,6 @@ def get_database_url():
     if not url or url.startswith('sqlite'):
         url = os.environ.get('POSTGRES_URL', '')
     return url
-    return url
 
 
 def get_connection():

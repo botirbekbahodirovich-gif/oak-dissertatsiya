@@ -83,6 +83,12 @@ def analytics_data():
         for name, count in ixtisoslik_counter.most_common(15)
     ]
 
+    supervisor_counter = Counter(_normalize_text(row.get("Ilmiy_rahbar")) for row in rows if row.get("Ilmiy_rahbar"))
+    top_supervisors = [
+        {"supervisor": name, "count": count}
+        for name, count in supervisor_counter.most_common(10)
+    ]
+
     top15_unis = [name for name, _ in muassasa_counter.most_common(15)]
     heatmap_counts = defaultdict(lambda: defaultdict(int))
     heatmap_darajalar = []
@@ -108,6 +114,7 @@ def analytics_data():
         "daraja_ratio": daraja_counts,
         "trend": trend_data,
         "top_ixtisosliklar": top_ixtisosliklar,
+        "top_supervisors": top_supervisors,
         "heatmap": heatmap
     })
 

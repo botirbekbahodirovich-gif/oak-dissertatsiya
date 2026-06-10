@@ -28,7 +28,6 @@ def get_database_url():
     if not url or url.startswith('sqlite'):
         url = os.environ.get('POSTGRES_URL', '')
     return url
-    return url
 
 
 def get_connection():
@@ -532,26 +531,29 @@ def chat():
             if not GROQ_API_KEY:
                 return jsonify({"response": "Groq API kaliti sozlanmagan."})
 
-            from groq import Groq
-            client = Groq(api_key=GROQ_API_KEY)
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "Sen IlmNet platformasining AI yordamchisisan. "
-                            "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
-                            "Javobni ozbekcha, qisqa va aniq ber."
-                        )
-                    },
-                    {"role": "user", "content": message + "\n\n" + context}
-                ],
-                max_tokens=500
-            )
-            answer = (response.choices[0].message.content or "Javob olinmadi.").strip()
-            safe_answer = html_module.escape(answer).replace("\n", "<br>")
-            return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
+            try:
+                from groq import Groq
+                client = Groq(api_key=GROQ_API_KEY)
+                response = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Sen IlmNet platformasining AI yordamchisisan. "
+                                "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
+                                "Javobni ozbekcha, qisqa va aniq ber."
+                            )
+                        },
+                        {"role": "user", "content": message + "\n\n" + context}
+                    ],
+                    max_tokens=500
+                )
+                answer = (response.choices[0].message.content or "Javob olinmadi.").strip()
+                safe_answer = html_module.escape(answer).replace("\n", "<br>")
+                return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
+            except Exception:
+                return jsonify({"response": "AI xizmati hozirda mavjud emas. Iltimos, keyinroq urinib ko'ring."})
     
     except Exception as e:
-        return jsonify({"response": f"Xatolik yuz berdi: {str(e)}"}), 500
+        return jsonify({"response": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}), 200

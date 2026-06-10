@@ -25,7 +25,6 @@ def get_database_url():
     if not url or url.startswith('sqlite'):
         url = os.environ.get('POSTGRES_URL', '')
     return url
-    return url
 
 
 def get_connection():
@@ -119,7 +118,7 @@ def register():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('login'))
+    return redirect(url_for('auth.login'))
 
 
 @auth_bp.route('/login/telegram', methods=['POST'])
