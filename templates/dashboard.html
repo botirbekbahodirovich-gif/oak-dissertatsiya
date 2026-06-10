@@ -73,6 +73,7 @@
   <div class="table-panel">
     <div class="table-header-bar">
       <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
+      <div class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></div>
     </div>
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0">
@@ -224,6 +225,10 @@
   }
   function renderInfo(page, total) {
     resultCount.textContent = total.toLocaleString('uz');
+    const start = total ? (page - 1) * PER_PAGE + 1 : 0;
+    const end = Math.min(page * PER_PAGE, total);
+    const info = total ? `${start}–${end} / ${total.toLocaleString('uz')} ta` : '';
+    document.getElementById('top-pagination-info').textContent = info;
   }
   function renderPagination(page, total) {
     const bar = document.getElementById('pagination-bar');
