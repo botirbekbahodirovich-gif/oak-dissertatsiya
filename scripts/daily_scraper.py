@@ -69,6 +69,33 @@ def existing_oak_ids(conn):
         return {row[0] for row in cur.fetchall()}
 
 
+def max_oak_id(conn) -> int:
+    with conn.cursor() as cur:
+        cur.execute("SELECT MAX(CAST(oak_id AS INTEGER)) FROM dissertations WHERE oak_id ~ '^[0-9]+$'")
+        row = cur.fetchone()
+        return row[0] if row and row[0] else 0
+
+
+def is_valid_record(data: dict) -> bool:
+    mavzu = (data.get("mavzu") or "").strip()
+    olim = (data.get("olim") or "").strip()
+    muassasa = (data.get("muassasa") or "").strip()
+    ilmiy_rahbar = (data.get("ilmiy_rahbar") or "").strip()
+    if not mavzu or len(mavzu) <= 20:
+        return False
+    if not olim:
+        return False
+    if "attestatsiya komissiyasi" in mavzu.lower():
+        return False
+    if "Fanlar akademiyasi" in mavzu:
+        return False
+    if mavzu == muassasa:
+        return False
+    if not ilmiy_rahbar:
+        return False
+    return True
+
+
 def insert_dissertation(conn, data: dict):
     with conn.cursor() as cur:
         cur.execute(
@@ -101,8 +128,8 @@ def fetch(url: str):
     return resp.text
 
 
-def get_page_links(html: str) -> list[str]:
-    """Return /pages/ links sorted by oak_id DESC, top 20 newest."""
+def get_page_links(html: str, min_oak_id: int = 0) -> list[str]:
+    """Return /pages/ links with oak_id > min_oak_id, sorted DESC, top 20."""
     soup = BeautifulSoup(html, "html.parser")
     seen = {}
     for a in soup.find_all("a", href=True):
@@ -111,9 +138,9 @@ def get_page_links(html: str) -> list[str]:
             if href.startswith("/"):
                 href = BASE_URL + href
             oid = oak_id_from_url(href)
-            seen[oid] = href
-    # Sort numeric oak_ids descending, take top 20
-    sorted_ids = sorted(seen.keys(), key=lambda x: int(x) if x.isdigit() else 0, reverse=True)
+            if oid.isdigit() and int(oid) > min_oak_id:
+                seen[oid] = href
+    sorted_ids = sorted(seen.keys(), key=lambda x: int(x), reverse=True)
     return [seen[k] for k in sorted_ids[:20]]
 
 
@@ -226,11 +253,14 @@ def main():
     except Exception as e:
         sys.exit(f"Failed to fetch listing page: {e}")
 
-    links = get_page_links(html)
-    print(f"Found {len(links)} dissertation links (top 20 newest by oak_id)")
+    db_max = max_oak_id(conn)
+    print(f"Max oak_id in DB: {db_max}")
+
+    links = get_page_links(html, min_oak_id=db_max)
+    print(f"Found {len(links)} new dissertation links (oak_id > {db_max})")
 
     if not links:
-        print("No links found — check selector or site structure")
+        print("No new links found — DB is up to date")
         conn.close()
         return
 
@@ -250,8 +280,8 @@ def main():
         try:
             page_html = fetch(url)
             data = parse_dissertation(page_html, url)
-            if not data.get("mavzu", "").strip():
-                print("SKIP — mavzu empty")
+            if not is_valid_record(data):
+                print("SKIPPED: bad data")
                 continue
             insert_dissertation(conn, data)
             new_count += 1
