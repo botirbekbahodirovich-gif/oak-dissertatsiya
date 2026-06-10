@@ -1,334 +1,342 @@
 """
-Daily scraper for oak.uz dissertations.
-Fetches new dissertation pages and inserts them into PostgreSQL.
+OAK.UZ kunlik scraper — ro'yxat sahifasidan ma'lumot oladi.
+Faqat yangi e'lonlarni (last oak_id dan kattalarini) oladi.
 """
 import os
 import sys
-import time
 import re
+import time
+import json
 import psycopg2
-from dotenv import load_dotenv
-
-load_dotenv()
+from datetime import datetime
 
 try:
     import requests
     from bs4 import BeautifulSoup
 except ImportError:
-    sys.exit("Missing deps: pip install requests beautifulsoup4")
+    sys.exit("pip install requests beautifulsoup4")
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     sys.exit("DATABASE_URL not set")
 
-LIST_URL = "https://oak.uz/page/8?page=1"
-BASE_URL = "https://oak.uz"
-DELAY = 1.5
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (compatible; OAK-scraper/1.0; +https://github.com)"
-    )
+BASE_URL   = "https://oak.uz/page/8"
+MAX_PAGES  = 10
+DELAY      = 1.0
+TIMEOUT    = 20
+HEADERS    = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 }
 
+FAN_TARMOQLARI = [
+    "тиббиёт","филология","техника","педагогика","тарих",
+    "биология","иқтисодиёт","кимё","қишлоқ хўжалиги",
+    "физика","математика","юридик","фалсафа","психология",
+    "социология","сиёсат","география","геология","архитектура",
+    "санъатшунослик","ветеринария","фармацевтика",
+]
 
-# ---------------------------------------------------------------------------
-# DB helpers
-# ---------------------------------------------------------------------------
+
+# ── DB ──────────────────────────────────────────────────────────────────────
 
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 
-def ensure_columns(conn):
-    """Add scraper-specific columns if they don't exist yet."""
-    extra_cols = [
-        ("oak_id",               "TEXT UNIQUE"),
-        ("ixtisoslik_nomi",      "TEXT"),
-        ("mavzu_raqami",         "TEXT"),
-        ("ilmiy_rahbar_daraja",  "TEXT"),
-        ("ilmiy_kengash_raqami", "TEXT"),
-        ("opponent_1",           "TEXT"),
-        ("opponent_2",           "TEXT"),
-        ("yetakchi_tashkilot",   "TEXT"),
-    ]
-    with conn.cursor() as cur:
-        for col, col_type in extra_cols:
-            cur.execute(
-                """
-                ALTER TABLE dissertations
-                ADD COLUMN IF NOT EXISTS %s %s
-                """ % (col, col_type)  # col names can't be parameterised
-            )
-    conn.commit()
-
-
-def existing_oak_ids(conn):
-    with conn.cursor() as cur:
-        cur.execute("SELECT oak_id FROM dissertations WHERE oak_id IS NOT NULL")
-        return {row[0] for row in cur.fetchall()}
-
-
-def max_oak_id(conn) -> int:
-    with conn.cursor() as cur:
-        cur.execute("SELECT COALESCE(MAX(oak_id), 0) FROM dissertations WHERE oak_id IS NOT NULL")
-        row = cur.fetchone()
-        val = row[0] if row else None
-        return int(val) if val and str(val).isdigit() else 0
-
-
-def is_valid_record(data: dict) -> bool:
-    mavzu = (data.get("mavzu") or "").strip()
-    olim = (data.get("olim") or "").strip()
-    muassasa = (data.get("muassasa") or "").strip()
-    ilmiy_rahbar = (data.get("ilmiy_rahbar") or "").strip()
-    if not mavzu or len(mavzu) <= 20:
-        return False
-    if not olim:
-        return False
-    if "attestatsiya komissiyasi" in mavzu.lower():
-        return False
-    if "Fanlar akademiyasi" in mavzu:
-        return False
-    if mavzu == muassasa:
-        return False
-    if not ilmiy_rahbar:
-        return False
-    return True
-
-
-def insert_dissertation(conn, data: dict):
+def get_max_oak_id(conn) -> int:
     with conn.cursor() as cur:
         cur.execute(
-            """
-            INSERT INTO dissertations
-                (oak_id, olim, daraja, mavzu, ixtisoslik, ixtisoslik_nomi,
-                 mavzu_raqami, ilmiy_rahbar, ilmiy_rahbar_daraja, muassasa,
-                 ilmiy_kengash_raqami, opponent_1, opponent_2,
-                 yetakchi_tashkilot, link)
-            VALUES
-                (%(oak_id)s, %(olim)s, %(daraja)s, %(mavzu)s, %(ixtisoslik)s,
-                 %(ixtisoslik_nomi)s, %(mavzu_raqami)s, %(ilmiy_rahbar)s,
-                 %(ilmiy_rahbar_daraja)s, %(muassasa)s,
-                 %(ilmiy_kengash_raqami)s, %(opponent_1)s, %(opponent_2)s,
-                 %(yetakchi_tashkilot)s, %(link)s)
-            ON CONFLICT (oak_id) DO NOTHING
-            """,
-            data,
+            "SELECT COALESCE(MAX(oak_id::integer), 0) "
+            "FROM dissertations WHERE oak_id ~ '^[0-9]+$'"
         )
+        return cur.fetchone()[0]
+
+
+def insert_item(conn, item: dict):
+    with conn.cursor() as cur:
+        cur.execute("""
+            INSERT INTO dissertations (
+                oak_id, link, olim, daraja, mavzu,
+                ixtisoslik, fan_tarmogi, mavzu_raqami,
+                ilmiy_rahbar, muassasa,
+                ilmiy_kengash_raqami,
+                opponent_1, opponent_2,
+                yetakchi_tashkilot, yonalish,
+                scraped_at
+            ) VALUES (
+                %(oak_id)s, %(link)s, %(olim)s, %(daraja)s, %(mavzu)s,
+                %(ixtisoslik)s, %(fan_tarmogi)s, %(mavzu_raqami)s,
+                %(ilmiy_rahbar)s, %(muassasa)s,
+                %(ilmiy_kengash_raqami)s,
+                %(opponent_1)s, %(opponent_2)s,
+                %(yetakchi_tashkilot)s, %(yonalish)s,
+                NOW()
+            )
+            ON CONFLICT (oak_id) DO NOTHING
+        """, item)
     conn.commit()
 
 
-# ---------------------------------------------------------------------------
-# Scraping helpers
-# ---------------------------------------------------------------------------
+# ── PARSE ────────────────────────────────────────────────────────────────────
 
-def fetch(url: str):
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    return resp.text
-
-
-def get_page_links(html: str, min_oak_id: int = 0) -> list[str]:
-    """Return /pages/ links with oak_id > min_oak_id, sorted DESC, top 20."""
-    soup = BeautifulSoup(html, "html.parser")
-    seen = {}
-    for a in soup.find_all("a", href=True):
-        href = a["href"]
-        if "/pages/" in href:
-            if href.startswith("/"):
-                href = BASE_URL + href
-            oid = oak_id_from_url(href)
-            if oid.isdigit() and int(oid) > min_oak_id:
-                seen[oid] = href
-    sorted_ids = sorted(seen.keys(), key=lambda x: int(x), reverse=True)
-    return [seen[k] for k in sorted_ids[:20]]
+def fetch(url, retries=3):
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+            if r.status_code == 200:
+                return r.text
+        except Exception:
+            pass
+        time.sleep(2)
+    return None
 
 
-def oak_id_from_url(url: str) -> str:
-    """Extract the numeric id from a /pages/view/NNN URL."""
-    m = re.search(r"/pages/(?:view/)?(\d+)", url)
-    return m.group(1) if m else url.split("/")[-1]
+def extract_field(text, patterns):
+    for pattern in patterns:
+        regex = (
+            pattern
+            + r"\s*:?\s*(.+?)(?=\n[А-ЯЎҒҲҚIVX]|$"
+            + r"|\bДиссертация\b|\bИлмий\b|\bИК\b"
+            + r"|\bРасмий\b|\bЕтакчи\b|\bТадқиқот\b"
+            + r"|\bI\.\b|\bII\.\b|\bIII\.\b|\bIV\.\b)"
+        )
+        m = re.search(regex, text, re.DOTALL | re.IGNORECASE)
+        if m:
+            result = re.sub(r"\s+", " ", m.group(1).strip()).rstrip(" .;,")
+            if result and len(result) < 2000:
+                return result
+    return ""
 
 
-def _cell_text(tag) -> str:
-    return tag.get_text(" ", strip=True) if tag else ""
+def extract_science_branch(text):
+    m = re.search(
+        r"\(([а-яёўқғҳА-ЯЁЎҚҒҲ\s\-]+)\s+фанлари\)",
+        text, re.IGNORECASE
+    )
+    if m:
+        return m.group(1).strip().lower()
+    m = re.search(
+        r"([а-яёўқғҳА-ЯЁЎҚҒҲ\s\-]+)\s+фанлари\s+(?:доктори|номзоди)",
+        text, re.IGNORECASE
+    )
+    if m:
+        branch = m.group(1).strip().lower()
+        for fan in FAN_TARMOQLARI:
+            if fan in branch:
+                return fan
+    text_lower = text.lower()
+    for fan in FAN_TARMOQLARI:
+        if fan in text_lower:
+            return fan
+    return ""
 
 
-_debug_first_page = True  # print raw text once per run
+def extract_ik_code(text):
+    m = re.search(
+        r"((?:DSc|PhD)\.\d+/\d+\.\d+\.\d+[\.\w/]*\d+)", text
+    )
+    return m.group(1) if m else ""
 
 
-def parse_dissertation(html: str, url: str) -> dict:
-    """
-    Parse a single dissertation page.
-    Looks for the Umumiy ma'lumotlar / Умумий маълумотлар section
-    and extracts key→value pairs from a definition-list or table.
-    """
-    global _debug_first_page
-    soup = BeautifulSoup(html, "html.parser")
-    raw_text = soup.get_text(" ", strip=True)
+def detect_degree(text):
+    if re.search(
+        r"\bDSc\b|фан доктори\s*\(DSc\)|doktori\s*\(DSc\)",
+        text, re.IGNORECASE
+    ):
+        return "DSc"
+    if re.search(
+        r"\bPhD\b|фалсафа доктори|falsafa doktori",
+        text, re.IGNORECASE
+    ):
+        return "PhD"
+    return ""
 
-    if _debug_first_page:
-        print(f"\n[DEBUG] First 500 chars of page text:\n{raw_text[:500]}\n")
-        _debug_first_page = False
 
-    # Locate the info block — try <table> with Cyrillic/Latin markers
-    info: dict[str, str] = {}
+def extract_olim_name(title: str) -> str:
+    """Sarlavhadan olim ismini ajratish."""
+    m = re.search(
+        r"^([А-ЯЎҚҒҲа-яўқғҳёЁ][а-яўқғҳёЁ]+(?:\s+[А-ЯЎҚҒҲа-яўқғҳёЁ][а-яўқғҳёЁ]+){1,3})",
+        title.strip()
+    )
+    return m.group(1).strip() if m else ""
 
-    MARKERS = [
-        "Умумий ма",
-        "Умумий маълумотлар",
-        "диссертация",
-        "ҳимояси",
-        "Umumiy ma",
-    ]
 
-    target_table = None
-    found_marker = None
-    for table in soup.find_all("table"):
-        text = table.get_text()
-        for marker in MARKERS:
-            if marker in text:
-                target_table = table
-                found_marker = marker
-                break
-        if target_table:
-            break
+def split_opponents(opponents_text: str):
+    """Opponentlar matnini ikkiga ajratish."""
+    if not opponents_text:
+        return "", ""
+    parts = re.split(r";\s*", opponents_text)
+    opp1 = parts[0].strip() if len(parts) > 0 else ""
+    opp2 = parts[1].strip() if len(parts) > 1 else ""
+    return opp1, opp2
 
-    print(f"  [parse] marker={'\"' + found_marker + '\"' if found_marker else 'NO MARKER'}")
 
-    if target_table:
-        for tr in target_table.find_all("tr"):
-            cells = tr.find_all(["td", "th"])
-            if len(cells) >= 2:
-                key = _cell_text(cells[0]).strip(": ")
-                val = _cell_text(cells[1]).strip()
-                if key:
-                    info[key] = val
-    else:
-        # Fallback: search all tables (no marker required)
-        for table in soup.find_all("table"):
-            for tr in table.find_all("tr"):
-                cells = tr.find_all(["td", "th"])
-                if len(cells) >= 2:
-                    key = _cell_text(cells[0]).strip(": ")
-                    val = _cell_text(cells[1]).strip()
-                    if key and len(key) < 80:
-                        info[key] = val
-        # Also try <dl>
-        for dl in soup.find_all("dl"):
-            for dt, dd in zip(dl.find_all("dt"), dl.find_all("dd")):
-                info[dt.get_text(strip=True)] = dd.get_text(strip=True)
-
-    # Helper: search by substring match in multiple languages
-    def get(*keys: str) -> str:
-        for key in keys:
-            for k, v in info.items():
-                if key.lower() in k.lower():
-                    return v
-        return ""
-
-    # Title / mavzu — often in an <h1> or <h2> if not in table
-    mavzu = get("mavzu", "диссертация", "тема", "Mavzu")
-    if not mavzu:
-        for tag in soup.find_all(["h1", "h2", "h3"]):
-            t = tag.get_text(strip=True)
-            if len(t) > 20:
-                mavzu = t
-                break
-
-    # Olim name — extract from h1 using "нинг" possessive suffix pattern
-    olim = get("Olim", "Илм", "olim", "Диссертант", "диссертант")
-    if not olim:
-        title_tag = soup.find("h1")
-        if title_tag:
-            t = title_tag.get_text(strip=True)
-            m = re.search(r'([А-ЯЎҚҒҲа-яўқғҳёЁ\s]+?)нинг', t)
-            if m:
-                olim = m.group(1).strip().split('\n')[-1].strip()
-
-    return {
-        "oak_id":               oak_id_from_url(url),
-        "link":                 url,
-        "olim":                 olim,
-        "daraja":               get("Daraja", "Ilmiy daraja", "daraja", "Учёная степень"),
-        "mavzu":                mavzu,
-        "ixtisoslik":           get("Ixtisoslik shifri", "Ixtisoslik kodi", "Ихтисослик шифри", "Специальность"),
-        "ixtisoslik_nomi":      get("Ixtisoslik nomi", "Ихтисослик номи"),
-        "mavzu_raqami":         get("Mavzu raqami", "Мавзу рақами", "Qaror"),
-        "ilmiy_rahbar":         get("Ilmiy rahbar", "Илмий раҳбар", "rahbar", "раҳбар"),
-        "ilmiy_rahbar_daraja":  get("Ilmiy rahbar daraja", "Илмий раҳбар даража"),
-        "muassasa":             get("Muassasa", "Муассаса", "Tashkilot", "Ташкилот"),
-        "ilmiy_kengash_raqami": get("Ilmiy kengash", "Илмий кенгаш"),
-        "opponent_1":           get("Rasmiy opponent 1", "Расмий оппонент 1", "Opponent 1"),
-        "opponent_2":           get("Rasmiy opponent 2", "Расмий оппонент 2", "Opponent 2"),
-        "yetakchi_tashkilot":   get("Yetakchi tashkilot", "Етакчи ташкилот"),
+def parse_announcement(text, title=""):
+    fields = {
+        "mavzu": [
+            r"Диссертация мавзуси[^:]*шифри[^:]*",
+            r"Диссертасия мавзуси[^:]*шифри[^:]*",
+        ],
+        "ro_yxat_raqami": [
+            r"Диссертация мавзуси рўйхатга олинган рақам",
+            r"мавзуси рўйҳатга олинган рақам",
+        ],
+        "ilmiy_rahbar": [
+            r"Илмий раҳбар(?:лар)?(?:нинг[^:]*)?",
+            r"Илмий маслаҳатчи",
+        ],
+        "bajarilgan_muassasa": [
+            r"Диссертация бажарилган муассаса(?:лар)? номи",
+            r"Диссертасия бажарилган муассаса(?:лар)? номи",
+        ],
+        "ik_muassasa": [
+            r"ИК фаолият кўрсатаётган муассаса[^:]*номи[^:]*ИК рақами",
+            r"ИК фаолият кўрсатаётган муассаса[^:]*",
+        ],
+        "opponentlar": [r"Расмий оппонентлар"],
+        "yetakchi_tashkilot": [r"Етакчи ташкилот"],
+        "yo_nalish": [
+            r"Диссертация йўналиши",
+            r"Диссертасия йўналиши",
+        ],
     }
 
+    result = {k: extract_field(text, v) for k, v in fields.items()}
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+    codes = re.findall(r"\b(\d{2}\.\d{2}\.\d{2})\b", text)
+    result["ixtisoslik_shifrlari"] = ", ".join(sorted(set(codes)))
+    result["fan_tarmogi"]          = extract_science_branch(text)
+    result["ik_raqami"]            = extract_ik_code(text)
+    result["daraja"]               = detect_degree(text)
+    result["olim"]                 = extract_olim_name(title)
+
+    opp1, opp2 = split_opponents(result["opponentlar"])
+    result["opponent_1"] = opp1
+    result["opponent_2"] = opp2
+
+    return result
+
+
+def parse_list_page(html):
+    soup = BeautifulSoup(html, "html.parser")
+    items = []
+    for a in soup.find_all("a", href=True):
+        if "/pages/" not in a["href"]:
+            continue
+        if a.get_text(strip=True).lower() != "batafsil":
+            continue
+        block = a
+        for _ in range(6):
+            block = block.parent
+            if block is None:
+                break
+            if block.find("h3"):
+                break
+        if block is None:
+            continue
+        h3 = block.find("h3")
+        if not h3 or not h3.find("a"):
+            continue
+        title = h3.get_text(strip=True)
+        link  = h3.find("a")["href"]
+        if link.startswith("/"):
+            link = "https://oak.uz" + link
+        m = re.search(r"/pages/(\d+)", link)
+        item_id = int(m.group(1)) if m else 0
+        text_block = block.get_text(" ", strip=True)
+        date_m = re.search(r"\b(\d{2}\.\d{2}\.\d{4})\b", text_block)
+        date   = date_m.group(1) if date_m else ""
+        full   = block.get_text("\n", strip=True)
+        clean  = full.replace(title, "", 1)
+        clean  = re.sub(r"\bBatafsil\b", "", clean)
+        clean  = re.sub(r"^\s*" + re.escape(date), "", clean)
+        items.append({
+            "id": item_id, "title": title, "link": link,
+            "date": date,  "raw_text": clean.strip()
+        })
+    seen, unique = set(), []
+    for it in items:
+        if it["link"] not in seen:
+            seen.add(it["link"])
+            unique.append(it)
+    return unique
+
+
+# ── MAIN ─────────────────────────────────────────────────────────────────────
 
 def main():
     conn = get_conn()
-    print("Connected to database")
+    print("DB ga ulandi")
 
-    ensure_columns(conn)
-    print("Schema up-to-date")
+    last_id = get_max_oak_id(conn)
+    print("Oxirgi oak_id: " + str(last_id))
+    print("Sana: " + datetime.now().isoformat())
 
-    # Fetch listing page
-    print(f"Fetching listing: {LIST_URL}")
-    try:
-        html = fetch(LIST_URL)
-    except Exception as e:
-        sys.exit(f"Failed to fetch listing page: {e}")
+    new_count   = 0
+    max_id_seen = last_id
 
-    db_max = max_oak_id(conn)
-    print(f"Max oak_id in DB: {db_max}")
-
-    links = get_page_links(html, min_oak_id=db_max)
-    print(f"Found {len(links)} new dissertation links (oak_id > {db_max})")
-
-    if not links:
-        print("No new links found — DB is up to date")
-        conn.close()
-        return
-
-    known = existing_oak_ids(conn)
-    print(f"Already in DB: {len(known)} records with oak_id")
-
-    new_count = 0
-    error_count = 0
-
-    for i, url in enumerate(links, 1):
-        oak_id = oak_id_from_url(url)
-        if oak_id in known:
-            print(f"  [{i}/{len(links)}] SKIP {oak_id} (already exists)")
+    for page_num in range(1, MAX_PAGES + 1):
+        url  = f"{BASE_URL}?page={page_num}" if page_num > 1 else BASE_URL
+        print("Sahifa " + str(page_num) + " tekshirilmoqda...")
+        html = fetch(url)
+        if html is None:
             continue
 
-        print(f"  [{i}/{len(links)}] Scraping {url} ...", end=" ", flush=True)
-        try:
-            page_html = fetch(url)
-            data = parse_dissertation(page_html, url)
-            if not is_valid_record(data):
-                print("SKIPPED: bad data")
+        items = parse_list_page(html)
+        if not items:
+            break
+
+        page_ids = [it["id"] for it in items]
+        page_max = max(page_ids)
+        page_min = min(page_ids)
+
+        if page_max > max_id_seen:
+            max_id_seen = page_max
+
+        stop_after = False
+        if last_id > 0 and page_min <= last_id:
+            stop_after = True
+
+        for item in items:
+            if item["id"] <= last_id:
                 continue
-            insert_dissertation(conn, data)
-            new_count += 1
-            print(f"OK  — {data['olim'] or '(no name)'}")
-        except Exception as e:
-            error_count += 1
-            print(f"ERROR: {e}")
+            parsed = parse_announcement(item["raw_text"], item["title"])
+            opp1, opp2 = parsed["opponent_1"], parsed["opponent_2"]
+            db_item = {
+                "oak_id":               str(item["id"]),
+                "link":                 item["link"],
+                "olim":                 parsed["olim"],
+                "daraja":               parsed["daraja"],
+                "mavzu":                parsed["mavzu"],
+                "ixtisoslik":           parsed["ixtisoslik_shifrlari"],
+                "fan_tarmogi":          parsed["fan_tarmogi"],
+                "mavzu_raqami":         parsed["ro_yxat_raqami"],
+                "ilmiy_rahbar":         parsed["ilmiy_rahbar"],
+                "muassasa":             parsed["bajarilgan_muassasa"],
+                "ilmiy_kengash_raqami": parsed["ik_raqami"],
+                "opponent_1":           opp1,
+                "opponent_2":           opp2,
+                "yetakchi_tashkilot":   parsed["yetakchi_tashkilot"],
+                "yonalish":             parsed["yo_nalish"],
+            }
+            try:
+                insert_item(conn, db_item)
+                new_count += 1
+                print("  + " + str(item["id"]) + " | " + item["date"] + " | " + item["title"][:60])
+            except Exception as e:
+                print("  ! Xato " + str(item["id"]) + ": " + str(e))
+
+        if stop_after:
+            print("  Eski e'lonlarga yetildi, to'xtatildi.")
+            break
 
         time.sleep(DELAY)
 
     conn.close()
-    print()
     print("=" * 50)
-    print(f"Done. New records inserted : {new_count}")
-    print(f"      Errors               : {error_count}")
-    print(f"      Skipped (existing)   : {len(links) - new_count - error_count}")
+    print("Yangi qo'shildi: " + str(new_count))
+    print("Oxirgi ko'rilgan ID: " + str(max_id_seen))
 
 
 if __name__ == "__main__":
