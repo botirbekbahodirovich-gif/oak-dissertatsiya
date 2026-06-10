@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import openpyxl
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 try:
@@ -564,3 +565,79 @@ def chat():
     
     except Exception as e:
         return jsonify({"response": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}), 200
+
+
+@data_bp.route('/api/oak/ingest', methods=['POST'])
+def oak_ingest():
+    auth = request.headers.get('Authorization', '')
+    if not OAK_API_KEY or auth != f'Bearer {OAK_API_KEY}':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    payload = request.get_json(silent=True) or {}
+    items = payload.get('items', [])
+    if not isinstance(items, list):
+        return jsonify({'error': 'items must be a list'}), 400
+
+    added = 0
+    skipped = 0
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            for item in items:
+                oak_id = str(item.get('ID', '')).strip()
+                mavzu  = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
+                olim   = str(item.get('Sarlavha', '') or '').strip()
+
+                if not oak_id:
+                    skipped += 1
+                    continue
+                if not mavzu or len(mavzu) < 20:
+                    skipped += 1
+                    continue
+                if 'attestatsiya komissiyasi' in mavzu.lower():
+                    skipped += 1
+                    continue
+
+                cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
+                if cur.fetchone():
+                    skipped += 1
+                    continue
+
+                cur.execute(
+                    """
+                    INSERT INTO dissertations
+                        (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
+                         mavzu_raqami, ilmiy_rahbar, muassasa,
+                         ilmiy_kengash_raqami, opponent_1, opponent_2,
+                         yetakchi_tashkilot, link)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (oak_id) DO NOTHING
+                    """,
+                    (
+                        oak_id,
+                        str(item.get('Sana', '') or '')[:50],
+                        str(item.get('Daraja', '') or '')[:20],
+                        olim[:200],
+                        mavzu[:500],
+                        str(item.get('Ixtisoslik shifrlari', '') or '')[:50],
+                        str(item.get('Royxat raqami', '') or ''),
+                        str(item.get('Ilmiy rahbar', '') or '')[:200],
+                        str(item.get('Bajarilgan muassasa', '') or '')[:300],
+                        str(item.get('IK raqami', '') or ''),
+                        '',
+                        '',
+                        str(item.get('Yetakchi tashkilot', '') or '')[:200],
+                        str(item.get('Havola', '') or ''),
+                    )
+                )
+                added += 1
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'added': added, 'skipped': skipped, 'total': len(items)})
