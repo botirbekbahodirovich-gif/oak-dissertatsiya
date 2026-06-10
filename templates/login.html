@@ -32,9 +32,11 @@
         </div>
       </div>
       <button type="submit" class="btn btn-primary w-100"> <i class="bi bi-box-arrow-in-right me-1"></i>Kirish</button>
+    </form>
 
-      <div class="text-center my-4">
-        <p style="color:#8899b4;margin-bottom:12px">— yoki Telegram orqali kiring —</p>
+    <div class="text-center my-4">
+      <p style="color:#8899b4;font-size:14px;margin-bottom:16px">— yoki Telegram orqali kiring —</p>
+      <div id="tg-container">
         <script async src="https://telegram.org/js/telegram-widget.js?22"
           data-telegram-login="send_kod_bot"
           data-size="large"
@@ -43,7 +45,8 @@
           data-request-access="write">
         </script>
       </div>
-    </form>
+      <p id="tg-status" style="color:#ef4444;font-size:13px;margin-top:8px;display:none"></p>
+    </div>
     <div class="mt-4 text-center"><span class="text-muted">Hisobingiz yo'qmi?</span>
       <div class="mt-2"><a href="/register" class="btn btn-action w-100">Ro'yxatdan o'tish</a></div>
     </div>
@@ -59,13 +62,24 @@
   });
 
   function onTelegramAuth(user) {
+    document.getElementById('tg-container').innerHTML = '<p style="color:#4a9eff;font-size:14px">Tekshirilmoqda...</p>';
     fetch('/login/telegram', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(user)
-    }).then(r=>r.json()).then(d=>{
-      if(d.redirect) window.location.href=d.redirect;
-      else alert(d.error||'Xatolik yuz berdi');
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) window.location.href = d.redirect || '/dashboard';
+      else {
+        document.getElementById('tg-status').textContent = d.error || 'Xatolik';
+        document.getElementById('tg-status').style.display = 'block';
+        document.getElementById('tg-container').innerHTML = '<p style="color:#8899b4;font-size:13px">Qayta urinish uchun sahifani yangilang</p>';
+      }
+    })
+    .catch(() => {
+      document.getElementById('tg-status').textContent = 'Tarmoq xatosi';
+      document.getElementById('tg-status').style.display = 'block';
     });
   }
 </script>

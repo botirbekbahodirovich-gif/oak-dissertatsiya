@@ -123,50 +123,71 @@ def logout():
 
 @auth_bp.route('/login/telegram', methods=['POST'])
 def telegram_login():
-    from app import User, is_safe_relative_url
-    data = request.get_json(silent=True) or {}
+    from app import User
+    raw = request.get_json(silent=True) or {}
 
     if not TELEGRAM_BOT_TOKEN:
-        return jsonify({'error': 'TELEGRAM_BOT_TOKEN sozlanmagan'}), 500
-
-    # Verify Telegram hash
-    check_hash = data.pop('hash', '')
-    data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
-    secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
-    computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
-
-    if computed != check_hash:
-        return jsonify({'error': 'Tasdiqlash xatosi'}), 403
-
-    if time.time() - int(data.get('auth_date', 0)) > 86400:
-        return jsonify({'error': "Muddati o'tgan"}), 403
-
-    tg_id    = str(data.get('id', ''))
-    username = data.get('username') or f"tg_{tg_id}"
-    email    = f"{tg_id}@telegram.uz"
+        return jsonify({'success': False, 'error': 'TELEGRAM_BOT_TOKEN sozlanmagan'}), 200
 
     try:
+        # Work on a copy so we don't mutate the original dict
+        data = dict(raw)
+        check_hash = data.pop('hash', '')
+
+        if not check_hash:
+            return jsonify({'success': False, 'error': 'Hash mavjud emas'}), 200
+
+        data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
+        secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
+        computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
+
+        if not hmac.compare_digest(computed, check_hash):
+            return jsonify({
+                'success': False,
+                'error': "Bot domain sozlanmagan: @BotFather da /setdomain buyrug'ini bering"
+            }), 200
+
+        if time.time() - int(data.get('auth_date', 0)) > 86400:
+            return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 200
+
+        tg_id    = str(data.get('id', ''))
+        username = (data.get('username') or f"tg_{tg_id}").strip()
+        email    = f"{tg_id}@telegram.uz"
+
+        if not tg_id:
+            return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 200
+
         conn = get_connection()
-        cur  = conn.cursor()
-        cur.execute("SELECT id, username, email FROM users WHERE username = %s", (username,))
-        user_row = cur.fetchone()
+        try:
+            cur = conn.cursor()
+            # Look up by telegram email to handle username changes
+            cur.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+            user_row = cur.fetchone()
 
-        if not user_row:
-            cur.execute(
-                "INSERT INTO users (username, email, password_hash, is_admin) "
-                "VALUES (%s, %s, %s, %s) RETURNING id",
-                (username, email, 'telegram_auth', False)
-            )
-            user_id = cur.fetchone()[0]
-            conn.commit()
-        else:
-            user_id = user_row[0]
-            email   = user_row[2] or email
+            if not user_row:
+                # Also check by username in case email lookup misses
+                cur.execute("SELECT id, username, email FROM users WHERE username = %s", (username,))
+                user_row = cur.fetchone()
 
-        cur.close()
-        conn.close()
+            if not user_row:
+                cur.execute(
+                    "INSERT INTO users (username, email, password_hash, is_admin) "
+                    "VALUES (%s, %s, %s, %s) RETURNING id",
+                    (username, email, 'telegram_auth', False)
+                )
+                user_id = cur.fetchone()[0]
+                conn.commit()
+            else:
+                user_id = user_row[0]
+                username = user_row[1]
+                email    = user_row[2] or email
+
+            cur.close()
+        finally:
+            conn.close()
+
     except Exception as e:
-        return jsonify({'error': f'DB xatolik: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': f"Xatolik: {str(e)}"}), 200
 
     login_user(User(user_id, username, email), remember=True)
-    return jsonify({'redirect': '/dashboard'})
+    return jsonify({'success': True, 'redirect': '/dashboard'})
