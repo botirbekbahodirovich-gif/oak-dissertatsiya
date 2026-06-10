@@ -4,13 +4,20 @@
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
   .entity-link:hover { text-decoration: underline; }
-  .mavzu-cell { max-width: 260px; white-space: normal; word-break: break-word; }
+  .mavzu-cell { max-width: 240px; white-space: normal; word-break: break-word; }
+  .detail-row td { background: var(--oak-card, #1a1f2e); padding: 1rem 1.25rem; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem 1.25rem; }
+  .detail-item label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--oak-muted, #8892a4); display: block; margin-bottom: 2px; }
+  .detail-item span { font-size: 0.88rem; }
+  .detail-actions { margin-top: .75rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+  tr.expanded-row > td { border-bottom: none; }
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     #btn-export { width: 100%; justify-content: center; }
     .mavzu-cell { max-width: 140px; }
     .olim-cell, .muassasa-cell, .sana-cell { white-space: nowrap; }
+    .col-ixtisoslik { display: none; }
   }
 </style>
 {% endblock %}
@@ -65,15 +72,16 @@
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0">
         <thead><tr>
-          <th style="width:42px">#</th>
+          <th style="width:36px">#</th>
           <th data-sort="Olim">Olim</th>
           <th data-sort="Mavzu">Mavzu</th>
-          <th data-sort="Daraja" style="width:80px">Daraja</th>
-          <th data-sort="Sana" style="width:96px">Sana</th>
+          <th data-sort="Daraja" style="width:72px">Daraja</th>
+          <th data-sort="Ixtisoslik" class="col-ixtisoslik" style="width:96px">Ixtisoslik</th>
+          <th data-sort="Sana" style="width:90px">Sana</th>
           <th data-sort="Muassasa">Muassasa</th>
         </tr></thead>
         <tbody id="table-body">
-          <tr><td colspan="6"><div class="skeleton-bar"></div></td></tr>
+          <tr><td colspan="7"><div class="skeleton-bar"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -126,14 +134,21 @@
     const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
   }
+  function ixtisoslikShifr(val) {
+    if (!val) return '—';
+    const m = String(val).match(/^\d{2}\.\d{2}\.\d{2}/);
+    return m ? m[0] : escHtml(val.slice(0, 10));
+  }
   function renderRows(records, startIndex) {
     if (!records.length) {
-      tableBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-search"></i><div>Natija topilmadi</div></div></td></tr>';
       return;
     }
     const term = currentFilters.search.trim();
-    tableBody.innerHTML = records.map((r,i) => {
+    const rows = [];
+    records.forEach((r, i) => {
       const num = r.id || startIndex + i + 1;
+      const rowId = `detail-${num}`;
       const daraja = (r.Daraja || '').toUpperCase();
       const darajaSpan = daraja === 'PHD'
         ? '<span class="badge-phd badge-role">PhD</span>'
@@ -146,16 +161,48 @@
       const universityLink = r.Muassasa
         ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>`
         : '—';
-      const mavzuShort = (r.Mavzu||'').length > 80 ? escHtml(r.Mavzu.slice(0,78)) + '…' : escHtml(r.Mavzu||'—');
-      return `<tr onclick="location.href='/dissertation/${num}'" style="cursor:pointer;" title="Batafsil ko'rish">
+      const mavzuFull = r.Mavzu || '';
+      const mavzuShort = mavzuFull.length > 60 ? escHtml(mavzuFull.slice(0, 59)) + '…' : escHtml(mavzuFull || '—');
+      const muassasaFull = r.Muassasa || '';
+      const muassasaShort = muassasaFull.length > 30 ? escHtml(muassasaFull.slice(0, 29)) + '…' : escHtml(muassasaFull || '—');
+      const muassasaCell = muassasaFull
+        ? `<a href="/university/${encodeURIComponent(muassasaFull)}" class="entity-link" onclick="event.stopPropagation()" title="${escHtml(muassasaFull)}">${muassasaShort}</a>`
+        : '—';
+      rows.push(`<tr class="data-row" data-row-id="${rowId}" style="cursor:pointer;" title="Batafsil ko'rish">
           <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
           <td class="olim-cell" style="white-space:nowrap;">${authorLink}</td>
-          <td class="mavzu-cell" style="max-width:320px;">${term ? highlight(r.Mavzu, term) : mavzuShort}</td>
+          <td class="mavzu-cell">${term ? highlight(mavzuFull, term) : mavzuShort}</td>
           <td>${darajaSpan}</td>
+          <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;">${ixtisoslikShifr(r.Ixtisoslik)}</td>
           <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
-          <td class="muassasa-cell">${universityLink}</td>
-        </tr>`;
-    }).join('');
+          <td class="muassasa-cell">${muassasaCell}</td>
+        </tr>`);
+      rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
+          <td colspan="7">
+            <div class="detail-grid">
+              <div class="detail-item"><label>Mavzu (to'liq)</label><span>${escHtml(r.Mavzu || '—')}</span></div>
+              <div class="detail-item"><label>Ixtisoslik</label><span>${escHtml(r.Ixtisoslik || '—')}</span></div>
+              <div class="detail-item"><label>Muassasa</label><span>${escHtml(r.Muassasa || '—')}</span></div>
+              <div class="detail-item"><label>Ilmiy rahbar</label><span>${r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link">${escHtml(r.Ilmiy_rahbar)}</a>` : '—'}</span></div>
+              <div class="detail-item"><label>Daraja</label><span>${escHtml(r.Daraja || '—')}</span></div>
+              <div class="detail-item"><label>Sana</label><span>${fmtSana(r.Sana)}</span></div>
+            </div>
+            <div class="detail-actions">
+              <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>Batafsil</a>
+            </div>
+          </td>
+        </tr>`);
+    });
+    tableBody.innerHTML = rows.join('');
+    tableBody.querySelectorAll('tr.data-row').forEach(tr => {
+      tr.addEventListener('click', () => {
+        const det = document.getElementById(tr.dataset.rowId);
+        if (!det) return;
+        const open = det.style.display !== 'none';
+        det.style.display = open ? 'none' : 'table-row';
+        tr.classList.toggle('expanded-row', !open);
+      });
+    });
   }
   function renderInfo(page, total) {
     resultCount.textContent = total.toLocaleString('uz');
@@ -197,7 +244,7 @@
       renderRows(currentRecords, (data.page-1)*PER_PAGE);
       renderInfo(data.page, data.total);
     } catch (err) {
-      tableBody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma' + "'" + 'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
     }
   }
   let filterTimer;
