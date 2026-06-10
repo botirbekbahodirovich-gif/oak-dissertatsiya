@@ -255,12 +255,49 @@ def main():
 
 
 def _build_record(item, parsed):
+    import re
+    
+    # Olim ismini sarlavhadan tozalab ajratish
+    title = item.get("title", "")
+    olim = ""
+    
+    # Kirill: "Фамилия Исм Отасининг фалсафа/фан доктори..."
+    m = re.search(
+        r'^([А-ЯЎҚҒҲа-яўқғҳёЁ\s\'\-\.]+?)нинг\s+(?:фалсафа|фан)\s+доктори',
+        title.strip()
+    )
+    if m:
+        olim = m.group(1).strip()
+    else:
+        # Lotin: "Familiya Ism Otasinining falsafa/fan doktori..."
+        m = re.search(
+            r'^([A-Za-z\s\'\-\.]+?)ning\s+(?:falsafa|fan)\s+doktori',
+            title.strip(), re.IGNORECASE
+        )
+        if m:
+            olim = m.group(1).strip()
+        else:
+            # Zaxira: "нинг" gacha
+            m = re.search(r'^(.+?)нинг', title)
+            if m:
+                olim = m.group(1).strip()
+    
+    # Daraja aniqlashtirish
+    daraja = parsed.get("daraja", "")
+    if not daraja:
+        text = title + " " + parsed.get("mavzu", "")
+        if any(x in text for x in ["фалсафа доктори", "falsafa doktori", "(PhD)", "PhD/"]):
+            daraja = "PhD"
+        elif any(x in text for x in ["фан доктори", "fan doktori", "(DSc)", "DSc/"]):
+            daraja = "DSc"
+    
     return {
         "ID": item["id"],
         "Sana": item["date"],
-        "Sarlavha": item["title"],
+        "Sarlavha": title,           # To'liq sarlavha (log uchun)
+        "Olim": olim,                # Tozalangan ism (saytga yuborish uchun)
         "Havola": item["link"],
-        "Daraja": parsed["daraja"],
+        "Daraja": daraja,
         "Mavzu va ixtisoslik": parsed["mavzu"],
         "Ixtisoslik shifrlari": ", ".join(parsed["ixtisoslik_shifrlari"]),
         "Fan tarmogi": parsed["fan_tarmogi"],
