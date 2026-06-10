@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import io
 import html as html_module
@@ -584,6 +585,93 @@ def chat():
         return jsonify({"response": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}), 200
 
 
+# ---------------------------------------------------------------------------
+# Ingest helpers
+# ---------------------------------------------------------------------------
+
+def _extract_olim(title: str) -> str:
+    if not title:
+        return ''
+    t = title.strip()
+    # "нинг фалсафа/фан доктори" — most reliable
+    m = re.search(
+        r'^([А-ЯЎҚҒҲа-яўқғҳёЁ][А-ЯЎҚҒҲа-яўқғҳёЁa-z\s\'\-\.]+?)нинг\s+(?:фалсафа|фан)\s+доктори',
+        t
+    )
+    if m:
+        return m.group(1).strip()
+    # Latin transliteration
+    m = re.search(
+        r'^([A-Za-zА-ЯЎҚҒҲа-яўқғҳёЁ][A-Za-zА-ЯЎҚҒҲа-яўқғҳёЁ\s\'\-\.]+?)ning\s+(?:falsafa|fan)\s+doktori',
+        t, re.IGNORECASE
+    )
+    if m:
+        return m.group(1).strip()
+    # Fallback: everything before "нинг"
+    m = re.search(r'^(.+?)нинг', t)
+    if m:
+        return m.group(1).strip()
+    return t[:80].strip()
+
+
+def _extract_daraja(title: str, mavzu: str) -> str:
+    text = (title or '') + ' ' + (mavzu or '')
+    if any(x in text for x in ['фалсафа доктори', 'falsafa doktori', '(PhD)', 'PhD/']):
+        return 'PhD'
+    if any(x in text for x in ['фан доктори', 'fan doktori', '(DSc)', 'DSc/']):
+        return 'DSc'
+    if 'PhD' in text:
+        return 'PhD'
+    if 'DSc' in text:
+        return 'DSc'
+    return ''
+
+
+def _extract_mavzu(mavzu_full: str) -> str:
+    if not mavzu_full:
+        return ''
+    # Extract text inside quotes first
+    m = re.search(r'[«"“«]([^»"”»]{20,})[»"”»]', mavzu_full)
+    if m:
+        return m.group(1).strip()
+    # Up to first specialization code like "08.00.07"
+    m = re.search(r'^(.+?)\s+\d{2}\.\d{2}\.\d{2}', mavzu_full)
+    if m:
+        return m.group(1).strip(' –—-')
+    return mavzu_full[:500].strip()
+
+
+def _extract_ixtisoslik(shifr_field: str, mavzu_full: str) -> str:
+    # Prefer dedicated field — take only the first code
+    src = shifr_field or mavzu_full or ''
+    m = re.search(r'\b(\d{2}\.\d{2}\.\d{2})\b', src)
+    return m.group(1) if m else ''
+
+
+def _validate_ingest_record(oak_id: str, olim: str, daraja: str,
+                             mavzu: str, muassasa: str) -> str | None:
+    """Return a skip reason string, or None if the record is valid."""
+    if not oak_id or not oak_id.isdigit() or int(oak_id) <= 0:
+        return 'bad oak_id'
+    if 'нинг' in olim:
+        return 'olim not cleaned'
+    if daraja not in ('PhD', 'DSc', ''):
+        return f'bad daraja: {daraja}'
+    if not mavzu or not (20 <= len(mavzu) <= 500):
+        return f'mavzu length {len(mavzu)}'
+    if mavzu == muassasa:
+        return 'mavzu == muassasa'
+    if 'attestatsiya komissiyasi' in mavzu.lower():
+        return 'attestatsiya noise'
+    if 'Fanlar akademiyasi' in mavzu:
+        return 'Fanlar akademiyasi noise'
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Ingest endpoint
+# ---------------------------------------------------------------------------
+
 @data_bp.route('/api/oak/ingest', methods=['POST'])
 def oak_ingest():
     auth = request.headers.get('Authorization', '')
@@ -597,28 +685,37 @@ def oak_ingest():
 
     added = 0
     skipped = 0
+    skip_reasons: dict = {}
 
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             for item in items:
-                oak_id = str(item.get('ID', '')).strip()
-                mavzu  = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
-                olim   = str(item.get('Sarlavha', '') or '').strip()
+                oak_id     = str(item.get('ID', '') or '').strip()
+                title      = str(item.get('Sarlavha', '') or '').strip()
+                mavzu_full = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
+                muassasa   = str(item.get('Bajarilgan muassasa', '') or '').strip()[:300]
 
-                if not oak_id:
+                # Extract & clean fields
+                olim     = _extract_olim(title)
+                mavzu    = _extract_mavzu(mavzu_full)
+                daraja   = _extract_daraja(title, mavzu_full) or str(item.get('Daraja', '') or '').strip()
+                ixtisoslik = _extract_ixtisoslik(
+                    str(item.get('Ixtisoslik shifrlari', '') or ''),
+                    mavzu_full
+                )
+
+                # Validate
+                reason = _validate_ingest_record(oak_id, olim, daraja, mavzu, muassasa)
+                if reason:
                     skipped += 1
-                    continue
-                if not mavzu or len(mavzu) < 20:
-                    skipped += 1
-                    continue
-                if 'attestatsiya komissiyasi' in mavzu.lower():
-                    skipped += 1
+                    skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
                     continue
 
                 cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
                 if cur.fetchone():
                     skipped += 1
+                    skip_reasons['duplicate'] = skip_reasons.get('duplicate', 0) + 1
                     continue
 
                 cur.execute(
@@ -634,16 +731,16 @@ def oak_ingest():
                     (
                         oak_id,
                         str(item.get('Sana', '') or '')[:50],
-                        str(item.get('Daraja', '') or '')[:20],
+                        daraja,
                         olim[:200],
                         mavzu[:500],
-                        str(item.get('Ixtisoslik shifrlari', '') or '')[:50],
+                        ixtisoslik[:50],
                         str(item.get('Royxat raqami', '') or ''),
                         str(item.get('Ilmiy rahbar', '') or '')[:200],
-                        str(item.get('Bajarilgan muassasa', '') or '')[:300],
+                        muassasa,
                         str(item.get('IK raqami', '') or ''),
-                        '',
-                        '',
+                        str(item.get('Opponent 1', '') or '')[:200],
+                        str(item.get('Opponent 2', '') or '')[:200],
                         str(item.get('Yetakchi tashkilot', '') or '')[:200],
                         str(item.get('Havola', '') or ''),
                     )
@@ -657,4 +754,68 @@ def oak_ingest():
     finally:
         conn.close()
 
-    return jsonify({'added': added, 'skipped': skipped, 'total': len(items)})
+    return jsonify({'added': added, 'skipped': skipped,
+                    'total': len(items), 'skip_reasons': skip_reasons})
+
+
+# ---------------------------------------------------------------------------
+# Admin: fix existing data quality
+# ---------------------------------------------------------------------------
+
+@data_bp.route('/admin/fix-existing-data', methods=['POST'])
+@login_required
+def fix_existing_data():
+    from flask_login import current_user
+    if not getattr(current_user, 'username', None) or current_user.username != 'admin':
+        return jsonify({'error': 'Admin only'}), 403
+
+    fixed = {'daraja_phd': 0, 'daraja_dsc': 0, 'olim_cleaned': 0}
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Fix PhD daraja
+            cur.execute("""
+                UPDATE dissertations
+                SET daraja = 'PhD'
+                WHERE (mavzu ILIKE '%фалсафа доктори%'
+                       OR mavzu ILIKE '%(PhD)%'
+                       OR link   ILIKE '%PhD%'
+                       OR olim   ILIKE '%нинг фалсафа%')
+                  AND UPPER(TRIM(daraja)) != 'PHD'
+            """)
+            fixed['daraja_phd'] = cur.rowcount
+
+            # Fix DSc daraja
+            cur.execute("""
+                UPDATE dissertations
+                SET daraja = 'DSc'
+                WHERE (mavzu ILIKE '%фан доктори%'
+                       OR mavzu ILIKE '%(DSc)%'
+                       OR link   ILIKE '%DSc%')
+                  AND UPPER(TRIM(daraja)) != 'DSC'
+            """)
+            fixed['daraja_dsc'] = cur.rowcount
+
+            # Fix olim names containing "нинг" — fetch then update
+            cur.execute(
+                "SELECT id, olim FROM dissertations WHERE olim LIKE '%нинг%'"
+            )
+            dirty = cur.fetchall()
+            for row_id, raw_olim in dirty:
+                clean = _extract_olim(raw_olim)
+                if clean and clean != raw_olim and 'нинг' not in clean:
+                    cur.execute(
+                        "UPDATE dissertations SET olim = %s WHERE id = %s",
+                        (clean[:200], row_id)
+                    )
+                    fixed['olim_cleaned'] += 1
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    return jsonify(fixed)
