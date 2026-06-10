@@ -250,6 +250,9 @@ def main():
         try:
             page_html = fetch(url)
             data = parse_dissertation(page_html, url)
+            if not data.get("mavzu", "").strip():
+                print("SKIP — mavzu empty")
+                continue
             insert_dissertation(conn, data)
             new_count += 1
             print(f"OK  — {data['olim'] or '(no name)'}")

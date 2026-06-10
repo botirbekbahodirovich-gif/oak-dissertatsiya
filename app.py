@@ -80,18 +80,29 @@ csrf.exempt(app.view_functions['auth.telegram_login'])
 @app.route("/")
 def home():
     try:
-        rows = query_dissertations("", "", "", "", "id", "desc", page=1, per_page=6)
+        from data import get_connection
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, olim, mavzu, daraja, sana, muassasa "
+                "FROM dissertations "
+                "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
+                "ORDER BY id DESC LIMIT 6"
+            )
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+        conn.close()
     except Exception:
         rows = []
     recent = []
     if rows:
         recent = [{
             "id": row.get("id"),
-            "Olim": row.get("Olim", ""),
-            "Mavzu": row.get("Mavzu", ""),
-            "Daraja": row.get("Daraja", ""),
-            "Sana": row.get("Sana", ""),
-            "Muassasa": row.get("Muassasa", ""),
+            "Olim": row.get("olim", "") or "",
+            "Mavzu": row.get("mavzu", "") or "",
+            "Daraja": row.get("daraja", "") or "",
+            "Sana": row.get("sana", "") or "",
+            "Muassasa": row.get("muassasa", "") or "",
         } for row in rows]
     return render_template("home.html", recent=recent)
 
