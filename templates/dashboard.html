@@ -78,11 +78,11 @@
       <table class="table table-hover align-middle mb-0">
         <thead><tr>
           <th style="width:36px">#</th>
+          <th data-sort="Sana" style="width:90px">Sana</th>
           <th data-sort="Olim">Olim</th>
           <th data-sort="Mavzu">Mavzu</th>
           <th data-sort="Daraja" style="width:72px">Daraja</th>
           <th data-sort="Ixtisoslik" class="col-ixtisoslik" style="width:96px">Ixtisoslik</th>
-          <th data-sort="Sana" style="width:90px">Sana</th>
           <th data-sort="Ilmiy_rahbar">Ilmiy rahbar</th>
         </tr></thead>
         <tbody id="table-body">
@@ -187,11 +187,11 @@
       const supervisorCount = r.supervisor_count || 1;
       rows.push(`<tr class="data-row" data-row-id="${rowId}" style="cursor:pointer;" title="Batafsil ko'rish">
           <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
+          <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
           <td class="olim-cell" style="white-space:nowrap;">${authorLink}</td>
           <td class="mavzu-cell">${term ? highlight(mavzuFull, term) : mavzuShort}</td>
           <td>${darajaSpan}</td>
           <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;"><a href="/specialization/${encodeURIComponent(ixtisoslikShifr(r.Ixtisoslik))}" class="entity-link" onclick="event.stopPropagation()" style="cursor:pointer;" title="Bu ixtisoslik bo'yicha filtrlash">${ixtisoslikShifr(r.Ixtisoslik)}</a></td>
-          <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
           <td class="muassasa-cell">${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
