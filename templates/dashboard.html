@@ -173,7 +173,7 @@
           <td class="olim-cell" style="white-space:nowrap;">${authorLink}</td>
           <td class="mavzu-cell">${term ? highlight(mavzuFull, term) : mavzuShort}</td>
           <td>${darajaSpan}</td>
-          <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;">${ixtisoslikShifr(r.Ixtisoslik)}</td>
+          <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;"><a href="/specialization/${encodeURIComponent(ixtisoslikShifr(r.Ixtisoslik))}" class="entity-link" onclick="event.stopPropagation()" style="cursor:pointer;" title="Bu ixtisoslik bo'yicha filtrlash">${ixtisoslikShifr(r.Ixtisoslik)}</a></td>
           <td class="sana-cell" style="white-space:nowrap;">${fmtSana(r.Sana)}</td>
           <td class="muassasa-cell">${muassasaCell}</td>
         </tr>`);
@@ -188,7 +188,8 @@
               <div class="detail-item"><label>Sana</label><span>${fmtSana(r.Sana)}</span></div>
             </div>
             <div class="detail-actions">
-              <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>Batafsil</a>
+              <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-file-text me-1"></i>Batafsil</a>
+              ${(r.Link || r.oak_id) ? `<a href="${escHtml(r.Link || 'https://oak.uz/pages/' + r.oak_id)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish →</a>` : ''}
             </div>
           </td>
         </tr>`);

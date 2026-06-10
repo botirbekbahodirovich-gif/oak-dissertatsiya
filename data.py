@@ -39,8 +39,13 @@ def get_connection():
 def normalize_row(row):
     if row is None:
         return None
+    oak_id = str(row.get("oak_id") or "").strip()
+    link = str(row.get("Link") or "").strip()
+    if not link and oak_id:
+        link = f"https://oak.uz/pages/{oak_id}"
     return {
         "id": row.get("id"),
+        "oak_id": oak_id,
         "Sana": str(row.get("Sana") or "").strip(),
         "Daraja": str(row.get("Daraja") or "").strip(),
         "Olim": str(row.get("Olim") or "").strip(),
@@ -48,7 +53,7 @@ def normalize_row(row):
         "Ixtisoslik": str(row.get("Ixtisoslik") or "").strip(),
         "Muassasa": str(row.get("Muassasa") or "").strip(),
         "Ilmiy_rahbar": str(row.get("Ilmiy_rahbar") or "").strip(),
-        "Link": str(row.get("Link") or "").strip(),
+        "Link": link,
     }
 
 
@@ -118,7 +123,7 @@ def _map_sort_column(sort_by):
 
 def load_data():
     sql = (
-        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
         'FROM dissertations ORDER BY id'
@@ -149,7 +154,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
         pagination_clause = ' LIMIT %s OFFSET %s'
         params = params + [per_page, (page - 1) * per_page]
     sql = (
-        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
         f'FROM dissertations{clause} ORDER BY {sort_col} {sort_dir}' + pagination_clause
@@ -173,7 +178,7 @@ def _distinct_values(column):
 
 def get_dissertation_by_id(dissertation_id):
     sql = (
-        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
         'FROM dissertations WHERE id = %s'
@@ -223,7 +228,7 @@ def get_dissertations_by_field(field_name, field_value):
     if not column:
         return []
     sql = (
-        'SELECT id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
+        'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
         f'FROM dissertations WHERE TRIM({column}) = TRIM(%s) ORDER BY id'
