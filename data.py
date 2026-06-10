@@ -139,10 +139,27 @@ def count_dissertations(search, daraja, muassasa, ixtisoslik):
     return _query_scalar(sql, params) or 0
 
 
+# Default sort direction per column: Sana/id start DESC, text columns start ASC
+_COL_DEFAULT_DIR = {
+    "id":           "desc",
+    "sana":         "desc",
+    "olim":         "asc",
+    "mavzu":        "asc",
+    "daraja":       "asc",
+    "ixtisoslik":   "asc",
+    "muassasa":     "asc",
+    "ilmiy_rahbar": "asc",
+}
+
+
 def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir, page=None, per_page=None):
     clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
     sort_col = _map_sort_column(sort_by)
-    sort_dir = 'desc' if str(sort_dir or '').lower() == 'desc' else 'asc'
+    # Honour explicit direction; fall back to per-column default; ultimate default is desc (id DESC)
+    if sort_dir and str(sort_dir).lower() in ('asc', 'desc'):
+        effective_dir = str(sort_dir).lower()
+    else:
+        effective_dir = _COL_DEFAULT_DIR.get(sort_col, 'desc')
     pagination_clause = ''
     if page is not None and per_page is not None:
         try:
@@ -160,7 +177,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
         'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
         'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link", '
         'COUNT(*) OVER (PARTITION BY TRIM(d.ilmiy_rahbar)) AS supervisor_count '
-        f'FROM dissertations d{clause} ORDER BY {sort_col} {sort_dir}' + pagination_clause
+        f'FROM dissertations d{clause} ORDER BY {sort_col} {effective_dir}' + pagination_clause
     )
     return _query_rows(sql, params)
 
@@ -234,7 +251,7 @@ def get_dissertations_by_field(field_name, field_value):
         'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
         'mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa", '
         'ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link" '
-        f'FROM dissertations WHERE TRIM({column}) = TRIM(%s) ORDER BY id'
+        f'FROM dissertations WHERE TRIM({column}) = TRIM(%s) ORDER BY id DESC'
     )
     return _query_rows(sql, (field_value,))
 
@@ -290,8 +307,8 @@ def data():
     except ValueError:
         per_page = 50
 
-    sort_by = request.args.get("sort_by", "Sana")
-    sort_dir = request.args.get("sort_dir", "asc")
+    sort_by = request.args.get("sort_by", "id")
+    sort_dir = request.args.get("sort_dir", "desc")
     total = count_dissertations(search, daraja, muassasa, ixtisoslik)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
@@ -331,8 +348,8 @@ def export():
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
         request.args.get("ixtisoslik", "").strip(),
-        request.args.get("sort_by", "Sana"),
-        request.args.get("sort_dir", "asc")
+        request.args.get("sort_by", "id"),
+        request.args.get("sort_dir", "desc")
     )
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
@@ -351,8 +368,8 @@ def export_xlsx():
         request.args.get("daraja", "").strip(),
         request.args.get("muassasa", "").strip(),
         request.args.get("ixtisoslik", "").strip(),
-        request.args.get("sort_by", "Sana"),
-        request.args.get("sort_dir", "asc")
+        request.args.get("sort_by", "id"),
+        request.args.get("sort_dir", "desc")
     )
     wb = openpyxl.Workbook()
     ws = wb.active

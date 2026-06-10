@@ -99,8 +99,15 @@
 {% block scripts %}
 <script>
   const PER_PAGE = 50;
+  const SORT_KEY = 'dashboard-sort';
+  // Default sort: id desc (newest first). Column default dirs for first click.
+  const COL_DEFAULT_DIR = { Sana:'desc', id:'desc' };
+  function defaultDir(col) { return COL_DEFAULT_DIR[col] || 'asc'; }
+  function loadSort() {
+    try { return JSON.parse(sessionStorage.getItem(SORT_KEY)) || {key:'id', dir:'desc'}; } catch(e) { return {key:'id', dir:'desc'}; }
+  }
   let currentPage = 1;
-  let currentSort = { key: 'Sana', dir: 'asc' };
+  let currentSort = loadSort();
   let currentTotal = 0;
   let currentRecords = [];
   let currentFilters = { search: '', daraja: '', muassasa: '', ixtisoslik: '' };
@@ -116,12 +123,18 @@
     const escaped = term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
     return escHtml(text).replace(new RegExp('('+escaped+')','ig'), '<span class="search-highlight">$1</span>');
   }
-  function sortArray(records) {
-    return records.slice().sort((a,b) => {
-      const x = (a[currentSort.key] || '').toLowerCase();
-      const y = (b[currentSort.key] || '').toLowerCase();
-      if (x === y) return 0;
-      return currentSort.dir === 'asc' ? (x < y ? -1 : 1) : (x > y ? -1 : 1);
+  function renderSortHeaders() {
+    sortHeaders.forEach(th => {
+      const key = th.dataset.sort;
+      th.style.cursor = 'pointer';
+      // Strip old indicator
+      th.textContent = th.textContent.replace(/ [▲▼]$/, '').trim();
+      if (key === currentSort.key) {
+        th.style.color = 'var(--oak-accent, #4a9eff)';
+        th.textContent += ' ' + (currentSort.dir === 'asc' ? '▲' : '▼');
+      } else {
+        th.style.color = '';
+      }
     });
   }
   function applyInitialFiltersFromUrl() {
@@ -285,13 +298,22 @@
   async function updateData(reset=false) {
     if (reset) currentPage = 1;
     showSkeleton();
-    const params = new URLSearchParams({search: currentFilters.search, daraja: currentFilters.daraja, muassasa: currentFilters.muassasa, ixtisoslik: currentFilters.ixtisoslik, page: currentPage, per_page: PER_PAGE});
+    renderSortHeaders();
+    const params = new URLSearchParams({
+      search: currentFilters.search,
+      daraja: currentFilters.daraja,
+      muassasa: currentFilters.muassasa,
+      ixtisoslik: currentFilters.ixtisoslik,
+      page: currentPage,
+      per_page: PER_PAGE,
+      sort_by: currentSort.key,
+      sort_dir: currentSort.dir
+    });
     try {
       const res = await fetch('/data?' + params);
       const data = await res.json();
       currentTotal = data.total;
       currentRecords = data.records;
-      if (currentSort.key) currentRecords = sortArray(currentRecords);
       renderRows(currentRecords, (data.page-1)*PER_PAGE);
       renderInfo(data.page, data.total);
       renderPagination(data.page, data.total);
@@ -331,18 +353,24 @@
     updateData(true);
   });
   document.getElementById('btn-export')?.addEventListener('click', function() {
-    const params = new URLSearchParams(currentFilters);
+    const params = new URLSearchParams({...currentFilters, sort_by: currentSort.key, sort_dir: currentSort.dir});
     window.location.href = '/export?' + params;
   });
-sortHeaders.forEach(header => header.addEventListener('click', function() {
+  sortHeaders.forEach(header => header.addEventListener('click', function() {
     const key = this.dataset.sort;
-    if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-    else { currentSort.key = key; currentSort.dir = 'asc'; }
-    updateData();
+    if (currentSort.key === key) {
+      currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSort.key = key;
+      currentSort.dir = defaultDir(key);
+    }
+    sessionStorage.setItem(SORT_KEY, JSON.stringify(currentSort));
+    updateData(true);
   }));
   document.addEventListener('DOMContentLoaded', async () => {
     await loadFilters();
     applyInitialFiltersFromUrl();
+    renderSortHeaders();
     updateData(true);
   });
 </script>
