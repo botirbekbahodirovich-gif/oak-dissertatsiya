@@ -1,6 +1,7 @@
 import os
+import io
 from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
@@ -84,4 +85,126 @@ def upload_csv():
         "success": True,
         "rows": inserted,
         "message": f"Muvaffaqiyatli yuklandi! {inserted} ta yozuv saqlandi."
+    })
+
+
+# Column mapping for the bulk clear-and-upload format
+_COL_MAP = {
+    'ID':                                              'oak_id',
+    'Sana':                                            'sana',
+    'ism_familya':                                     'olim',
+    'Havola':                                          'link',
+    'Daraja':                                          'daraja',
+    'Mavzular':                                        'mavzu',
+    "Ixtisoslik shifri va Ixtisoslik nomi (fan tarmog'i)": 'ixtisoslik_nomi',
+    'Ixtisoslik shifrlari':                            'ixtisoslik',
+    'Fan tarmogi':                                     'fan_tarmoqi',
+    'Royxat raqami':                                   'mavzu_raqami',
+    'ilmiy_rahbar':                                    'ilmiy_rahbar',
+    'Bajarilgan muassasa':                             'muassasa',
+    'IK muassasa':                                     'ilmiy_kengash',
+    'IK raqami':                                       'ilmiy_kengash_raqami',
+    '1_oponent':                                       'opponent_1',
+    '2_oponent':                                       'opponent_2',
+    'Yetakchi tashkilot':                              'yetakchi_tashkilot',
+}
+
+# DB columns we will insert (must match the mapping values + exist in the table)
+_DB_COLS = [
+    'oak_id', 'sana', 'olim', 'link', 'daraja', 'mavzu',
+    'ixtisoslik_nomi', 'ixtisoslik', 'fan_tarmoqi', 'mavzu_raqami',
+    'ilmiy_rahbar', 'muassasa', 'ilmiy_kengash', 'ilmiy_kengash_raqami',
+    'opponent_1', 'opponent_2', 'yetakchi_tashkilot',
+]
+
+
+def _ensure_extra_columns(conn):
+    """Add any missing columns used by the bulk upload."""
+    extra = [
+        ('fan_tarmoqi',          'TEXT'),
+        ('ixtisoslik_nomi',      'TEXT'),
+        ('ilmiy_kengash',        'TEXT'),
+        ('oak_id',               'TEXT UNIQUE'),
+    ]
+    with conn.cursor() as cur:
+        for col, col_type in extra:
+            cur.execute(
+                "ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS %s %s" % (col, col_type)
+            )
+    conn.commit()
+
+
+def _read_file(file) -> pd.DataFrame:
+    name = (file.filename or '').lower()
+    raw = file.read()
+    if name.endswith('.xlsx') or name.endswith('.xls'):
+        return pd.read_excel(io.BytesIO(raw), dtype=str)
+    return pd.read_csv(io.BytesIO(raw), dtype=str)
+
+
+@upload_bp.route('/admin/clear-and-upload', methods=['POST'])
+@login_required
+def clear_and_upload():
+    if not getattr(current_user, 'username', None) or current_user.username != 'admin':
+        return jsonify({'success': False, 'error': 'Admin only'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'Fayl tanlanmagan.'}), 400
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'success': False, 'error': "Fayl nomi bo'sh."}), 400
+    ext = (file.filename or '').lower().rsplit('.', 1)[-1]
+    if ext not in ('csv', 'xlsx', 'xls'):
+        return jsonify({'success': False, 'error': 'Faqat .csv yoki .xlsx qabul qilinadi.'}), 400
+
+    try:
+        df = _read_file(file)
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"Fayl o'qishda xatolik: {e}"}), 400
+
+    # Rename columns to DB names
+    df = df.rename(columns=_COL_MAP)
+    df = df.fillna('')
+
+    # Keep only columns we know how to insert
+    present_cols = [c for c in _DB_COLS if c in df.columns]
+    if not present_cols:
+        return jsonify({'success': False, 'error': 'Mos ustunlar topilmadi.'}), 400
+
+    try:
+        conn = get_connection()
+        _ensure_extra_columns(conn)
+
+        with conn.cursor() as cur:
+            # Delete everything
+            cur.execute('DELETE FROM dissertations')
+            deleted = cur.rowcount
+
+            # Build insert rows
+            rows = []
+            for _, row in df.iterrows():
+                mavzu = str(row.get('mavzu', '') or '').strip()
+                if not mavzu or len(mavzu) < 5:
+                    continue
+                rows.append(tuple(str(row.get(c, '') or '')[:500] for c in present_cols))
+
+            if rows:
+                placeholders = ','.join(['%s'] * len(present_cols))
+                col_list = ','.join(present_cols)
+                execute_values(
+                    cur,
+                    f"INSERT INTO dissertations ({col_list}) VALUES %s ON CONFLICT (oak_id) DO NOTHING",
+                    rows
+                )
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"DB xatolik: {e}"}), 500
+
+    return jsonify({
+        'success': True,
+        'deleted': deleted,
+        'added': len(rows),
+        'message': f"{deleted} ta o'chirildi, {len(rows)} ta qo'shildi."
     })

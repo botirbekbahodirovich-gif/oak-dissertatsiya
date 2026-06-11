@@ -18,6 +18,28 @@
     <button id="btn-submit" class="btn btn-primary w-100 mt-3" disabled><i class="bi bi-cloud-upload me-1"></i>Yuklash</button>
     <div id="status-box" class="alert-inline" style="display:none;margin-top:1rem;"></div>
   </div>
+
+  <!-- Clear & Upload (admin only) -->
+  <div class="content-card mt-4" style="max-width:700px;margin:1.5rem auto 0;border-color:rgba(248,113,113,0.3);">
+    <div class="page-heading">
+      <div>
+        <h1 style="color:#f87171;font-size:1.1rem;">⚠ Bazani tozalab yuklash</h1>
+        <p style="color:#f87171;opacity:.8;">Bu amal <strong>barcha mavjud yozuvlarni o'chiradi</strong> va yangi fayl bilan almashtiradi.</p>
+      </div>
+    </div>
+    <div id="drop-zone-bulk" class="content-card" style="border:1px dashed rgba(248,113,113,0.4);text-align:center;cursor:pointer;padding:2rem;">
+      <div class="mb-3"><i class="bi bi-file-earmark-excel" style="font-size:2rem;color:#f87171;"></i></div>
+      <div class="h5">.xlsx yoki .csv faylni bu yerga tashlang</div>
+      <p class="form-text">Barcha ustunlar yangi format bilan mos kelishi kerak.</p>
+      <input id="file-input-bulk" type="file" accept=".csv,.xlsx,.xls" style="display:none;" />
+      <div id="file-name-bulk" class="form-text mt-2" style="color:#f87171;display:none;"></div>
+    </div>
+    <button id="btn-submit-bulk" class="btn w-100 mt-3" disabled
+      style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:#f87171;font-weight:600;">
+      <i class="bi bi-trash3 me-1"></i>Bazani tozalab yuklash
+    </button>
+    <div id="status-box-bulk" class="alert-inline" style="display:none;margin-top:1rem;"></div>
+  </div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -56,6 +78,62 @@
       else { updateStatus('error', data.error || 'Yuklashda xatolik yuz berdi.'); }
     } catch (err) { updateStatus('error', 'Tarmoq xatoligi.'); }
     btnSubmit.disabled = false;
+  });
+
+  // ── Clear & Upload ──────────────────────────────────────────────────────────
+  const fileInputBulk = document.getElementById('file-input-bulk');
+  const dropZoneBulk  = document.getElementById('drop-zone-bulk');
+  const btnBulk       = document.getElementById('btn-submit-bulk');
+  const fileNameBulk  = document.getElementById('file-name-bulk');
+  const statusBulk    = document.getElementById('status-box-bulk');
+  let bulkFile = null;
+
+  function updateBulkStatus(type, msg) {
+    statusBulk.style.display = 'block';
+    statusBulk.className = 'alert-inline ' + (type === 'success' ? 'success' : 'error');
+    statusBulk.textContent = msg;
+  }
+
+  dropZoneBulk.addEventListener('click', () => fileInputBulk.click());
+  fileInputBulk.addEventListener('change', () => { if (fileInputBulk.files[0]) selectBulk(fileInputBulk.files[0]); });
+  dropZoneBulk.addEventListener('dragover', e => { e.preventDefault(); dropZoneBulk.style.borderColor = 'rgba(248,113,113,0.8)'; });
+  dropZoneBulk.addEventListener('dragleave', () => { dropZoneBulk.style.borderColor = 'rgba(248,113,113,0.4)'; });
+  dropZoneBulk.addEventListener('drop', e => {
+    e.preventDefault(); dropZoneBulk.style.borderColor = 'rgba(248,113,113,0.4)';
+    selectBulk(e.dataTransfer.files[0]);
+  });
+  function selectBulk(file) {
+    if (!file) return;
+    const ok = /\.(csv|xlsx|xls)$/i.test(file.name);
+    if (!ok) { updateBulkStatus('error', 'Faqat .csv yoki .xlsx qabul qilinadi.'); return; }
+    bulkFile = file; btnBulk.disabled = false;
+    fileNameBulk.textContent = file.name; fileNameBulk.style.display = 'block';
+    statusBulk.style.display = 'none';
+  }
+
+  btnBulk.addEventListener('click', async () => {
+    if (!bulkFile) return;
+    const confirmed = confirm(
+      '⚠ DIQQAT!\n\nBu amal bazadagi BARCHA yozuvlarni o\'chiradi va yangi fayl bilan almashtiradi.\n\nDavom etasizmi?'
+    );
+    if (!confirmed) return;
+    const formData = new FormData();
+    formData.append('file', bulkFile);
+    btnBulk.disabled = true;
+    btnBulk.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Yuklanmoqda...';
+    try {
+      const res = await fetch('/admin/clear-and-upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        updateBulkStatus('success', data.message || `O'chirildi: ${data.deleted}, Qo'shildi: ${data.added}`);
+      } else {
+        updateBulkStatus('error', data.error || 'Xatolik yuz berdi.');
+      }
+    } catch (err) {
+      updateBulkStatus('error', 'Tarmoq xatoligi.');
+    }
+    btnBulk.disabled = false;
+    btnBulk.innerHTML = '<i class="bi bi-trash3 me-1"></i>Bazani tozalab yuklash';
   });
 </script>
 {% endblock %}
