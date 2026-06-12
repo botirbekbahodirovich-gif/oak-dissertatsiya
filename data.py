@@ -146,13 +146,17 @@ def _query_scalar(sql, params=None):
         conn.close()
 
 
-def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
-    search = (search or '').strip()
-    daraja = (daraja or '').strip()
-    muassasa = (muassasa or '').strip()
-    ixtisoslik = (ixtisoslik or '').strip()
+def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
+                         fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+    search       = (search       or '').strip()
+    daraja       = (daraja       or '').strip()
+    muassasa     = (muassasa     or '').strip()
+    ixtisoslik   = (ixtisoslik   or '').strip()
+    fan_tarmoqi  = (fan_tarmoqi  or '').strip()
+    ilmiy_kengash= (ilmiy_kengash or '').strip()
+    sana_yil     = (sana_yil     or '').strip()
     clauses = []
-    params = []
+    params  = []
     if search:
         text = f"%{search}%"
         clauses.append(
@@ -170,6 +174,15 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
     if ixtisoslik:
         clauses.append("TRIM(ixtisoslik) ILIKE %s")
         params.append(ixtisoslik)
+    if fan_tarmoqi:
+        clauses.append("TRIM(COALESCE(fan_tarmoqi,'')) = %s")
+        params.append(fan_tarmoqi)
+    if ilmiy_kengash:
+        clauses.append("TRIM(COALESCE(ilmiy_kengash,'')) ILIKE %s")
+        params.append(ilmiy_kengash)
+    if sana_yil:
+        clauses.append("sana LIKE %s")
+        params.append(f"{sana_yil}%")
     clause = " WHERE " + " AND ".join(clauses) if clauses else ""
     return clause, params
 
@@ -199,8 +212,10 @@ def load_data():
     return _query_rows(sql)
 
 
-def count_dissertations(search, daraja, muassasa, ixtisoslik):
-    clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
+def count_dissertations(search, daraja, muassasa, ixtisoslik,
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+    clause, params = _build_filter_clause(
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil)
     sql = 'SELECT COUNT(*) FROM dissertations' + clause
     return _query_scalar(sql, params) or 0
 
@@ -218,8 +233,11 @@ _COL_DEFAULT_DIR = {
 }
 
 
-def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir, page=None, per_page=None):
-    clause, params = _build_filter_clause(search, daraja, muassasa, ixtisoslik)
+def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
+                        page=None, per_page=None,
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+    clause, params = _build_filter_clause(
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil)
     sort_col = _map_sort_column(sort_by)
     # Honour explicit direction; fall back to per-column default; ultimate default is desc (id DESC)
     if sort_dir and str(sort_dir).lower() in ('asc', 'desc'):
@@ -248,20 +266,42 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
     return _query_rows(sql, params)
 
 
-def _distinct_values(column):
-    valid_columns = {"daraja", "muassasa", "ixtisoslik"}
-    if column not in valid_columns:
+_DISTINCT_LIMITS = {
+    "daraja": 20, "ixtisoslik": 500, "fan_tarmoqi": 100,
+    "muassasa": 500, "ilmiy_kengash": 200,
+}
+
+def _distinct_values(column, limit=None):
+    if column not in _DISTINCT_LIMITS:
         return []
+    lim = limit or _DISTINCT_LIMITS[column]
     sql = (
         f"SELECT DISTINCT TRIM({column}) AS val FROM dissertations "
         f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' "
-        f"ORDER BY val LIMIT 200"
+        f"ORDER BY val LIMIT {int(lim)}"
     )
     conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(sql)
             return [row[0] for row in cur.fetchall() if row[0] is not None]
+    finally:
+        conn.close()
+
+
+def _distinct_years():
+    sql = """
+        SELECT DISTINCT SUBSTRING(TRIM(sana), 1, 4) AS yr
+        FROM dissertations
+        WHERE sana IS NOT NULL AND TRIM(sana) ~ '^[0-9]{4}'
+        ORDER BY yr DESC
+        LIMIT 50
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            return [row[0] for row in cur.fetchall() if row[0]]
     finally:
         conn.close()
 
@@ -369,6 +409,7 @@ def _data_cache_key():
     return (
         f"data_{a.get('page',1)}_{a.get('per_page',50)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
+        f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
         f"_{a.get('sort_by','id')}_{a.get('sort_dir','desc')}"
     )
 
@@ -377,28 +418,34 @@ def _data_cache_key():
 @login_required
 @cache.cached(timeout=120, make_cache_key=_data_cache_key)
 def data():
-    search = request.args.get("search", "").strip()
-    daraja = request.args.get("daraja", "").strip()
-    muassasa = request.args.get("muassasa", "").strip()
-    ixtisoslik = request.args.get("ixtisoslik", "").strip()
+    a = request.args
+    search        = a.get("search",        "").strip()
+    daraja        = a.get("daraja",        "").strip()
+    muassasa      = a.get("muassasa",      "").strip()
+    ixtisoslik    = a.get("ixtisoslik",    "").strip()
+    fan_tarmoqi   = a.get("fan_tarmoqi",   "").strip()
+    ilmiy_kengash = a.get("ilmiy_kengash", "").strip()
+    sana_yil      = a.get("sana_yil",      "").strip()
     try:
-        page = int(request.args.get("page", 1))
+        page = int(a.get("page", 1))
     except ValueError:
         page = 1
     try:
-        per_page = int(request.args.get("per_page", 50))
+        per_page = int(a.get("per_page", 50))
     except ValueError:
         per_page = 50
 
-    sort_by = request.args.get("sort_by", "id")
-    sort_dir = request.args.get("sort_dir", "desc")
-    total = count_dissertations(search, daraja, muassasa, ixtisoslik)
+    sort_by  = a.get("sort_by",  "id")
+    sort_dir = a.get("sort_dir", "desc")
+    total = count_dissertations(search, daraja, muassasa, ixtisoslik,
+                                fan_tarmoqi, ilmiy_kengash, sana_yil)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     rows = query_dissertations(
         search, daraja, muassasa, ixtisoslik,
         sort_by, sort_dir,
-        page, per_page
+        page, per_page,
+        fan_tarmoqi, ilmiy_kengash, sana_yil
     )
 
     return jsonify({
@@ -414,13 +461,13 @@ def data():
 @login_required
 @cache.cached(timeout=600, key_prefix='filters')
 def filters():
-    darajalar = _distinct_values("daraja")
-    muassasalar = _distinct_values("muassasa")
-    ixtisosliklar = _distinct_values("ixtisoslik")
     return jsonify({
-        "darajalar": darajalar,
-        "muassasalar": muassasalar,
-        "ixtisosliklar": ixtisosliklar
+        "daraja":        ['PhD', 'DSc'],
+        "ixtisoslik":    _distinct_values("ixtisoslik"),
+        "fan_tarmoqi":   _distinct_values("fan_tarmoqi"),
+        "muassasa":      _distinct_values("muassasa"),
+        "ilmiy_kengash": _distinct_values("ilmiy_kengash"),
+        "yillar":        _distinct_years(),
     })
 
 

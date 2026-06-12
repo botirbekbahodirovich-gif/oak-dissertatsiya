@@ -68,6 +68,15 @@
   .pg-btn.active { background:#4a9eff; border-color:#4a9eff; color:#fff; font-weight:600; cursor:default; }
   .pg-btn:disabled { opacity:0.35; cursor:default; }
   .pg-info { font-size:0.82rem; color:var(--oak-muted,#8892a4); margin-left:4px; }
+  /* compact filter row */
+  .filter-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .filter-select {
+    padding:5px 8px; font-size:13px; border-radius:6px;
+    background:var(--oak-surface,#1a1d23); border:1px solid rgba(255,255,255,0.1);
+    color:#e2e8f0; max-width:160px; flex:1 1 110px; min-width:90px;
+    cursor:pointer; appearance:auto;
+  }
+  .filter-select:focus { outline:none; border-color:rgba(74,158,255,0.5); }
   /* search clear button */
   #search-clear-btn {
     border-left: none; background: transparent;
@@ -111,33 +120,24 @@
   </div>
 
   <div class="content-card mb-3 filter-panel">
-    <div class="row g-3 align-items-end">
-      <div class="col-12 col-md-5">
-        <label class="form-label" for="search-input">Qidirish</label>
-        <div class="input-group">
-          <span class="input-group-text">
-            <i class="bi bi-search" id="search-icon"></i>
-            <span id="search-spinner"></span>
-          </span>
-          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa..." autocomplete="off" />
-          <button id="search-clear-btn" class="btn btn-outline-secondary" type="button" title="Tozalash" style="display:none;">✕</button>
-        </div>
-      </div>
-      <div class="col-12 col-sm-4 col-md-2">
-        <label class="form-label" for="filter-daraja">Daraja</label>
-        <select id="filter-daraja" class="form-select"><option value="">Barcha darajalar</option></select>
-      </div>
-      <div class="col-12 col-sm-8 col-md-3">
-        <label class="form-label" for="filter-muassasa">Muassasa</label>
-        <select id="filter-muassasa" class="form-select"><option value="">Barcha muassasalar</option></select>
-      </div>
-      <div class="col-9 col-sm-9 col-md-2">
-        <label class="form-label" for="filter-ixtisoslik">Ixtisoslik</label>
-        <select id="filter-ixtisoslik" class="form-select"><option value="">Barcha ixtisosliklar</option></select>
-      </div>
-      <div class="col-3 col-sm-3 col-md-auto d-flex align-items-end">
-        <button id="btn-reset" class="btn btn-secondary w-100">✕</button>
-      </div>
+    <!-- Search row -->
+    <div class="input-group mb-2">
+      <span class="input-group-text">
+        <i class="bi bi-search" id="search-icon"></i>
+        <span id="search-spinner"></span>
+      </span>
+      <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa, ixtisoslik..." autocomplete="off" />
+      <button id="search-clear-btn" class="btn btn-outline-secondary" type="button" title="Tozalash" style="display:none;">✕</button>
+    </div>
+    <!-- Filter dropdowns row -->
+    <div class="filter-row">
+      <select id="filter-daraja"        class="filter-select"><option value="">Daraja</option></select>
+      <select id="filter-ixtisoslik"    class="filter-select"><option value="">Ixtisoslik shifri</option></select>
+      <select id="filter-fan-tarmoqi"   class="filter-select"><option value="">Fan tarmog'i</option></select>
+      <select id="filter-muassasa"      class="filter-select"><option value="">Muassasa</option></select>
+      <select id="filter-ilmiy-kengash" class="filter-select"><option value="">IK tashkilot</option></select>
+      <select id="filter-sana-yil"      class="filter-select"><option value="">Sana (yil)</option></select>
+      <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">✕ Tozalash</button>
     </div>
   </div>
 
@@ -189,7 +189,7 @@
   let currentSort = loadSort();
   let currentTotal = 0;
   let currentRecords = [];
-  let currentFilters = { search: '', daraja: '', muassasa: '', ixtisoslik: '' };
+  let currentFilters = { search:'', daraja:'', muassasa:'', ixtisoslik:'', fan_tarmoqi:'', ilmiy_kengash:'', sana_yil:'' };
   const tableBody = document.getElementById('table-body');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
@@ -216,15 +216,19 @@
     });
   }
   function applyInitialFiltersFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    currentFilters.search = params.get('search') || '';
-    currentFilters.daraja = params.get('daraja') || '';
-    currentFilters.muassasa = params.get('muassasa') || '';
-    currentFilters.ixtisoslik = params.get('ixtisoslik') || '';
-    document.getElementById('search-input').value = currentFilters.search;
-    document.getElementById('filter-daraja').value = currentFilters.daraja;
-    document.getElementById('filter-muassasa').value = currentFilters.muassasa;
-    document.getElementById('filter-ixtisoslik').value = currentFilters.ixtisoslik;
+    const p = new URLSearchParams(window.location.search);
+    const map = {
+      'search':'search-input', 'daraja':'filter-daraja',
+      'muassasa':'filter-muassasa', 'ixtisoslik':'filter-ixtisoslik',
+      'fan_tarmoqi':'filter-fan-tarmoqi', 'ilmiy_kengash':'filter-ilmiy-kengash',
+      'sana_yil':'filter-sana-yil'
+    };
+    Object.entries(map).forEach(([key, id]) => {
+      const val = p.get(key) || '';
+      currentFilters[key] = val;
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
     const cb = document.getElementById('search-clear-btn');
     if (cb) cb.style.display = currentFilters.search ? '' : 'none';
   }
@@ -356,21 +360,19 @@
   async function loadFilters() {
     try {
       const res = await fetch('/filters');
-      const data = await res.json();
-      const targets = {
-        daraja: document.getElementById('filter-daraja'),
-        muassasa: document.getElementById('filter-muassasa'),
-        ixtisoslik: document.getElementById('filter-ixtisoslik')
+      const d = await res.json();
+      const fill = (id, values, label) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = `<option value="">${label}</option>`;
+        values.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; el.append(o); });
       };
-      data.darajalar.forEach(value => {
-        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.daraja.append(opt);
-      });
-      data.muassasalar.forEach(value => {
-        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.muassasa.append(opt);
-      });
-      data.ixtisosliklar.forEach(value => {
-        const opt = document.createElement('option'); opt.value = value; opt.textContent = value; targets.ixtisoslik.append(opt);
-      });
+      fill('filter-daraja',        d.daraja        || [], 'Daraja');
+      fill('filter-ixtisoslik',    d.ixtisoslik    || [], 'Ixtisoslik shifri');
+      fill('filter-fan-tarmoqi',   d.fan_tarmoqi   || [], "Fan tarmog'i");
+      fill('filter-muassasa',      d.muassasa      || [], 'Muassasa');
+      fill('filter-ilmiy-kengash', d.ilmiy_kengash || [], 'IK tashkilot');
+      fill('filter-sana-yil',      d.yillar        || [], 'Sana (yil)');
     } catch (error) {
       console.warn('Filter values could not be loaded.', error);
     }
@@ -393,14 +395,17 @@
     renderSortHeaders();
     _searchSpinner(true);
     const params = new URLSearchParams({
-      search: currentFilters.search,
-      daraja: currentFilters.daraja,
-      muassasa: currentFilters.muassasa,
-      ixtisoslik: currentFilters.ixtisoslik,
-      page: currentPage,
-      per_page: PER_PAGE,
-      sort_by: currentSort.key,
-      sort_dir: currentSort.dir
+      search:        currentFilters.search,
+      daraja:        currentFilters.daraja,
+      muassasa:      currentFilters.muassasa,
+      ixtisoslik:    currentFilters.ixtisoslik,
+      fan_tarmoqi:   currentFilters.fan_tarmoqi,
+      ilmiy_kengash: currentFilters.ilmiy_kengash,
+      sana_yil:      currentFilters.sana_yil,
+      page:          currentPage,
+      per_page:      PER_PAGE,
+      sort_by:       currentSort.key,
+      sort_dir:      currentSort.dir
     });
     try {
       const res = await fetch('/data?' + params);
@@ -454,9 +459,17 @@
     searchInput.focus();
   });
 
-  ['filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => {
+  const DROP_MAP = {
+    'filter-daraja':        'daraja',
+    'filter-ixtisoslik':    'ixtisoslik',
+    'filter-fan-tarmoqi':   'fan_tarmoqi',
+    'filter-muassasa':      'muassasa',
+    'filter-ilmiy-kengash': 'ilmiy_kengash',
+    'filter-sana-yil':      'sana_yil',
+  };
+  Object.keys(DROP_MAP).forEach(id => {
     document.getElementById(id)?.addEventListener('change', function() {
-      currentFilters[id.replace('filter-','')] = this.value.trim();
+      currentFilters[DROP_MAP[id]] = this.value.trim();
       updateData(true);
     });
   });
@@ -464,8 +477,8 @@
   document.getElementById('btn-reset')?.addEventListener('click', function() {
     searchInput.value = '';
     if (clearBtn) clearBtn.style.display = 'none';
-    ['filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => document.getElementById(id).value = '');
-    currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:''};
+    Object.keys(DROP_MAP).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:'', fan_tarmoqi:'', ilmiy_kengash:'', sana_yil:''};
     updateData(true);
   });
   document.getElementById('btn-export')?.addEventListener('click', function() {
