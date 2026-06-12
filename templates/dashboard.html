@@ -12,17 +12,30 @@
   tr.expanded-row > td { border-bottom: none; }
   /* ── table layout ── */
   .data-table { table-layout: fixed; width: 100%; }
-  .data-table td { color: #e2e8f0; transition: all 0.2s ease; }
+  .data-table td { color: #e2e8f0 !important; }
+  .data-table th { color: #94a3b8; }
   .data-table tr.data-row:hover { background: rgba(255,255,255,0.04) !important; cursor: pointer; }
-  .data-table tr.data-row:hover .cell-mavzu { color: #4a9eff; text-decoration: underline; }
+  /* mavzu: plain, no hover effect */
   .cell-mavzu {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; white-space: normal;
     padding-left: 12px !important; padding-right: 12px !important;
   }
-  .cell-olim, .cell-rahbar {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  /* clickable cells */
+  .cell-sana { white-space: nowrap; cursor: pointer; transition: color 0.2s; }
+  .cell-sana:hover { color: #4a9eff !important; text-decoration: underline; }
+  .cell-olim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .cell-olim a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
+  .cell-olim:hover a { color: #4a9eff !important; text-decoration: underline; }
+  .cell-ixtisoslik { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .cell-ixtisoslik a { color: #e2e8f0 !important; text-decoration: none; font-family: monospace; font-size: 0.82rem; transition: color 0.2s; }
+  .cell-ixtisoslik:hover a { color: #4a9eff !important; text-decoration: underline; }
+  .cell-rahbar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .cell-rahbar a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
+  .cell-rahbar:hover a { color: #4a9eff !important; text-decoration: underline; }
+  /* daraja badges */
+  .badge-dsc.badge-role { background: #c2550a !important; color: #fff !important; cursor: default !important; }
+  .badge-phd.badge-role { background: #16a34a !important; color: #fff !important; cursor: default !important; }
   /* ── pagination ── */
   .pagination-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:0.75rem 0 0.25rem; }
   .pg-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--oak-text,#cbd5e1); font-size:0.85rem; cursor:pointer; transition:background .15s,border-color .15s; }
@@ -170,16 +183,13 @@
     return n >= 10 ? '#991b1b' : (colors[n] || '');
   }
   function supervisorBadge(name, count) {
-    const nameShort = (name||'').length > 30 ? escHtml((name||'').slice(0,29)) + '…' : escHtml(name||'—');
-    const supervisorLink = name
-      ? `<a href="/supervisor/${encodeURIComponent(name)}" class="entity-link" onclick="event.stopPropagation()" title="${escHtml(name)}">${nameShort}</a>`
-      : '—';
-    if (!name || count <= 1) return supervisorLink;
+    if (!name) return '—';
+    const nameShort = name.length > 28 ? escHtml(name.slice(0, 27)) + '…' : escHtml(name);
     const color = getBadgeColor(count);
-    const badge = color
+    const badge = color && count > 1
       ? `<span style="display:inline-block;min-width:20px;height:20px;border-radius:10px;text-align:center;font-size:11px;font-weight:600;color:#fff;padding:0 5px;margin-left:6px;vertical-align:middle;line-height:20px;background:${color}">${count}</span>`
       : '';
-    return supervisorLink + badge;
+    return `<a href="/supervisor/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="${escHtml(name)}">${nameShort}</a>${badge}`;
   }
   function ixtisoslikShifr(val) {
     if (!val) return '—';
@@ -202,22 +212,23 @@
         : daraja === 'DSC'
         ? '<span class="badge-dsc badge-role">DSc</span>'
         : escHtml(r.Daraja || '—');
-      const authorLink = r.Olim
-        ? `<a href="/author/${encodeURIComponent(r.Olim)}" class="entity-link" onclick="event.stopPropagation()" title="${escHtml(r.Olim)}">${highlight(r.Olim_short || r.Olim, term)}</a>`
-        : '—';
-      const universityLink = r.Muassasa
-        ? `<a href="/university/${encodeURIComponent(r.Muassasa)}" class="entity-link" onclick="event.stopPropagation()">${highlight(r.Muassasa, term)}</a>`
+      const olimDisplay = escHtml(r.Olim_short || r.Olim || '—');
+      const olimLink = r.Olim
+        ? `<a href="/dissertation/${num}" onclick="event.stopPropagation()" title="Batafsil ma'lumot">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
         : '—';
       const mavzuFull = r.Mavzu || '';
-      const muassasaFull = r.Muassasa || '';
       const supervisorCount = r.supervisor_count || 1;
-      rows.push(`<tr class="data-row" data-row-id="${rowId}" title="Batafsil ko'rish">
+      const shifr = ixtisoslikShifr(r.Ixtisoslik);
+      const shiftLink = r.Ixtisoslik && shifr !== '—'
+        ? `<a href="/specialization/${encodeURIComponent(shifr)}" onclick="event.stopPropagation()" title="Shu shifrdagi himoya qilingan e'lonlar">${escHtml(shifr)}</a>`
+        : escHtml(shifr);
+      rows.push(`<tr class="data-row" data-row-id="${rowId}">
           <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
-          <td style="white-space:nowrap;font-size:0.85rem;">${fmtSana(r.Sana)}</td>
-          <td class="cell-olim">${authorLink}</td>
+          <td class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')" title="Shu sanadagi himoyalar">${fmtSana(r.Sana)}</td>
+          <td class="cell-olim">${olimLink}</td>
           <td class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
-          <td>${darajaSpan}</td>
-          <td class="col-ixtisoslik" style="font-family:monospace;font-size:0.82rem;"><a href="/specialization/${encodeURIComponent(ixtisoslikShifr(r.Ixtisoslik))}" class="entity-link" onclick="event.stopPropagation()" style="cursor:pointer;" title="Bu ixtisoslik bo'yicha filtrlash">${ixtisoslikShifr(r.Ixtisoslik)}</a></td>
+          <td style="cursor:default;">${darajaSpan}</td>
+          <td class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
           <td class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
