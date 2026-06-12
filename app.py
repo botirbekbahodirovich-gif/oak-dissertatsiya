@@ -111,6 +111,15 @@ def _run_startup_migrations():
                 cur.execute(
                     f"CREATE INDEX IF NOT EXISTS {idx_name} ON dissertations({col})"
                 )
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_fts ON dissertations
+                USING gin(to_tsvector('simple',
+                    coalesce(olim,'') || ' ' ||
+                    coalesce(mavzu,'') || ' ' ||
+                    coalesce(ilmiy_rahbar,'') || ' ' ||
+                    coalesce(muassasa,'')
+                ))
+            """)
         conn.commit()
         conn.close()
     except Exception:

@@ -102,20 +102,20 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik):
     params = []
     if search:
         text = f"%{search}%"
-        columns = [
-            "sana", "daraja", "olim", "mavzu",
-            "ixtisoslik", "muassasa", "ilmiy_rahbar", "link"
-        ]
-        clauses.append("(" + " OR ".join(f"{col} ILIKE %s" for col in columns) + ")")
-        params.extend([text] * len(columns))
+        clauses.append(
+            "(TRIM(olim) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+            "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
+            "TRIM(ixtisoslik) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
+        )
+        params.extend([text] * 6)
     if daraja:
-        clauses.append("daraja ILIKE %s")
+        clauses.append("UPPER(TRIM(daraja)) = UPPER(%s)")
         params.append(daraja)
     if muassasa:
-        clauses.append("muassasa ILIKE %s")
+        clauses.append("TRIM(muassasa) ILIKE %s")
         params.append(muassasa)
     if ixtisoslik:
-        clauses.append("ixtisoslik ILIKE %s")
+        clauses.append("TRIM(ixtisoslik) ILIKE %s")
         params.append(ixtisoslik)
     clause = " WHERE " + " AND ".join(clauses) if clauses else ""
     return clause, params
@@ -199,7 +199,11 @@ def _distinct_values(column):
     valid_columns = {"daraja", "muassasa", "ixtisoslik"}
     if column not in valid_columns:
         return []
-    sql = f"SELECT DISTINCT {column} FROM dissertations WHERE {column} IS NOT NULL AND TRIM({column}) <> '' ORDER BY {column}"
+    sql = (
+        f"SELECT DISTINCT TRIM({column}) AS val FROM dissertations "
+        f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' "
+        f"ORDER BY val LIMIT 200"
+    )
     conn = get_connection()
     try:
         with conn.cursor() as cur:
