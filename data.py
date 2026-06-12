@@ -92,12 +92,13 @@ def get_connection():
 
 
 def clean_olim_name(name: str) -> str:
-    """'Алиев Жасур Ҳамидович, ...' → 'Алиев Жасур' (first 2 words only)"""
+    """Normalize whitespace/newlines; keep up to 3 words; truncate at 35 chars."""
     if not name:
         return ''
     clean = ' '.join(name.split(',')[0].split())
     words = clean.split()
-    return f"{words[0]} {words[1]}" if len(words) >= 2 else clean
+    result = ' '.join(words[:3])
+    return result[:35] + '…' if len(result) > 35 else result
 
 
 def normalize_row(row):
