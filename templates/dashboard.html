@@ -172,7 +172,6 @@
       <h1>Dissertatsiyalar jadvali</h1>
       <p>Mualliflar, muassasalar, ilmiy rahbarlar va ixtisoslik bo'yicha qidiruv.</p>
     </div>
-    <button id="btn-export-xlsx" class="btn btn-action"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
   </div>
 
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-3" id="stats-row">
@@ -242,13 +241,13 @@
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0 table-sticky data-table">
         <colgroup>
-          <col id="col-num">
-          <col id="col-sana">
-          <col id="col-olim">
-          <col id="col-mavzu">
-          <col id="col-daraja">
-          <col id="col-ixtisoslik">
-          <col id="col-rahbar">
+          <col id="col-num" style="width:35px">
+          <col id="col-sana" style="width:85px">
+          <col id="col-olim" style="width:180px">
+          <col id="col-mavzu" style="width:300px">
+          <col id="col-daraja" style="width:55px">
+          <col id="col-ixtisoslik" style="width:75px">
+          <col id="col-rahbar" style="width:180px">
         </colgroup>
         <thead><tr>
           <th data-col-key="num"><span class="col-label">#</span><div class="resize-handle"></div></th>
@@ -342,7 +341,7 @@
         : escHtml(r.Daraja || '—');
       const olimDisplay = escHtml(r.Olim_short || r.Olim || '—');
       const olimLink = r.Olim
-        ? `<a href="/dissertation/${num}" onclick="event.stopPropagation()" title="Batafsil ma'lumot">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
+        ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
         : '—';
       const mavzuFull = r.Mavzu || '';
       const supervisorCount = r.supervisor_count || 1;
@@ -657,12 +656,6 @@
     currentFilters.search = '';
     document.getElementById('search-stats').style.display = 'none';
     currentPage = 1; updateData(); searchInput.focus();
-  });
-
-  // Export xlsx
-  document.getElementById('btn-export-xlsx')?.addEventListener('click', function() {
-    const params = new URLSearchParams({...currentFilters, sort_by: currentSort.key, sort_dir: currentSort.dir});
-    window.location.href = '/export-xlsx?' + params;
   });
 
   // Reset

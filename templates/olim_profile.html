@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Olim — {{ olim_name }}{% endblock %}
+{% block extra_head %}
+<style>
+  .olim-hero { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+  .olim-avatar {
+    width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(135deg,#4a9eff,#7c5cfc);
+    display:grid; place-items:center; font-size:1.4rem; color:#fff; flex-shrink:0;
+  }
+  .olim-meta h1 { margin:0; font-size:1.2rem; font-weight:700; }
+  .olim-meta p  { margin:0; color:var(--oak-muted); font-size:0.88rem; }
+  .diss-card {
+    background:var(--oak-surface-2,#22262f);
+    border:1px solid var(--oak-border);
+    border-radius:14px; padding:1.1rem 1.25rem;
+    transition:border-color 0.2s;
+  }
+  .diss-card:hover { border-color:rgba(74,158,255,0.3); }
+  .diss-card-top { display:flex; align-items:flex-start; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.55rem; }
+  .diss-mavzu { font-size:0.97rem; font-weight:600; color:#e2e8f0; line-height:1.45; flex:1; min-width:200px; }
+  .diss-meta-row { display:flex; flex-wrap:wrap; gap:0.4rem 1.2rem; font-size:0.82rem; color:var(--oak-muted); margin-top:0.5rem; }
+  .diss-meta-row span { display:flex; align-items:center; gap:0.3rem; }
+  .diss-actions { margin-top:0.75rem; display:flex; gap:0.4rem; flex-wrap:wrap; }
+  .badge-phd-pill { background:#16a34a; color:#fff; padding:2px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+  .badge-dsc-pill { background:#ff6f00; color:#fff; padding:2px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div class="olim-hero">
+    <div class="olim-avatar"><i class="bi bi-person-fill"></i></div>
+    <div class="olim-meta">
+      <h1>{{ olim_name }}</h1>
+      <p>
+        {{ stats.total }} ta ilmiy ish
+        {% if stats.phd %}&nbsp;·&nbsp;<span style="color:#34d399;">{{ stats.phd }} PhD</span>{% endif %}
+        {% if stats.dsc %}&nbsp;·&nbsp;<span style="color:#a78bfa;">{{ stats.dsc }} DSc</span>{% endif %}
+      </p>
+    </div>
+  </div>
+  <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left me-1"></i>Ortga</a>
+</div>
+
+<div class="d-flex flex-column gap-3">
+  {% for d in dissertations %}
+  <div class="diss-card">
+    <div class="diss-card-top">
+      {% set dar = (d.Daraja or '')|upper %}
+      {% if dar == 'PHD' %}
+        <span class="badge-phd-pill">PhD</span>
+      {% elif dar == 'DSC' %}
+        <span class="badge-dsc-pill">DSc</span>
+      {% else %}
+        <span style="font-size:0.78rem;color:var(--oak-muted);">{{ d.Daraja or '—' }}</span>
+      {% endif %}
+      <span class="diss-mavzu">{{ d.Mavzu or '—' }}</span>
+    </div>
+    <div class="diss-meta-row">
+      {% if d.Sana %}
+      <span><i class="bi bi-calendar3"></i>{{ d.Sana }}</span>
+      {% endif %}
+      {% if d.Muassasa %}
+      <span><i class="bi bi-building"></i>
+        <a href="/university/{{ d.Muassasa | urlencode }}" style="color:inherit;">{{ d.Muassasa }}</a>
+      </span>
+      {% endif %}
+      {% if d.Ixtisoslik %}
+      <span><i class="bi bi-tag"></i>
+        <a href="/specialization/{{ d.Ixtisoslik | urlencode }}" style="color:inherit;">{{ d.Ixtisoslik }}</a>
+      </span>
+      {% endif %}
+      {% if d.Ilmiy_rahbar %}
+      <span><i class="bi bi-person-badge"></i>
+        <a href="/supervisor/{{ d.Ilmiy_rahbar | urlencode }}" style="color:inherit;">{{ d.Ilmiy_rahbar }}</a>
+        <span id="sup-badge-{{ loop.index }}"></span>
+        <script>document.getElementById('sup-badge-{{ loop.index }}').innerHTML = supervisorBadge({{ d.Ilmiy_rahbar|tojson }}, {{ d.supervisor_count|default(1)|int }});</script>
+      </span>
+      {% endif %}
+    </div>
+    <div class="diss-actions">
+      <a href="/dissertation/{{ d.id }}" class="btn btn-sm btn-action"><i class="bi bi-file-text me-1"></i>Batafsil</a>
+      {% if d.Link %}
+      <a href="{{ d.Link }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

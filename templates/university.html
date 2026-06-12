@@ -23,7 +23,7 @@
               <td>{{ loop.index }}</td>
               <td>{{ row.Sana }}</td>
               <td>{{ row.Daraja }}</td>
-              <td><a href="/dissertation/{{ row.id if row.id is defined else loop.index }}">{{ row.Olim }}</a></td>
+              <td><a href="/olim/{{ row.Olim | urlencode }}">{{ row.Olim }}</a></td>
               <td class="mavzu-cell">{{ row.Mavzu }}</td>
               <td><a href="/specialization/{{ row.Ixtisoslik | urlencode }}">{{ row.Ixtisoslik }}</a></td>
               <td>

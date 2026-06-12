@@ -533,32 +533,17 @@ def search_stats():
     return jsonify({'total': total, 'olim': olim_count, 'mavzu': mavzu_count, 'rahbar': rahbar_count})
 
 
-@data_bp.route('/export-xlsx')
+@data_bp.route('/olim/<path:name>')
 @login_required
-def export_xlsx():
-    rows = query_dissertations(
-        request.args.get("search", "").strip(),
-        request.args.get("daraja", "").strip(),
-        request.args.get("muassasa", "").strip(),
-        request.args.get("ixtisoslik", "").strip(),
-        request.args.get("sort_by", "id"),
-        request.args.get("sort_dir", "desc")
+def olim_profile(name):
+    rows = _query_rows(
+        "SELECT * FROM dissertations WHERE TRIM(olim) ILIKE %s ORDER BY sana ASC",
+        (f'%{name.strip()}%',)
     )
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append(["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
-    for row in rows:
-        ws.append([
-            row.get("id"), row.get("Sana"), row.get("Daraja"), row.get("Olim"),
-            row.get("Mavzu"), row.get("Ixtisoslik"), row.get("Muassasa"),
-            row.get("Ilmiy_rahbar"), row.get("Link")
-        ])
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return send_file(buf, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                     as_attachment=True,
-                     download_name="dissertatsiyalar_filtrlangan.xlsx")
+    if not rows:
+        abort(404)
+    return render_template('olim_profile.html', olim_name=name, dissertations=rows,
+                           stats=_summary_stats(rows))
 
 
 def _summary_stats(rows):
