@@ -91,6 +91,31 @@ def get_connection():
     return psycopg2.connect(get_database_url())
 
 
+def get_supervisor_counts() -> dict:
+    """Returns {trimmed_name: count} for all supervisors. Cached 5 min."""
+    key = 'supervisor_counts'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT TRIM(ilmiy_rahbar), COUNT(*)
+                    FROM dissertations
+                    WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != ''
+                    GROUP BY TRIM(ilmiy_rahbar)
+                """)
+                result = {row[0]: row[1] for row in cur.fetchall()}
+        finally:
+            conn.close()
+    except Exception:
+        result = {}
+    cache.set(key, result, timeout=300)
+    return result
+
+
 def clean_olim_name(name: str) -> str:
     """Normalize whitespace/newlines; keep up to 3 words; truncate at 35 chars."""
     if not name:
@@ -122,7 +147,8 @@ def normalize_row(row):
         "Ilmiy_rahbar": ' '.join(str(row.get("Ilmiy_rahbar") or "").split()),
         "Ilmiy_rahbar_short": clean_olim_name(' '.join(str(row.get("Ilmiy_rahbar") or "").split())),
         "Link": link,
-        "supervisor_count": int(row.get("supervisor_count") or 1),
+        "supervisor_count": get_supervisor_counts().get(
+            ' '.join(str(row.get("Ilmiy_rahbar") or "").split()), 1),
     }
 
 
@@ -260,8 +286,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
     sql = (
         'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
         'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
-        'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link", '
-        'COUNT(*) OVER (PARTITION BY TRIM(d.ilmiy_rahbar)) AS supervisor_count '
+        'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
         f'FROM dissertations d{clause} ORDER BY {sort_col} {effective_dir}' + pagination_clause
     )
     return _query_rows(sql, params)

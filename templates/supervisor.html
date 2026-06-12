@@ -3,7 +3,11 @@
 {% block content %}
   <div class="page-heading">
     <div>
-      <h1>Ilmiy rahbar: {{ name }}</h1>
+      <h1 style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        Ilmiy rahbar: {{ name }}
+        <span id="sup-hdr-badge"></span>
+        <script>document.getElementById('sup-hdr-badge').innerHTML = supervisorBadge({{ name|tojson }}, {{ stats.total }});</script>
+      </h1>
       <p>{{ rows|length }} ta dissertatsiya topildi.</p>
     </div>
     <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left"></i> Ortga</a>

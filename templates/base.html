@@ -415,6 +415,14 @@
       }
     })();
   </script>
+  <script>
+  function supervisorBadge(name, count) {
+    if (!count || count <= 1) return '';
+    const colors = {2:'#ef7c24',3:'#ef7c24',4:'#ec6d10',5:'#ec6d10',6:'#e73927',7:'#e73927',8:'#dd1f13',9:'#dd1f13'};
+    const color = count >= 10 ? '#cf0107' : (colors[count] || '#ef7c24');
+    return `<span style="display:inline-block;min-width:20px;height:20px;border-radius:10px;background:${color};color:#fff;font-size:11px;font-weight:600;text-align:center;line-height:20px;padding:0 5px;margin-left:6px;">${count}</span>`;
+  }
+  </script>
   {% block scripts %}{% endblock %}
 <style>
   #ai-btn {

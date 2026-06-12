@@ -238,17 +238,10 @@
     const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
   }
-  function getBadgeColor(n) {
-    const colors = ['','','#4ade80','#86efac','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c'];
-    return n >= 10 ? '#991b1b' : (colors[n] || '');
-  }
-  function supervisorBadge(name, nameShortArg, count) {
+function supervisorCell(name, nameShortArg, count) {
     if (!name) return '—';
     const display = escHtml(nameShortArg || name);
-    const color = getBadgeColor(count);
-    const badge = color && count > 1
-      ? `<span style="display:inline-block;min-width:20px;height:20px;border-radius:10px;text-align:center;font-size:11px;font-weight:600;color:#fff;padding:0 5px;margin-left:6px;vertical-align:middle;line-height:20px;background:${color}">${count}</span>`
-      : '';
+    const badge = supervisorBadge(name, count);
     return `<a href="/supervisor/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="Bu rahbar boshqargan dissertatsiyalar">${display}</a>${badge}`;
   }
   function ixtisoslikShifr(val) {
@@ -289,7 +282,7 @@
           <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
-          <td data-col-key="rahbar" class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
+          <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
           <td colspan="7">
@@ -297,7 +290,7 @@
               <div class="detail-item"><label>Mavzu (to'liq)</label><span>${escHtml(r.Mavzu || '—')}</span></div>
               <div class="detail-item"><label>Ixtisoslik</label><span>${escHtml(r.Ixtisoslik || '—')}</span></div>
               <div class="detail-item"><label>Muassasa</label><span>${escHtml(r.Muassasa || '—')}</span></div>
-              <div class="detail-item"><label>Ilmiy rahbar</label><span>${r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link">${escHtml(r.Ilmiy_rahbar)}</a>` : '—'}</span></div>
+              <div class="detail-item"><label>Ilmiy rahbar</label><span>${r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link">${escHtml(r.Ilmiy_rahbar)}</a>${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}` : '—'}</span></div>
               <div class="detail-item"><label>Daraja</label><span>${escHtml(r.Daraja || '—')}</span></div>
               <div class="detail-item"><label>Sana</label><span>${fmtSana(r.Sana)}</span></div>
             </div>

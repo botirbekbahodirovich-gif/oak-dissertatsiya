@@ -127,8 +127,12 @@
       <div class="sec-card-title"><i class="bi bi-person-badge-fill"></i>Ilmiy rahbar</div>
       <div class="field">
         <div class="field-lbl">👨‍🏫 Ism</div>
-        <div class="field-val">
-          {% if row.Ilmiy_rahbar %}<a href="/supervisor/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>{% else %}—{% endif %}
+        <div class="field-val" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+          {% if row.Ilmiy_rahbar %}
+            <a href="/supervisor/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>
+            <span id="sup-badge-detail"></span>
+            <script>document.getElementById('sup-badge-detail').innerHTML = supervisorBadge({{ row.Ilmiy_rahbar|tojson }}, {{ row.supervisor_count|default(1)|int }});</script>
+          {% else %}—{% endif %}
         </div>
       </div>
       {% if row.Ilmiy_rahbar_daraja %}

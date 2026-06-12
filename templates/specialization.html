@@ -26,7 +26,11 @@
               <td><a href="/dissertation/{{ row.id if row.id is defined else loop.index }}">{{ row.Olim }}</a></td>
               <td class="mavzu-cell">{{ row.Mavzu }}</td>
               <td><a href="/university/{{ row.Muassasa | urlencode }}">{{ row.Muassasa }}</a></td>
-              <td><a href="/supervisor/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a></td>
+              <td>
+                <a href="/supervisor/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a>
+                <span class="sup-badge-cell"></span>
+                <script>document.currentScript.previousElementSibling.innerHTML = supervisorBadge({{ row.Ilmiy_rahbar|tojson }}, {{ row.supervisor_count|default(1)|int }});</script>
+              </td>
               <td>{% if row.Link %}<a href="{{ row.Link }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}—{% endif %}</td>
             </tr>
           {% endfor %}
