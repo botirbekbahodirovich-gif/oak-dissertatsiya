@@ -17,6 +17,12 @@ if not session_secret:
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
 
+from extensions import cache
+cache.init_app(app, config={
+    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_DEFAULT_TIMEOUT': 300,
+})
+
 from flask_wtf.csrf import generate_csrf
 
 @app.context_processor

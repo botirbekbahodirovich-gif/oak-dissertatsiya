@@ -3,6 +3,7 @@ from flask_login import login_required
 from collections import Counter, defaultdict
 from datetime import datetime
 from data import get_connection, query_dissertations
+from extensions import cache
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -26,6 +27,7 @@ def _parse_month(date_text):
 
 
 @analytics_bp.route('/stats-json')
+@cache.cached(timeout=300, key_prefix='stats_json')
 def stats_json():
     sql = '''
         SELECT
@@ -54,6 +56,7 @@ def stats_json():
 
 @analytics_bp.route('/analytics-data')
 @login_required
+@cache.cached(timeout=600, key_prefix='analytics_data')
 def analytics_data():
     rows = query_dissertations("", "", "", "", "id", "asc")
     muassasa_counter = Counter(_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa"))
@@ -120,6 +123,7 @@ def analytics_data():
 
 
 @analytics_bp.route('/api/faol')
+@cache.cached(timeout=300, key_prefix='api_faol')
 def faol():
     """Public endpoint — top 3 universities, supervisors, ixtisosliklar."""
     conn = get_connection()

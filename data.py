@@ -3,6 +3,7 @@ import re
 import csv
 import io
 import html as html_module
+import threading
 from dotenv import load_dotenv
 load_dotenv()
 import openpyxl
@@ -10,12 +11,15 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
+from extensions import cache
 try:
     import psycopg2
     import psycopg2.extras as psycopg2_extras
+    from psycopg2 import pool as pg_pool
 except Exception:
     psycopg2 = None
     psycopg2_extras = None
+    pg_pool = None
 
 REQUIRED_COLUMNS = {
     "Sana", "Daraja", "Olim", "Mavzu",
@@ -32,9 +36,58 @@ def get_database_url():
     return url
 
 
+# ── Connection pool ───────────────────────────────────────────────────────────
+
+_db_pool: 'pg_pool.ThreadedConnectionPool | None' = None
+_db_pool_lock = threading.Lock()
+
+
+def _get_pool():
+    global _db_pool
+    if _db_pool is None:
+        with _db_pool_lock:
+            if _db_pool is None and pg_pool is not None:
+                url = get_database_url()
+                if url:
+                    _db_pool = pg_pool.ThreadedConnectionPool(2, 10, url)
+    return _db_pool
+
+
+class _PooledConn:
+    """Wraps a psycopg2 connection so that close() returns it to the pool."""
+    __slots__ = ('_conn', '_pool')
+
+    def __init__(self, conn, pool):
+        object.__setattr__(self, '_conn', conn)
+        object.__setattr__(self, '_pool', pool)
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, '_conn'), name)
+
+    def __setattr__(self, name, value):
+        setattr(object.__getattribute__(self, '_conn'), name, value)
+
+    def cursor(self, *args, **kwargs):
+        return object.__getattribute__(self, '_conn').cursor(*args, **kwargs)
+
+    def commit(self):
+        return object.__getattribute__(self, '_conn').commit()
+
+    def rollback(self):
+        return object.__getattribute__(self, '_conn').rollback()
+
+    def close(self):
+        pool = object.__getattribute__(self, '_pool')
+        conn = object.__getattribute__(self, '_conn')
+        pool.putconn(conn)
+
+
 def get_connection():
     if not psycopg2:
         raise RuntimeError('psycopg2 is required for PostgreSQL support.')
+    p = _get_pool()
+    if p:
+        return _PooledConn(p.getconn(), p)
     return psycopg2.connect(get_database_url())
 
 
@@ -311,8 +364,18 @@ def _prepare_rows(rows):
 data_bp = Blueprint('data', __name__)
 
 
+def _data_cache_key():
+    a = request.args
+    return (
+        f"data_{a.get('page',1)}_{a.get('per_page',50)}"
+        f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
+        f"_{a.get('sort_by','id')}_{a.get('sort_dir','desc')}"
+    )
+
+
 @data_bp.route('/data')
 @login_required
+@cache.cached(timeout=120, make_cache_key=_data_cache_key)
 def data():
     search = request.args.get("search", "").strip()
     daraja = request.args.get("daraja", "").strip()
@@ -349,6 +412,7 @@ def data():
 
 @data_bp.route('/filters')
 @login_required
+@cache.cached(timeout=600, key_prefix='filters')
 def filters():
     darajalar = _distinct_values("daraja")
     muassasalar = _distinct_values("muassasa")

@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 import pandas as pd
 from dotenv import load_dotenv
+from extensions import cache
 load_dotenv()
 try:
     import psycopg2
@@ -202,6 +203,7 @@ def clear_and_upload():
     except Exception as e:
         return jsonify({'success': False, 'error': f"DB xatolik: {e}"}), 500
 
+    cache.clear()
     return jsonify({
         'success': True,
         'deleted': deleted,
