@@ -13,8 +13,31 @@
   /* ── table layout ── */
   .data-table { table-layout: fixed; width: 100%; }
   .data-table td { color: #e2e8f0 !important; }
-  .data-table th { color: #94a3b8; }
+  .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; }
+  .data-table thead { position: sticky; top: 0; z-index: 10; }
+  .data-table thead th { background: var(--oak-surface, #1a1d23); box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
   .data-table tr.data-row:hover { background: rgba(255,255,255,0.04) !important; cursor: pointer; }
+  /* resize handle */
+  .resize-handle {
+    position: absolute; right: 0; top: 0; height: 100%; width: 5px;
+    cursor: col-resize; user-select: none; background: transparent; z-index: 1;
+  }
+  .resize-handle:hover, .resize-handle.dragging { background: rgba(74,158,255,0.4); }
+  /* column visibility dropdown */
+  .col-toggle-wrap { position: relative; display: inline-block; }
+  #col-dropdown {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
+    background: #1e2330; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 0.4rem 0; min-width: 170px; box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  }
+  #col-dropdown.open { display: block; }
+  .col-dropdown-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.85rem; font-size: 0.84rem; cursor: pointer;
+    color: var(--oak-text, #cbd5e1); transition: background 0.12s;
+  }
+  .col-dropdown-item:hover { background: rgba(74,158,255,0.1); }
+  .col-dropdown-item input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
   /* mavzu: plain, no hover effect */
   .cell-mavzu {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -97,18 +120,26 @@
   <div class="table-panel">
     <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
       <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
-      <div class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
+        <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></span>
+        <div class="col-toggle-wrap">
+          <button id="btn-col-toggle" class="btn btn-secondary btn-sm" title="Ustunlarni boshqarish" style="padding:4px 8px;">
+            <i class="bi bi-gear-fill"></i>
+          </button>
+          <div id="col-dropdown"></div>
+        </div>
+      </div>
     </div>
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0 table-sticky data-table">
         <thead><tr>
-          <th style="width:36px">#</th>
-          <th data-sort="Sana" style="width:80px">Sana</th>
-          <th data-sort="Olim" style="width:160px">Olim</th>
-          <th data-sort="Mavzu">Mavzu</th>
-          <th data-sort="Daraja" style="width:60px">Daraja</th>
-          <th data-sort="Ixtisoslik" class="col-ixtisoslik" style="width:80px">Ixtisoslik</th>
-          <th data-sort="Ilmiy_rahbar" style="width:160px">Ilmiy rahbar</th>
+          <th data-col-key="num" style="width:36px"><span class="col-label">#</span><div class="resize-handle"></div></th>
+          <th data-sort="Sana" data-col-key="sana" style="width:80px"><span class="col-label">Sana</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Olim" data-col-key="olim" style="width:160px"><span class="col-label">Olim</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Mavzu" data-col-key="mavzu"><span class="col-label">Mavzu</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Daraja" data-col-key="daraja" style="width:60px"><span class="col-label">Daraja</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Ixtisoslik" data-col-key="ixti" class="col-ixtisoslik" style="width:80px"><span class="col-label">Ixtisoslik</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Ilmiy_rahbar" data-col-key="rahbar" style="width:160px"><span class="col-label">Ilmiy rahbar</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
         </tr></thead>
         <tbody id="table-body">
           <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
@@ -149,15 +180,15 @@
   }
   function renderSortHeaders() {
     sortHeaders.forEach(th => {
-      const key = th.dataset.sort;
       th.style.cursor = 'pointer';
-      // Strip old indicator
-      th.textContent = th.textContent.replace(/ [▲▼]$/, '').trim();
+      const key = th.dataset.sort;
+      const ind = th.querySelector('.sort-ind');
       if (key === currentSort.key) {
-        th.style.color = 'var(--oak-accent, #4a9eff)';
-        th.textContent += ' ' + (currentSort.dir === 'asc' ? '▲' : '▼');
+        th.style.color = '#4a9eff';
+        if (ind) ind.textContent = currentSort.dir === 'asc' ? ' ▲' : ' ▼';
       } else {
         th.style.color = '';
+        if (ind) ind.textContent = '';
       }
     });
   }
@@ -223,13 +254,13 @@
         ? `<a href="/specialization/${encodeURIComponent(shifr)}" onclick="event.stopPropagation()" title="Shu shifrdagi himoya qilingan e'lonlar">${escHtml(shifr)}</a>`
         : escHtml(shifr);
       rows.push(`<tr class="data-row" data-row-id="${rowId}">
-          <td style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
-          <td class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')" title="Shu sanadagi himoyalar">${fmtSana(r.Sana)}</td>
-          <td class="cell-olim">${olimLink}</td>
-          <td class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
-          <td style="cursor:default;">${darajaSpan}</td>
-          <td class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
-          <td class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
+          <td data-col-key="num" style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
+          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')" title="Shu sanadagi himoyalar">${fmtSana(r.Sana)}</td>
+          <td data-col-key="olim" class="cell-olim">${olimLink}</td>
+          <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
+          <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
+          <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
+          <td data-col-key="rahbar" class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
           <td colspan="7">
@@ -377,7 +408,8 @@
     const params = new URLSearchParams({...currentFilters, sort_by: currentSort.key, sort_dir: currentSort.dir});
     window.location.href = '/export?' + params;
   });
-  sortHeaders.forEach(header => header.addEventListener('click', function() {
+  sortHeaders.forEach(header => header.addEventListener('click', function(e) {
+    if (e.target.classList.contains('resize-handle')) return;
     const key = this.dataset.sort;
     if (currentSort.key === key) {
       currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
@@ -388,11 +420,116 @@
     sessionStorage.setItem(SORT_KEY, JSON.stringify(currentSort));
     updateData(true);
   }));
+  // ── Column resize ─────────────────────────────────────────────────────────
+  const COL_WIDTHS_KEY = 'dashboard-col-widths';
+
+  function saveColWidths() {
+    const widths = {};
+    document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
+      if (th.style.width) widths[th.dataset.colKey] = th.style.width;
+    });
+    try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(widths)); } catch(e) {}
+  }
+
+  function loadColWidths() {
+    try {
+      const widths = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY)) || {};
+      document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
+        const w = widths[th.dataset.colKey];
+        if (w) th.style.width = w;
+      });
+    } catch(e) {}
+  }
+
+  function initResizeHandles() {
+    document.querySelectorAll('.data-table thead th').forEach(th => {
+      const handle = th.querySelector('.resize-handle');
+      if (!handle) return;
+      let startX = 0, startW = 0;
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        startX = e.clientX;
+        startW = th.offsetWidth;
+        handle.classList.add('dragging');
+        function onMove(e) {
+          const w = Math.max(40, startW + e.clientX - startX);
+          th.style.width = w + 'px';
+        }
+        function onUp() {
+          handle.classList.remove('dragging');
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          saveColWidths();
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
+  }
+
+  // ── Column visibility ──────────────────────────────────────────────────────
+  const COL_VIS_KEY = 'dashboard-col-visibility';
+  const COL_DEFS = [
+    { key: 'sana',   label: 'Sana' },
+    { key: 'olim',   label: 'Olim' },
+    { key: 'daraja', label: 'Daraja' },
+    { key: 'ixti',   label: 'Ixtisoslik' },
+    { key: 'rahbar', label: 'Ilmiy rahbar' },
+  ];
+  let colVis = {};
+
+  function loadColVis() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COL_VIS_KEY)) || {};
+      COL_DEFS.forEach(c => { colVis[c.key] = saved[c.key] !== false; });
+    } catch(e) {
+      COL_DEFS.forEach(c => { colVis[c.key] = true; });
+    }
+  }
+
+  function applyColVis() {
+    let styleEl = document.getElementById('col-vis-style');
+    if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'col-vis-style'; document.head.appendChild(styleEl); }
+    styleEl.textContent = COL_DEFS
+      .filter(c => !colVis[c.key])
+      .map(c => `[data-col-key="${c.key}"] { display: none !important; }`)
+      .join('\n');
+  }
+
+  function initColToggle() {
+    const btn = document.getElementById('btn-col-toggle');
+    const drop = document.getElementById('col-dropdown');
+    if (!btn || !drop) return;
+
+    drop.innerHTML = COL_DEFS.map(c => `
+      <label class="col-dropdown-item">
+        <input type="checkbox" data-vis-key="${c.key}" ${colVis[c.key] ? 'checked' : ''}>
+        ${c.label}
+      </label>`).join('');
+
+    drop.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        colVis[cb.dataset.visKey] = cb.checked;
+        try { localStorage.setItem(COL_VIS_KEY, JSON.stringify(colVis)); } catch(e) {}
+        applyColVis();
+      });
+    });
+
+    btn.addEventListener('click', e => { e.stopPropagation(); drop.classList.toggle('open'); });
+    document.addEventListener('click', () => drop.classList.remove('open'));
+  }
+
   document.addEventListener('DOMContentLoaded', async () => {
+    loadColVis();
+    applyColVis();
+    initColToggle();
     await loadFilters();
     applyInitialFiltersFromUrl();
     renderSortHeaders();
-    updateData(true);
+    await updateData(true);
+    loadColWidths();
+    initResizeHandles();
   });
 </script>
 
