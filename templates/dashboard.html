@@ -12,10 +12,10 @@
   tr.expanded-row > td { border-bottom: none; }
 
   /* ── table layout ── */
-  .data-table { table-layout: fixed; width: 100%; min-width: 640px; font-size: 13px; }
+  .data-table { table-layout: fixed; width: auto; min-width: 100%; font-size: 13px; }
   .data-table td, .data-table th { padding: 8px 10px; }
   .data-table tbody tr { min-height: 40px; }
-  .data-table td { color: #e2e8f0 !important; border-right: 1px solid rgba(255,255,255,0.05); }
+  .data-table td { color: #e2e8f0 !important; border-right: 1px solid rgba(255,255,255,0.05); white-space: normal; word-wrap: break-word; overflow: visible; vertical-align: top; }
   .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; border-right: 1px solid rgba(255,255,255,0.05); }
   .data-table td:last-child, .data-table th:last-child { border-right: none; }
   .data-table thead { position: sticky; top: 0; z-index: 10; }
@@ -61,10 +61,7 @@
   .col-dropdown-item input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
 
   /* cell styles */
-  .cell-mavzu {
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; white-space: normal;
-  }
+  .cell-mavzu { white-space: normal; word-break: break-word; min-width: 200px; }
   .cell-sana { white-space: nowrap; cursor: pointer; transition: color 0.2s; }
   .cell-sana:hover { color: #4a9eff !important; text-decoration: underline; }
   .cell-olim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
@@ -76,6 +73,16 @@
   .cell-rahbar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .cell-rahbar a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
   .cell-rahbar:hover a { color: #4a9eff !important; text-decoration: underline; }
+
+  /* font size controls */
+  .font-size-controls { display: flex; gap: 4px; flex-shrink: 0; }
+  .font-size-controls button {
+    padding: 4px 10px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: #94a3b8;
+    cursor: pointer; font-size: 12px; line-height: 1;
+  }
+  .font-size-controls button:hover { border-color: #4a9eff; color: #4a9eff; }
 
   /* daraja badges */
   .badge-dsc.badge-role { background: #c2550a !important; color: #fff !important; cursor: default !important; }
@@ -189,7 +196,6 @@
     <div class="filter-row">
       <!-- Daraja toggle buttons -->
       <div class="daraja-buttons">
-        <button class="daraja-btn active" data-value="" id="btn-all">Barchasi</button>
         <button class="daraja-btn" data-value="PhD" id="btn-phd">PhD</button>
         <button class="daraja-btn" data-value="DSc" id="btn-dsc">DSc</button>
       </div>
@@ -202,6 +208,12 @@
       <div class="custom-select" id="cs-sana-yil">
         <div class="select-trigger"><span class="selected-text">Sana (yil)</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
         <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Yil..."><ul class="option-list"></ul></div>
+      </div>
+      <!-- Font size controls -->
+      <div class="font-size-controls">
+        <button onclick="setFontSize(12)" title="Kichik">A-</button>
+        <button onclick="setFontSize(14)" title="O'rtacha">A</button>
+        <button onclick="setFontSize(16)" title="Katta">A+</button>
       </div>
       <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">✕ Tozalash</button>
     </div>
@@ -230,13 +242,13 @@
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0 table-sticky data-table">
         <colgroup>
-          <col style="width:35px">
-          <col style="width:85px">
-          <col style="width:170px">
-          <col>
-          <col style="width:55px">
-          <col style="width:75px">
-          <col style="width:170px">
+          <col id="col-num">
+          <col id="col-sana">
+          <col id="col-olim">
+          <col id="col-mavzu">
+          <col id="col-daraja">
+          <col id="col-ixtisoslik">
+          <col id="col-rahbar">
         </colgroup>
         <thead><tr>
           <th data-col-key="num"><span class="col-label">#</span><div class="resize-handle"></div></th>
@@ -534,7 +546,8 @@
   document.querySelectorAll('.daraja-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const val = btn.dataset.value;
-      if (btn.classList.contains('active') && val !== '') {
+      // clicking active button again → clear filter
+      if (btn.classList.contains('active')) {
         _setDaraja('');
       } else {
         _setDaraja(val);
@@ -672,38 +685,60 @@
     updateData(true);
   }));
 
-  // ── Column resize ──────────────────────────────────────────────────────────
-  const COL_WIDTHS_KEY = 'dashboard-col-widths';
-  function saveColWidths() {
-    const widths = {};
-    document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
-      if (th.style.width) widths[th.dataset.colKey] = th.style.width;
-    });
-    try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(widths)); } catch(e) {}
+  // ── Column resize (independent via <col> widths) ──────────────────────────
+  const defaultWidths = {
+    'col-num': 35, 'col-sana': 85, 'col-olim': 180,
+    'col-mavzu': 300, 'col-daraja': 55, 'col-ixtisoslik': 75, 'col-rahbar': 180
+  };
+  function saveColWidth(colId, width) {
+    try { localStorage.setItem('col-width-' + colId, width); } catch(e) {}
   }
-  function loadColWidths() {
-    try {
-      const widths = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY)) || {};
-      document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
-        const w = widths[th.dataset.colKey]; if (w) th.style.width = w;
-      });
-    } catch(e) {}
+  function getColWidth(colId) {
+    return parseInt(localStorage.getItem('col-width-' + colId)) || defaultWidths[colId];
+  }
+  function applyColWidths() {
+    Object.keys(defaultWidths).forEach(id => {
+      const col = document.getElementById(id);
+      if (col) col.style.width = getColWidth(id) + 'px';
+    });
   }
   function initResizeHandles() {
     document.querySelectorAll('.data-table thead th').forEach(th => {
       const handle = th.querySelector('.resize-handle');
       if (!handle) return;
+      // map th data-col-key → col id
+      const colKeyMap = { num:'col-num', sana:'col-sana', olim:'col-olim', mavzu:'col-mavzu', daraja:'col-daraja', ixti:'col-ixtisoslik', rahbar:'col-rahbar' };
+      const colId = colKeyMap[th.dataset.colKey];
+      if (!colId) return;
       let startX = 0, startW = 0;
       handle.addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
-        startX = e.clientX; startW = th.offsetWidth;
+        startX = e.clientX;
+        startW = getColWidth(colId);
         handle.classList.add('dragging');
-        const onMove = e => { th.style.width = Math.max(40, startW + e.clientX - startX) + 'px'; };
-        const onUp   = () => { handle.classList.remove('dragging'); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); saveColWidths(); };
+        const onMove = ev => {
+          const newW = Math.max(40, startW + ev.clientX - startX);
+          const col = document.getElementById(colId);
+          if (col) col.style.width = newW + 'px';
+        };
+        const onUp = () => {
+          handle.classList.remove('dragging');
+          const col = document.getElementById(colId);
+          if (col) saveColWidth(colId, parseInt(col.style.width));
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
       });
     });
+  }
+
+  // ── Font size ──────────────────────────────────────────────────────────────
+  function setFontSize(size) {
+    const t = document.querySelector('.data-table');
+    if (t) t.style.fontSize = size + 'px';
+    try { localStorage.setItem('table-font-size', size); } catch(e) {}
   }
 
   // ── Column visibility ──────────────────────────────────────────────────────
@@ -744,12 +779,16 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
+    // restore font size
+    const savedSize = localStorage.getItem('table-font-size');
+    if (savedSize) { const t = document.querySelector('.data-table'); if (t) t.style.fontSize = savedSize + 'px'; }
     loadColVis(); applyColVis(); initColToggle();
+    applyColWidths();
     await loadFilters();
     applyInitialFiltersFromUrl();
     renderSortHeaders();
     await updateData(true);
-    loadColWidths(); initResizeHandles();
+    initResizeHandles();
   });
 </script>
 <script>
