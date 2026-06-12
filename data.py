@@ -497,6 +497,42 @@ def filters():
     })
 
 
+@data_bp.route('/search-stats')
+@login_required
+def search_stats():
+    search = request.args.get('search', '').strip()
+    if not search or len(search) < 2:
+        return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
+    like = f'%{search}%'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(DISTINCT TRIM(olim)) FROM dissertations "
+                    "WHERE TRIM(olim) ILIKE %s", (like,))
+                olim_count = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT COUNT(*) FROM dissertations WHERE TRIM(mavzu) ILIKE %s", (like,))
+                mavzu_count = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT COUNT(DISTINCT TRIM(ilmiy_rahbar)) FROM dissertations "
+                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s", (like,))
+                rahbar_count = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT COUNT(*) FROM dissertations WHERE "
+                    "TRIM(olim) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+                    "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
+                    "TRIM(ixtisoslik) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s",
+                    (like, like, like, like, like, like))
+                total = cur.fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:
+        return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
+    return jsonify({'total': total, 'olim': olim_count, 'mavzu': mavzu_count, 'rahbar': rahbar_count})
+
+
 @data_bp.route('/export-xlsx')
 @login_required
 def export_xlsx():

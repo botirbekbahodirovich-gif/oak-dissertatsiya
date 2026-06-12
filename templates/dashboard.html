@@ -21,6 +21,16 @@
   .data-table thead { position: sticky; top: 0; z-index: 10; }
   .data-table thead th { background: var(--oak-surface, #1a1d23); box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
 
+  /* alignment */
+  .data-table td[data-col-key="num"],
+  .data-table th[data-col-key="num"] { text-align: center; }
+  .data-table td[data-col-key="sana"],
+  .data-table th[data-col-key="sana"] { text-align: center; }
+  .data-table td[data-col-key="daraja"],
+  .data-table th[data-col-key="daraja"] { text-align: center; }
+  .data-table td[data-col-key="ixti"],
+  .data-table th[data-col-key="ixti"] { text-align: center; }
+
   /* zebra + hover */
   .data-table tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.04); }
   .data-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
@@ -28,11 +38,11 @@
 
   /* resize handle */
   .resize-handle {
-    position: absolute; right: 0; top: 20%; height: 60%; width: 3px;
-    cursor: col-resize; background: rgba(255,255,255,0.10); border-radius: 2px;
-    transition: background 0.2s; z-index: 1;
+    position: absolute; right: 0; top: 20%; height: 60%; width: 4px;
+    cursor: col-resize; background: rgba(255,255,255,0.12); border-radius: 2px;
+    transition: background 0.2s, width 0.1s; z-index: 1;
   }
-  .resize-handle:hover, .resize-handle.dragging { background: rgba(74,158,255,0.5); }
+  .resize-handle:hover, .resize-handle.dragging { background: #4a9eff; width: 4px; }
 
   /* column visibility dropdown */
   .col-toggle-wrap { position: relative; display: inline-block; }
@@ -87,16 +97,27 @@
   mark { background: rgba(74,158,255,0.3); color: #fff; border-radius: 3px; padding: 0 2px; }
   #result-info .search-term { color: #4a9eff; font-weight: 600; }
 
+  /* search stats bar */
+  #search-stats { display:none; padding:6px 0; font-size:13px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.06); margin-top:8px; }
+
   /* filter row */
   .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 
-  /* daraja checkboxes */
-  .daraja-filter { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-  .daraja-filter label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; user-select: none; }
-  .daraja-filter input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
+  /* daraja toggle buttons */
+  .daraja-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+  .daraja-btn {
+    padding: 6px 16px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: #94a3b8; font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .daraja-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
+  .daraja-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
+  .daraja-btn[data-value="PhD"].active { background: #16a34a; border-color: #16a34a; }
+  .daraja-btn[data-value="DSc"].active { background: #ff6f00; border-color: #ff6f00; }
 
   /* custom searchable select */
-  .custom-select { position: relative; min-width: 120px; max-width: 180px; flex: 1 1 110px; }
+  .custom-select { position: relative; min-width: 120px; max-width: 220px; flex: 1 1 120px; }
   .select-trigger {
     display: flex; align-items: center; justify-content: space-between;
     padding: 6px 10px; border-radius: 6px; cursor: pointer;
@@ -123,7 +144,7 @@
     width: 100%; padding: 7px 10px; border: none; border-bottom: 1px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.05); color: #e2e8f0; font-size: 13px; outline: none; box-sizing: border-box;
   }
-  .option-list { list-style: none; margin: 0; padding: 4px 0; max-height: 200px; overflow-y: auto; }
+  .option-list { list-style: none; margin: 0; padding: 4px 0; max-height: 220px; overflow-y: auto; }
   .option-list li { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .option-list li:hover { background: rgba(74,158,255,0.15); color: #fff; }
   .option-list li.selected { background: rgba(74,158,255,0.2); color: #4a9eff; }
@@ -134,6 +155,7 @@
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
     .col-ixtisoslik { display: none; }
     .custom-select { min-width: 100px; }
+    .daraja-btn { padding: 5px 10px; font-size: 12px; }
   }
 </style>
 {% endblock %}
@@ -165,33 +187,30 @@
     </div>
     <!-- Filter row -->
     <div class="filter-row">
-      <!-- Daraja checkboxes -->
-      <div class="daraja-filter">
-        <label><input type="checkbox" id="filter-phd" value="PhD"> <span class="badge-phd badge-role" style="padding:2px 8px;border-radius:4px;">PhD</span></label>
-        <label><input type="checkbox" id="filter-dsc" value="DSc"> <span class="badge-dsc badge-role" style="padding:2px 8px;border-radius:4px;">DSc</span></label>
+      <!-- Daraja toggle buttons -->
+      <div class="daraja-buttons">
+        <button class="daraja-btn active" data-value="" id="btn-all">Barchasi</button>
+        <button class="daraja-btn" data-value="PhD" id="btn-phd">PhD</button>
+        <button class="daraja-btn" data-value="DSc" id="btn-dsc">DSc</button>
       </div>
-      <!-- Searchable selects -->
+      <!-- Ixtisoslik searchable select -->
       <div class="custom-select" id="cs-ixtisoslik">
         <div class="select-trigger"><span class="selected-text">Ixtisoslik shifri</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
         <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
       </div>
-      <div class="custom-select" id="cs-fan-tarmoqi">
-        <div class="select-trigger"><span class="selected-text">Fan tarmog'i</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
-        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
-      </div>
-      <div class="custom-select" id="cs-muassasa">
-        <div class="select-trigger"><span class="selected-text">Muassasa</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
-        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
-      </div>
-      <div class="custom-select" id="cs-ilmiy-kengash">
-        <div class="select-trigger"><span class="selected-text">IK tashkilot</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
-        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
-      </div>
+      <!-- Sana/yil searchable select -->
       <div class="custom-select" id="cs-sana-yil">
         <div class="select-trigger"><span class="selected-text">Sana (yil)</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
         <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Yil..."><ul class="option-list"></ul></div>
       </div>
       <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">✕ Tozalash</button>
+    </div>
+    <!-- Search stats bar -->
+    <div id="search-stats">
+      Jami: <b style="color:#e2e8f0" id="ss-total">0</b> ta &nbsp;|&nbsp;
+      Olimlar: <b style="color:#4a9eff" id="ss-olim">0</b> ta &nbsp;|&nbsp;
+      Mavzular: <b style="color:#4a9eff" id="ss-mavzu">0</b> ta &nbsp;|&nbsp;
+      Ilmiy rahbarlar: <b style="color:#4a9eff" id="ss-rahbar">0</b> ta
     </div>
   </div>
 
@@ -251,7 +270,7 @@
   let currentSort = loadSort();
   let currentTotal = 0;
   let currentRecords = [];
-  let currentFilters = { search:'', daraja:'', muassasa:'', ixtisoslik:'', fan_tarmoqi:'', ilmiy_kengash:'', sana_yil:'' };
+  let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
   const tableBody = document.getElementById('table-body');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
@@ -475,23 +494,17 @@
   }
 
   // ── Filters loading ────────────────────────────────────────────────────────
-  let csIxti, csFan, csMuassasa, csIK, csSana;
+  let csIxti, csSana;
 
   async function loadFilters() {
-    csIxti     = new CustomSelect('cs-ixtisoslik',    'ixtisoslik',    'Ixtisoslik shifri');
-    csFan      = new CustomSelect('cs-fan-tarmoqi',   'fan_tarmoqi',   "Fan tarmog'i");
-    csMuassasa = new CustomSelect('cs-muassasa',      'muassasa',      'Muassasa');
-    csIK       = new CustomSelect('cs-ilmiy-kengash', 'ilmiy_kengash', 'IK tashkilot');
-    csSana     = new CustomSelect('cs-sana-yil',      'sana_yil',      'Sana (yil)');
-    customSelects = [csIxti, csFan, csMuassasa, csIK, csSana];
+    csIxti = new CustomSelect('cs-ixtisoslik', 'ixtisoslik', 'Ixtisoslik shifri');
+    csSana = new CustomSelect('cs-sana-yil',   'sana_yil',   'Sana (yil)');
+    customSelects = [csIxti, csSana];
     try {
       const res = await fetch('/filters');
       const d = await res.json();
-      csIxti.setOptions(d.ixtisoslik    || []);
-      csFan.setOptions(d.fan_tarmoqi    || []);
-      csMuassasa.setOptions(d.muassasa  || []);
-      csIK.setOptions(d.ilmiy_kengash   || []);
-      csSana.setOptions(d.yillar        || []);
+      csIxti.setOptions(d.ixtisoslik || []);
+      csSana.setOptions(d.yillar     || []);
     } catch(e) { console.warn('Filters load failed', e); }
   }
 
@@ -502,22 +515,33 @@
     const cb = document.getElementById('search-clear-btn');
     if (cb) cb.style.display = currentFilters.search ? '' : 'none';
 
-    currentFilters.ixtisoslik    = p.get('ixtisoslik')    || '';
-    currentFilters.fan_tarmoqi   = p.get('fan_tarmoqi')   || '';
-    currentFilters.muassasa      = p.get('muassasa')      || '';
-    currentFilters.ilmiy_kengash = p.get('ilmiy_kengash') || '';
-    currentFilters.sana_yil      = p.get('sana_yil')      || '';
-    if (csIxti)     csIxti.setValue(currentFilters.ixtisoslik);
-    if (csFan)      csFan.setValue(currentFilters.fan_tarmoqi);
-    if (csMuassasa) csMuassasa.setValue(currentFilters.muassasa);
-    if (csIK)       csIK.setValue(currentFilters.ilmiy_kengash);
-    if (csSana)     csSana.setValue(currentFilters.sana_yil);
+    currentFilters.ixtisoslik = p.get('ixtisoslik') || '';
+    currentFilters.sana_yil   = p.get('sana_yil')   || '';
+    if (csIxti) csIxti.setValue(currentFilters.ixtisoslik);
+    if (csSana) csSana.setValue(currentFilters.sana_yil);
 
     const darajaParam = p.get('daraja') || '';
-    currentFilters.daraja = darajaParam;
-    document.getElementById('filter-phd').checked = darajaParam === 'PhD';
-    document.getElementById('filter-dsc').checked = darajaParam === 'DSc';
+    _setDaraja(darajaParam);
   }
+
+  // ── Daraja toggle buttons ──────────────────────────────────────────────────
+  function _setDaraja(val) {
+    currentFilters.daraja = val;
+    document.querySelectorAll('.daraja-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.value === val);
+    });
+  }
+  document.querySelectorAll('.daraja-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.value;
+      if (btn.classList.contains('active') && val !== '') {
+        _setDaraja('');
+      } else {
+        _setDaraja(val);
+      }
+      updateData(true);
+    });
+  });
 
   function showSkeleton() {
     tableBody.innerHTML = [1,2,3].map(() =>
@@ -531,23 +555,42 @@
     if (spinner) spinner.style.display = on ? 'inline-block' : 'none';
   }
 
+  // ── Search stats ───────────────────────────────────────────────────────────
+  let statsTimeout;
+  function fetchSearchStats(term) {
+    const bar = document.getElementById('search-stats');
+    if (!term || term.length < 2) {
+      if (bar) bar.style.display = 'none';
+      return;
+    }
+    clearTimeout(statsTimeout);
+    statsTimeout = setTimeout(async () => {
+      try {
+        const res = await fetch('/search-stats?search=' + encodeURIComponent(term));
+        const d = await res.json();
+        document.getElementById('ss-total').textContent  = (d.total  || 0).toLocaleString('uz');
+        document.getElementById('ss-olim').textContent   = (d.olim   || 0).toLocaleString('uz');
+        document.getElementById('ss-mavzu').textContent  = (d.mavzu  || 0).toLocaleString('uz');
+        document.getElementById('ss-rahbar').textContent = (d.rahbar || 0).toLocaleString('uz');
+        if (bar) bar.style.display = '';
+      } catch(e) {}
+    }, 350);
+  }
+
   async function updateData(reset=false) {
     if (reset) currentPage = 1;
     showSkeleton();
     renderSortHeaders();
     _searchSpinner(true);
     const params = new URLSearchParams({
-      search:        currentFilters.search,
-      daraja:        currentFilters.daraja,
-      muassasa:      currentFilters.muassasa,
-      ixtisoslik:    currentFilters.ixtisoslik,
-      fan_tarmoqi:   currentFilters.fan_tarmoqi,
-      ilmiy_kengash: currentFilters.ilmiy_kengash,
-      sana_yil:      currentFilters.sana_yil,
-      page:          currentPage,
-      per_page:      PER_PAGE,
-      sort_by:       currentSort.key,
-      sort_dir:      currentSort.dir
+      search:     currentFilters.search,
+      daraja:     currentFilters.daraja,
+      ixtisoslik: currentFilters.ixtisoslik,
+      sana_yil:   currentFilters.sana_yil,
+      page:       currentPage,
+      per_page:   PER_PAGE,
+      sort_by:    currentSort.key,
+      sort_dir:   currentSort.dir
     });
     try {
       const res = await fetch('/data?' + params);
@@ -586,27 +629,22 @@
     const val = this.value;
     clearBtn.style.display = val.length ? '' : 'none';
     currentFilters.search = val.trim();
+    if (!val.trim()) document.getElementById('search-stats').style.display = 'none';
     clearTimeout(searchTimeout);
     if (val.length === 0 || val.length >= 2) {
-      searchTimeout = setTimeout(() => { currentPage = 1; updateData(); }, 300);
+      searchTimeout = setTimeout(() => {
+        currentPage = 1;
+        updateData();
+        fetchSearchStats(val.trim());
+      }, 300);
     }
   });
   clearBtn?.addEventListener('click', function() {
     searchInput.value = ''; clearBtn.style.display = 'none';
-    currentFilters.search = ''; currentPage = 1; updateData(); searchInput.focus();
+    currentFilters.search = '';
+    document.getElementById('search-stats').style.display = 'none';
+    currentPage = 1; updateData(); searchInput.focus();
   });
-
-  // Daraja checkboxes
-  function _darajaChanged() {
-    const phd = document.getElementById('filter-phd').checked;
-    const dsc = document.getElementById('filter-dsc').checked;
-    if (phd && !dsc)       currentFilters.daraja = 'PhD';
-    else if (dsc && !phd)  currentFilters.daraja = 'DSc';
-    else                   currentFilters.daraja = '';
-    updateData(true);
-  }
-  document.getElementById('filter-phd')?.addEventListener('change', _darajaChanged);
-  document.getElementById('filter-dsc')?.addEventListener('change', _darajaChanged);
 
   // Export xlsx
   document.getElementById('btn-export-xlsx')?.addEventListener('click', function() {
@@ -617,10 +655,10 @@
   // Reset
   document.getElementById('btn-reset')?.addEventListener('click', function() {
     searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
-    document.getElementById('filter-phd').checked = false;
-    document.getElementById('filter-dsc').checked = false;
+    document.getElementById('search-stats').style.display = 'none';
+    _setDaraja('');
     customSelects.forEach(s => s.reset());
-    currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:'', fan_tarmoqi:'', ilmiy_kengash:'', sana_yil:''};
+    currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
     updateData(true);
   });
 
