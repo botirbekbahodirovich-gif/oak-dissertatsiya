@@ -38,6 +38,20 @@ def get_connection():
     return psycopg2.connect(get_database_url())
 
 
+def clean_olim_name(name: str) -> str:
+    """Shorten 'Aliyev Jasur Hamidovich, iqtisodiyot...' → 'Aliyev Jasur H.'"""
+    if not name:
+        return ''
+    parts = name.split(',')
+    clean = parts[0].strip()
+    words = clean.split()
+    if len(words) >= 3:
+        return f"{words[0]} {words[1]} {words[2][0]}."
+    elif len(words) == 2:
+        return f"{words[0]} {words[1]}"
+    return clean
+
+
 def normalize_row(row):
     if row is None:
         return None
@@ -45,12 +59,14 @@ def normalize_row(row):
     link = str(row.get("Link") or "").strip()
     if not link and oak_id:
         link = f"https://oak.uz/pages/{oak_id}"
+    olim = str(row.get("Olim") or "").strip()
     return {
         "id": row.get("id"),
         "oak_id": oak_id,
         "Sana": str(row.get("Sana") or "").strip(),
         "Daraja": str(row.get("Daraja") or "").strip(),
-        "Olim": str(row.get("Olim") or "").strip(),
+        "Olim": olim,
+        "Olim_short": clean_olim_name(olim),
         "Mavzu": str(row.get("Mavzu") or "").strip(),
         "Ixtisoslik": str(row.get("Ixtisoslik") or "").strip(),
         "Muassasa": str(row.get("Muassasa") or "").strip(),
@@ -215,6 +231,7 @@ def get_dissertation_detail_by_id(dissertation_id):
             sana AS "Sana", daraja AS "Daraja", olim AS "Olim",
             mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa",
             ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link",
+            oak_id AS "Oak_id",
             COALESCE(ixtisoslik_nomi, '') AS "Ixtisoslik_nomi",
             COALESCE(mavzu_raqami, '') AS "Mavzu_raqami",
             COALESCE(ilmiy_rahbar_daraja, '') AS "Ilmiy_rahbar_daraja",
@@ -222,8 +239,10 @@ def get_dissertation_detail_by_id(dissertation_id):
             COALESCE(ilmiy_kengash_raqami, '') AS "Ilmiy_kengash_raqami",
             COALESCE(opponent_1, '') AS "Opponent_1",
             COALESCE(opponent_2, '') AS "Opponent_2",
+            COALESCE(opponent_3, '') AS "Opponent_3",
             COALESCE(yetakchi_tashkilot, '') AS "Yetakchi_tashkilot",
-            oak_id AS "Oak_id"
+            COALESCE(fan_tarmoqi, '') AS "Fan_tarmoqi",
+            COALESCE(yonalish, '') AS "Yonalish"
         FROM dissertations WHERE id = %s
     '''
     conn = get_connection()
@@ -403,6 +422,7 @@ def dissertation(id):
     row = get_dissertation_detail_by_id(id)
     if not row:
         abort(404)
+    row['Olim_short'] = clean_olim_name(row.get('Olim', ''))
     return render_template('dissertation.html', row=row, id=id)
 
 

@@ -77,6 +77,37 @@ app.register_blueprint(upload_bp)
 csrf.exempt(app.view_functions['auth.telegram_login'])
 
 
+def _run_startup_migrations():
+    try:
+        from data import get_connection
+        conn = get_connection()
+        cols = [
+            ('fan_tarmoqi',          'TEXT'),
+            ('ixtisoslik_nomi',      'TEXT'),
+            ('mavzu_raqami',         'TEXT'),
+            ('ilmiy_kengash',        'TEXT'),
+            ('ilmiy_kengash_raqami', 'TEXT'),
+            ('opponent_1',           'TEXT'),
+            ('opponent_2',           'TEXT'),
+            ('opponent_3',           'TEXT'),
+            ('yetakchi_tashkilot',   'TEXT'),
+            ('ilmiy_rahbar_daraja',  'TEXT'),
+            ('yonalish',             'TEXT'),
+        ]
+        with conn.cursor() as cur:
+            for col, typ in cols:
+                cur.execute(
+                    f"ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS {col} {typ}"
+                )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+_run_startup_migrations()
+
+
 @app.route("/")
 def home():
     try:
@@ -96,9 +127,11 @@ def home():
         rows = []
     recent = []
     if rows:
+        from data import clean_olim_name
         recent = [{
             "id": row.get("id"),
             "Olim": row.get("olim", "") or "",
+            "Olim_display": clean_olim_name(row.get("olim", "") or ""),
             "Mavzu": row.get("mavzu", "") or "",
             "Daraja": row.get("daraja", "") or "",
             "Sana": row.get("sana", "") or "",

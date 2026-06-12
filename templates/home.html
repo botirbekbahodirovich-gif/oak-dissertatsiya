@@ -505,7 +505,7 @@
           <span class="dc-badge {{ 'dc-phd' if d=='PHD' else 'dc-dsc' if d=='DSC' else 'dc-other' }}">{{ r.Daraja or '—' }}</span>
           <span class="dc-date">{{ r.Sana }}</span>
         </div>
-        <div class="dc-olim">{{ r.Olim if r.Olim else "Noma'lum" }}</div>
+        <div class="dc-olim">{{ r.Olim_display or r.Olim or "Noma'lum" }}</div>
         <div class="dc-mavzu">{{ r.Mavzu[:80] ~ '…' if r.Mavzu and r.Mavzu|length > 80 else (r.Mavzu if r.Mavzu else "Mavzu ko'rsatilmagan") }}</div>
         <div class="dc-muas"><i class="bi bi-building"></i>{{ r.Muassasa if r.Muassasa else '—' }}</div>
       </a>

@@ -1,171 +1,197 @@
 {% extends "base.html" %}
-{% block title %}{{ row.Olim or 'Dissertatsiya' }} — Olimlar.uz{% endblock %}
+{% block title %}{{ row.Olim_short or row.Olim or 'Dissertatsiya' }} — Olimlar.uz{% endblock %}
 {% block extra_head %}
 <style>
-  .detail-section { margin-bottom: 1.5rem; }
-  .detail-section-title {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--oak-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--oak-border);
+  .back-link { color: var(--oak-muted); font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; transition: color 0.15s; }
+  .back-link:hover { color: var(--oak-accent); }
+
+  /* ── Section 1: mavzu card ── */
+  .mavzu-card {
+    background: linear-gradient(135deg, rgba(74,158,255,0.07), rgba(124,92,252,0.07));
+    border: 1px solid rgba(74,158,255,0.2); border-radius: 16px;
+    padding: 1.75rem; margin-bottom: 1.5rem;
   }
-  .field-row { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.9rem; }
-  .field-label { font-size: 0.73rem; font-weight: 600; color: var(--oak-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .field-value { font-size: 0.97rem; color: var(--oak-text); line-height: 1.5; }
-  .field-value.empty { color: var(--oak-muted); font-style: italic; }
-  .badge-detail-phd { background: rgba(52,211,153,0.14); color: #34d399; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; }
-  .badge-detail-dsc { background: rgba(167,139,250,0.14); color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; }
-  .title-card { background: linear-gradient(135deg, rgba(74,158,255,0.07), rgba(124,92,252,0.07)); border: 1px solid rgba(74,158,255,0.2); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
-  .title-card .mavzu-text { font-size: 1.15rem; font-weight: 700; line-height: 1.5; color: #e8eef8; margin-bottom: 0.75rem; }
-  .meta-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .meta-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; background: rgba(255,255,255,0.05); border: 1px solid var(--oak-border); color: var(--oak-muted); }
-  .oak-link { display: inline-flex; align-items: center; gap: 0.4rem; padding: 8px 16px; border-radius: 10px; background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); color: #4a9eff; font-size: 0.88rem; font-weight: 600; text-decoration: none; transition: background 0.15s, border-color 0.15s; }
-  .oak-link:hover { background: rgba(74,158,255,0.18); border-color: #4a9eff; color: #4a9eff; text-decoration: none; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.5rem; }
-  @media (max-width: 991px) { .content-card.h-100 { height: auto !important; } }
+  .mavzu-title { font-size: 1.2rem; font-weight: 700; color: #e8eef8; line-height: 1.55; margin-bottom: 1rem; }
+  .meta-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+  .badge-phd-lg { background: rgba(52,211,153,0.14); color: #34d399; padding: 4px 14px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; }
+  .badge-dsc-lg { background: rgba(167,139,250,0.14); color: #a78bfa; padding: 4px 14px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; }
+  .meta-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--oak-muted); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 20px; }
+  .oak-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 6px 14px; border-radius: 10px; background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); color: #4a9eff; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: background 0.15s; }
+  .oak-btn:hover { background: rgba(74,158,255,0.2); color: #4a9eff; text-decoration: none; }
+
+  /* ── Section cards ── */
+  .sec-card { background: var(--oak-surface, #1a1d23); border: 1px solid var(--oak-border, rgba(255,255,255,0.07)); border-radius: 14px; padding: 1.25rem; height: 100%; }
+  .sec-card-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--oak-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--oak-border, rgba(255,255,255,0.07)); display: flex; align-items: center; gap: 0.4rem; }
+  .field { margin-bottom: 0.85rem; }
+  .field:last-child { margin-bottom: 0; }
+  .field-lbl { font-size: 0.72rem; font-weight: 600; color: var(--oak-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .field-val { font-size: 0.92rem; color: #e2e8f0; line-height: 1.5; }
+  .field-val a { color: var(--oak-accent); text-decoration: none; }
+  .field-val a:hover { text-decoration: underline; }
+
+  /* ── Opponents list ── */
+  .opp-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.25rem; }
+  .opp-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
+  .opp-num { font-size: 0.72rem; font-weight: 700; color: var(--oak-muted); min-width: 18px; padding-top: 2px; }
+  .opp-name { font-size: 0.9rem; color: #e2e8f0; line-height: 1.45; }
+
   @media (max-width: 576px) {
-    .grid-2 { grid-template-columns: 1fr; }
-    .title-card { padding: 1rem; }
-    .title-card .mavzu-text { font-size: 1rem; }
-    .oak-link { width: 100%; justify-content: center; }
+    .mavzu-card { padding: 1.1rem; }
+    .mavzu-title { font-size: 1rem; }
+    .oak-btn { width: 100%; justify-content: center; }
   }
 </style>
 {% endblock %}
 {% block content %}
+
 <div class="mb-3">
-  <a href="/dashboard" style="color:var(--oak-muted);font-size:0.88rem;display:inline-flex;align-items:center;gap:0.35rem;">
+  <a href="/dashboard" class="back-link">
     <i class="bi bi-arrow-left"></i> Jadvalga qaytish
   </a>
 </div>
 
-<div class="title-card">
-  <div class="mavzu-text">{{ row.Mavzu or '—' }}</div>
-  <div class="meta-chips">
-    {% set daraja_upper = (row.Daraja or '')|upper %}
-    {% if daraja_upper == 'PHD' %}
-      <span class="badge-detail-phd">PhD</span>
-    {% elif daraja_upper == 'DSC' %}
-      <span class="badge-detail-dsc">DSc</span>
-    {% elif row.Daraja %}
-      <span class="meta-chip">{{ row.Daraja }}</span>
-    {% endif %}
+<!-- ── Section 1: Mavzu ── -->
+<div class="mavzu-card">
+  <div class="mavzu-title">{{ row.Mavzu or '—' }}</div>
+  <div class="meta-row">
+    {% set d = (row.Daraja or '')|upper %}
+    {% if d == 'PHD' %}<span class="badge-phd-lg">PhD</span>
+    {% elif d == 'DSC' %}<span class="badge-dsc-lg">DSc</span>
+    {% elif row.Daraja %}<span class="meta-chip">{{ row.Daraja }}</span>{% endif %}
     {% if row.Sana %}<span class="meta-chip"><i class="bi bi-calendar3"></i>{{ row.Sana }}</span>{% endif %}
-    {% if row.Mavzu_raqami %}<span class="meta-chip"><i class="bi bi-hash"></i>{{ row.Mavzu_raqami }}</span>{% endif %}
-    {% if row.Oak_id %}<span class="meta-chip"><i class="bi bi-fingerprint"></i>OAK ID: {{ row.Oak_id }}</span>{% endif %}
+    {% if row.Link %}
+      <a href="{{ row.Link }}" target="_blank" rel="noopener" class="oak-btn">
+        <i class="bi bi-box-arrow-up-right"></i>OAK saytida ko'rish
+      </a>
+    {% endif %}
   </div>
 </div>
 
-<div class="row g-4">
-  <div class="col-12 col-lg-7">
-    <div class="content-card h-100">
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-person-fill me-1"></i>Tadqiqotchi</div>
-        <div class="field-row">
-          <div class="field-label">Olim (dissertant)</div>
-          <div class="field-value">{{ row.Olim or '—' }}</div>
+<!-- ── Section 2: Tadqiqotchi + Ixtisoslik ── -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-6">
+    <div class="sec-card">
+      <div class="sec-card-title"><i class="bi bi-person-fill"></i>Tadqiqotchi</div>
+      <div class="field">
+        <div class="field-lbl">👤 Olim</div>
+        <div class="field-val">
+          {% if row.Olim %}<a href="/author/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>{% else %}—{% endif %}
         </div>
       </div>
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-person-badge-fill me-1"></i>Ilmiy rahbar</div>
-        <div class="grid-2">
-          <div class="field-row">
-            <div class="field-label">Ism</div>
-            <div class="field-value">
-              {% if row.Ilmiy_rahbar %}
-                <a href="/supervisor/{{ row.Ilmiy_rahbar|urlencode }}" style="color:var(--oak-accent);">{{ row.Ilmiy_rahbar }}</a>
-              {% else %}—{% endif %}
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Ilmiy daraja</div>
-            <div class="field-value {% if not row.Ilmiy_rahbar_daraja %}empty{% endif %}">{{ row.Ilmiy_rahbar_daraja or 'Ko\'rsatilmagan' }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-building-fill me-1"></i>Muassasa</div>
-        <div class="field-row">
-          <div class="field-label">Tashkilot</div>
-          <div class="field-value">
-            {% if row.Muassasa %}
-              <a href="/university/{{ row.Muassasa|urlencode }}" style="color:var(--oak-accent);">{{ row.Muassasa }}</a>
-            {% else %}—{% endif %}
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-tags-fill me-1"></i>Ixtisoslik</div>
-        <div class="grid-2">
-          <div class="field-row">
-            <div class="field-label">Kod</div>
-            <div class="field-value">
-              {% if row.Ixtisoslik %}
-                <a href="/specialization/{{ row.Ixtisoslik|urlencode }}" style="color:var(--oak-accent);">{{ row.Ixtisoslik }}</a>
-              {% else %}—{% endif %}
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field-label">Nomi</div>
-            <div class="field-value {% if not row.Ixtisoslik_nomi %}empty{% endif %}">{{ row.Ixtisoslik_nomi or 'Ko\'rsatilmagan' }}</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="col-12 col-lg-5">
-    <div class="content-card h-100">
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-clipboard2-check-fill me-1"></i>Ilmiy kengash</div>
-        <div class="field-row">
-          <div class="field-label">Nomi</div>
-          <div class="field-value {% if not row.Ilmiy_kengash %}empty{% endif %}">{{ row.Ilmiy_kengash or 'Ko\'rsatilmagan' }}</div>
-        </div>
-        <div class="field-row">
-          <div class="field-label">Raqami</div>
-          <div class="field-value {% if not row.Ilmiy_kengash_raqami %}empty{% endif %}">{{ row.Ilmiy_kengash_raqami or 'Ko\'rsatilmagan' }}</div>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-people-fill me-1"></i>Opponentlar</div>
-        <div class="field-row">
-          <div class="field-label">Opponent 1</div>
-          <div class="field-value {% if not row.Opponent_1 %}empty{% endif %}">{{ row.Opponent_1 or 'Ko\'rsatilmagan' }}</div>
-        </div>
-        <div class="field-row">
-          <div class="field-label">Opponent 2</div>
-          <div class="field-value {% if not row.Opponent_2 %}empty{% endif %}">{{ row.Opponent_2 or 'Ko\'rsatilmagan' }}</div>
-        </div>
-      </div>
-
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-bank2 me-1"></i>Yetakchi tashkilot</div>
-        <div class="field-row">
-          <div class="field-value {% if not row.Yetakchi_tashkilot %}empty{% endif %}">{{ row.Yetakchi_tashkilot or 'Ko\'rsatilmagan' }}</div>
-        </div>
-      </div>
-
-      {% if row.Link %}
-      <div class="detail-section">
-        <div class="detail-section-title"><i class="bi bi-link-45deg me-1"></i>OAK Havola</div>
-        <a href="{{ row.Link }}" target="_blank" rel="noopener noreferrer" class="oak-link">
-          <i class="bi bi-box-arrow-up-right"></i> OAK saytida ko'rish
-        </a>
+      {% if row.Mavzu_raqami %}
+      <div class="field">
+        <div class="field-lbl">🔢 Ro'yxat raqami</div>
+        <div class="field-val">{{ row.Mavzu_raqami }}</div>
       </div>
       {% endif %}
-
+      {% if row.Yonalish %}
+      <div class="field">
+        <div class="field-lbl">📋 Yo'nalish</div>
+        <div class="field-val">{{ row.Yonalish }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="sec-card">
+      <div class="sec-card-title"><i class="bi bi-tags-fill"></i>Ixtisoslik</div>
+      {% if row.Ixtisoslik %}
+      <div class="field">
+        <div class="field-lbl">🔢 Shifr</div>
+        <div class="field-val"><a href="/specialization/{{ row.Ixtisoslik|urlencode }}">{{ row.Ixtisoslik }}</a></div>
+      </div>
+      {% endif %}
+      {% if row.Ixtisoslik_nomi %}
+      <div class="field">
+        <div class="field-lbl">📖 Nomi</div>
+        <div class="field-val">{{ row.Ixtisoslik_nomi }}</div>
+      </div>
+      {% endif %}
+      {% if row.Fan_tarmoqi %}
+      <div class="field">
+        <div class="field-lbl">🌿 Fan tarmog'i</div>
+        <div class="field-val">{{ row.Fan_tarmoqi }}</div>
+      </div>
+      {% endif %}
+      {% if not row.Ixtisoslik and not row.Ixtisoslik_nomi and not row.Fan_tarmoqi %}
+      <div style="color:var(--oak-muted);font-size:0.85rem;font-style:italic;">Ko'rsatilmagan</div>
+      {% endif %}
     </div>
   </div>
 </div>
+
+<!-- ── Section 3: Ilmiy rahbar + Muassasalar ── -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-6">
+    <div class="sec-card">
+      <div class="sec-card-title"><i class="bi bi-person-badge-fill"></i>Ilmiy rahbar</div>
+      <div class="field">
+        <div class="field-lbl">👨‍🏫 Ism</div>
+        <div class="field-val">
+          {% if row.Ilmiy_rahbar %}<a href="/supervisor/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>{% else %}—{% endif %}
+        </div>
+      </div>
+      {% if row.Ilmiy_rahbar_daraja %}
+      <div class="field">
+        <div class="field-lbl">🎓 Unvon</div>
+        <div class="field-val">{{ row.Ilmiy_rahbar_daraja }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="sec-card">
+      <div class="sec-card-title"><i class="bi bi-building-fill"></i>Muassasalar</div>
+      {% if row.Muassasa %}
+      <div class="field">
+        <div class="field-lbl">🏛️ Bajarilgan muassasa</div>
+        <div class="field-val"><a href="/university/{{ row.Muassasa|urlencode }}">{{ row.Muassasa }}</a></div>
+      </div>
+      {% endif %}
+      {% if row.Ilmiy_kengash %}
+      <div class="field">
+        <div class="field-lbl">🏢 Ilmiy kengash</div>
+        <div class="field-val">{{ row.Ilmiy_kengash }}</div>
+      </div>
+      {% endif %}
+      {% if row.Ilmiy_kengash_raqami %}
+      <div class="field">
+        <div class="field-lbl">🔑 IK raqami</div>
+        <div class="field-val">{{ row.Ilmiy_kengash_raqami }}</div>
+      </div>
+      {% endif %}
+      {% if not row.Muassasa and not row.Ilmiy_kengash and not row.Ilmiy_kengash_raqami %}
+      <div style="color:var(--oak-muted);font-size:0.85rem;font-style:italic;">Ko'rsatilmagan</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Section 4: Opponentlar ── -->
+{% set opps = [] %}
+{% if row.Opponent_1 %}{% set _ = opps.append(row.Opponent_1) %}{% endif %}
+{% if row.Opponent_2 %}{% set _ = opps.append(row.Opponent_2) %}{% endif %}
+{% if row.Opponent_3 %}{% set _ = opps.append(row.Opponent_3) %}{% endif %}
+{% if opps %}
+<div class="sec-card mb-3">
+  <div class="sec-card-title"><i class="bi bi-people-fill"></i>Rasmiy opponentlar</div>
+  <div class="opp-list">
+    {% for opp in opps %}
+    <div class="opp-item">
+      <span class="opp-num">{{ loop.index }}.</span>
+      <span class="opp-name">{{ opp }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Section 5: Yetakchi tashkilot ── -->
+{% if row.Yetakchi_tashkilot %}
+<div class="sec-card mb-3">
+  <div class="sec-card-title"><i class="bi bi-bank2"></i>Yetakchi tashkilot</div>
+  <div class="field-val">🏢 {{ row.Yetakchi_tashkilot }}</div>
+</div>
+{% endif %}
+
 {% endblock %}
