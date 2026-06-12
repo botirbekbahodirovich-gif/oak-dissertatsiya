@@ -11,7 +11,9 @@
   .detail-actions { margin-top: .75rem; display: flex; gap: .5rem; flex-wrap: wrap; }
   tr.expanded-row > td { border-bottom: none; }
   /* ── table layout ── */
-  .data-table { table-layout: fixed; width: 100%; }
+  .data-table { table-layout: fixed; width: 100%; min-width: 640px; }
+  /* zebra striping: every other data-row (data-rows sit at odd DOM positions) */
+  .data-table tbody tr.data-row:nth-child(4n+1) { background: rgba(255,255,255,0.018); }
   .data-table td { color: #e2e8f0 !important; }
   .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; }
   .data-table thead { position: sticky; top: 0; z-index: 10; }

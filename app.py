@@ -99,6 +99,18 @@ def _run_startup_migrations():
                 cur.execute(
                     f"ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS {col} {typ}"
                 )
+            indexes = [
+                ("idx_dissertations_olim",         "olim"),
+                ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
+                ("idx_dissertations_ilmiy_rahbar",  "ilmiy_rahbar"),
+                ("idx_dissertations_daraja",        "daraja"),
+                ("idx_dissertations_oak_id",        "oak_id"),
+                ("idx_dissertations_sana",          "sana"),
+            ]
+            for idx_name, col in indexes:
+                cur.execute(
+                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON dissertations({col})"
+                )
         conn.commit()
         conn.close()
     except Exception:
