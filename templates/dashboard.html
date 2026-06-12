@@ -4,27 +4,36 @@
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
   .entity-link:hover { text-decoration: underline; }
-  .detail-row td { background: var(--oak-card, #1a1f2e); padding: 1rem 1.25rem; }
-  .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem 1.25rem; }
-  .detail-item label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--oak-muted, #8892a4); display: block; margin-bottom: 2px; }
-  .detail-item span { font-size: 0.88rem; }
-  .detail-actions { margin-top: .75rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .detail-row td { background: var(--oak-card, #1a1f2e); padding: 0.85rem 1.1rem; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.4rem 1rem; }
+  .detail-item label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--oak-muted, #8892a4); display: block; margin-bottom: 2px; }
+  .detail-item span { font-size: 0.85rem; }
+  .detail-actions { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; }
   tr.expanded-row > td { border-bottom: none; }
+
   /* ── table layout ── */
-  .data-table { table-layout: fixed; width: 100%; min-width: 640px; }
-  /* zebra striping: every other data-row (data-rows sit at odd DOM positions) */
-  .data-table tbody tr.data-row:nth-child(4n+1) { background: rgba(255,255,255,0.018); }
-  .data-table td { color: #e2e8f0 !important; }
-  .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; }
+  .data-table { table-layout: fixed; width: 100%; min-width: 640px; font-size: 13px; }
+  .data-table td, .data-table th { padding: 8px 10px; }
+  .data-table tbody tr { min-height: 40px; }
+  .data-table td { color: #e2e8f0 !important; border-right: 1px solid rgba(255,255,255,0.05); }
+  .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; border-right: 1px solid rgba(255,255,255,0.05); }
+  .data-table td:last-child, .data-table th:last-child { border-right: none; }
   .data-table thead { position: sticky; top: 0; z-index: 10; }
   .data-table thead th { background: var(--oak-surface, #1a1d23); box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
-  .data-table tr.data-row:hover { background: rgba(255,255,255,0.04) !important; cursor: pointer; }
+
+  /* zebra + hover */
+  .data-table tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.04); }
+  .data-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
+  .data-table tbody tr.data-row:hover  { background: rgba(74,158,255,0.10) !important; border-left: 3px solid #4a9eff; cursor: pointer; }
+
   /* resize handle */
   .resize-handle {
-    position: absolute; right: 0; top: 0; height: 100%; width: 5px;
-    cursor: col-resize; user-select: none; background: transparent; z-index: 1;
+    position: absolute; right: 0; top: 20%; height: 60%; width: 3px;
+    cursor: col-resize; background: rgba(255,255,255,0.10); border-radius: 2px;
+    transition: background 0.2s; z-index: 1;
   }
-  .resize-handle:hover, .resize-handle.dragging { background: rgba(74,158,255,0.4); }
+  .resize-handle:hover, .resize-handle.dragging { background: rgba(74,158,255,0.5); }
+
   /* column visibility dropdown */
   .col-toggle-wrap { position: relative; display: inline-block; }
   #col-dropdown {
@@ -40,66 +49,91 @@
   }
   .col-dropdown-item:hover { background: rgba(74,158,255,0.1); }
   .col-dropdown-item input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
-  /* mavzu: plain, no hover effect */
+
+  /* cell styles */
   .cell-mavzu {
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden; white-space: normal;
-    padding-left: 12px !important; padding-right: 12px !important;
   }
-  /* clickable cells */
   .cell-sana { white-space: nowrap; cursor: pointer; transition: color 0.2s; }
   .cell-sana:hover { color: #4a9eff !important; text-decoration: underline; }
   .cell-olim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .cell-olim a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
   .cell-olim:hover a { color: #4a9eff !important; text-decoration: underline; }
   .cell-ixtisoslik { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-  .cell-ixtisoslik a { color: #e2e8f0 !important; text-decoration: none; font-family: monospace; font-size: 0.82rem; transition: color 0.2s; }
+  .cell-ixtisoslik a { color: #e2e8f0 !important; text-decoration: none; font-family: monospace; font-size: 0.8rem; transition: color 0.2s; }
   .cell-ixtisoslik:hover a { color: #4a9eff !important; text-decoration: underline; }
   .cell-rahbar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .cell-rahbar a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
   .cell-rahbar:hover a { color: #4a9eff !important; text-decoration: underline; }
+
   /* daraja badges */
   .badge-dsc.badge-role { background: #c2550a !important; color: #fff !important; cursor: default !important; }
   .badge-phd.badge-role { background: #16a34a !important; color: #fff !important; cursor: default !important; }
-  /* ── pagination ── */
+
+  /* pagination */
   .pagination-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:0.75rem 0 0.25rem; }
   .pg-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--oak-text,#cbd5e1); font-size:0.85rem; cursor:pointer; transition:background .15s,border-color .15s; }
   .pg-btn:hover:not(:disabled):not(.active) { background:rgba(74,158,255,0.12); border-color:rgba(74,158,255,0.4); }
   .pg-btn.active { background:#4a9eff; border-color:#4a9eff; color:#fff; font-weight:600; cursor:default; }
   .pg-btn:disabled { opacity:0.35; cursor:default; }
   .pg-info { font-size:0.82rem; color:var(--oak-muted,#8892a4); margin-left:4px; }
-  /* compact filter row */
-  .filter-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  .filter-select {
-    padding:5px 8px; font-size:13px; border-radius:6px;
-    background:var(--oak-surface,#1a1d23); border:1px solid rgba(255,255,255,0.1);
-    color:#e2e8f0; max-width:160px; flex:1 1 110px; min-width:90px;
-    cursor:pointer; appearance:auto;
-  }
-  .filter-select:focus { outline:none; border-color:rgba(74,158,255,0.5); }
-  /* search clear button */
-  #search-clear-btn {
-    border-left: none; background: transparent;
-    color: var(--oak-muted, #8892a4); transition: color 0.15s;
-  }
+
+  /* search */
+  #search-clear-btn { border-left: none; background: transparent; color: var(--oak-muted, #8892a4); transition: color 0.15s; }
   #search-clear-btn:hover { color: #e2e8f0; background: transparent; }
-  /* search spinner */
-  #search-spinner {
-    display: none; width: 14px; height: 14px;
-    border: 2px solid rgba(74,158,255,0.25); border-top-color: #4a9eff;
-    border-radius: 50%; animation: spin-s 0.7s linear infinite;
-    vertical-align: middle;
-  }
+  #search-spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(74,158,255,0.25); border-top-color: #4a9eff; border-radius: 50%; animation: spin-s 0.7s linear infinite; vertical-align: middle; }
   @keyframes spin-s { to { transform: rotate(360deg); } }
-  /* highlight match */
   mark { background: rgba(74,158,255,0.3); color: #fff; border-radius: 3px; padding: 0 2px; }
-  /* search result info */
   #result-info .search-term { color: #4a9eff; font-weight: 600; }
+
+  /* filter row */
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+
+  /* daraja checkboxes */
+  .daraja-filter { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .daraja-filter label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px; user-select: none; }
+  .daraja-filter input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
+
+  /* custom searchable select */
+  .custom-select { position: relative; min-width: 120px; max-width: 180px; flex: 1 1 110px; }
+  .select-trigger {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    background: var(--oak-surface, #1a1d23); border: 1px solid rgba(255,255,255,0.1);
+    color: #e2e8f0; font-size: 13px; gap: 4px;
+  }
+  .select-trigger:hover { border-color: rgba(74,158,255,0.4); }
+  .select-trigger.active { border-color: #4a9eff; }
+  .select-trigger .selected-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .select-trigger .arrow { color: #94a3b8; font-size: 10px; flex-shrink: 0; }
+  .clear-btn {
+    background: none; border: none; color: #94a3b8; cursor: pointer;
+    font-size: 12px; padding: 0 2px; display: none; line-height: 1;
+  }
+  .clear-btn.visible { display: inline; }
+  .clear-btn:hover { color: #e2e8f0; }
+  .dropdown-panel {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1000;
+    background: #1a1d23; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .dropdown-search {
+    width: 100%; padding: 7px 10px; border: none; border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05); color: #e2e8f0; font-size: 13px; outline: none; box-sizing: border-box;
+  }
+  .option-list { list-style: none; margin: 0; padding: 4px 0; max-height: 200px; overflow-y: auto; }
+  .option-list li { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .option-list li:hover { background: rgba(74,158,255,0.15); color: #fff; }
+  .option-list li.selected { background: rgba(74,158,255,0.2); color: #4a9eff; }
+  .option-list li.no-match { color: var(--oak-muted); font-style: italic; cursor: default; padding: 8px 12px; }
+
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-    #btn-export { width: 100%; justify-content: center; }
     .col-ixtisoslik { display: none; }
+    .custom-select { min-width: 100px; }
   }
 </style>
 {% endblock %}
@@ -109,7 +143,7 @@
       <h1>Dissertatsiyalar jadvali</h1>
       <p>Mualliflar, muassasalar, ilmiy rahbarlar va ixtisoslik bo'yicha qidiruv.</p>
     </div>
-    <button id="btn-export" class="btn btn-action"><i class="bi bi-download me-1"></i>CSV eksport</button>
+    <button id="btn-export-xlsx" class="btn btn-action"><i class="bi bi-file-earmark-excel me-1"></i>Excel</button>
   </div>
 
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-3" id="stats-row">
@@ -120,7 +154,7 @@
   </div>
 
   <div class="content-card mb-3 filter-panel">
-    <!-- Search row -->
+    <!-- Search -->
     <div class="input-group mb-2">
       <span class="input-group-text">
         <i class="bi bi-search" id="search-icon"></i>
@@ -129,14 +163,34 @@
       <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa, ixtisoslik..." autocomplete="off" />
       <button id="search-clear-btn" class="btn btn-outline-secondary" type="button" title="Tozalash" style="display:none;">✕</button>
     </div>
-    <!-- Filter dropdowns row -->
+    <!-- Filter row -->
     <div class="filter-row">
-      <select id="filter-daraja"        class="filter-select"><option value="">Daraja</option></select>
-      <select id="filter-ixtisoslik"    class="filter-select"><option value="">Ixtisoslik shifri</option></select>
-      <select id="filter-fan-tarmoqi"   class="filter-select"><option value="">Fan tarmog'i</option></select>
-      <select id="filter-muassasa"      class="filter-select"><option value="">Muassasa</option></select>
-      <select id="filter-ilmiy-kengash" class="filter-select"><option value="">IK tashkilot</option></select>
-      <select id="filter-sana-yil"      class="filter-select"><option value="">Sana (yil)</option></select>
+      <!-- Daraja checkboxes -->
+      <div class="daraja-filter">
+        <label><input type="checkbox" id="filter-phd" value="PhD"> <span class="badge-phd badge-role" style="padding:2px 8px;border-radius:4px;">PhD</span></label>
+        <label><input type="checkbox" id="filter-dsc" value="DSc"> <span class="badge-dsc badge-role" style="padding:2px 8px;border-radius:4px;">DSc</span></label>
+      </div>
+      <!-- Searchable selects -->
+      <div class="custom-select" id="cs-ixtisoslik">
+        <div class="select-trigger"><span class="selected-text">Ixtisoslik shifri</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
+        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
+      </div>
+      <div class="custom-select" id="cs-fan-tarmoqi">
+        <div class="select-trigger"><span class="selected-text">Fan tarmog'i</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
+        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
+      </div>
+      <div class="custom-select" id="cs-muassasa">
+        <div class="select-trigger"><span class="selected-text">Muassasa</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
+        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
+      </div>
+      <div class="custom-select" id="cs-ilmiy-kengash">
+        <div class="select-trigger"><span class="selected-text">IK tashkilot</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
+        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Qidiring..."><ul class="option-list"></ul></div>
+      </div>
+      <div class="custom-select" id="cs-sana-yil">
+        <div class="select-trigger"><span class="selected-text">Sana (yil)</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
+        <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Yil..."><ul class="option-list"></ul></div>
+      </div>
       <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">✕ Tozalash</button>
     </div>
   </div>
@@ -156,14 +210,23 @@
     </div>
     <div class="table-scroll">
       <table class="table table-hover align-middle mb-0 table-sticky data-table">
+        <colgroup>
+          <col style="width:35px">
+          <col style="width:85px">
+          <col style="width:170px">
+          <col>
+          <col style="width:55px">
+          <col style="width:75px">
+          <col style="width:170px">
+        </colgroup>
         <thead><tr>
-          <th data-col-key="num" style="width:36px"><span class="col-label">#</span><div class="resize-handle"></div></th>
-          <th data-sort="Sana" data-col-key="sana" style="width:80px"><span class="col-label">Sana</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Olim" data-col-key="olim" style="width:180px"><span class="col-label">Olim</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-col-key="num"><span class="col-label">#</span><div class="resize-handle"></div></th>
+          <th data-sort="Sana" data-col-key="sana"><span class="col-label">Sana</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Olim" data-col-key="olim"><span class="col-label">Olim</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
           <th data-sort="Mavzu" data-col-key="mavzu"><span class="col-label">Mavzu</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Daraja" data-col-key="daraja" style="width:60px"><span class="col-label">Daraja</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Ixtisoslik" data-col-key="ixti" class="col-ixtisoslik" style="width:80px"><span class="col-label">Ixtisoslik</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Ilmiy_rahbar" data-col-key="rahbar" style="width:180px"><span class="col-label">Ilmiy rahbar</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Daraja" data-col-key="daraja"><span class="col-label">Daraja</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Ixtisoslik" data-col-key="ixti" class="col-ixtisoslik"><span class="col-label">Ixtisoslik</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-sort="Ilmiy_rahbar" data-col-key="rahbar"><span class="col-label">Ilmiy rahbar</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
         </tr></thead>
         <tbody id="table-body">
           <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
@@ -179,7 +242,6 @@
 <script>
   const PER_PAGE = 50;
   const SORT_KEY = 'dashboard-sort';
-  // Default sort: id desc (newest first). Column default dirs for first click.
   const COL_DEFAULT_DIR = { Sana:'desc', id:'desc' };
   function defaultDir(col) { return COL_DEFAULT_DIR[col] || 'asc'; }
   function loadSort() {
@@ -193,8 +255,8 @@
   const tableBody = document.getElementById('table-body');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
-  function escHtml(value) {
-    return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function escHtml(v) {
+    return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function highlight(text, term) {
     if (!term || term.length < 2) return escHtml(text);
@@ -215,30 +277,12 @@
       }
     });
   }
-  function applyInitialFiltersFromUrl() {
-    const p = new URLSearchParams(window.location.search);
-    const map = {
-      'search':'search-input', 'daraja':'filter-daraja',
-      'muassasa':'filter-muassasa', 'ixtisoslik':'filter-ixtisoslik',
-      'fan_tarmoqi':'filter-fan-tarmoqi', 'ilmiy_kengash':'filter-ilmiy-kengash',
-      'sana_yil':'filter-sana-yil'
-    };
-    Object.entries(map).forEach(([key, id]) => {
-      const val = p.get(key) || '';
-      currentFilters[key] = val;
-      const el = document.getElementById(id);
-      if (el) el.value = val;
-    });
-    const cb = document.getElementById('search-clear-btn');
-    if (cb) cb.style.display = currentFilters.search ? '' : 'none';
-  }
   function fmtSana(s) {
     if (!s) return '—';
-    // YYYY-MM-DD → DD.MM.YYYY
     const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
     return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
   }
-function supervisorCell(name, nameShortArg, count) {
+  function supervisorCell(name, nameShortArg, count) {
     if (!name) return '—';
     const display = escHtml(nameShortArg || name);
     const badge = supervisorBadge(name, count);
@@ -273,11 +317,11 @@ function supervisorCell(name, nameShortArg, count) {
       const supervisorCount = r.supervisor_count || 1;
       const shifr = ixtisoslikShifr(r.Ixtisoslik);
       const shiftLink = r.Ixtisoslik && shifr !== '—'
-        ? `<a href="/specialization/${encodeURIComponent(shifr)}" onclick="event.stopPropagation()" title="Shu shifrdagi himoya qilingan e'lonlar">${escHtml(shifr)}</a>`
+        ? `<a href="/specialization/${encodeURIComponent(shifr)}" onclick="event.stopPropagation()">${escHtml(shifr)}</a>`
         : escHtml(shifr);
       rows.push(`<tr class="data-row" data-row-id="${rowId}">
-          <td data-col-key="num" style="color:var(--oak-muted);font-size:0.82rem;">${startIndex + i + 1}</td>
-          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')" title="Shu sanadagi himoyalar">${fmtSana(r.Sana)}</td>
+          <td data-col-key="num" style="color:var(--oak-muted);font-size:0.78rem;">${startIndex + i + 1}</td>
+          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
           <td data-col-key="olim" class="cell-olim">${olimLink}</td>
           <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
@@ -321,11 +365,9 @@ function supervisorCell(name, nameShortArg, count) {
     const infoEl = document.getElementById('result-info');
     if (!infoEl) return;
     const n = `<strong>${total.toLocaleString('uz')}</strong>`;
-    if (term.length >= 2) {
-      infoEl.innerHTML = `${n} ta natija topildi: <span class="search-term">"${escHtml(term)}"</span>`;
-    } else {
-      infoEl.innerHTML = `Topildi: ${n} ta natija`;
-    }
+    infoEl.innerHTML = term.length >= 2
+      ? `${n} ta natija topildi: <span class="search-term">"${escHtml(term)}"</span>`
+      : `Topildi: ${n} ta natija`;
   }
   function renderPagination(page, total) {
     const bar = document.getElementById('pagination-bar');
@@ -333,7 +375,6 @@ function supervisorCell(name, nameShortArg, count) {
     const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
     const start = total ? (page - 1) * PER_PAGE + 1 : 0;
     const end = Math.min(page * PER_PAGE, total);
-    // Compute window of 5 page buttons centred on current page
     let winStart = Math.max(1, page - 2);
     let winEnd = Math.min(totalPages, winStart + 4);
     if (winEnd - winStart < 4) winStart = Math.max(1, winEnd - 4);
@@ -350,29 +391,137 @@ function supervisorCell(name, nameShortArg, count) {
       b.addEventListener('click', () => { currentPage = +b.dataset.pg; updateData(); window.scrollTo({top:0,behavior:'smooth'}); })
     );
   }
+
+  // ── Custom searchable select ───────────────────────────────────────────────
+  let customSelects = [];
+
+  class CustomSelect {
+    constructor(elId, filterKey, placeholder) {
+      this.el = document.getElementById(elId);
+      if (!this.el) return;
+      this.filterKey  = filterKey;
+      this.placeholder = placeholder;
+      this.value      = '';
+      this.options    = [];
+      this.trigger    = this.el.querySelector('.select-trigger');
+      this.panel      = this.el.querySelector('.dropdown-panel');
+      this.searchEl   = this.el.querySelector('.dropdown-search');
+      this.listEl     = this.el.querySelector('.option-list');
+      this.textEl     = this.el.querySelector('.selected-text');
+      this.clearEl    = this.el.querySelector('.clear-btn');
+      this._init();
+    }
+    _init() {
+      this.trigger.addEventListener('click', (e) => {
+        if (this.clearEl.contains(e.target)) return;
+        this._toggle();
+      });
+      this.clearEl.addEventListener('click', (e) => { e.stopPropagation(); this._clear(); });
+      this.searchEl.addEventListener('input', () => this._renderList());
+      document.addEventListener('click', (e) => { if (!this.el.contains(e.target)) this._close(); });
+    }
+    setOptions(options) {
+      this.options = options;
+      this._renderList();
+    }
+    setValue(val) {
+      this.value = val;
+      this.textEl.textContent = val || this.placeholder;
+      this.clearEl.classList.toggle('visible', !!val);
+      this._renderList();
+    }
+    _renderList() {
+      const q = (this.searchEl.value || '').toLowerCase();
+      const filtered = q ? this.options.filter(o => o.toLowerCase().includes(q)) : this.options;
+      if (!filtered.length) {
+        this.listEl.innerHTML = `<li class="no-match">Topilmadi</li>`;
+        return;
+      }
+      this.listEl.innerHTML = filtered.map(o =>
+        `<li class="${o === this.value ? 'selected' : ''}" data-val="${escHtml(o)}">${escHtml(o)}</li>`
+      ).join('');
+      this.listEl.querySelectorAll('li[data-val]').forEach(li =>
+        li.addEventListener('click', () => this._select(li.dataset.val))
+      );
+    }
+    _select(val) {
+      this.setValue(val);
+      currentFilters[this.filterKey] = val;
+      this._close();
+      updateData(true);
+    }
+    _clear() {
+      this.setValue('');
+      currentFilters[this.filterKey] = '';
+      updateData(true);
+    }
+    _toggle() {
+      const open = this.panel.style.display !== 'none';
+      customSelects.forEach(s => { if (s !== this) s._close(); });
+      open ? this._close() : this._open();
+    }
+    _open() {
+      this.panel.style.display = 'block';
+      this.trigger.classList.add('active');
+      this.searchEl.value = '';
+      this._renderList();
+      setTimeout(() => this.searchEl.focus(), 50);
+    }
+    _close() {
+      this.panel.style.display = 'none';
+      this.trigger.classList.remove('active');
+    }
+    reset() { this.setValue(''); this._close(); }
+  }
+
+  // ── Filters loading ────────────────────────────────────────────────────────
+  let csIxti, csFan, csMuassasa, csIK, csSana;
+
   async function loadFilters() {
+    csIxti     = new CustomSelect('cs-ixtisoslik',    'ixtisoslik',    'Ixtisoslik shifri');
+    csFan      = new CustomSelect('cs-fan-tarmoqi',   'fan_tarmoqi',   "Fan tarmog'i");
+    csMuassasa = new CustomSelect('cs-muassasa',      'muassasa',      'Muassasa');
+    csIK       = new CustomSelect('cs-ilmiy-kengash', 'ilmiy_kengash', 'IK tashkilot');
+    csSana     = new CustomSelect('cs-sana-yil',      'sana_yil',      'Sana (yil)');
+    customSelects = [csIxti, csFan, csMuassasa, csIK, csSana];
     try {
       const res = await fetch('/filters');
       const d = await res.json();
-      const fill = (id, values, label) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = `<option value="">${label}</option>`;
-        values.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; el.append(o); });
-      };
-      fill('filter-daraja',        d.daraja        || [], 'Daraja');
-      fill('filter-ixtisoslik',    d.ixtisoslik    || [], 'Ixtisoslik shifri');
-      fill('filter-fan-tarmoqi',   d.fan_tarmoqi   || [], "Fan tarmog'i");
-      fill('filter-muassasa',      d.muassasa      || [], 'Muassasa');
-      fill('filter-ilmiy-kengash', d.ilmiy_kengash || [], 'IK tashkilot');
-      fill('filter-sana-yil',      d.yillar        || [], 'Sana (yil)');
-    } catch (error) {
-      console.warn('Filter values could not be loaded.', error);
-    }
+      csIxti.setOptions(d.ixtisoslik    || []);
+      csFan.setOptions(d.fan_tarmoqi    || []);
+      csMuassasa.setOptions(d.muassasa  || []);
+      csIK.setOptions(d.ilmiy_kengash   || []);
+      csSana.setOptions(d.yillar        || []);
+    } catch(e) { console.warn('Filters load failed', e); }
   }
+
+  function applyInitialFiltersFromUrl() {
+    const p = new URLSearchParams(window.location.search);
+    currentFilters.search = p.get('search') || '';
+    document.getElementById('search-input').value = currentFilters.search;
+    const cb = document.getElementById('search-clear-btn');
+    if (cb) cb.style.display = currentFilters.search ? '' : 'none';
+
+    currentFilters.ixtisoslik    = p.get('ixtisoslik')    || '';
+    currentFilters.fan_tarmoqi   = p.get('fan_tarmoqi')   || '';
+    currentFilters.muassasa      = p.get('muassasa')      || '';
+    currentFilters.ilmiy_kengash = p.get('ilmiy_kengash') || '';
+    currentFilters.sana_yil      = p.get('sana_yil')      || '';
+    if (csIxti)     csIxti.setValue(currentFilters.ixtisoslik);
+    if (csFan)      csFan.setValue(currentFilters.fan_tarmoqi);
+    if (csMuassasa) csMuassasa.setValue(currentFilters.muassasa);
+    if (csIK)       csIK.setValue(currentFilters.ilmiy_kengash);
+    if (csSana)     csSana.setValue(currentFilters.sana_yil);
+
+    const darajaParam = p.get('daraja') || '';
+    currentFilters.daraja = darajaParam;
+    document.getElementById('filter-phd').checked = darajaParam === 'PhD';
+    document.getElementById('filter-dsc').checked = darajaParam === 'DSc';
+  }
+
   function showSkeleton() {
-    tableBody.innerHTML = [1,2,3].map(w =>
-      `<tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:${w*30+10}%"></div></td></tr>`
+    tableBody.innerHTML = [1,2,3].map(() =>
+      `<tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>`
     ).join('');
   }
   function _searchSpinner(on) {
@@ -414,25 +563,25 @@ function supervisorCell(name, nameShortArg, count) {
       _searchSpinner(false);
     }
   }
+
   // Scroll position memory
   (function() {
     const KEY = 'dashboard-scroll-y';
     let scrollTimer;
-    window.addEventListener('scroll', function() {
+    window.addEventListener('scroll', () => {
       clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(function() {
-        sessionStorage.setItem(KEY, window.scrollY);
-      }, 500);
+      scrollTimer = setTimeout(() => sessionStorage.setItem(KEY, window.scrollY), 500);
     });
-    window.addEventListener('load', function() {
+    window.addEventListener('load', () => {
       const saved = sessionStorage.getItem(KEY);
       if (saved) window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' });
     });
   })();
+
+  // Search
   let searchTimeout;
   const searchInput = document.getElementById('search-input');
   const clearBtn = document.getElementById('search-clear-btn');
-
   searchInput?.addEventListener('input', function() {
     const val = this.value;
     clearBtn.style.display = val.length ? '' : 'none';
@@ -442,57 +591,51 @@ function supervisorCell(name, nameShortArg, count) {
       searchTimeout = setTimeout(() => { currentPage = 1; updateData(); }, 300);
     }
   });
-
   clearBtn?.addEventListener('click', function() {
-    searchInput.value = '';
-    clearBtn.style.display = 'none';
-    currentFilters.search = '';
-    currentPage = 1;
-    updateData();
-    searchInput.focus();
+    searchInput.value = ''; clearBtn.style.display = 'none';
+    currentFilters.search = ''; currentPage = 1; updateData(); searchInput.focus();
   });
 
-  const DROP_MAP = {
-    'filter-daraja':        'daraja',
-    'filter-ixtisoslik':    'ixtisoslik',
-    'filter-fan-tarmoqi':   'fan_tarmoqi',
-    'filter-muassasa':      'muassasa',
-    'filter-ilmiy-kengash': 'ilmiy_kengash',
-    'filter-sana-yil':      'sana_yil',
-  };
-  Object.keys(DROP_MAP).forEach(id => {
-    document.getElementById(id)?.addEventListener('change', function() {
-      currentFilters[DROP_MAP[id]] = this.value.trim();
-      updateData(true);
-    });
+  // Daraja checkboxes
+  function _darajaChanged() {
+    const phd = document.getElementById('filter-phd').checked;
+    const dsc = document.getElementById('filter-dsc').checked;
+    if (phd && !dsc)       currentFilters.daraja = 'PhD';
+    else if (dsc && !phd)  currentFilters.daraja = 'DSc';
+    else                   currentFilters.daraja = '';
+    updateData(true);
+  }
+  document.getElementById('filter-phd')?.addEventListener('change', _darajaChanged);
+  document.getElementById('filter-dsc')?.addEventListener('change', _darajaChanged);
+
+  // Export xlsx
+  document.getElementById('btn-export-xlsx')?.addEventListener('click', function() {
+    const params = new URLSearchParams({...currentFilters, sort_by: currentSort.key, sort_dir: currentSort.dir});
+    window.location.href = '/export-xlsx?' + params;
   });
 
+  // Reset
   document.getElementById('btn-reset')?.addEventListener('click', function() {
-    searchInput.value = '';
-    if (clearBtn) clearBtn.style.display = 'none';
-    Object.keys(DROP_MAP).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
+    document.getElementById('filter-phd').checked = false;
+    document.getElementById('filter-dsc').checked = false;
+    customSelects.forEach(s => s.reset());
     currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:'', fan_tarmoqi:'', ilmiy_kengash:'', sana_yil:''};
     updateData(true);
   });
-  document.getElementById('btn-export')?.addEventListener('click', function() {
-    const params = new URLSearchParams({...currentFilters, sort_by: currentSort.key, sort_dir: currentSort.dir});
-    window.location.href = '/export?' + params;
-  });
+
+  // Sort headers
   sortHeaders.forEach(header => header.addEventListener('click', function(e) {
     if (e.target.classList.contains('resize-handle')) return;
     const key = this.dataset.sort;
-    if (currentSort.key === key) {
-      currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-    } else {
-      currentSort.key = key;
-      currentSort.dir = defaultDir(key);
-    }
+    if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+    else { currentSort.key = key; currentSort.dir = defaultDir(key); }
     sessionStorage.setItem(SORT_KEY, JSON.stringify(currentSort));
     updateData(true);
   }));
-  // ── Column resize ─────────────────────────────────────────────────────────
-  const COL_WIDTHS_KEY = 'dashboard-col-widths';
 
+  // ── Column resize ──────────────────────────────────────────────────────────
+  const COL_WIDTHS_KEY = 'dashboard-col-widths';
   function saveColWidths() {
     const widths = {};
     document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
@@ -500,38 +643,25 @@ function supervisorCell(name, nameShortArg, count) {
     });
     try { localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(widths)); } catch(e) {}
   }
-
   function loadColWidths() {
     try {
       const widths = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY)) || {};
       document.querySelectorAll('.data-table thead th[data-col-key]').forEach(th => {
-        const w = widths[th.dataset.colKey];
-        if (w) th.style.width = w;
+        const w = widths[th.dataset.colKey]; if (w) th.style.width = w;
       });
     } catch(e) {}
   }
-
   function initResizeHandles() {
     document.querySelectorAll('.data-table thead th').forEach(th => {
       const handle = th.querySelector('.resize-handle');
       if (!handle) return;
       let startX = 0, startW = 0;
       handle.addEventListener('mousedown', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        startX = e.clientX;
-        startW = th.offsetWidth;
+        e.preventDefault(); e.stopPropagation();
+        startX = e.clientX; startW = th.offsetWidth;
         handle.classList.add('dragging');
-        function onMove(e) {
-          const w = Math.max(40, startW + e.clientX - startX);
-          th.style.width = w + 'px';
-        }
-        function onUp() {
-          handle.classList.remove('dragging');
-          document.removeEventListener('mousemove', onMove);
-          document.removeEventListener('mouseup', onUp);
-          saveColWidths();
-        }
+        const onMove = e => { th.style.width = Math.max(40, startW + e.clientX - startX) + 'px'; };
+        const onUp   = () => { handle.classList.remove('dragging'); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); saveColWidths(); };
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
       });
@@ -548,36 +678,22 @@ function supervisorCell(name, nameShortArg, count) {
     { key: 'rahbar', label: 'Ilmiy rahbar' },
   ];
   let colVis = {};
-
   function loadColVis() {
     try {
       const saved = JSON.parse(localStorage.getItem(COL_VIS_KEY)) || {};
       COL_DEFS.forEach(c => { colVis[c.key] = saved[c.key] !== false; });
-    } catch(e) {
-      COL_DEFS.forEach(c => { colVis[c.key] = true; });
-    }
+    } catch(e) { COL_DEFS.forEach(c => { colVis[c.key] = true; }); }
   }
-
   function applyColVis() {
     let styleEl = document.getElementById('col-vis-style');
     if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'col-vis-style'; document.head.appendChild(styleEl); }
-    styleEl.textContent = COL_DEFS
-      .filter(c => !colVis[c.key])
-      .map(c => `[data-col-key="${c.key}"] { display: none !important; }`)
-      .join('\n');
+    styleEl.textContent = COL_DEFS.filter(c => !colVis[c.key]).map(c => `[data-col-key="${c.key}"] { display: none !important; }`).join('\n');
   }
-
   function initColToggle() {
     const btn = document.getElementById('btn-col-toggle');
     const drop = document.getElementById('col-dropdown');
     if (!btn || !drop) return;
-
-    drop.innerHTML = COL_DEFS.map(c => `
-      <label class="col-dropdown-item">
-        <input type="checkbox" data-vis-key="${c.key}" ${colVis[c.key] ? 'checked' : ''}>
-        ${c.label}
-      </label>`).join('');
-
+    drop.innerHTML = COL_DEFS.map(c => `<label class="col-dropdown-item"><input type="checkbox" data-vis-key="${c.key}" ${colVis[c.key] ? 'checked' : ''}>${c.label}</label>`).join('');
     drop.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       cb.addEventListener('change', () => {
         colVis[cb.dataset.visKey] = cb.checked;
@@ -585,39 +701,32 @@ function supervisorCell(name, nameShortArg, count) {
         applyColVis();
       });
     });
-
     btn.addEventListener('click', e => { e.stopPropagation(); drop.classList.toggle('open'); });
     document.addEventListener('click', () => drop.classList.remove('open'));
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    loadColVis();
-    applyColVis();
-    initColToggle();
+    loadColVis(); applyColVis(); initColToggle();
     await loadFilters();
     applyInitialFiltersFromUrl();
     renderSortHeaders();
     await updateData(true);
-    loadColWidths();
-    initResizeHandles();
+    loadColWidths(); initResizeHandles();
   });
 </script>
-
-  <script>
-    async function loadAndRenderStats(){
-      try{
-        const res = await fetch('/stats-json');
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        const data = await res.json();
-        const fmt = (n)=> typeof n === 'number' ? n.toLocaleString('uz') : n;
-        document.getElementById('stat-total').textContent = fmt(data.total);
-        document.getElementById('stat-phd').textContent = fmt(data.phd);
-        document.getElementById('stat-dsc').textContent = fmt(data.dsc);
-        document.getElementById('stat-muassasalar').textContent = fmt(data.muassasalar);
-      }catch(err){
-        console.error('Failed to load stats:', err);
-      }
-    }
-    document.addEventListener('DOMContentLoaded', loadAndRenderStats);
-  </script>
+<script>
+  async function loadAndRenderStats() {
+    try {
+      const res = await fetch('/stats-json');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const fmt = n => typeof n === 'number' ? n.toLocaleString('uz') : n;
+      document.getElementById('stat-total').textContent       = fmt(data.total);
+      document.getElementById('stat-phd').textContent         = fmt(data.phd);
+      document.getElementById('stat-dsc').textContent         = fmt(data.dsc);
+      document.getElementById('stat-muassasalar').textContent = fmt(data.muassasalar);
+    } catch(err) { console.error('Failed to load stats:', err); }
+  }
+  document.addEventListener('DOMContentLoaded', loadAndRenderStats);
+</script>
 {% endblock %}

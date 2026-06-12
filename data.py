@@ -497,26 +497,6 @@ def filters():
     })
 
 
-@data_bp.route('/export')
-@login_required
-def export():
-    rows = query_dissertations(
-        request.args.get("search", "").strip(),
-        request.args.get("daraja", "").strip(),
-        request.args.get("muassasa", "").strip(),
-        request.args.get("ixtisoslik", "").strip(),
-        request.args.get("sort_by", "id"),
-        request.args.get("sort_dir", "desc")
-    )
-    buf = io.StringIO()
-    writer = csv.DictWriter(buf, fieldnames=["id", "Sana", "Daraja", "Olim", "Mavzu", "Ixtisoslik", "Muassasa", "Ilmiy_rahbar", "Link"])
-    writer.writeheader()
-    writer.writerows(rows)
-    data = buf.getvalue().encode("utf-8-sig")
-    return send_file(io.BytesIO(data), mimetype="text/csv", as_attachment=True,
-                     download_name="dissertatsiyalar_filtrlangan.csv")
-
-
 @data_bp.route('/export-xlsx')
 @login_required
 def export_xlsx():
