@@ -68,6 +68,24 @@
   .pg-btn.active { background:#4a9eff; border-color:#4a9eff; color:#fff; font-weight:600; cursor:default; }
   .pg-btn:disabled { opacity:0.35; cursor:default; }
   .pg-info { font-size:0.82rem; color:var(--oak-muted,#8892a4); margin-left:4px; }
+  /* search clear button */
+  #search-clear-btn {
+    border-left: none; background: transparent;
+    color: var(--oak-muted, #8892a4); transition: color 0.15s;
+  }
+  #search-clear-btn:hover { color: #e2e8f0; background: transparent; }
+  /* search spinner */
+  #search-spinner {
+    display: none; width: 14px; height: 14px;
+    border: 2px solid rgba(74,158,255,0.25); border-top-color: #4a9eff;
+    border-radius: 50%; animation: spin-s 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin-s { to { transform: rotate(360deg); } }
+  /* highlight match */
+  mark { background: rgba(74,158,255,0.3); color: #fff; border-radius: 3px; padding: 0 2px; }
+  /* search result info */
+  #result-info .search-term { color: #4a9eff; font-weight: 600; }
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
@@ -97,8 +115,12 @@
       <div class="col-12 col-md-5">
         <label class="form-label" for="search-input">Qidirish</label>
         <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa..." />
+          <span class="input-group-text">
+            <i class="bi bi-search" id="search-icon"></i>
+            <span id="search-spinner"></span>
+          </span>
+          <input id="search-input" type="text" class="form-control" placeholder="Olim, mavzu, muassasa..." autocomplete="off" />
+          <button id="search-clear-btn" class="btn btn-outline-secondary" type="button" title="Tozalash" style="display:none;">✕</button>
         </div>
       </div>
       <div class="col-12 col-sm-4 col-md-2">
@@ -121,7 +143,7 @@
 
   <div class="table-panel">
     <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-      <div class="result-count">Topildi: <strong id="result-count">—</strong> ta natija</div>
+      <div id="result-info" class="result-count">Topildi: <strong>—</strong> ta natija</div>
       <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
         <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></span>
         <div class="col-toggle-wrap">
@@ -169,16 +191,15 @@
   let currentRecords = [];
   let currentFilters = { search: '', daraja: '', muassasa: '', ixtisoslik: '' };
   const tableBody = document.getElementById('table-body');
-  const resultCount = document.getElementById('result-count');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
   function escHtml(value) {
     return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   function highlight(text, term) {
-    if (!term) return escHtml(text);
-    const escaped = term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
-    return escHtml(text).replace(new RegExp('('+escaped+')','ig'), '<span class="search-highlight">$1</span>');
+    if (!term || term.length < 2) return escHtml(text);
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escHtml(text).replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
   }
   function renderSortHeaders() {
     sortHeaders.forEach(th => {
@@ -204,6 +225,8 @@
     document.getElementById('filter-daraja').value = currentFilters.daraja;
     document.getElementById('filter-muassasa').value = currentFilters.muassasa;
     document.getElementById('filter-ixtisoslik').value = currentFilters.ixtisoslik;
+    const cb = document.getElementById('search-clear-btn');
+    if (cb) cb.style.display = currentFilters.search ? '' : 'none';
   }
   function fmtSana(s) {
     if (!s) return '—';
@@ -293,11 +316,19 @@
     });
   }
   function renderInfo(page, total) {
-    resultCount.textContent = total.toLocaleString('uz');
+    const term = currentFilters.search.trim();
     const start = total ? (page - 1) * PER_PAGE + 1 : 0;
     const end = Math.min(page * PER_PAGE, total);
     const info = total ? `${start}–${end} / ${total.toLocaleString('uz')} ta` : '';
     document.getElementById('top-pagination-info').textContent = info;
+    const infoEl = document.getElementById('result-info');
+    if (!infoEl) return;
+    const n = `<strong>${total.toLocaleString('uz')}</strong>`;
+    if (term.length >= 2) {
+      infoEl.innerHTML = `${n} ta natija topildi: <span class="search-term">"${escHtml(term)}"</span>`;
+    } else {
+      infoEl.innerHTML = `Topildi: ${n} ta natija`;
+    }
   }
   function renderPagination(page, total) {
     const bar = document.getElementById('pagination-bar');
@@ -349,10 +380,18 @@
       `<tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:${w*30+10}%"></div></td></tr>`
     ).join('');
   }
+  function _searchSpinner(on) {
+    const icon = document.getElementById('search-icon');
+    const spinner = document.getElementById('search-spinner');
+    if (icon) icon.style.display = on ? 'none' : '';
+    if (spinner) spinner.style.display = on ? 'inline-block' : 'none';
+  }
+
   async function updateData(reset=false) {
     if (reset) currentPage = 1;
     showSkeleton();
     renderSortHeaders();
+    _searchSpinner(true);
     const params = new URLSearchParams({
       search: currentFilters.search,
       daraja: currentFilters.daraja,
@@ -373,6 +412,8 @@
       renderPagination(data.page, data.total);
     } catch (err) {
       tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+    } finally {
+      _searchSpinner(false);
     }
   }
   // Scroll position memory
@@ -390,19 +431,40 @@
       if (saved) window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' });
     });
   })();
-  let filterTimer;
-  ['search-input','filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => {
-    document.getElementById(id)?.addEventListener(id === 'search-input' ? 'input' : 'change', function() {
-      const value = this.value.trim();
-      currentFilters[id.replace('filter-','')] = value;
-      if (id === 'search-input') {
-        clearTimeout(filterTimer);
-        filterTimer = setTimeout(() => updateData(true), 300);
-      } else { updateData(true); }
+  let searchTimeout;
+  const searchInput = document.getElementById('search-input');
+  const clearBtn = document.getElementById('search-clear-btn');
+
+  searchInput?.addEventListener('input', function() {
+    const val = this.value;
+    clearBtn.style.display = val.length ? '' : 'none';
+    currentFilters.search = val.trim();
+    clearTimeout(searchTimeout);
+    if (val.length === 0 || val.length >= 2) {
+      searchTimeout = setTimeout(() => { currentPage = 1; updateData(); }, 300);
+    }
+  });
+
+  clearBtn?.addEventListener('click', function() {
+    searchInput.value = '';
+    clearBtn.style.display = 'none';
+    currentFilters.search = '';
+    currentPage = 1;
+    updateData();
+    searchInput.focus();
+  });
+
+  ['filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', function() {
+      currentFilters[id.replace('filter-','')] = this.value.trim();
+      updateData(true);
     });
   });
+
   document.getElementById('btn-reset')?.addEventListener('click', function() {
-    ['search-input','filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => document.getElementById(id).value = '');
+    searchInput.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    ['filter-daraja','filter-muassasa','filter-ixtisoslik'].forEach(id => document.getElementById(id).value = '');
     currentFilters = {search:'', daraja:'', muassasa:'', ixtisoslik:''};
     updateData(true);
   });
