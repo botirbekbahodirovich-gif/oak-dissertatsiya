@@ -104,11 +104,11 @@
         <thead><tr>
           <th style="width:36px">#</th>
           <th data-sort="Sana" style="width:80px">Sana</th>
-          <th data-sort="Olim" style="width:130px">Olim</th>
+          <th data-sort="Olim" style="width:160px">Olim</th>
           <th data-sort="Mavzu">Mavzu</th>
           <th data-sort="Daraja" style="width:60px">Daraja</th>
           <th data-sort="Ixtisoslik" class="col-ixtisoslik" style="width:80px">Ixtisoslik</th>
-          <th data-sort="Ilmiy_rahbar" style="width:130px">Ilmiy rahbar</th>
+          <th data-sort="Ilmiy_rahbar" style="width:160px">Ilmiy rahbar</th>
         </tr></thead>
         <tbody id="table-body">
           <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
@@ -182,14 +182,14 @@
     const colors = ['','','#4ade80','#86efac','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c'];
     return n >= 10 ? '#991b1b' : (colors[n] || '');
   }
-  function supervisorBadge(name, count) {
+  function supervisorBadge(name, nameShortArg, count) {
     if (!name) return '—';
-    const nameShort = name.length > 28 ? escHtml(name.slice(0, 27)) + '…' : escHtml(name);
+    const display = escHtml(nameShortArg || name);
     const color = getBadgeColor(count);
     const badge = color && count > 1
       ? `<span style="display:inline-block;min-width:20px;height:20px;border-radius:10px;text-align:center;font-size:11px;font-weight:600;color:#fff;padding:0 5px;margin-left:6px;vertical-align:middle;line-height:20px;background:${color}">${count}</span>`
       : '';
-    return `<a href="/supervisor/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="${escHtml(name)}">${nameShort}</a>${badge}`;
+    return `<a href="/supervisor/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="Bu rahbar boshqargan dissertatsiyalar">${display}</a>${badge}`;
   }
   function ixtisoslikShifr(val) {
     if (!val) return '—';
@@ -229,7 +229,7 @@
           <td class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
           <td style="cursor:default;">${darajaSpan}</td>
           <td class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
-          <td class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}</td>
+          <td class="cell-rahbar">${supervisorBadge(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
           <td colspan="7">

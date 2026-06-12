@@ -39,17 +39,12 @@ def get_connection():
 
 
 def clean_olim_name(name: str) -> str:
-    """Shorten 'Aliyev Jasur Hamidovich, iqtisodiyot...' → 'Aliyev Jasur H.'"""
+    """'Алиев Жасур Ҳамидович, ...' → 'Алиев Жасур' (first 2 words only)"""
     if not name:
         return ''
-    parts = name.split(',')
-    clean = ' '.join(parts[0].split())
+    clean = ' '.join(name.split(',')[0].split())
     words = clean.split()
-    if len(words) >= 3:
-        return f"{words[0]} {words[1]} {words[2][0]}."
-    elif len(words) == 2:
-        return f"{words[0]} {words[1]}"
-    return clean
+    return f"{words[0]} {words[1]}" if len(words) >= 2 else clean
 
 
 def normalize_row(row):
@@ -71,6 +66,7 @@ def normalize_row(row):
         "Ixtisoslik": str(row.get("Ixtisoslik") or "").strip(),
         "Muassasa": str(row.get("Muassasa") or "").strip(),
         "Ilmiy_rahbar": ' '.join(str(row.get("Ilmiy_rahbar") or "").split()),
+        "Ilmiy_rahbar_short": clean_olim_name(' '.join(str(row.get("Ilmiy_rahbar") or "").split())),
         "Link": link,
         "supervisor_count": int(row.get("supervisor_count") or 1),
     }
