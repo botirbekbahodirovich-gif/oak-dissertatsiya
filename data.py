@@ -43,7 +43,7 @@ def clean_olim_name(name: str) -> str:
     if not name:
         return ''
     parts = name.split(',')
-    clean = parts[0].strip()
+    clean = ' '.join(parts[0].split())
     words = clean.split()
     if len(words) >= 3:
         return f"{words[0]} {words[1]} {words[2][0]}."
@@ -70,7 +70,7 @@ def normalize_row(row):
         "Mavzu": str(row.get("Mavzu") or "").strip(),
         "Ixtisoslik": str(row.get("Ixtisoslik") or "").strip(),
         "Muassasa": str(row.get("Muassasa") or "").strip(),
-        "Ilmiy_rahbar": str(row.get("Ilmiy_rahbar") or "").strip(),
+        "Ilmiy_rahbar": ' '.join(str(row.get("Ilmiy_rahbar") or "").split()),
         "Link": link,
         "supervisor_count": int(row.get("supervisor_count") or 1),
     }
