@@ -273,30 +273,33 @@ def main():
     print("Oxirgi oak_id: " + str(last_id))
     print("Sana: " + datetime.now().isoformat())
 
-    new_count   = 0
-    max_id_seen = last_id
+    new_count    = 0
+    pages_checked = 0
+    max_id_seen  = last_id
 
     for page_num in range(1, MAX_PAGES + 1):
         url  = f"{BASE_URL}?page={page_num}" if page_num > 1 else BASE_URL
         print("Sahifa " + str(page_num) + " tekshirilmoqda...")
         html = fetch(url)
         if html is None:
+            pages_checked += 1
             continue
 
         items = parse_list_page(html)
+        pages_checked += 1
         if not items:
+            print("  Sahifada e'lon topilmadi, to'xtatildi.")
             break
 
         page_ids = [it["id"] for it in items]
         page_max = max(page_ids)
-        page_min = min(page_ids)
-
         if page_max > max_id_seen:
             max_id_seen = page_max
 
-        stop_after = False
-        if last_id > 0 and page_min <= last_id:
-            stop_after = True
+        # Stop when every link on this page is already in the DB
+        if last_id > 0 and all(it["id"] <= last_id for it in items):
+            print("  Barcha e'lonlar allaqachon bazada, to'xtatildi.")
+            break
 
         for item in items:
             if item["id"] <= last_id:
@@ -327,14 +330,11 @@ def main():
             except Exception as e:
                 print("  ! Xato " + str(item["id"]) + ": " + str(e))
 
-        if stop_after:
-            print("  Eski e'lonlarga yetildi, to'xtatildi.")
-            break
-
         time.sleep(DELAY)
 
     conn.close()
     print("=" * 50)
+    print("Tekshirilgan sahifalar: " + str(pages_checked))
     print("Yangi qo'shildi: " + str(new_count))
     print("Oxirgi ko'rilgan ID: " + str(max_id_seen))
 
