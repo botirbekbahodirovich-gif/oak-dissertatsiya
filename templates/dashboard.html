@@ -225,6 +225,10 @@
     </div>
     <!-- Search summary card -->
     <div id="search-summary" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;font-size:13px;"></div>
+    <div id="opponent-panel" style="display:none;margin-top:10px;">
+      <div style="font-size:13px;font-weight:600;color:#4a9eff;margin-bottom:6px;">📋 Opponent sifatida qatnashgan himoyalar</div>
+      <div id="opponent-list" style="max-height:320px;overflow-y:auto;"></div>
+    </div>
   </div>
 
   <div class="table-panel">
@@ -590,11 +594,54 @@
       html += `<div><span style="color:#4a9eff;font-weight:600;">👨‍🏫 Ilmiy rahbar:</span><br><span style="color:#e2e8f0;">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
     }
     if (data.opponent_count > 0) {
-      html += `<div><span style="color:#4a9eff;font-weight:600;">📋 Opponent:</span><br><span style="color:#e2e8f0;">${data.opponent_count.toLocaleString('uz')} ta himoyada ishtirok etgan</span></div>`;
+      html += `<div><span style="color:#4a9eff;font-weight:600;">📋 Opponent:</span><br>` +
+        `<button onclick="showOpponentDissertations()" ` +
+        `style="background:none;border:none;color:#4a9eff;cursor:pointer;text-decoration:underline;font-size:13px;padding:0;">` +
+        `${data.opponent_count.toLocaleString('uz')} ta himoyada ishtirok etgan` +
+        `</button></div>`;
     }
     html += '</div>';
     el.innerHTML = html;
     el.style.display = 'block';
+  }
+
+  function showOpponentDissertations() {
+    const panel = document.getElementById('opponent-panel');
+    const list  = document.getElementById('opponent-list');
+    const term  = document.getElementById('search-input')?.value?.trim() || '';
+    if (!term || !panel || !list) return;
+    if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
+    list.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px 0;">Yuklanmoqda…</div>';
+    panel.style.display = 'block';
+    fetch('/search-as-opponent?search=' + encodeURIComponent(term))
+      .then(r => r.json())
+      .then(data => {
+        const rows = data.dissertations || [];
+        if (!rows.length) { list.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px 0;">Ma\'lumot topilmadi</div>'; return; }
+        let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        html += '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);color:#94a3b8;">' +
+          '<th style="padding:4px 8px;text-align:left;">Sana</th>' +
+          '<th style="padding:4px 8px;text-align:left;">Olim</th>' +
+          '<th style="padding:4px 8px;text-align:left;">Mavzu</th>' +
+          '<th style="padding:4px 8px;text-align:left;">Daraja</th>' +
+          '</tr></thead><tbody>';
+        rows.forEach(r => {
+          const olimName = escHtml(r.olim || '');
+          const olimLink = r.olim ? `<a href="/olim/${encodeURIComponent(r.olim)}" style="color:#4a9eff;text-decoration:none;">${olimName}</a>` : '—';
+          html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">` +
+            `<td style="padding:4px 8px;white-space:nowrap;color:#94a3b8;">${escHtml(r.sana||'')}</td>` +
+            `<td style="padding:4px 8px;">${olimLink}</td>` +
+            `<td style="padding:4px 8px;color:#e2e8f0;">${escHtml((r.mavzu||'').substring(0,80))}${(r.mavzu||'').length>80?'…':''}</td>` +
+            `<td style="padding:4px 8px;"><span style="background:${r.daraja==='PhD'?'rgba(22,163,74,0.18)':'rgba(255,111,0,0.18)'};color:${r.daraja==='PhD'?'#16a34a':'#ff6f00'};padding:1px 7px;border-radius:4px;">${escHtml(r.daraja||'')}</span></td>` +
+            `</tr>`;
+        });
+        html += '</tbody></table>';
+        if (rows.length < data.total) {
+          html += `<div style="font-size:11px;color:#94a3b8;padding:6px 8px;">Jami: ${data.total} ta, ${rows.length} ta ko'rsatilmoqda</div>`;
+        }
+        list.innerHTML = html;
+      })
+      .catch(() => { list.innerHTML = '<div style="color:#f87171;font-size:13px;padding:8px 0;">Xatolik yuz berdi</div>'; });
   }
 
   let statsTimeout;
@@ -680,6 +727,7 @@
     if (!val.trim()) {
       document.getElementById('search-stats').style.display = 'none';
       document.getElementById('search-summary').style.display = 'none';
+      document.getElementById('opponent-panel').style.display = 'none';
     }
     clearTimeout(searchTimeout);
     if (val.length === 0 || val.length >= 2) {
@@ -695,6 +743,7 @@
     currentFilters.search = '';
     document.getElementById('search-stats').style.display = 'none';
     document.getElementById('search-summary').style.display = 'none';
+    document.getElementById('opponent-panel').style.display = 'none';
     currentPage = 1; updateData(); searchInput.focus();
   });
 
@@ -703,6 +752,7 @@
     searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
     document.getElementById('search-stats').style.display = 'none';
     document.getElementById('search-summary').style.display = 'none';
+    document.getElementById('opponent-panel').style.display = 'none';
     _setDaraja('');
     customSelects.forEach(s => s.reset());
     currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };

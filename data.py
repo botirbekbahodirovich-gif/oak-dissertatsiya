@@ -616,6 +616,43 @@ def search_summary():
     })
 
 
+@data_bp.route('/search-as-opponent')
+@login_required
+def search_as_opponent():
+    search = request.args.get('search', '').strip()
+    if not search:
+        return jsonify({'dissertations': [], 'total': 0})
+    sl = f'%{search}%'
+    sc = f'%{latin_to_cyrillic(search)}%'
+    try:
+        rows = _query_rows(
+            "SELECT * FROM dissertations WHERE "
+            "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
+            "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
+            "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s "
+            "ORDER BY sana DESC",
+            (sl, sc, sl, sc, sl, sc)
+        )
+    except Exception:
+        return jsonify({'dissertations': [], 'total': 0})
+    result = [
+        {
+            'id':           r.get('id'),
+            'olim':         r.get('Olim', ''),
+            'mavzu':        r.get('Mavzu', ''),
+            'daraja':       r.get('Daraja', ''),
+            'sana':         r.get('Sana', ''),
+            'muassasa':     r.get('Muassasa', ''),
+            'ilmiy_rahbar': r.get('Ilmiy_rahbar', ''),
+            'opponent_1':   r.get('Opponent_1', ''),
+            'opponent_2':   r.get('Opponent_2', ''),
+            'opponent_3':   r.get('Opponent_3', ''),
+        }
+        for r in rows
+    ]
+    return jsonify({'dissertations': result, 'total': len(result)})
+
+
 @data_bp.route('/olim/<path:name>')
 @login_required
 def olim_profile(name):
