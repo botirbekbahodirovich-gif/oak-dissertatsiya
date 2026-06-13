@@ -697,17 +697,68 @@ def search_as_opponent():
     return jsonify({'dissertations': result, 'total': len(result)})
 
 
+_FULL_DISS_COLUMNS = '''
+    id,
+    sana AS "Sana", daraja AS "Daraja", olim AS "Olim",
+    mavzu AS "Mavzu", ixtisoslik AS "Ixtisoslik", muassasa AS "Muassasa",
+    ilmiy_rahbar AS "Ilmiy_rahbar", link AS "Link", oak_id AS "Oak_id",
+    COALESCE(ixtisoslik_nomi, '') AS "Ixtisoslik_nomi",
+    COALESCE(mavzu_raqami, '') AS "Mavzu_raqami",
+    COALESCE(ilmiy_rahbar_daraja, '') AS "Ilmiy_rahbar_daraja",
+    COALESCE(ilmiy_kengash, '') AS "Ilmiy_kengash",
+    COALESCE(ilmiy_kengash_raqami, '') AS "Ilmiy_kengash_raqami",
+    COALESCE(opponent_1, '') AS "Opponent_1",
+    COALESCE(opponent_2, '') AS "Opponent_2",
+    COALESCE(opponent_3, '') AS "Opponent_3",
+    COALESCE(yetakchi_tashkilot, '') AS "Yetakchi_tashkilot",
+    COALESCE(fan_tarmoqi, '') AS "Fan_tarmoqi",
+    COALESCE(yonalish, '') AS "Yonalish",
+    COALESCE(photo_url, '') AS "photo_url"
+'''
+
+
+def _query_full_diss(where_sql, params, order='sana DESC'):
+    """Return dissertation rows with all detail fields (no normalize_row stripping)."""
+    sql = f"SELECT {_FULL_DISS_COLUMNS} FROM dissertations WHERE {where_sql} ORDER BY {order}"
+    conn = get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+            cur.execute(sql, tuple(params or ()))
+            out = []
+            for row in cur.fetchall():
+                d = {k: (str(v).strip() if v is not None else '') for k, v in row.items()}
+                d['id'] = row.get('id')
+                d['Olim_short'] = clean_olim_name(d.get('Olim', ''))
+                out.append(d)
+            return out
+    finally:
+        conn.close()
+
+
 @data_bp.route('/olim/<path:name>')
 @login_required
 def olim_profile(name):
-    rows = _query_rows(
-        "SELECT * FROM dissertations WHERE TRIM(olim) ILIKE %s ORDER BY sana ASC",
-        (f'%{name.strip()}%',)
-    )
-    if not rows:
+    term = name.strip()
+    like = f'%{term}%'
+    own = _query_full_diss('TRIM(olim) ILIKE %s', (like,), order='sana DESC')
+    if not own:
         abort(404)
-    return render_template('olim_profile.html', olim_name=name, dissertations=rows,
-                           stats=_summary_stats(rows))
+    as_supervisor = _query_full_diss('TRIM(COALESCE(ilmiy_rahbar,\'\')) ILIKE %s', (like,), order='sana DESC')
+    as_opponent = _query_full_diss(
+        "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s "
+        "OR TRIM(COALESCE(opponent_3,'')) ILIKE %s",
+        (like, like, like), order='sana DESC')
+    fields = {d.get('Ixtisoslik', '').strip() for d in own if d.get('Ixtisoslik', '').strip()}
+    stats = {
+        'total': len(own),
+        'phd': sum(1 for d in own if str(d.get('Daraja', '')).strip().upper() == 'PHD'),
+        'dsc': sum(1 for d in own if str(d.get('Daraja', '')).strip().upper() == 'DSC'),
+        'fields': len(fields),
+        'supervisor_count': len(as_supervisor),
+        'opponent_count': len(as_opponent),
+    }
+    return render_template('olim_profile.html', olim_name=term, dissertations=own,
+                           as_supervisor=as_supervisor, as_opponent=as_opponent, stats=stats)
 
 
 def _summary_stats(rows):

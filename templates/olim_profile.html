@@ -11,90 +11,137 @@
 {% block title %}Olim — {{ olim_name }}{% endblock %}
 {% block extra_head %}
 <style>
-  .olim-hero { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
-  .olim-avatar {
-    width:56px; height:56px; border-radius:50%;
-    background:linear-gradient(135deg,#4a9eff,#7c5cfc);
-    display:grid; place-items:center; font-size:1.4rem; color:#fff; flex-shrink:0;
-  }
-  .olim-meta h1 { margin:0; font-size:1.2rem; font-weight:700; }
-  .olim-meta p  { margin:0; color:var(--oak-muted); font-size:0.88rem; }
-  .diss-card {
-    background:var(--oak-surface-2,#22262f);
-    border:1px solid var(--oak-border);
-    border-radius:14px; padding:1.1rem 1.25rem;
-    transition:border-color 0.2s;
-  }
+  .olim-hero { display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; }
+  .olim-meta h1 { margin:0 0 4px; font-size:1.5rem; font-weight:800; }
+  .hero-badges { display:flex; gap:0.5rem; flex-wrap:wrap; margin:6px 0; }
+  .hero-stats { color:var(--oak-muted); font-size:0.9rem; display:flex; gap:0.4rem 1rem; flex-wrap:wrap; }
+  .hero-stats b { color:#e2e8f0; }
+  .badge-phd-pill { background:#16a34a; color:#fff; padding:3px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; white-space:nowrap; }
+  .badge-dsc-pill { background:#ff6f00; color:#fff; padding:3px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; white-space:nowrap; }
+  .section-title { font-size:1.05rem; font-weight:700; margin:1.75rem 0 0.9rem; display:flex; align-items:center; gap:0.5rem; }
+  .section-title .count-pill { background:rgba(74,158,255,0.14); color:#4a9eff; border-radius:20px; padding:2px 12px; font-size:0.8rem; font-weight:700; }
+
+  .diss-card { background:var(--oak-surface-2,#22262f); border:1px solid var(--oak-border); border-left-width:4px; border-radius:14px; padding:1.1rem 1.25rem; transition:border-color 0.2s; }
+  .diss-card.is-phd { border-left-color:#16a34a; }
+  .diss-card.is-dsc { border-left-color:#ff6f00; }
   .diss-card:hover { border-color:rgba(74,158,255,0.3); }
   .diss-card-top { display:flex; align-items:flex-start; gap:0.75rem; flex-wrap:wrap; margin-bottom:0.55rem; }
   .diss-mavzu { font-size:0.97rem; font-weight:600; color:#e2e8f0; line-height:1.45; flex:1; min-width:200px; }
   .diss-meta-row { display:flex; flex-wrap:wrap; gap:0.4rem 1.2rem; font-size:0.82rem; color:var(--oak-muted); margin-top:0.5rem; }
-  .diss-meta-row span { display:flex; align-items:center; gap:0.3rem; }
+  .diss-meta-row span { display:flex; align-items:flex-start; gap:0.3rem; }
+  .diss-meta-row a { color:#4a9eff; }
   .diss-actions { margin-top:0.75rem; display:flex; gap:0.4rem; flex-wrap:wrap; }
-  .badge-phd-pill { background:#16a34a; color:#fff; padding:2px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
-  .badge-dsc-pill { background:#ff6f00; color:#fff; padding:2px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+
+  .role-item { display:flex; align-items:flex-start; gap:0.6rem; padding:0.7rem 0.9rem; background:var(--oak-surface-2,#22262f); border:1px solid var(--oak-border); border-radius:11px; }
+  .role-item .ri-daraja { flex-shrink:0; }
+  .role-item .ri-main { flex:1; min-width:0; }
+  .role-item .ri-mavzu { font-size:0.88rem; color:#e2e8f0; line-height:1.4; }
+  .role-item .ri-sub { font-size:0.78rem; color:var(--oak-muted); margin-top:3px; display:flex; gap:0.4rem 1rem; flex-wrap:wrap; }
+  .role-item .ri-sub a { color:#4a9eff; }
+  .mini-phd { color:#34d399; font-weight:700; font-size:0.74rem; }
+  .mini-dsc { color:#a78bfa; font-weight:700; font-size:0.74rem; }
 </style>
 {% endblock %}
 {% block content %}
 <div class="page-heading">
   <div class="olim-hero">
-    {% set photo = dissertations[0].get('photo_url') if dissertations and dissertations[0].get is defined else None %}
-  {{ avatar(photo, olim_name, 56) }}
+    {% set photo = dissertations[0].photo_url if dissertations else None %}
+    {{ avatar(photo, olim_name, 72) }}
     <div class="olim-meta">
       <h1>{{ olim_name }}</h1>
-      <p>
-        {{ stats.total }} ta ilmiy ish
-        {% if stats.phd %}&nbsp;·&nbsp;<span style="color:#34d399;">{{ stats.phd }} PhD</span>{% endif %}
-        {% if stats.dsc %}&nbsp;·&nbsp;<span style="color:#a78bfa;">{{ stats.dsc }} DSc</span>{% endif %}
-      </p>
+      <div class="hero-badges">
+        {% if stats.phd %}<span class="badge-phd-pill">{{ stats.phd }} PhD</span>{% endif %}
+        {% if stats.dsc %}<span class="badge-dsc-pill">{{ stats.dsc }} DSc</span>{% endif %}
+      </div>
+      <div class="hero-stats">
+        <span><b>{{ stats.total }}</b>&nbsp;ta himoya</span>
+        <span><b>{{ stats.fields }}</b>&nbsp;ta sohada faol</span>
+        <span><b>{{ stats.opponent_count }}</b>&nbsp;marta opponent</span>
+        {% if stats.supervisor_count %}<span><b>{{ stats.supervisor_count }}</b>&nbsp;ta shogird</span>{% endif %}
+      </div>
     </div>
   </div>
   <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left me-1"></i>Ortga</a>
 </div>
 
+<!-- ── Dissertations ── -->
+<div class="section-title"><i class="bi bi-journal-text" style="color:#4a9eff;"></i>Ilmiy ishlar <span class="count-pill">{{ stats.total }}</span></div>
 <div class="d-flex flex-column gap-3">
   {% for d in dissertations %}
-  <div class="diss-card">
+  {% set dar = (d.Daraja or '')|upper %}
+  <div class="diss-card {% if dar == 'PHD' %}is-phd{% elif dar == 'DSC' %}is-dsc{% endif %}">
     <div class="diss-card-top">
-      {% set dar = (d.Daraja or '')|upper %}
-      {% if dar == 'PHD' %}
-        <span class="badge-phd-pill">PhD</span>
-      {% elif dar == 'DSC' %}
-        <span class="badge-dsc-pill">DSc</span>
-      {% else %}
-        <span style="font-size:0.78rem;color:var(--oak-muted);">{{ d.Daraja or '—' }}</span>
-      {% endif %}
+      {% if dar == 'PHD' %}<span class="badge-phd-pill">PhD</span>
+      {% elif dar == 'DSC' %}<span class="badge-dsc-pill">DSc</span>
+      {% else %}<span style="font-size:0.78rem;color:var(--oak-muted);">{{ d.Daraja or '—' }}</span>{% endif %}
       <span class="diss-mavzu">{{ d.Mavzu or '—' }}</span>
     </div>
     <div class="diss-meta-row">
-      {% if d.Sana %}
-      <span><i class="bi bi-calendar3"></i>{{ d.Sana }}</span>
-      {% endif %}
-      {% if d.Muassasa %}
-      <span><i class="bi bi-building"></i>
-        <a href="/university/{{ d.Muassasa | urlencode }}" style="color:inherit;">{{ d.Muassasa }}</a>
-      </span>
-      {% endif %}
-      {% if d.Ixtisoslik %}
-      <span><i class="bi bi-tag"></i>
-        <a href="/specialization/{{ d.Ixtisoslik | urlencode }}" style="color:inherit;">{{ d.Ixtisoslik }}</a>
-      </span>
-      {% endif %}
-      {% if d.Ilmiy_rahbar %}
-      <span><i class="bi bi-person-badge"></i>
-        <a href="/supervisor/{{ d.Ilmiy_rahbar | urlencode }}" style="color:inherit;">{{ d.Ilmiy_rahbar }}</a>
-        <span id="sup-badge-{{ loop.index }}"></span>
-        <script>document.getElementById('sup-badge-{{ loop.index }}').innerHTML = supervisorBadge({{ d.Ilmiy_rahbar|tojson }}, {{ d.supervisor_count|default(1)|int }});</script>
-      </span>
-      {% endif %}
+      {% if d.Sana %}<span><i class="bi bi-calendar3"></i>{{ d.Sana }}</span>{% endif %}
+      {% if d.Ixtisoslik %}<span><i class="bi bi-tag"></i><a href="/specialization/{{ d.Ixtisoslik | urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
+      {% if d.Muassasa %}<span><i class="bi bi-building"></i><a href="/university/{{ d.Muassasa | urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+      {% if d.Ilmiy_kengash or d.Ilmiy_kengash_raqami %}<span><i class="bi bi-bank"></i>{{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
+      {% if d.Yetakchi_tashkilot %}<span><i class="bi bi-bank2"></i>{{ d.Yetakchi_tashkilot }}</span>{% endif %}
     </div>
+    {% set opps = [] %}
+    {% if d.Opponent_1 %}{% set _ = opps.append(d.Opponent_1) %}{% endif %}
+    {% if d.Opponent_2 %}{% set _ = opps.append(d.Opponent_2) %}{% endif %}
+    {% if d.Opponent_3 %}{% set _ = opps.append(d.Opponent_3) %}{% endif %}
+    {% if opps %}
+    <div class="diss-meta-row" style="margin-top:0.4rem;">
+      <span style="align-items:flex-start;"><i class="bi bi-people"></i>Opponentlar: {{ opps | join('; ') }}</span>
+    </div>
+    {% endif %}
     <div class="diss-actions">
       <a href="/dissertation/{{ d.id }}" class="btn btn-sm btn-action"><i class="bi bi-file-text me-1"></i>Batafsil</a>
-      {% if d.Link %}
-      <a href="{{ d.Link }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish</a>
-      {% endif %}
+      {% if d.Link %}<a href="{{ d.Link }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish</a>{% endif %}
     </div>
   </div>
   {% endfor %}
 </div>
+
+<!-- ── As supervisor ── -->
+{% if as_supervisor %}
+<div class="section-title"><i class="bi bi-person-badge" style="color:#34d399;"></i>{{ as_supervisor|length }} ta shogird chiqargan</div>
+<div class="d-flex flex-column gap-2">
+  {% for d in as_supervisor %}
+  <div class="role-item">
+    <span class="ri-daraja">
+      {% set rd = (d.Daraja or '')|upper %}
+      {% if rd == 'PHD' %}<span class="mini-phd">PhD</span>{% elif rd == 'DSC' %}<span class="mini-dsc">DSc</span>{% else %}<span style="color:var(--oak-muted);font-size:0.74rem;">—</span>{% endif %}
+    </span>
+    <div class="ri-main">
+      <div class="ri-mavzu"><a href="/dissertation/{{ d.id }}" style="color:inherit;">{{ d.Mavzu or '—' }}</a></div>
+      <div class="ri-sub">
+        {% if d.Olim %}<a href="/olim/{{ d.Olim | urlencode }}"><i class="bi bi-person"></i> {{ d.Olim_short or d.Olim }}</a>{% endif %}
+        {% if d.Sana %}<span><i class="bi bi-calendar3"></i> {{ d.Sana }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── As opponent ── -->
+{% if as_opponent %}
+<div class="section-title"><i class="bi bi-people" style="color:#fb923c;"></i>{{ as_opponent|length }} ta himoyada opponent bo'lgan</div>
+<div class="d-flex flex-column gap-2">
+  {% for d in as_opponent %}
+  <div class="role-item">
+    <span class="ri-daraja">
+      {% set rd = (d.Daraja or '')|upper %}
+      {% if rd == 'PHD' %}<span class="mini-phd">PhD</span>{% elif rd == 'DSC' %}<span class="mini-dsc">DSc</span>{% else %}<span style="color:var(--oak-muted);font-size:0.74rem;">—</span>{% endif %}
+    </span>
+    <div class="ri-main">
+      <div class="ri-mavzu"><a href="/dissertation/{{ d.id }}" style="color:inherit;">{{ d.Mavzu or '—' }}</a></div>
+      <div class="ri-sub">
+        {% if d.Olim %}<a href="/olim/{{ d.Olim | urlencode }}"><i class="bi bi-person"></i> {{ d.Olim_short or d.Olim }}</a>{% endif %}
+        {% if d.Sana %}<span><i class="bi bi-calendar3"></i> {{ d.Sana }}</span>{% endif %}
+        {% if d.Muassasa %}<a href="/university/{{ d.Muassasa | urlencode }}"><i class="bi bi-building"></i> {{ d.Muassasa }}</a>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% endblock %}
