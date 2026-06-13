@@ -157,6 +157,22 @@
   .option-list li.selected { background: rgba(74,158,255,0.2); color: #4a9eff; }
   .option-list li.no-match { color: var(--oak-muted); font-style: italic; cursor: default; padding: 8px 12px; }
 
+  /* scope buttons */
+  .scope-btn {
+    padding: 4px 14px; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: transparent; color: #94a3b8;
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .scope-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
+  .scope-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
+
+  /* skeleton pulse */
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.8; }
+  }
+
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
@@ -182,6 +198,15 @@
   </div>
 
   <div class="content-card mb-3 filter-panel">
+    <!-- Scope buttons -->
+    <div class="search-scope" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
+      <span style="color:#94a3b8;font-size:12px;">Qidiruv:</span>
+      <button class="scope-btn active" data-scope="all">Hammasi</button>
+      <button class="scope-btn" data-scope="olim">Olim</button>
+      <button class="scope-btn" data-scope="rahbar">Ilmiy rahbar</button>
+      <button class="scope-btn" data-scope="opponent">Opponent</button>
+      <button class="scope-btn" data-scope="mavzu">Mavzu</button>
+    </div>
     <!-- Search -->
     <div class="input-group mb-2">
       <span class="input-group-text">
@@ -284,6 +309,9 @@
   let currentTotal = 0;
   let currentRecords = [];
   let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
+  let currentScope = 'all';
+  let searchController = null;
+  let summaryController = null;
   const tableBody = document.getElementById('table-body');
   const sortHeaders = document.querySelectorAll('th[data-sort]');
 
@@ -346,15 +374,18 @@
         ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
         : '—';
       const termLower = term.toLowerCase();
-      const isOpponentMatch = term.length >= 2 && (
-        (r.Opponent_1 || '').toLowerCase().includes(termLower) ||
-        (r.Opponent_2 || '').toLowerCase().includes(termLower) ||
-        (r.Opponent_3 || '').toLowerCase().includes(termLower)
-      ) && !(r.Olim || '').toLowerCase().includes(termLower);
-      const opponentBadge = isOpponentMatch
-        ? `<span class="opponent-badge" style="display:inline-block;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;">opponent</span>`
-        : '';
       const mavzuFull = r.Mavzu || '';
+      const showOpponentBadge = term.length >= 2 &&
+        (currentScope === 'all' || currentScope === 'opponent') &&
+        (
+          (r.Opponent_1 || '').toLowerCase().includes(termLower) ||
+          (r.Opponent_2 || '').toLowerCase().includes(termLower) ||
+          (r.Opponent_3 || '').toLowerCase().includes(termLower)
+        ) &&
+        !(r.Olim || '').toLowerCase().includes(termLower);
+      const opponentBadge = showOpponentBadge
+        ? `<span style="display:inline-block;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;">opponent</span>`
+        : '';
       const supervisorCount = r.supervisor_count || 1;
       const shifr = ixtisoslikShifr(r.Ixtisoslik);
       const shiftLink = r.Ixtisoslik && shifr !== '—'
@@ -363,8 +394,8 @@
       rows.push(`<tr class="data-row" data-row-id="${rowId}">
           <td data-col-key="num" style="color:var(--oak-muted);font-size:0.78rem;">${startIndex + i + 1}</td>
           <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
-          <td data-col-key="olim" class="cell-olim">${olimLink}${opponentBadge}</td>
-          <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}</td>
+          <td data-col-key="olim" class="cell-olim">${olimLink}</td>
+          <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}${opponentBadge}</td>
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
           <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
@@ -567,9 +598,8 @@
   });
 
   function showSkeleton() {
-    tableBody.innerHTML = [1,2,3].map(() =>
-      `<tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>`
-    ).join('');
+    const cell = `<td><div style="height:14px;background:rgba(255,255,255,0.06);border-radius:4px;animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
+    tableBody.innerHTML = Array(8).fill(`<tr>${Array(7).fill(cell).join('')}</tr>`).join('');
   }
   function _searchSpinner(on) {
     const icon = document.getElementById('search-icon');
@@ -610,36 +640,37 @@
     el.style.display = 'block';
   }
 
-  let statsTimeout;
-  function fetchSearchStats(term) {
+  function hideSummary() {
     const bar = document.getElementById('search-stats');
     const sumEl = document.getElementById('search-summary');
-    if (!term || term.length < 2) {
-      if (bar) bar.style.display = 'none';
-      if (sumEl) sumEl.style.display = 'none';
-      return;
-    }
-    clearTimeout(statsTimeout);
-    statsTimeout = setTimeout(() => {
-      const q = encodeURIComponent(term);
-      fetch('/search-stats?search=' + q)
-        .then(r => r.json())
-        .then(d => {
-          document.getElementById('ss-total').textContent  = (d.total  || 0).toLocaleString('uz');
-          document.getElementById('ss-olim').textContent   = (d.olim   || 0).toLocaleString('uz');
-          document.getElementById('ss-mavzu').textContent  = (d.mavzu  || 0).toLocaleString('uz');
-          document.getElementById('ss-rahbar').textContent = (d.rahbar || 0).toLocaleString('uz');
-          if (bar) bar.style.display = '';
-        }).catch(() => {});
-      fetch('/search-summary?search=' + q)
-        .then(r => r.json())
-        .then(renderSummary)
-        .catch(() => {});
-    }, 350);
+    if (bar) bar.style.display = 'none';
+    if (sumEl) sumEl.style.display = 'none';
   }
 
-  async function updateData(reset=false) {
+  function fetchSearchStats(term) {
+    if (summaryController) summaryController.abort();
+    summaryController = new AbortController();
+    if (!term || term.length < 2) { hideSummary(); return; }
+    const q = encodeURIComponent(term);
+    const sig = summaryController.signal;
+    Promise.all([
+      fetch('/search-stats?search='   + q, { signal: sig }).then(r => r.json()),
+      fetch('/search-summary?search=' + q, { signal: sig }).then(r => r.json())
+    ]).then(([stats, summary]) => {
+      const bar = document.getElementById('search-stats');
+      document.getElementById('ss-total').textContent  = (stats.total  || 0).toLocaleString('uz');
+      document.getElementById('ss-olim').textContent   = (stats.olim   || 0).toLocaleString('uz');
+      document.getElementById('ss-mavzu').textContent  = (stats.mavzu  || 0).toLocaleString('uz');
+      document.getElementById('ss-rahbar').textContent = (stats.rahbar || 0).toLocaleString('uz');
+      if (bar) bar.style.display = '';
+      renderSummary(summary);
+    }).catch(e => { if (e.name !== 'AbortError') console.error(e); });
+  }
+
+  function updateData(reset=false) {
     if (reset) currentPage = 1;
+    if (searchController) searchController.abort();
+    searchController = new AbortController();
     showSkeleton();
     renderSortHeaders();
     _searchSpinner(true);
@@ -651,21 +682,24 @@
       page:       currentPage,
       per_page:   PER_PAGE,
       sort_by:    currentSort.key,
-      sort_dir:   currentSort.dir
+      sort_dir:   currentSort.dir,
+      scope:      currentScope
     });
-    try {
-      const res = await fetch('/data?' + params);
-      const data = await res.json();
-      currentTotal = data.total;
-      currentRecords = data.records;
-      renderRows(currentRecords, (data.page-1)*PER_PAGE);
-      renderInfo(data.page, data.total);
-      renderPagination(data.page, data.total);
-    } catch (err) {
-      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
-    } finally {
-      _searchSpinner(false);
-    }
+    fetch('/data?' + params, { signal: searchController.signal })
+      .then(r => r.json())
+      .then(data => {
+        currentTotal   = data.total;
+        currentRecords = data.records;
+        renderRows(currentRecords, (data.page - 1) * PER_PAGE);
+        renderInfo(data.page, data.total);
+        renderPagination(data.page, data.total);
+        _searchSpinner(false);
+      })
+      .catch(e => {
+        if (e.name === 'AbortError') return;
+        tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+        _searchSpinner(false);
+      });
   }
 
   // Scroll position memory
@@ -682,6 +716,17 @@
     });
   })();
 
+  // Scope buttons
+  document.querySelectorAll('.scope-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentScope = this.dataset.scope;
+      currentPage = 1;
+      updateData();
+    });
+  });
+
   // Search
   let searchTimeout;
   const searchInput = document.getElementById('search-input');
@@ -690,33 +735,30 @@
     const val = this.value;
     clearBtn.style.display = val.length ? '' : 'none';
     currentFilters.search = val.trim();
-    if (!val.trim()) {
-      document.getElementById('search-stats').style.display = 'none';
-      document.getElementById('search-summary').style.display = 'none';
-    }
+    if (!val.trim()) hideSummary();
     clearTimeout(searchTimeout);
     if (val.length === 0 || val.length >= 2) {
       searchTimeout = setTimeout(() => {
         currentPage = 1;
         updateData();
         fetchSearchStats(val.trim());
-      }, 300);
+      }, 400);
     }
   });
   clearBtn?.addEventListener('click', function() {
     searchInput.value = ''; clearBtn.style.display = 'none';
     currentFilters.search = '';
-    document.getElementById('search-stats').style.display = 'none';
-    document.getElementById('search-summary').style.display = 'none';
+    hideSummary();
     currentPage = 1; updateData(); searchInput.focus();
   });
 
   // Reset
   document.getElementById('btn-reset')?.addEventListener('click', function() {
     searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
-    document.getElementById('search-stats').style.display = 'none';
-    document.getElementById('search-summary').style.display = 'none';
+    hideSummary();
     _setDaraja('');
+    currentScope = 'all';
+    document.querySelectorAll('.scope-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === 'all'));
     customSelects.forEach(s => s.reset());
     currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
     updateData(true);

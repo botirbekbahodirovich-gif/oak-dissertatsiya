@@ -201,7 +201,7 @@ def latin_to_cyrillic(text):
 
 
 def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
-                         fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     search       = (search       or '').strip()
     daraja       = (daraja       or '').strip()
     muassasa     = (muassasa     or '').strip()
@@ -209,23 +209,48 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
     fan_tarmoqi  = (fan_tarmoqi  or '').strip()
     ilmiy_kengash= (ilmiy_kengash or '').strip()
     sana_yil     = (sana_yil     or '').strip()
+    scope        = (scope        or 'all').strip()
     clauses = []
     params  = []
-    if search:
+    if search and len(search) >= 2:
         sl = f"%{search}%"
         sc = f"%{latin_to_cyrillic(search)}%"
-        clauses.append(
-            "(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
-            "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-            "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
-            "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
-            "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
-            "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR "
-            "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
-            "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
-            "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
-        )
-        params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
+        if scope == 'olim':
+            clauses.append("(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s)")
+            params.extend([sl, sc])
+        elif scope == 'rahbar':
+            clauses.append("(TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s)")
+            params.extend([sl, sc])
+        elif scope == 'opponent':
+            clauses.append(
+                "(TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
+                "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
+                "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
+            )
+            params.extend([sl, sc, sl, sc, sl, sc])
+        elif scope == 'mavzu':
+            clauses.append(
+                "(TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+                "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
+                "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
+            )
+            params.extend([sl, sc, sl, sc, sl, sc])
+        else:  # all
+            clauses.append(
+                "(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
+                "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+                "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
+                "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
+                "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
+                "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR "
+                "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
+                "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
+                "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
+            )
+            params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
+    elif search:
+        # search < 2 chars — no-op (return nothing for very short terms)
+        clauses.append("FALSE")
     if daraja:
         clauses.append("UPPER(TRIM(daraja)) = UPPER(%s)")
         params.append(daraja)
@@ -274,9 +299,9 @@ def load_data():
 
 
 def count_dissertations(search, daraja, muassasa, ixtisoslik,
-                        fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     clause, params = _build_filter_clause(
-        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil)
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
     sql = 'SELECT COUNT(*) FROM dissertations' + clause
     return _query_scalar(sql, params) or 0
 
@@ -296,9 +321,9 @@ _COL_DEFAULT_DIR = {
 
 def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
                         page=None, per_page=None,
-                        fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     clause, params = _build_filter_clause(
-        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil)
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
     sort_col = _map_sort_column(sort_by)
     # Honour explicit direction; fall back to per-column default; ultimate default is desc (id DESC)
     if sort_dir and str(sort_dir).lower() in ('asc', 'desc'):
@@ -470,7 +495,7 @@ def _data_cache_key():
         f"data_{a.get('page',1)}_{a.get('per_page',50)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
         f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
-        f"_{a.get('sort_by','id')}_{a.get('sort_dir','desc')}"
+        f"_{a.get('sort_by','id')}_{a.get('sort_dir','desc')}_{a.get('scope','all')}"
     )
 
 
@@ -497,15 +522,18 @@ def data():
 
     sort_by  = a.get("sort_by",  "id")
     sort_dir = a.get("sort_dir", "desc")
+    scope    = a.get("scope",    "all").strip()
+    if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
+        scope = 'all'
     total = count_dissertations(search, daraja, muassasa, ixtisoslik,
-                                fan_tarmoqi, ilmiy_kengash, sana_yil)
+                                fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     rows = query_dissertations(
         search, daraja, muassasa, ixtisoslik,
         sort_by, sort_dir,
         page, per_page,
-        fan_tarmoqi, ilmiy_kengash, sana_yil
+        fan_tarmoqi, ilmiy_kengash, sana_yil, scope
     )
 
     return jsonify({
