@@ -137,6 +137,22 @@ def _run_startup_migrations():
                     coalesce(muassasa,'')
                 ))
             """)
+            # pg_trgm for fast ILIKE / LIKE search
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            trgm_indexes = [
+                ("idx_trgm_olim",     "LOWER(TRIM(olim))"),
+                ("idx_trgm_mavzu",    "LOWER(TRIM(mavzu))"),
+                ("idx_trgm_rahbar",   "LOWER(TRIM(ilmiy_rahbar))"),
+                ("idx_trgm_muassasa", "LOWER(TRIM(muassasa))"),
+                ("idx_trgm_opp1",     "LOWER(TRIM(COALESCE(opponent_1,'')))"),
+                ("idx_trgm_opp2",     "LOWER(TRIM(COALESCE(opponent_2,'')))"),
+                ("idx_trgm_opp3",     "LOWER(TRIM(COALESCE(opponent_3,'')))"),
+            ]
+            for idx_name, expr in trgm_indexes:
+                cur.execute(
+                    f"CREATE INDEX IF NOT EXISTS {idx_name} "
+                    f"ON dissertations USING gin(({expr}) gin_trgm_ops)"
+                )
         conn.commit()
         conn.close()
     except Exception:

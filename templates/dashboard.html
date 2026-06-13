@@ -173,6 +173,9 @@
     50%       { opacity: 0.8; }
   }
 
+  /* smooth fade when new data arrives */
+  .data-table tbody { transition: opacity 0.15s ease; }
+
   @media (max-width: 576px) {
     .page-heading h1 { font-size: 1.05rem; }
     .table-header-bar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
@@ -278,12 +281,12 @@
         </colgroup>
         <thead><tr>
           <th data-col-key="num"><span class="col-label">#</span><div class="resize-handle"></div></th>
-          <th data-sort="Sana" data-col-key="sana"><span class="col-label">Sana</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Olim" data-col-key="olim"><span class="col-label">Olim</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Mavzu" data-col-key="mavzu"><span class="col-label">Mavzu</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Daraja" data-col-key="daraja"><span class="col-label">Daraja</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Ixtisoslik" data-col-key="ixti" class="col-ixtisoslik"><span class="col-label">Ixtisoslik</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
-          <th data-sort="Ilmiy_rahbar" data-col-key="rahbar"><span class="col-label">Ilmiy rahbar</span><span class="sort-ind"></span><div class="resize-handle"></div></th>
+          <th data-col-key="sana"><span class="col-label">Sana</span><div class="resize-handle"></div></th>
+          <th data-col-key="olim"><span class="col-label">Olim</span><div class="resize-handle"></div></th>
+          <th data-col-key="mavzu"><span class="col-label">Mavzu</span><div class="resize-handle"></div></th>
+          <th data-col-key="daraja"><span class="col-label">Daraja</span><div class="resize-handle"></div></th>
+          <th data-col-key="ixti" class="col-ixtisoslik"><span class="col-label">Ixtisoslik</span><div class="resize-handle"></div></th>
+          <th data-col-key="rahbar"><span class="col-label">Ilmiy rahbar</span><div class="resize-handle"></div></th>
         </tr></thead>
         <tbody id="table-body">
           <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
@@ -298,14 +301,7 @@
 {% block scripts %}
 <script>
   const PER_PAGE = 50;
-  const SORT_KEY = 'dashboard-sort';
-  const COL_DEFAULT_DIR = { Sana:'desc', id:'desc' };
-  function defaultDir(col) { return COL_DEFAULT_DIR[col] || 'asc'; }
-  function loadSort() {
-    try { return JSON.parse(sessionStorage.getItem(SORT_KEY)) || {key:'id', dir:'desc'}; } catch(e) { return {key:'id', dir:'desc'}; }
-  }
   let currentPage = 1;
-  let currentSort = loadSort();
   let currentTotal = 0;
   let currentRecords = [];
   let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
@@ -313,7 +309,6 @@
   let searchController = null;
   let summaryController = null;
   const tableBody = document.getElementById('table-body');
-  const sortHeaders = document.querySelectorAll('th[data-sort]');
 
   function escHtml(v) {
     return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -322,20 +317,6 @@
     if (!term || term.length < 2) return escHtml(text);
     const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return escHtml(text).replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
-  }
-  function renderSortHeaders() {
-    sortHeaders.forEach(th => {
-      th.style.cursor = 'pointer';
-      const key = th.dataset.sort;
-      const ind = th.querySelector('.sort-ind');
-      if (key === currentSort.key) {
-        th.style.color = '#4a9eff';
-        if (ind) ind.textContent = currentSort.dir === 'asc' ? ' ▲' : ' ▼';
-      } else {
-        th.style.color = '';
-        if (ind) ind.textContent = '';
-      }
-    });
   }
   function fmtSana(s) {
     if (!s) return '—';
@@ -671,8 +652,8 @@
     if (reset) currentPage = 1;
     if (searchController) searchController.abort();
     searchController = new AbortController();
-    showSkeleton();
-    renderSortHeaders();
+    // Dim existing rows instead of clearing — keeps context visible while loading
+    tableBody.style.opacity = '0.5';
     _searchSpinner(true);
     const params = new URLSearchParams({
       search:     currentFilters.search,
@@ -681,8 +662,8 @@
       sana_yil:   currentFilters.sana_yil,
       page:       currentPage,
       per_page:   PER_PAGE,
-      sort_by:    currentSort.key,
-      sort_dir:   currentSort.dir,
+      sort_by:    'id',
+      sort_dir:   'desc',
       scope:      currentScope
     });
     fetch('/data?' + params, { signal: searchController.signal })
@@ -693,11 +674,13 @@
         renderRows(currentRecords, (data.page - 1) * PER_PAGE);
         renderInfo(data.page, data.total);
         renderPagination(data.page, data.total);
+        tableBody.style.opacity = '1';
         _searchSpinner(false);
       })
       .catch(e => {
         if (e.name === 'AbortError') return;
         tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+        tableBody.style.opacity = '1';
         _searchSpinner(false);
       });
   }
@@ -736,6 +719,10 @@
     clearBtn.style.display = val.length ? '' : 'none';
     currentFilters.search = val.trim();
     if (!val.trim()) hideSummary();
+    // Immediate visual feedback — dim before debounce fires
+    if (val.length === 0 || val.length >= 2) {
+      tableBody.style.opacity = '0.5';
+    }
     clearTimeout(searchTimeout);
     if (val.length === 0 || val.length >= 2) {
       searchTimeout = setTimeout(() => {
@@ -763,16 +750,6 @@
     currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
     updateData(true);
   });
-
-  // Sort headers
-  sortHeaders.forEach(header => header.addEventListener('click', function(e) {
-    if (e.target.classList.contains('resize-handle')) return;
-    const key = this.dataset.sort;
-    if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-    else { currentSort.key = key; currentSort.dir = defaultDir(key); }
-    sessionStorage.setItem(SORT_KEY, JSON.stringify(currentSort));
-    updateData(true);
-  }));
 
   // ── Column resize (independent via <col> widths) ──────────────────────────
   const defaultWidths = {
@@ -875,8 +852,8 @@
     applyColWidths();
     await loadFilters();
     applyInitialFiltersFromUrl();
-    renderSortHeaders();
-    await updateData(true);
+    showSkeleton();
+    updateData(true);
     initResizeHandles();
   });
 </script>

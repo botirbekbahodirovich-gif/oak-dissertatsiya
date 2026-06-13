@@ -213,43 +213,47 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
     clauses = []
     params  = []
     if search and len(search) >= 2:
-        sl = f"%{search}%"
-        sc = f"%{latin_to_cyrillic(search)}%"
+        # Pre-lowercase both variants so GIN trigram index on LOWER(TRIM(field)) is used
+        sl = f"%{search.lower()}%"
+        sc = f"%{latin_to_cyrillic(search).lower()}%"
         if scope == 'olim':
-            clauses.append("(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s)")
+            clauses.append(
+                "(LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s)"
+            )
             params.extend([sl, sc])
         elif scope == 'rahbar':
-            clauses.append("(TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s)")
+            clauses.append(
+                "(LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s)"
+            )
             params.extend([sl, sc])
         elif scope == 'opponent':
             clauses.append(
-                "(TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
-                "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
-                "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
+                "(LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s)"
             )
             params.extend([sl, sc, sl, sc, sl, sc])
         elif scope == 'mavzu':
             clauses.append(
-                "(TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-                "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
-                "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
+                "(LOWER(TRIM(mavzu)) LIKE %s OR LOWER(TRIM(mavzu)) LIKE %s OR "
+                "LOWER(TRIM(ixtisoslik)) LIKE %s OR LOWER(TRIM(ixtisoslik)) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s)"
             )
             params.extend([sl, sc, sl, sc, sl, sc])
         else:  # all
             clauses.append(
-                "(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
-                "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-                "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
-                "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
-                "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
-                "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR "
-                "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
-                "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
-                "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
+                "(LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s OR "
+                "LOWER(TRIM(mavzu)) LIKE %s OR LOWER(TRIM(mavzu)) LIKE %s OR "
+                "LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR "
+                "LOWER(TRIM(muassasa)) LIKE %s OR LOWER(TRIM(muassasa)) LIKE %s OR "
+                "LOWER(TRIM(ixtisoslik)) LIKE %s OR LOWER(TRIM(ixtisoslik)) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR "
+                "LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s)"
             )
             params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
     elif search:
-        # search < 2 chars — no-op (return nothing for very short terms)
         clauses.append("FALSE")
     if daraja:
         clauses.append("UPPER(TRIM(daraja)) = UPPER(%s)")
@@ -565,39 +569,45 @@ def search_stats():
     search = request.args.get('search', '').strip()
     if not search or len(search) < 2:
         return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
-    sl = f'%{search}%'
-    sc = f'%{latin_to_cyrillic(search)}%'
+    cache_key = f'search_stats:{search.lower()}'
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached)
+    sl = f'%{search.lower()}%'
+    sc = f'%{latin_to_cyrillic(search).lower()}%'
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT COUNT(DISTINCT TRIM(olim)) FROM dissertations "
-                    "WHERE TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s", (sl, sc))
+                    "SELECT COUNT(DISTINCT LOWER(TRIM(olim))) FROM dissertations "
+                    "WHERE LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s", (sl, sc))
                 olim_count = cur.fetchone()[0]
                 cur.execute(
                     "SELECT COUNT(*) FROM dissertations "
-                    "WHERE TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s", (sl, sc))
+                    "WHERE LOWER(TRIM(mavzu)) LIKE %s OR LOWER(TRIM(mavzu)) LIKE %s", (sl, sc))
                 mavzu_count = cur.fetchone()[0]
                 cur.execute(
-                    "SELECT COUNT(DISTINCT TRIM(ilmiy_rahbar)) FROM dissertations "
-                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s", (sl, sc))
+                    "SELECT COUNT(DISTINCT LOWER(TRIM(ilmiy_rahbar))) FROM dissertations "
+                    "WHERE LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s", (sl, sc))
                 rahbar_count = cur.fetchone()[0]
                 cur.execute(
                     "SELECT COUNT(*) FROM dissertations WHERE "
-                    "TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
-                    "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-                    "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
-                    "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
-                    "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
-                    "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s",
+                    "LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s OR "
+                    "LOWER(TRIM(mavzu)) LIKE %s OR LOWER(TRIM(mavzu)) LIKE %s OR "
+                    "LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR "
+                    "LOWER(TRIM(muassasa)) LIKE %s OR LOWER(TRIM(muassasa)) LIKE %s OR "
+                    "LOWER(TRIM(ixtisoslik)) LIKE %s OR LOWER(TRIM(ixtisoslik)) LIKE %s OR "
+                    "LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s",
                     (sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc))
                 total = cur.fetchone()[0]
         finally:
             conn.close()
     except Exception:
         return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
-    return jsonify({'total': total, 'olim': olim_count, 'mavzu': mavzu_count, 'rahbar': rahbar_count})
+    result = {'total': total, 'olim': olim_count, 'mavzu': mavzu_count, 'rahbar': rahbar_count}
+    cache.set(cache_key, result, timeout=120)
+    return jsonify(result)
 
 
 @data_bp.route('/search-summary')
@@ -606,27 +616,31 @@ def search_summary():
     search = request.args.get('search', '').strip()
     if not search or len(search) < 2:
         return jsonify({})
-    sl = f'%{search}%'
-    sc = f'%{latin_to_cyrillic(search)}%'
+    cache_key = f'search_summary:{search.lower()}'
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached)
+    sl = f'%{search.lower()}%'
+    sc = f'%{latin_to_cyrillic(search).lower()}%'
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT daraja, mavzu FROM dissertations "
-                    "WHERE TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s ORDER BY sana",
+                    "WHERE LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s ORDER BY sana",
                     (sl, sc))
                 olim_rows = cur.fetchall()
                 cur.execute(
                     "SELECT COUNT(*) FROM dissertations "
-                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s",
+                    "WHERE LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s",
                     (sl, sc))
                 rahbar_count = cur.fetchone()[0]
                 cur.execute(
                     "SELECT COUNT(*) FROM dissertations WHERE "
-                    "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
-                    "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
-                    "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s",
+                    "LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR "
+                    "LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR "
+                    "LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s",
                     (sl, sc, sl, sc, sl, sc))
                 opponent_count = cur.fetchone()[0]
         finally:
@@ -635,13 +649,15 @@ def search_summary():
         return jsonify({})
     phd_mavzu = [r[1] for r in olim_rows if (r[0] or '').strip().upper() == 'PHD']
     dsc_mavzu = [r[1] for r in olim_rows if (r[0] or '').strip().upper() == 'DSC']
-    return jsonify({
+    result = {
         'olim_count':     len(olim_rows),
         'rahbar_count':   rahbar_count,
         'opponent_count': opponent_count,
         'phd_mavzu':      phd_mavzu[:3],
         'dsc_mavzu':      dsc_mavzu[:3],
-    })
+    }
+    cache.set(cache_key, result, timeout=120)
+    return jsonify(result)
 
 
 @data_bp.route('/search-as-opponent')
