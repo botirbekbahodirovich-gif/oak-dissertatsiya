@@ -35,7 +35,8 @@ def stats_json():
             COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD') AS phd,
             COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC') AS dsc,
             COUNT(DISTINCT NULLIF(TRIM(muassasa), '')) AS muassasalar,
-            COUNT(DISTINCT NULLIF(TRIM(olim), '')) AS olim
+            COUNT(DISTINCT NULLIF(TRIM(olim), '')) AS olim,
+            COUNT(DISTINCT NULLIF(TRIM(ilmiy_rahbar), '')) AS rahbarlar
         FROM dissertations
     '''
     conn = get_connection()
@@ -48,7 +49,8 @@ def stats_json():
                 "phd": row[1] or 0,
                 "dsc": row[2] or 0,
                 "muassasalar": row[3] or 0,
-                "olim": row[4] or 0
+                "olim": row[4] or 0,
+                "rahbarlar": row[5] or 0
             })
     finally:
         conn.close()

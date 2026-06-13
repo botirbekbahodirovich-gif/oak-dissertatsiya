@@ -1,348 +1,104 @@
-<!DOCTYPE html>
-<html lang="uz" data-bs-theme="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tahlil — Olimlar.uz</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <style>
-    :root {
-      --oak-accent: #4a9eff;
-      --oak-accent-soft: rgba(74,158,255,0.12);
-      --oak-surface: #1a1d23;
-      --oak-surface-2: #22262f;
-      --oak-border: rgba(255,255,255,0.07);
-    }
+{% extends "base.html" %}
+{% block title %}Tahlil — Olimlar.uz{% endblock %}
+{% block extra_head %}
+<style>
+  .summary-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .chip {
+    background: var(--oak-surface); border: 1px solid var(--oak-border);
+    border-radius: 20px; padding: 5px 14px; font-size: 0.78rem; color: var(--oak-muted);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip span { color: var(--oak-text); font-weight: 700; }
+  .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 0.75rem; }
+  .heatmap-table th { color: var(--oak-muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 8px; text-align: center; white-space: nowrap; }
+  .heatmap-table th.row-header { text-align: left; max-width: 200px; }
+  .heatmap-table td { border-radius: 5px; text-align: center; padding: 8px 12px; font-weight: 700; font-size: 0.82rem; transition: transform 0.1s; cursor: default; }
+  .heatmap-table td:hover { transform: scale(1.08); }
+  .heatmap-table td.row-label { text-align: left; background: var(--oak-surface-2); color: var(--oak-muted); font-weight: 500; font-size: 0.75rem; padding: 8px 10px; max-width: 200px; white-space: normal; line-height: 1.3; }
+  .heatmap-table td.total-cell { background: rgba(74,158,255,0.08); color: #4a9eff; font-size: 0.78rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1><i class="bi bi-bar-chart-fill me-2" style="color:#4a9eff;"></i>Tahlil va grafiklar</h1>
+    <p>Dissertatsiyalar bazasi bo'yicha statistik ko'rsatkichlar va vizualizatsiya.</p>
+  </div>
+</div>
 
-    body {
-      background-color: #0f1114;
-      color: #cbd5e1;
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
-      min-height: 100vh;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-    }
+<!-- Summary chips -->
+<div class="summary-chips" id="summary-chips">
+  <div class="chip"><span class="skeleton-bar" style="width:80px;"></span></div>
+  <div class="chip"><span class="skeleton-bar" style="width:60px;"></span></div>
+  <div class="chip"><span class="skeleton-bar" style="width:60px;"></span></div>
+  <div class="chip"><span class="skeleton-bar" style="width:80px;"></span></div>
+</div>
 
-    /* Header */
-    .app-header {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 1rem 0;
-    }
-    .app-header .brand-icon {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; color: #fff; flex-shrink: 0;
-    }
-    .app-header h1 { font-size: 1.2rem; font-weight: 700; color: #e8edf5; margin: 0; }
-    .app-header small { font-size: 0.72rem; color: #6b7a99; }
-
-    /* Nav tabs */
-    .nav-tabs-custom {
-      background: var(--oak-surface);
-      border-bottom: 1px solid var(--oak-border);
-      padding: 0 1.5rem;
-    }
-    .nav-tabs-custom .nav-link {
-      color: #6b7a99;
-      border: none;
-      border-bottom: 2px solid transparent;
-      padding: 0.65rem 1rem;
-      font-size: 0.84rem;
-      font-weight: 500;
-      border-radius: 0;
-      transition: color 0.15s, border-color 0.15s;
-    }
-    .nav-tabs-custom .nav-link:hover { color: #c9d1e0; }
-    .nav-tabs-custom .nav-link.active {
-      color: var(--oak-accent);
-      border-bottom-color: var(--oak-accent);
-      background: transparent;
-    }
-    .nav-tabs-custom .nav-link i { margin-right: 6px; }
-    .btn-nav-upload {
-      font-size: 0.78rem; font-weight: 600;
-      padding: 4px 12px; border-radius: 7px;
-      background: rgba(74,158,255,0.12);
-      border: 1px solid rgba(74,158,255,0.3);
-      color: var(--oak-accent);
-      transition: all 0.15s; white-space: nowrap;
-      align-self: center; margin-left: auto;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
-    }
-    .btn-nav-upload:hover { background: rgba(74,158,255,0.22); border-color: var(--oak-accent); color: var(--oak-accent); }
-    .nav-user {
-      display: flex; align-items: center; gap: 10px;
-      border-left: 1px solid var(--oak-border);
-      padding-left: 0.75rem; margin-left: 0.5rem;
-    }
-    .nav-user .username { font-size: 0.78rem; color: #8899b4; display: flex; align-items: center; gap: 5px; }
-    .btn-nav-logout {
-      font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 6px;
-      background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25);
-      color: #f87171; text-decoration: none;
-      display: inline-flex; align-items: center; gap: 4px;
-      transition: all 0.15s; white-space: nowrap;
-    }
-    .btn-nav-logout:hover { background: rgba(248,113,113,0.2); border-color: #f87171; color: #f87171; }
-
-    /* Chart cards */
-    .chart-card {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 14px;
-      padding: 1.3rem;
-      height: 100%;
-    }
-    .chart-card .chart-title {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #8899b4;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-    .chart-card .chart-title i {
-      font-size: 0.9rem;
-      color: var(--oak-accent);
-    }
-    .chart-container {
-      position: relative;
-    }
-
-    /* Stat summary chips */
-    .summary-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .chip {
-      background: var(--oak-surface);
-      border: 1px solid var(--oak-border);
-      border-radius: 20px;
-      padding: 4px 12px;
-      font-size: 0.78rem;
-      color: #8899b4;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .chip span { color: #e8edf5; font-weight: 700; }
-
-    /* Heatmap table */
-    .heatmap-wrapper { overflow-x: auto; }
-    .heatmap-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 3px;
-      font-size: 0.75rem;
-    }
-    .heatmap-table th {
-      color: #6b7a99;
-      font-weight: 600;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      padding: 4px 8px;
-      text-align: center;
-      white-space: nowrap;
-    }
-    .heatmap-table th.row-header {
-      text-align: left;
-      max-width: 200px;
-      color: #8899b4;
-    }
-    .heatmap-table td {
-      border-radius: 5px;
-      text-align: center;
-      padding: 8px 12px;
-      font-weight: 700;
-      font-size: 0.82rem;
-      transition: transform 0.1s;
-      cursor: default;
-    }
-    .heatmap-table td:hover { transform: scale(1.08); }
-    .heatmap-table td.row-label {
-      text-align: left;
-      background: var(--oak-surface-2);
-      color: #8899b4;
-      font-weight: 500;
-      font-size: 0.75rem;
-      padding: 8px 10px;
-      max-width: 200px;
-      white-space: normal;
-      line-height: 1.3;
-    }
-    .heatmap-table td.total-cell {
-      background: rgba(74,158,255,0.08);
-      color: #4a9eff;
-      font-size: 0.78rem;
-    }
-
-    /* Loading skeleton */
-    .skeleton-bar {
-      height: 13px; border-radius: 5px;
-      background: linear-gradient(90deg, #22262f 25%, #2a2f3a 50%, #22262f 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.4s infinite;
-      display: inline-block;
-    }
-    @keyframes shimmer {
-      0% { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2d3343; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3d4a60; }
-
-    /* Theme toggle */
-    html, body { transition: background-color 0.25s ease, color 0.25s ease; }
-    .btn-theme-toggle {
-      background: none; border: 1px solid transparent;
-      color: #8899b4; font-size: 1rem; cursor: pointer;
-      border-radius: 6px; padding: 4px 9px;
-      transition: color 0.2s, background 0.15s, border-color 0.2s;
-      display: flex; align-items: center; line-height: 1;
-    }
-    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: var(--oak-accent); background: rgba(74,158,255,0.08); }
-  </style>
-</head>
-<body>
-
-<!-- Header -->
-<header class="app-header">
-  <div class="container-xl">
-    <div class="d-flex align-items-center gap-3">
-      <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
-      <div>
-        <h1>Olimlar.uz Tahlil</h1>
-        <small>O'zbekiston Oliy Attestatsiya Komissiyasi — Dissertatsiyalar bazasi</small>
-      </div>
+<!-- Row 1: Universities bar + PhD/DSc pie -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-8">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-building"></i>Top 20 muassasa (dissertatsiya soni bo'yicha)</div>
+      <div class="chart-container" style="height:360px;"><canvas id="chart-muassasalar"></canvas></div>
     </div>
   </div>
-</header>
-
-<!-- Nav tabs -->
-<div class="nav-tabs-custom">
-  <div class="container-xl d-flex align-items-stretch">
-    <ul class="nav flex-grow-1">
-      <li class="nav-item">
-        <a class="nav-link" href="/"><i class="bi bi-table"></i>Ma'lumotlar jadvali</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link active" href="/stats"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
-      </li>
-    </ul>
-    <a href="/upload" class="btn-nav-upload">
-      <i class="bi bi-cloud-upload-fill"></i>CSV yuklash
-    </a>
-    <div class="nav-user">
-      <span class="username"><i class="bi bi-person-circle"></i>{{ current_user.username }}</span>
-      <a href="/logout" class="btn-nav-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
-      <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"></button>
+  <div class="col-12 col-lg-4">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-pie-chart-fill"></i>PhD va DSc nisbati</div>
+      <div class="chart-container" style="height:360px;"><canvas id="chart-daraja"></canvas></div>
     </div>
   </div>
 </div>
 
-<main class="container-xl py-4">
-
-  <!-- Summary chips -->
-  <div class="summary-chips" id="summary-chips">
-    <div class="chip"><span class="skeleton-bar" style="width:80px;"></span></div>
-    <div class="chip"><span class="skeleton-bar" style="width:60px;"></span></div>
-    <div class="chip"><span class="skeleton-bar" style="width:60px;"></span></div>
-    <div class="chip"><span class="skeleton-bar" style="width:80px;"></span></div>
-  </div>
-
-  <!-- Row 1: Universities bar + PhD/DSc pie -->
-  <div class="row g-3 mb-3">
-    <div class="col-12 col-lg-8">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-building"></i>Top 20 muassasa (dissertatsiya soni bo'yicha)</div>
-        <div class="chart-container" style="height:360px;">
-          <canvas id="chart-muassasalar"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-lg-4">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-pie-chart-fill"></i>PhD va DSc nisbati</div>
-        <div class="chart-container" style="height:360px;">
-          <canvas id="chart-daraja"></canvas>
-        </div>
-      </div>
+<!-- Row 2: Top supervisors -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-person-lines-fill"></i>Top 10 Ilmiy rahbarlar</div>
+      <div class="chart-container" style="height:360px;"><canvas id="chart-supervisors"></canvas></div>
     </div>
   </div>
+</div>
 
-  <!-- Row 2: Trend line -->
-
-  <!-- Row 1b: Top supervisors -->
-  <div class="row g-3 mb-3">
-    <div class="col-12">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-person-lines-fill"></i>Top 10 Ilmiy rahbarlar</div>
-        <div class="chart-container" style="height:360px;">
-          <canvas id="chart-supervisors"></canvas>
-        </div>
-      </div>
+<!-- Row 3: Trend -->
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>Dissertatsiyalar trendi (yil/oy bo'yicha)</div>
+      <div class="chart-container" style="height:240px;"><canvas id="chart-trend"></canvas></div>
     </div>
   </div>
-  <div class="row g-3 mb-3">
-    <div class="col-12">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>Dissertatsiyalar trendi (yil/oy bo'yicha)</div>
-        <div class="chart-container" style="height:240px;">
-          <canvas id="chart-trend"></canvas>
-        </div>
+</div>
+
+<!-- Row 4: Ixtisoslik bar + Heatmap -->
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-5">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-tags-fill"></i>Top 15 ixtisoslik kodi</div>
+      <div class="chart-container" style="height:420px;"><canvas id="chart-ixtisosliklar"></canvas></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-grid-3x3-gap-fill"></i>Muassasa × Daraja kesma jadvali</div>
+      <div class="heatmap-wrapper">
+        <table class="heatmap-table" id="heatmap-table">
+          <tbody>
+            <tr><td colspan="4"><div class="skeleton-bar" style="width:100%;height:20px;"></div></td></tr>
+            <tr><td colspan="4"><div class="skeleton-bar" style="width:90%;height:20px;"></div></td></tr>
+            <tr><td colspan="4"><div class="skeleton-bar" style="width:95%;height:20px;"></div></td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-
-  <!-- Row 3: Ixtisoslik bar + Heatmap -->
-  <div class="row g-3 mb-3">
-    <div class="col-12 col-lg-5">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-tags-fill"></i>Top 15 ixtisoslik kodi</div>
-        <div class="chart-container" style="height:420px;">
-          <canvas id="chart-ixtisosliklar"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-lg-7">
-      <div class="chart-card">
-        <div class="chart-title"><i class="bi bi-grid-3x3-gap-fill"></i>Muassasa × Daraja kesma jadvali</div>
-        <div class="heatmap-wrapper">
-          <table class="heatmap-table table-sticky" id="heatmap-table">
-            <tbody>
-              <tr><td colspan="4"><div class="skeleton-bar" style="width:100%;height:20px;"></div></td></tr>
-              <tr><td colspan="4"><div class="skeleton-bar" style="width:90%;height:20px;"></div></td></tr>
-              <tr><td colspan="4"><div class="skeleton-bar" style="width:95%;height:20px;"></div></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</div>
+{% endblock %}
+{% block scripts %}
 <script>
-  // Global Chart.js defaults for dark theme
   Chart.defaults.color = '#6b7a99';
   Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
-  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
   Chart.defaults.font.size = 12;
 
   const PALETTE = [
@@ -353,15 +109,9 @@
   ];
 
   const TOOLTIP_STYLE = {
-    backgroundColor: '#1a1d23',
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    titleColor: '#e8edf5',
-    bodyColor: '#8899b4',
-    padding: 10,
-    cornerRadius: 8,
-    displayColors: true,
-    boxPadding: 4
+    backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1,
+    titleColor: '#e8edf5', bodyColor: '#8899b4', padding: 10, cornerRadius: 8,
+    displayColors: true, boxPadding: 4
   };
 
   function heatColor(value, max) {
@@ -377,14 +127,15 @@
     const res = await fetch('/analytics-data');
     const d = await res.json();
 
-    // Summary chips
     const statsRes = await fetch('/stats-json');
     const stats = await statsRes.json();
     document.getElementById('summary-chips').innerHTML = `
-      <div class="chip"><i class="bi bi-collection" style="color:#4a9eff;"></i>Jami: <span>${stats.total.toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-award" style="color:#34d399;"></i>PhD: <span>${stats.phd.toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-patch-star" style="color:#a78bfa;"></i>DSc: <span>${stats.dsc.toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-building" style="color:#fbbf24;"></i>Muassasalar: <span>${stats.muassasalar.toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-collection" style="color:#4a9eff;"></i>Jami: <span>${(stats.total||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-award" style="color:#34d399;"></i>PhD: <span>${(stats.phd||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-patch-star" style="color:#a78bfa;"></i>DSc: <span>${(stats.dsc||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-person-lines-fill" style="color:#fb923c;"></i>Ilmiy rahbarlar: <span>${(stats.rahbarlar||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-building" style="color:#fbbf24;"></i>Muassasalar: <span>${(stats.muassasalar||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-mortarboard" style="color:#38bdf8;"></i>Olimlar: <span>${(stats.olim||0).toLocaleString('uz')}</span></div>
     `;
 
     // 1. Top 20 universities horizontal bar
@@ -392,209 +143,85 @@
     const muassasaCounts = d.top_muassasalar.map(r => r.count);
     new Chart(document.getElementById('chart-muassasalar'), {
       type: 'bar',
-      data: {
-        labels: muassasaLabels,
-        datasets: [{
-          label: 'Dissertatsiyalar soni',
-          data: muassasaCounts,
-          backgroundColor: muassasaLabels.map((_, i) => PALETTE[i % PALETTE.length] + '99'),
-          borderColor: muassasaLabels.map((_, i) => PALETTE[i % PALETTE.length]),
-          borderWidth: 1,
-          borderRadius: 5,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...TOOLTIP_STYLE }
-        },
-        scales: {
-          x: {
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: '#6b7a99', font: { size: 11 } }
-          },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: '#8899b4',
-              font: { size: 11 },
-              callback: function(val, idx) {
-                const label = this.getLabelForValue(val);
-                return label.length > 30 ? label.slice(0, 28) + '…' : label;
-              }
-            }
-          }
-        }
-      }
+      data: { labels: muassasaLabels, datasets: [{
+        label: 'Dissertatsiyalar soni', data: muassasaCounts,
+        backgroundColor: muassasaLabels.map((_, i) => PALETTE[i % PALETTE.length] + '99'),
+        borderColor: muassasaLabels.map((_, i) => PALETTE[i % PALETTE.length]),
+        borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
+        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 } } },
+          y: { grid: { display: false }, ticks: { color: '#8899b4', font: { size: 11 },
+            callback: function(val) { const label = this.getLabelForValue(val); return label.length > 30 ? label.slice(0, 28) + '…' : label; } } } } }
     });
 
-    // 2a. Top supervisors bar (Top 10)
+    // 2. Top supervisors bar (Top 10)
     const supLabels = d.top_supervisors ? d.top_supervisors.map(r => r.supervisor) : [];
     const supCounts = d.top_supervisors ? d.top_supervisors.map(r => r.count) : [];
     if (supLabels.length) {
       new Chart(document.getElementById('chart-supervisors'), {
         type: 'bar',
-        data: {
-          labels: supLabels,
-          datasets: [{
-            label: 'Dissertatsiyalar',
-            data: supCounts,
-            backgroundColor: supLabels.map((_, i) => PALETTE[i % PALETTE.length] + '99'),
-            borderColor: supLabels.map((_, i) => PALETTE[i % PALETTE.length]),
-            borderWidth: 1,
-            borderRadius: 5,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
+        data: { labels: supLabels, datasets: [{ label: 'Dissertatsiyalar', data: supCounts,
+          backgroundColor: supLabels.map((_, i) => PALETTE[i % PALETTE.length] + '99'),
+          borderColor: supLabels.map((_, i) => PALETTE[i % PALETTE.length]),
+          borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
-          scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99' } }, y: { grid: { display: false }, ticks: { color: '#8899b4' } } }
-        }
+          scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99' } }, y: { grid: { display: false }, ticks: { color: '#8899b4' } } } }
       });
     }
 
-    // 2. PhD vs DSc doughnut
+    // 3. PhD vs DSc doughnut
     const darajaLabels = d.daraja_ratio.map(r => r.daraja);
     const darajaCounts = d.daraja_ratio.map(r => r.count);
-    const darajaColors = darajaLabels.map(l =>
-      l.toUpperCase() === 'PHD' ? '#34d399' :
-      l.toUpperCase() === 'DSC' ? '#a78bfa' : '#fbbf24'
-    );
+    const darajaColors = darajaLabels.map(l => l.toUpperCase() === 'PHD' ? '#34d399' : l.toUpperCase() === 'DSC' ? '#a78bfa' : '#fbbf24');
     new Chart(document.getElementById('chart-daraja'), {
       type: 'doughnut',
-      data: {
-        labels: darajaLabels,
-        datasets: [{
-          data: darajaCounts,
-          backgroundColor: darajaColors.map(c => c + 'bb'),
-          borderColor: darajaColors,
-          borderWidth: 2,
-          hoverOffset: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '62%',
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: '#8899b4', padding: 16, font: { size: 12 }, boxWidth: 12, borderRadius: 3 }
-          },
-          tooltip: {
-            ...TOOLTIP_STYLE,
-            callbacks: {
-              label: ctx => {
-                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                const pct = ((ctx.parsed / total) * 100).toFixed(1);
-                return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
-              }
-            }
-          }
-        }
-      }
+      data: { labels: darajaLabels, datasets: [{ data: darajaCounts,
+        backgroundColor: darajaColors.map(c => c + 'bb'), borderColor: darajaColors, borderWidth: 2, hoverOffset: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#8899b4', padding: 16, font: { size: 12 }, boxWidth: 12, borderRadius: 3 } },
+          tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const total = ctx.dataset.data.reduce((a, b) => a + b, 0); const pct = ((ctx.parsed / total) * 100).toFixed(1); return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`; } } } } }
     });
 
-    // 3. Trend line
+    // 4. Trend line
     const trendLabels = d.trend.map(r => r.period);
     const trendCounts = d.trend.map(r => r.count);
     new Chart(document.getElementById('chart-trend'), {
       type: 'line',
-      data: {
-        labels: trendLabels,
-        datasets: [{
-          label: 'Dissertatsiyalar',
-          data: trendCounts,
-          borderColor: '#4a9eff',
-          backgroundColor: 'rgba(74,158,255,0.1)',
-          borderWidth: 2,
-          pointBackgroundColor: '#4a9eff',
-          pointRadius: trendLabels.length > 30 ? 2 : 4,
-          pointHoverRadius: 6,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...TOOLTIP_STYLE }
-        },
-        scales: {
-          x: {
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: '#6b7a99', maxRotation: 45, font: { size: 10 } }
-          },
-          y: {
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 },
-            beginAtZero: true
-          }
-        }
-      }
+      data: { labels: trendLabels, datasets: [{ label: 'Dissertatsiyalar', data: trendCounts,
+        borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.1)', borderWidth: 2,
+        pointBackgroundColor: '#4a9eff', pointRadius: trendLabels.length > 30 ? 2 : 4, pointHoverRadius: 6, fill: true, tension: 0.4 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
+        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', maxRotation: 45, font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 }, beginAtZero: true } } }
     });
 
-    // 4. Top 15 ixtisoslik horizontal bar
+    // 5. Top 15 ixtisoslik horizontal bar
     const ixLabels = d.top_ixtisosliklar.map(r => r.ixtisoslik);
     const ixCounts = d.top_ixtisosliklar.map(r => r.count);
     new Chart(document.getElementById('chart-ixtisosliklar'), {
       type: 'bar',
-      data: {
-        labels: ixLabels,
-        datasets: [{
-          label: 'Dissertatsiyalar',
-          data: ixCounts,
-          backgroundColor: '#a78bfa55',
-          borderColor: '#a78bfa',
-          borderWidth: 1,
-          borderRadius: 5,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...TOOLTIP_STYLE }
-        },
-        scales: {
-          x: {
-            grid: { color: 'rgba(255,255,255,0.04)' },
-            ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 }
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: '#8899b4', font: { size: 11 } }
-          }
-        }
-      }
+      data: { labels: ixLabels, datasets: [{ label: 'Dissertatsiyalar', data: ixCounts,
+        backgroundColor: '#a78bfa55', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
+      options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
+        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 } },
+          y: { grid: { display: false }, ticks: { color: '#8899b4', font: { size: 11 } } } } }
     });
 
-    // 5. Heatmap table
+    // 6. Heatmap table
     const hm = d.heatmap;
     if (hm.muassasalar.length === 0) {
       document.getElementById('heatmap-table').innerHTML = '<tr><td colspan="4" style="color:#4a556a;text-align:center;padding:2rem;">Ma\'lumot yo\'q</td></tr>';
       return;
     }
-    // Find max value for color scaling
     let maxVal = 0;
     hm.data.forEach(row => row.forEach(v => { if (v > maxVal) maxVal = v; }));
-
     let thead = '<thead><tr><th class="row-header">Muassasa</th>';
-    hm.darajalar.forEach(d => { thead += `<th>${d}</th>`; });
+    hm.darajalar.forEach(dd => { thead += `<th>${dd}</th>`; });
     thead += '<th>Jami</th></tr></thead>';
-
     let tbody = '<tbody>';
     hm.muassasalar.forEach((uni, i) => {
       const rowData = hm.data[i] || [];
@@ -607,136 +234,9 @@
       tbody += `<td class="total-cell">${rowTotal}</td></tr>`;
     });
     tbody += '</tbody>';
-
     document.getElementById('heatmap-table').innerHTML = thead + tbody;
   }
 
   loadAndRender().catch(err => console.error('Analytics load error:', err));
 </script>
-<script>
-(function(){
-  var h=document.documentElement,b=document.getElementById('theme-toggle');
-  var t=localStorage.getItem('oak-theme')||'dark';
-  h.setAttribute('data-bs-theme',t);
-  b.innerHTML=t==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  b.addEventListener('click',function(){
-    var n=h.getAttribute('data-bs-theme')==='dark'?'light':'dark';
-    h.setAttribute('data-bs-theme',n);
-    localStorage.setItem('oak-theme',n);
-    b.innerHTML=n==='dark'?'<i class="bi bi-sun-fill"></i>':'<i class="bi bi-moon-fill"></i>';
-  });
-})();
-</script>
-
-<style>
-  #ai-btn {
-    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: #4a9eff; border: none; color: #fff; font-size: 24px;
-    cursor: pointer; box-shadow: 0 4px 20px rgba(74,158,255,0.4);
-    display: grid; place-items: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  #ai-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(74,158,255,0.55); }
-  #ai-panel {
-    position: fixed; right: 0; top: 0; height: 100vh; width: 320px;
-    background: #1a1d23; border-left: 1px solid rgba(255,255,255,0.1);
-    z-index: 9998; transform: translateX(100%);
-    transition: transform 0.3s ease;
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  #ai-panel.open { transform: translateX(0) !important; }
-  #ai-panel-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0;
-  }
-  #ai-close-btn { background: none; border: none; color: #8899b4; cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 6px; transition: color 0.15s, background 0.15s; }
-  #ai-close-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
-  #ai-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .ai-welcome { background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.2); border-radius: 10px; padding: 12px; color: #8899b4; font-size: 13px; line-height: 1.5; }
-  .ai-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-  .ai-suggestion-btn { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 12px; color: #cbd5e1; font-size: 12px; cursor: pointer; text-align: left; transition: background 0.15s, border-color 0.15s, color 0.15s; }
-  .ai-suggestion-btn:hover { background: rgba(74,158,255,0.1); border-color: rgba(74,158,255,0.25); color: #4a9eff; }
-  .ai-msg-user { align-self: flex-end; background: #4a9eff; color: #fff; border-radius: 12px 12px 4px 12px; padding: 8px 12px; font-size: 13px; max-width: 90%; word-break: break-word; }
-  .ai-msg-bot { align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px 12px 12px 4px; padding: 8px 12px; font-size: 13px; color: #cbd5e1; max-width: 95%; line-height: 1.5; word-break: break-word; }
-  .ai-typing { color: #8899b4; font-size: 12px; padding: 4px 0; }
-  #ai-input-area { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 8px; flex-shrink: 0; }
-  #ai-input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; color: #cbd5e1; font-size: 13px; outline: none; transition: border-color 0.15s; }
-  #ai-input:focus { border-color: #4a9eff; }
-  #ai-input::placeholder { color: #4a556a; }
-  #ai-send-btn { background: #4a9eff; border: none; border-radius: 10px; padding: 8px 14px; color: #fff; cursor: pointer; font-size: 14px; transition: opacity 0.15s; }
-  #ai-send-btn:hover { opacity: 0.88; }
-</style>
-
-<button id="ai-btn" title="AI Yordamchi">🤖</button>
-<aside id="ai-panel">
-  <div id="ai-panel-header">
-    <strong style="color:#4a9eff;font-size:14px;">🤖 Olimlar.uz AI Yordamchi</strong>
-    <button id="ai-close-btn" title="Yopish">✕</button>
-  </div>
-  <div id="ai-messages">
-    <div class="ai-welcome">Assalomu alaykum! Men dissertatsiya bazasi bo'yicha savollaringizga javob beraman.</div>
-    <div class="ai-suggestions">
-      <button class="ai-suggestion-btn">Eng faol ilmiy rahbarlar</button>
-      <button class="ai-suggestion-btn">PhD statistikasi</button>
-      <button class="ai-suggestion-btn">Mavzu tavsiya et</button>
-      <button class="ai-suggestion-btn">Tibbiyot dissertatsiyalari</button>
-    </div>
-  </div>
-  <div id="ai-input-area">
-    <input id="ai-input" type="text" placeholder="Savolingizni yozing..." />
-    <button id="ai-send-btn">&#10148;</button>
-  </div>
-</aside>
-<script>
-(function() {
-  var btn = document.getElementById('ai-btn');
-  var panel = document.getElementById('ai-panel');
-  var closeBtn = document.getElementById('ai-close-btn');
-  var sendBtn = document.getElementById('ai-send-btn');
-  var input = document.getElementById('ai-input');
-  var messages = document.getElementById('ai-messages');
-  btn.addEventListener('click', function() { panel.classList.toggle('open'); });
-  closeBtn.addEventListener('click', function() { panel.classList.remove('open'); });
-  function escapeHtml(text) {
-    var d = document.createElement('div');
-    d.appendChild(document.createTextNode(text));
-    return d.innerHTML;
-  }
-  function appendMsg(html, cls) {
-    var div = document.createElement('div');
-    div.className = cls; div.innerHTML = html;
-    messages.appendChild(div); messages.scrollTop = messages.scrollHeight;
-    return div;
-  }
-  function sendMessage(text) {
-    if (!text.trim()) return;
-    appendMsg(escapeHtml(text), 'ai-msg-user');
-    var typing = appendMsg('...', 'ai-typing');
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (messages.contains(typing)) messages.removeChild(typing);
-      appendMsg(data.response || 'Javob olishda xatolik.', 'ai-msg-bot');
-    })
-    .catch(function() {
-      if (messages.contains(typing)) messages.removeChild(typing);
-      appendMsg('Xatolik yuz berdi.', 'ai-msg-bot');
-    });
-  }
-  sendBtn.addEventListener('click', function() {
-    var text = input.value.trim();
-    if (text) { sendMessage(text); input.value = ''; }
-  });
-  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { sendBtn.click(); } });
-  document.querySelectorAll('.ai-suggestion-btn').forEach(function(b) {
-    b.addEventListener('click', function() { panel.classList.add('open'); sendMessage(b.textContent.trim()); });
-  });
-})();
-</script>
-</body>
-</html>
+{% endblock %}
