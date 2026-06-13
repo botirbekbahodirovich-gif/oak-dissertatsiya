@@ -379,6 +379,10 @@
         <a href="/dashboard" class="nav-link{% if request.path == '/dashboard' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali<span id="nav-total-badge" style="display:none;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(74,158,255,0.14);color:#4a9eff;font-size:0.7rem;font-weight:700;vertical-align:middle;"></span></a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
         <a href="/profile" class="nav-link{% if request.path == '/profile' %} active{% endif %}"><i class="bi bi-person-badge"></i>Profil</a>
+        <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
+          <i class="bi bi-bell-fill"></i>
+          <span id="notif-badge" style="display:none;position:absolute;top:4px;right:2px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
+        </a>
       </div>
       <div class="nav-actions">
         <span class="username"><i class="bi bi-person-circle"></i>{{ current_user.username }}</span>
@@ -415,6 +419,17 @@
     })();
   </script>
   <script>
+  (function checkNotifs() {
+    fetch('/api/notifications/count')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var b = document.getElementById('notif-badge');
+        if (!b) return;
+        if (d.count > 0) { b.textContent = d.count; b.style.display = 'inline-block'; }
+        else b.style.display = 'none';
+      }).catch(function() {});
+    setTimeout(checkNotifs, 60000);
+  })();
   function supervisorBadge(name, count) {
     if (!count || count <= 1) return '';
     const colors = {2:'#ef7c24',3:'#ef7c24',4:'#ec6d10',5:'#ec6d10',6:'#e73927',7:'#e73927',8:'#dd1f13',9:'#dd1f13'};

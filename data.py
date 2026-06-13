@@ -173,6 +173,33 @@ def _query_scalar(sql, params=None):
         conn.close()
 
 
+def latin_to_cyrillic(text):
+    if not text:
+        return text
+    result = text
+    multi = [
+        ("o'", "ў"), ("O'", "Ў"), ("g'", "ғ"), ("G'", "Ғ"),
+        ("ch", "ч"), ("Ch", "Ч"), ("CH", "Ч"),
+        ("sh", "ш"), ("Sh", "Ш"), ("SH", "Ш"),
+        ("ng", "нг"), ("Ng", "Нг"), ("NG", "Нг"),
+    ]
+    for lat, cyr in multi:
+        result = result.replace(lat, cyr)
+    single = {
+        'a':'а','b':'б','d':'д','e':'е','f':'ф','g':'г','h':'ҳ',
+        'i':'и','j':'ж','k':'к','l':'л','m':'м','n':'н','o':'о',
+        'p':'п','q':'қ','r':'р','s':'с','t':'т','u':'у','v':'в',
+        'w':'в','x':'х','y':'й','z':'з',
+        'A':'А','B':'Б','D':'Д','E':'Е','F':'Ф','G':'Г','H':'Ҳ',
+        'I':'И','J':'Ж','K':'К','L':'Л','M':'М','N':'Н','O':'О',
+        'P':'П','Q':'Қ','R':'Р','S':'С','T':'Т','U':'У','V':'В',
+        'W':'В','X':'Х','Y':'Й','Z':'З',
+    }
+    for lat, cyr in single.items():
+        result = result.replace(lat, cyr)
+    return result
+
+
 def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
                          fan_tarmoqi='', ilmiy_kengash='', sana_yil=''):
     search       = (search       or '').strip()
@@ -185,13 +212,17 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
     clauses = []
     params  = []
     if search:
-        text = f"%{search}%"
+        sl = f"%{search}%"
+        sc = f"%{latin_to_cyrillic(search)}%"
         clauses.append(
-            "(TRIM(olim) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-            "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
-            "TRIM(ixtisoslik) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
+            "(TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
+            "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+            "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
+            "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
+            "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
+            "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
         )
-        params.extend([text] * 6)
+        params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
     if daraja:
         clauses.append("UPPER(TRIM(daraja)) = UPPER(%s)")
         params.append(daraja)
@@ -503,28 +534,33 @@ def search_stats():
     search = request.args.get('search', '').strip()
     if not search or len(search) < 2:
         return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
-    like = f'%{search}%'
+    sl = f'%{search}%'
+    sc = f'%{latin_to_cyrillic(search)}%'
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     "SELECT COUNT(DISTINCT TRIM(olim)) FROM dissertations "
-                    "WHERE TRIM(olim) ILIKE %s", (like,))
+                    "WHERE TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s", (sl, sc))
                 olim_count = cur.fetchone()[0]
                 cur.execute(
-                    "SELECT COUNT(*) FROM dissertations WHERE TRIM(mavzu) ILIKE %s", (like,))
+                    "SELECT COUNT(*) FROM dissertations "
+                    "WHERE TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s", (sl, sc))
                 mavzu_count = cur.fetchone()[0]
                 cur.execute(
                     "SELECT COUNT(DISTINCT TRIM(ilmiy_rahbar)) FROM dissertations "
-                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s", (like,))
+                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s", (sl, sc))
                 rahbar_count = cur.fetchone()[0]
                 cur.execute(
                     "SELECT COUNT(*) FROM dissertations WHERE "
-                    "TRIM(olim) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
-                    "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
-                    "TRIM(ixtisoslik) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s",
-                    (like, like, like, like, like, like))
+                    "TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s OR "
+                    "TRIM(mavzu) ILIKE %s OR TRIM(mavzu) ILIKE %s OR "
+                    "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
+                    "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
+                    "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
+                    "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s",
+                    (sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc))
                 total = cur.fetchone()[0]
         finally:
             conn.close()

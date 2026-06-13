@@ -1,4 +1,13 @@
 {% extends "base.html" %}
+{% macro avatar(photo_url, name, size=80) %}
+<div style="width:{{size}}px;height:{{size}}px;border-radius:50%;overflow:hidden;border:2px solid rgba(74,158,255,0.3);flex-shrink:0;">
+  {% if photo_url %}
+    <img src="{{photo_url}}" alt="{{name}}" style="width:100%;height:100%;object-fit:cover;">
+  {% else %}
+    <div style="width:100%;height:100%;background:rgba(74,158,255,0.1);display:flex;align-items:center;justify-content:center;font-size:{{(size // 2.5)|int}}px;">🎓</div>
+  {% endif %}
+</div>
+{% endmacro %}
 {% block title %}{{ row.Olim_short or row.Olim or 'Dissertatsiya' }} — Olimlar.uz{% endblock %}
 {% block extra_head %}
 <style>
@@ -74,8 +83,9 @@
       <div class="sec-card-title"><i class="bi bi-person-fill"></i>Tadqiqotchi</div>
       <div class="field">
         <div class="field-lbl">👤 Olim</div>
-        <div class="field-val">
-          {% if row.Olim %}<a href="/author/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>{% else %}—{% endif %}
+        <div class="field-val" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          {{ avatar(row.get('photo_url') if row.get is defined else None, row.Olim or '', 48) }}
+          {% if row.Olim %}<a href="/olim/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>{% else %}—{% endif %}
         </div>
       </div>
       {% if row.Mavzu_raqami %}

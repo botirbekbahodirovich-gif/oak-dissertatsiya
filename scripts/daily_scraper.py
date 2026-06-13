@@ -332,6 +332,20 @@ def main():
 
         time.sleep(DELAY)
 
+    if new_count > 0:
+        try:
+            conn2 = get_conn()
+            with conn2.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO notifications (message, count) VALUES (%s, %s)",
+                    (f"{new_count} ta yangi himoya e'loni qo'shildi", new_count)
+                )
+            conn2.commit()
+            conn2.close()
+            print("Bildirishnoma saqlandi: " + str(new_count) + " ta yangi e'lon")
+        except Exception as e:
+            print("Bildirishnoma xatosi: " + str(e))
+
     conn.close()
     print("=" * 50)
     print("Tekshirilgan sahifalar: " + str(pages_checked))

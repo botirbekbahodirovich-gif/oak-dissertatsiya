@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 import bcrypt
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, render_template, redirect, url_for, jsonify
 from urllib.parse import urlparse
 from flask_login import (LoginManager, UserMixin, logout_user,
                          login_required, current_user)
@@ -105,6 +105,17 @@ def _run_startup_migrations():
                 cur.execute(
                     f"ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS {col} {typ}"
                 )
+            cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS photo_url TEXT")
+            cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS ilmiy_rahbar_photo_url TEXT")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id SERIAL PRIMARY KEY,
+                    message TEXT,
+                    count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    is_read BOOLEAN DEFAULT FALSE
+                )
+            """)
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
@@ -177,6 +188,49 @@ def index():
 @login_required
 def stats_page():
     return render_template("stats.html")
+
+
+@app.route("/api/notifications/count")
+@login_required
+def notifications_count():
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM notifications WHERE is_read = FALSE")
+                count = cur.fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:
+        count = 0
+    return jsonify({'count': count})
+
+
+@app.route("/notifications")
+@login_required
+def notifications_page():
+    from data import get_connection
+    notifs = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, message, count, created_at FROM notifications "
+                    "ORDER BY created_at DESC LIMIT 50"
+                )
+                notifs = [
+                    {'id': r[0], 'message': r[1], 'count': r[2], 'created_at': str(r[3])}
+                    for r in cur.fetchall()
+                ]
+                cur.execute("UPDATE notifications SET is_read = TRUE")
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return render_template("notifications.html", notifications=notifs)
 
 
 @app.route("/profile")
