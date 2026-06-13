@@ -220,9 +220,12 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
             "TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s OR "
             "TRIM(muassasa) ILIKE %s OR TRIM(muassasa) ILIKE %s OR "
             "TRIM(ixtisoslik) ILIKE %s OR TRIM(ixtisoslik) ILIKE %s OR "
-            "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s)"
+            "TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR TRIM(COALESCE(ixtisoslik_nomi,'')) ILIKE %s OR "
+            "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
+            "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
+            "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s)"
         )
-        params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
+        params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
     if daraja:
         clauses.append("UPPER(TRIM(daraja)) = UPPER(%s)")
         params.append(daraja)
@@ -567,6 +570,50 @@ def search_stats():
     except Exception:
         return jsonify({'total': 0, 'olim': 0, 'mavzu': 0, 'rahbar': 0})
     return jsonify({'total': total, 'olim': olim_count, 'mavzu': mavzu_count, 'rahbar': rahbar_count})
+
+
+@data_bp.route('/search-summary')
+@login_required
+def search_summary():
+    search = request.args.get('search', '').strip()
+    if not search or len(search) < 2:
+        return jsonify({})
+    sl = f'%{search}%'
+    sc = f'%{latin_to_cyrillic(search)}%'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT daraja, mavzu FROM dissertations "
+                    "WHERE TRIM(olim) ILIKE %s OR TRIM(olim) ILIKE %s ORDER BY sana",
+                    (sl, sc))
+                olim_rows = cur.fetchall()
+                cur.execute(
+                    "SELECT COUNT(*) FROM dissertations "
+                    "WHERE TRIM(ilmiy_rahbar) ILIKE %s OR TRIM(ilmiy_rahbar) ILIKE %s",
+                    (sl, sc))
+                rahbar_count = cur.fetchone()[0]
+                cur.execute(
+                    "SELECT COUNT(*) FROM dissertations WHERE "
+                    "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_1,'')) ILIKE %s OR "
+                    "TRIM(COALESCE(opponent_2,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s OR "
+                    "TRIM(COALESCE(opponent_3,'')) ILIKE %s OR TRIM(COALESCE(opponent_3,'')) ILIKE %s",
+                    (sl, sc, sl, sc, sl, sc))
+                opponent_count = cur.fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:
+        return jsonify({})
+    phd_mavzu = [r[1] for r in olim_rows if (r[0] or '').strip().upper() == 'PHD']
+    dsc_mavzu = [r[1] for r in olim_rows if (r[0] or '').strip().upper() == 'DSC']
+    return jsonify({
+        'olim_count':     len(olim_rows),
+        'rahbar_count':   rahbar_count,
+        'opponent_count': opponent_count,
+        'phd_mavzu':      phd_mavzu[:3],
+        'dsc_mavzu':      dsc_mavzu[:3],
+    })
 
 
 @data_bp.route('/olim/<path:name>')

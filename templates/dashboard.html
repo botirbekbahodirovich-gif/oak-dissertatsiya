@@ -223,6 +223,8 @@
       Mavzular: <b style="color:#4a9eff" id="ss-mavzu">0</b> ta &nbsp;|&nbsp;
       Ilmiy rahbarlar: <b style="color:#4a9eff" id="ss-rahbar">0</b> ta
     </div>
+    <!-- Search summary card -->
+    <div id="search-summary" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;font-size:13px;"></div>
   </div>
 
   <div class="table-panel">
@@ -567,25 +569,59 @@
     if (spinner) spinner.style.display = on ? 'inline-block' : 'none';
   }
 
-  // ── Search stats ───────────────────────────────────────────────────────────
+  // ── Search stats + summary ─────────────────────────────────────────────────
+  function renderSummary(data) {
+    const el = document.getElementById('search-summary');
+    if (!el) return;
+    if (!data || !Object.keys(data).length) { el.style.display = 'none'; return; }
+    let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;color:#94a3b8;">';
+    if (data.olim_count > 0) {
+      html += '<div>';
+      html += '<span style="color:#4a9eff;font-weight:600;">🎓 Olim sifatida:</span><br>';
+      (data.phd_mavzu || []).forEach(m => {
+        html += `<span style="color:#16a34a;">PhD:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+      });
+      (data.dsc_mavzu || []).forEach(m => {
+        html += `<span style="color:#ff6f00;">DSc:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+      });
+      html += '</div>';
+    }
+    if (data.rahbar_count > 0) {
+      html += `<div><span style="color:#4a9eff;font-weight:600;">👨‍🏫 Ilmiy rahbar:</span><br><span style="color:#e2e8f0;">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
+    }
+    if (data.opponent_count > 0) {
+      html += `<div><span style="color:#4a9eff;font-weight:600;">📋 Opponent:</span><br><span style="color:#e2e8f0;">${data.opponent_count.toLocaleString('uz')} ta himoyada ishtirok etgan</span></div>`;
+    }
+    html += '</div>';
+    el.innerHTML = html;
+    el.style.display = 'block';
+  }
+
   let statsTimeout;
   function fetchSearchStats(term) {
     const bar = document.getElementById('search-stats');
+    const sumEl = document.getElementById('search-summary');
     if (!term || term.length < 2) {
       if (bar) bar.style.display = 'none';
+      if (sumEl) sumEl.style.display = 'none';
       return;
     }
     clearTimeout(statsTimeout);
-    statsTimeout = setTimeout(async () => {
-      try {
-        const res = await fetch('/search-stats?search=' + encodeURIComponent(term));
-        const d = await res.json();
-        document.getElementById('ss-total').textContent  = (d.total  || 0).toLocaleString('uz');
-        document.getElementById('ss-olim').textContent   = (d.olim   || 0).toLocaleString('uz');
-        document.getElementById('ss-mavzu').textContent  = (d.mavzu  || 0).toLocaleString('uz');
-        document.getElementById('ss-rahbar').textContent = (d.rahbar || 0).toLocaleString('uz');
-        if (bar) bar.style.display = '';
-      } catch(e) {}
+    statsTimeout = setTimeout(() => {
+      const q = encodeURIComponent(term);
+      fetch('/search-stats?search=' + q)
+        .then(r => r.json())
+        .then(d => {
+          document.getElementById('ss-total').textContent  = (d.total  || 0).toLocaleString('uz');
+          document.getElementById('ss-olim').textContent   = (d.olim   || 0).toLocaleString('uz');
+          document.getElementById('ss-mavzu').textContent  = (d.mavzu  || 0).toLocaleString('uz');
+          document.getElementById('ss-rahbar').textContent = (d.rahbar || 0).toLocaleString('uz');
+          if (bar) bar.style.display = '';
+        }).catch(() => {});
+      fetch('/search-summary?search=' + q)
+        .then(r => r.json())
+        .then(renderSummary)
+        .catch(() => {});
     }, 350);
   }
 
@@ -641,7 +677,10 @@
     const val = this.value;
     clearBtn.style.display = val.length ? '' : 'none';
     currentFilters.search = val.trim();
-    if (!val.trim()) document.getElementById('search-stats').style.display = 'none';
+    if (!val.trim()) {
+      document.getElementById('search-stats').style.display = 'none';
+      document.getElementById('search-summary').style.display = 'none';
+    }
     clearTimeout(searchTimeout);
     if (val.length === 0 || val.length >= 2) {
       searchTimeout = setTimeout(() => {
@@ -655,6 +694,7 @@
     searchInput.value = ''; clearBtn.style.display = 'none';
     currentFilters.search = '';
     document.getElementById('search-stats').style.display = 'none';
+    document.getElementById('search-summary').style.display = 'none';
     currentPage = 1; updateData(); searchInput.focus();
   });
 
@@ -662,6 +702,7 @@
   document.getElementById('btn-reset')?.addEventListener('click', function() {
     searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
     document.getElementById('search-stats').style.display = 'none';
+    document.getElementById('search-summary').style.display = 'none';
     _setDaraja('');
     customSelects.forEach(s => s.reset());
     currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
