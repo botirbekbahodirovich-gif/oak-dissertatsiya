@@ -206,6 +206,76 @@ def stats_page():
     return render_template("stats.html")
 
 
+def _compare_university(cur, name):
+    """Aggregate comparison data for one university."""
+    name = (name or "").strip()
+    if not name:
+        return None
+    cur.execute(
+        """SELECT
+               COUNT(*),
+               COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD'),
+               COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC')
+           FROM dissertations WHERE TRIM(muassasa) = TRIM(%s)""",
+        (name,)
+    )
+    total, phd, dsc = cur.fetchone()
+    if not total:
+        return {"name": name, "total": 0, "phd": 0, "dsc": 0,
+                "top_supervisors": [], "top_ixtisosliklar": [], "years": []}
+    cur.execute(
+        """SELECT TRIM(ilmiy_rahbar), COUNT(*) AS cnt
+           FROM dissertations
+           WHERE TRIM(muassasa) = TRIM(%s) AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+           GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 5""",
+        (name,)
+    )
+    top_supervisors = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+    cur.execute(
+        """SELECT TRIM(ixtisoslik), COUNT(*) AS cnt
+           FROM dissertations
+           WHERE TRIM(muassasa) = TRIM(%s) AND ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> ''
+           GROUP BY TRIM(ixtisoslik) ORDER BY cnt DESC LIMIT 5""",
+        (name,)
+    )
+    top_ixtisosliklar = [{"code": r[0], "count": r[1]} for r in cur.fetchall()]
+    cur.execute(
+        r"""SELECT substring(TRIM(sana) from '\d{4}') AS yr, COUNT(*) AS cnt
+            FROM dissertations
+            WHERE TRIM(muassasa) = TRIM(%s) AND sana ~ '\d{4}'
+            GROUP BY yr ORDER BY yr""",
+        (name,)
+    )
+    years = [{"year": r[0], "count": r[1]} for r in cur.fetchall() if r[0]]
+    return {"name": name, "total": total or 0, "phd": phd or 0, "dsc": dsc or 0,
+            "top_supervisors": top_supervisors, "top_ixtisosliklar": top_ixtisosliklar,
+            "years": years}
+
+
+@app.route("/compare")
+@login_required
+def compare():
+    from flask import request
+    from data import get_connection
+    uni1 = request.args.get("uni1", "").strip()
+    uni2 = request.args.get("uni2", "").strip()
+    data1 = data2 = None
+    if uni1 or uni2:
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    if uni1:
+                        data1 = _compare_university(cur, uni1)
+                    if uni2:
+                        data2 = _compare_university(cur, uni2)
+            finally:
+                conn.close()
+        except Exception:
+            data1 = data2 = None
+    return render_template("compare.html", uni1=uni1, uni2=uni2, data1=data1, data2=data2)
+
+
 @app.route("/api/notifications/count")
 @login_required
 def notifications_count():

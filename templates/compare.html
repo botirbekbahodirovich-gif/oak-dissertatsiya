@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Solishtirish — Olimlar.uz{% endblock %}
+{% block extra_head %}
+<style>
+  .compare-form { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end; }
+  .compare-form .fld { flex:1 1 240px; min-width:200px; }
+  .compare-form label { display:block; font-size:0.78rem; font-weight:600; color:var(--oak-muted); margin-bottom:4px; }
+  .cmp-card { background:var(--oak-surface-2,#22262f); border:1px solid var(--oak-border); border-radius:14px; padding:1.25rem; height:100%; }
+  .cmp-name { font-size:1.05rem; font-weight:700; color:#e2e8f0; margin-bottom:0.9rem; line-height:1.4; min-height:2.8em; }
+  .cmp-nums { display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .cmp-num { flex:1; min-width:70px; text-align:center; background:rgba(255,255,255,0.03); border:1px solid var(--oak-border); border-radius:10px; padding:0.6rem 0.4rem; }
+  .cmp-num .v { font-size:1.3rem; font-weight:800; }
+  .cmp-num .l { font-size:0.7rem; color:var(--oak-muted); text-transform:uppercase; letter-spacing:0.4px; }
+  .cmp-sub-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--oak-muted); margin:1rem 0 0.5rem; }
+  .cmp-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.35rem; }
+  .cmp-list li { display:flex; justify-content:space-between; gap:0.5rem; font-size:0.84rem; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; }
+  .cmp-list li .nm { color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmp-list li .ct { color:#4a9eff; font-weight:700; flex-shrink:0; }
+  .cmp-empty { color:var(--oak-muted); font-style:italic; font-size:0.82rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1><i class="bi bi-bar-chart-steps me-2" style="color:#4a9eff;"></i>Muassasalarni solishtirish</h1>
+    <p>Ikkita muassasani tanlang va ko'rsatkichlarini yonma-yon ko'ring.</p>
+  </div>
+</div>
+
+<div class="content-card mb-3">
+  <form class="compare-form" method="get" action="/compare">
+    <div class="fld">
+      <label for="uni1">Birinchi muassasa</label>
+      <input list="uni-list" id="uni1" name="uni1" class="form-control" value="{{ uni1 }}" placeholder="Muassasa nomini yozing..." autocomplete="off">
+    </div>
+    <div class="fld">
+      <label for="uni2">Ikkinchi muassasa</label>
+      <input list="uni-list" id="uni2" name="uni2" class="form-control" value="{{ uni2 }}" placeholder="Muassasa nomini yozing..." autocomplete="off">
+    </div>
+    <datalist id="uni-list"></datalist>
+    <div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-left-right me-1"></i>Solishtirish</button>
+    </div>
+  </form>
+</div>
+
+{% macro cmp_card(d) %}
+<div class="cmp-card">
+  <div class="cmp-name">{{ d.name }}</div>
+  <div class="cmp-nums">
+    <div class="cmp-num"><div class="v" style="color:#4a9eff;">{{ d.total }}</div><div class="l">Jami</div></div>
+    <div class="cmp-num"><div class="v" style="color:#34d399;">{{ d.phd }}</div><div class="l">PhD</div></div>
+    <div class="cmp-num"><div class="v" style="color:#a78bfa;">{{ d.dsc }}</div><div class="l">DSc</div></div>
+  </div>
+  <div class="cmp-sub-title">Top ilmiy rahbarlar</div>
+  {% if d.top_supervisors %}
+  <ul class="cmp-list">
+    {% for s in d.top_supervisors %}
+    <li><span class="nm"><a href="/supervisor/{{ s.name | urlencode }}" style="color:inherit;">{{ s.name }}</a></span><span class="ct">{{ s.count }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="cmp-empty">Ma'lumot yo'q</div>{% endif %}
+  <div class="cmp-sub-title">Top ixtisoslik kodlari</div>
+  {% if d.top_ixtisosliklar %}
+  <ul class="cmp-list">
+    {% for ix in d.top_ixtisosliklar %}
+    <li><span class="nm"><a href="/specialization/{{ ix.code | urlencode }}" style="color:inherit;">{{ ix.code }}</a></span><span class="ct">{{ ix.count }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="cmp-empty">Ma'lumot yo'q</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% if data1 or data2 %}
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-6">
+    {% if data1 %}{{ cmp_card(data1) }}{% else %}<div class="cmp-card"><div class="cmp-empty">Birinchi muassasa tanlanmadi</div></div>{% endif %}
+  </div>
+  <div class="col-12 col-md-6">
+    {% if data2 %}{{ cmp_card(data2) }}{% else %}<div class="cmp-card"><div class="cmp-empty">Ikkinchi muassasa tanlanmadi</div></div>{% endif %}
+  </div>
+</div>
+
+{% if (data1 and data1.years) or (data2 and data2.years) %}
+<div class="chart-card">
+  <div class="chart-title"><i class="bi bi-graph-up"></i>Yillik taqsimot</div>
+  <div class="chart-container" style="height:280px;"><canvas id="chart-years"></canvas></div>
+</div>
+{% endif %}
+{% else %}
+<div class="content-card" style="text-align:center;padding:3rem 1rem;color:var(--oak-muted);">
+  <i class="bi bi-bar-chart-steps" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;opacity:0.4;"></i>
+  <div>Solishtirish uchun yuqorida ikkita muassasani tanlang.</div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  // Populate datalist from /filters muassasa
+  fetch('/filters').then(r => r.json()).then(d => {
+    const dl = document.getElementById('uni-list');
+    (d.muassasa || []).forEach(m => {
+      const o = document.createElement('option');
+      o.value = m; dl.appendChild(o);
+    });
+  }).catch(() => {});
+
+  const D1 = {{ data1|tojson if data1 else 'null' }};
+  const D2 = {{ data2|tojson if data2 else 'null' }};
+  const canvas = document.getElementById('chart-years');
+  if (canvas && (typeof Chart !== 'undefined')) {
+    const yearsSet = new Set();
+    [D1, D2].forEach(d => { if (d && d.years) d.years.forEach(y => yearsSet.add(y.year)); });
+    const years = Array.from(yearsSet).sort();
+    const mapOf = d => {
+      const m = {}; if (d && d.years) d.years.forEach(y => { m[y.year] = y.count; }); return m;
+    };
+    const m1 = mapOf(D1), m2 = mapOf(D2);
+    const datasets = [];
+    if (D1) datasets.push({ label: D1.name.length > 30 ? D1.name.slice(0,28)+'…' : D1.name,
+      data: years.map(y => m1[y] || 0), backgroundColor: 'rgba(74,158,255,0.65)', borderColor: '#4a9eff', borderWidth: 1, borderRadius: 4 });
+    if (D2) datasets.push({ label: D2.name.length > 30 ? D2.name.slice(0,28)+'…' : D2.name,
+      data: years.map(y => m2[y] || 0), backgroundColor: 'rgba(167,139,250,0.65)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4 });
+    new Chart(canvas, {
+      type: 'bar',
+      data: { labels: years, datasets: datasets },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#8899b4' } },
+          tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#e8edf5', bodyColor: '#8899b4', padding: 10, cornerRadius: 8 } },
+        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', stepSize: 1 }, beginAtZero: true } } }
+    });
+  }
+</script>
+{% endblock %}

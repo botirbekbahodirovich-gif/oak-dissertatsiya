@@ -378,6 +378,7 @@
         <a href="/" class="nav-link"><i class="bi bi-house-fill"></i>Bosh sahifa</a>
         <a href="/dashboard" class="nav-link{% if request.path == '/dashboard' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali<span id="nav-total-badge" style="display:none;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(74,158,255,0.14);color:#4a9eff;font-size:0.7rem;font-weight:700;vertical-align:middle;"></span></a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
+        <a href="/compare" class="nav-link{% if request.path.startswith('/compare') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i>Solishtirish</a>
         <a href="/profile" class="nav-link{% if request.path == '/profile' %} active{% endif %}"><i class="bi bi-person-badge"></i>Profil</a>
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
           <i class="bi bi-bell-fill"></i>
