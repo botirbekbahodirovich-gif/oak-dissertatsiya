@@ -769,6 +769,32 @@ def _summary_stats(rows):
     }
 
 
+def get_ixtisoslik_saturation(ixtisoslik_code):
+    """How many dissertations share this ixtisoslik code → saturation level."""
+    code = (ixtisoslik_code or '').strip()
+    if not code:
+        return None
+    cache_key = f'ixtisoslik_sat:{code.lower()}'
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        count = _query_scalar(
+            "SELECT COUNT(*) FROM dissertations WHERE TRIM(ixtisoslik) = TRIM(%s)",
+            (code,)
+        ) or 0
+    except Exception:
+        return None
+    if count < 50:
+        result = {'level': 'low', 'label': "Kam o'rganilgan", 'count': count}
+    elif count < 200:
+        result = {'level': 'medium', 'label': "O'rtacha o'rganilgan", 'count': count}
+    else:
+        result = {'level': 'high', 'label': "Ko'p o'rganilgan", 'count': count}
+    cache.set(cache_key, result, timeout=300)
+    return result
+
+
 @data_bp.route('/dissertation/<int:id>')
 @login_required
 def dissertation(id):
@@ -776,7 +802,8 @@ def dissertation(id):
     if not row:
         abort(404)
     row['Olim_short'] = clean_olim_name(row.get('Olim', ''))
-    return render_template('dissertation.html', row=row, id=id)
+    saturation = get_ixtisoslik_saturation(row.get('Ixtisoslik', ''))
+    return render_template('dissertation.html', row=row, id=id, saturation=saturation)
 
 
 @data_bp.route('/author/<path:name>')

@@ -38,6 +38,13 @@
   .field-val a { color: var(--oak-accent); text-decoration: none; }
   .field-val a:hover { text-decoration: underline; }
 
+  /* ── Saturation badge ── */
+  .sat-badge { display:inline-flex; align-items:center; gap:0.35rem; padding:3px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; }
+  .sat-low { background:rgba(52,211,153,0.16); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
+  .sat-medium { background:rgba(251,191,36,0.16); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); }
+  .sat-high { background:rgba(248,113,113,0.16); color:#f87171; border:1px solid rgba(248,113,113,0.3); }
+  .sat-count { font-size:0.8rem; color:var(--oak-muted); margin-top:4px; }
+
   /* ── Opponents list ── */
   .opp-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.25rem; }
   .opp-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
@@ -121,6 +128,18 @@
       <div class="field">
         <div class="field-lbl">🌿 Fan tarmog'i</div>
         <div class="field-val">{{ row.Fan_tarmoqi }}</div>
+      </div>
+      {% endif %}
+      {% if saturation %}
+      <div class="field">
+        <div class="field-lbl">📊 O'rganilganlik darajasi</div>
+        <div class="field-val">
+          <span class="sat-badge sat-{{ saturation.level }}">
+            {% if saturation.level == 'low' %}<i class="bi bi-stars"></i>{% elif saturation.level == 'medium' %}<i class="bi bi-bar-chart"></i>{% else %}<i class="bi bi-fire"></i>{% endif %}
+            {{ saturation.label }}
+          </span>
+          <div class="sat-count">Shu ixtisoslikda: <b style="color:#e2e8f0;">{{ saturation.count }}</b> ta himoya</div>
+        </div>
       </div>
       {% endif %}
       {% if not row.Ixtisoslik and not row.Ixtisoslik_nomi and not row.Fan_tarmoqi %}
