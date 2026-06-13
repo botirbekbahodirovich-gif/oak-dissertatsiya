@@ -277,21 +277,6 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
     return clause, params
 
 
-def _map_sort_column(sort_by):
-    mapping = {
-        "Sana": "sana",
-        "Daraja": "daraja",
-        "Olim": "olim",
-        "Mavzu": "mavzu",
-        "Ixtisoslik": "ixtisoslik",
-        "Muassasa": "muassasa",
-        "Ilmiy_rahbar": "ilmiy_rahbar",
-        "Link": "link",
-        "id": "id"
-    }
-    return mapping.get(sort_by, "id")
-
-
 def load_data():
     sql = (
         'SELECT id, oak_id, sana AS "Sana", daraja AS "Daraja", olim AS "Olim", '
@@ -310,30 +295,12 @@ def count_dissertations(search, daraja, muassasa, ixtisoslik,
     return _query_scalar(sql, params) or 0
 
 
-# Default sort direction per column: Sana/id start DESC, text columns start ASC
-_COL_DEFAULT_DIR = {
-    "id":           "desc",
-    "sana":         "desc",
-    "olim":         "asc",
-    "mavzu":        "asc",
-    "daraja":       "asc",
-    "ixtisoslik":   "asc",
-    "muassasa":     "asc",
-    "ilmiy_rahbar": "asc",
-}
-
-
-def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
+def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort_dir=None,
                         page=None, per_page=None,
                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     clause, params = _build_filter_clause(
         search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
-    sort_col = _map_sort_column(sort_by)
-    # Honour explicit direction; fall back to per-column default; ultimate default is desc (id DESC)
-    if sort_dir and str(sort_dir).lower() in ('asc', 'desc'):
-        effective_dir = str(sort_dir).lower()
-    else:
-        effective_dir = _COL_DEFAULT_DIR.get(sort_col, 'desc')
+    # Always sort oldest → newest (sana ASC, id ASC) regardless of filters/scope.
     pagination_clause = ''
     if page is not None and per_page is not None:
         try:
@@ -350,7 +317,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by, sort_dir,
         'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
         'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
         'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
-        f'FROM dissertations d{clause} ORDER BY {sort_col} {effective_dir}' + pagination_clause
+        f'FROM dissertations d{clause} ORDER BY d.sana ASC, d.id ASC' + pagination_clause
     )
     return _query_rows(sql, params)
 
@@ -499,7 +466,7 @@ def _data_cache_key():
         f"data_{a.get('page',1)}_{a.get('per_page',50)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
         f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
-        f"_{a.get('sort_by','id')}_{a.get('sort_dir','desc')}_{a.get('scope','all')}"
+        f"_{a.get('scope','all')}"
     )
 
 
@@ -524,8 +491,6 @@ def data():
     except ValueError:
         per_page = 50
 
-    sort_by  = a.get("sort_by",  "id")
-    sort_dir = a.get("sort_dir", "desc")
     scope    = a.get("scope",    "all").strip()
     if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
         scope = 'all'
@@ -535,9 +500,9 @@ def data():
     page = max(1, min(page, total_pages))
     rows = query_dissertations(
         search, daraja, muassasa, ixtisoslik,
-        sort_by, sort_dir,
-        page, per_page,
-        fan_tarmoqi, ilmiy_kengash, sana_yil, scope
+        page=page, per_page=per_page,
+        fan_tarmoqi=fan_tarmoqi, ilmiy_kengash=ilmiy_kengash,
+        sana_yil=sana_yil, scope=scope
     )
 
     return jsonify({

@@ -662,8 +662,6 @@
       sana_yil:   currentFilters.sana_yil,
       page:       currentPage,
       per_page:   PER_PAGE,
-      sort_by:    'id',
-      sort_dir:   'desc',
       scope:      currentScope
     });
     fetch('/data?' + params, { signal: searchController.signal })
