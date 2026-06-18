@@ -108,7 +108,7 @@ html { scroll-behavior: smooth; }
 .car-arrow.next { right: -6px; }
 .deg-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; white-space: nowrap; }
 .deg-phd { background: #059669; }
-.deg-dsc { background: #b85001; }
+.deg-dsc { background: #e36403; }
 .deg-other { background: #94a3b8; }
 
 /* ════════ SECTION 3 — HOW IT HELPS ════════ */
@@ -170,6 +170,16 @@ html { scroll-behavior: smooth; }
 .top-shogird { font-size: 0.82rem; color: #64748b; }
 .top-foot { text-align: center; margin-top: 24px; }
 
+/* marquee (auto-scrolling top scientists) */
+.marquee-wrap {
+  overflow: hidden; padding: 36px 0 16px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.marquee-track { display: flex; gap: 18px; width: max-content; animation: marquee 60s linear infinite; }
+.marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
 /* ════════ SECTION 6 — PORTFOLIO CTA ════════ */
 .portfolio-sec { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #6366f1 100%); padding: 80px 0; color: #fff; text-align: center; }
 .portfolio-sec h2 { font-size: 2rem; font-weight: 800; color: #fff; margin: 0 0 16px; line-height: 1.25; }
@@ -209,8 +219,23 @@ html { scroll-behavior: smooth; }
   font-size: 0.9rem; color: #334155; line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.rd-ix { display: inline-block; align-self: flex-start; font-size: 0.74rem; background: #e2e8f0; color: #475569; padding: 3px 10px; border-radius: 999px; margin-top: auto; }
-.recent-foot { text-align: center; margin-top: 40px; }
+.rd-ix { font-size: 0.74rem; background: #e2e8f0; color: #475569; padding: 3px 10px; border-radius: 999px; }
+.rd-bottom { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.rd-extra { display: none !important; }
+.recent-grid2.expanded .rd-extra { display: flex !important; }
+.recent-foot { text-align: center; margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+#rd-more-btn {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: #eff6ff; color: #2563eb; font-weight: 600; font-size: 0.95rem;
+  padding: 10px 24px; border-radius: 50px; border: 1px solid #bfdbfe;
+  transition: background 0.2s ease;
+}
+#rd-more-btn:hover { background: #dbeafe; }
+
+/* FAQ contact block */
+.faq-contact { text-align: center; margin: 32px 0 48px; }
+.faq-contact h3 { font-size: 1.4rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; }
+.faq-contact p { color: #64748b; margin: 0 0 22px; }
 .btn-outline-blue {
   display: inline-flex; align-items: center; gap: 8px;
   border: 2px solid #3b82f6; color: #3b82f6; font-weight: 600; font-size: 1rem;
@@ -305,19 +330,11 @@ html { scroll-behavior: smooth; }
     <button class="car-arrow prev" id="car-prev" aria-label="Oldingi">&#8592;</button>
     <div class="carousel-track" id="carousel-track">
       {% for n in news %}
-        {% if n.is_placeholder %}
-          <div class="news-card">
-            <div class="nc-title">{{ n.title }}</div>
-            <div class="nc-summary">{{ n.summary }}</div>
-            <div class="nc-date">{{ n.created_at }}</div>
-          </div>
-        {% else %}
-          <a class="news-card" href="/yangiliklar/{{ n.id }}">
-            <div class="nc-title">{{ n.title }}</div>
-            <div class="nc-summary">{{ n.summary }}</div>
-            <div class="nc-date">{{ n.created_at }}</div>
-          </a>
-        {% endif %}
+        <a class="news-card" href="{% if n.is_placeholder %}/yangiliklar{% else %}/yangiliklar/{{ n.id }}{% endif %}">
+          <div class="nc-title">{{ n.title }}</div>
+          <div class="nc-summary">{{ n.summary }}</div>
+          <div class="nc-date">{{ n.created_at }}</div>
+        </a>
       {% endfor %}
     </div>
     <button class="car-arrow next" id="car-next" aria-label="Keyingi">&#8594;</button>
@@ -389,8 +406,8 @@ html { scroll-behavior: smooth; }
   </div>
 </section>
 
-<!-- ════ SECTION 5: TOP RESEARCHERS ════ -->
-{% if top_supervisors %}
+<!-- ════ SECTION 5: TOP RESEARCHERS (marquee) ════ -->
+{% if top_marquee %}
 <section class="top-sec">
   <div class="hp-container fade-section">
     <div class="hp-center">
@@ -398,20 +415,25 @@ html { scroll-behavior: smooth; }
       <h2 class="hp-h2">Eng faol tadqiqotchilar</h2>
       <p class="hp-sub">Eng ko'p ilmiy rahbarlik qilgan va dissertatsiya himoya qilgan olimlar</p>
     </div>
-    <div class="top-scroll">
-      {% for s in top_supervisors %}
+  </div>
+  <div class="marquee-wrap">
+    <div class="marquee-track">
+      {# rendered twice for a seamless infinite loop #}
+      {% for s in top_marquee + top_marquee %}
         <div class="top-card">
           <div class="top-avatar">
             {% if s.photo_url %}<img src="{{ s.photo_url }}" alt="{{ s.display }}">{% else %}<span>🎓</span>{% endif %}
           </div>
-          <a class="top-name" href="/supervisor/{{ s.name|urlencode }}">{{ s.display or s.name }}</a>
-          <span class="top-diss">{{ s.count }} ta dissertatsiya</span>
-          <div class="top-shogird">{{ s.count }} ta shogird</div>
+          <a class="top-name" href="/olim/{{ s.name|urlencode }}">{{ s.display or s.name }}</a>
+          <span class="top-diss">{{ s.count }} ta shogird</span>
+          <div class="top-shogird">{{ s.count }} ta dissertatsiya</div>
         </div>
       {% endfor %}
     </div>
+  </div>
+  <div class="hp-container">
     <div class="top-foot">
-      <a href="/dashboard" class="btn-outline-blue">Hammasini ko'rish →</a>
+      <a href="/top-olimlar" class="btn-outline-blue">Hammasini ko'rish →</a>
     </div>
   </div>
 </section>
@@ -465,23 +487,27 @@ html { scroll-behavior: smooth; }
     <div class="hp-center">
       <h2 class="hp-h2">So'nggi himoya e'lonlari</h2>
     </div>
-    <div class="recent-grid2">
+    <div class="recent-grid2" id="recent-grid">
       {% if recent %}
-        {% for r in recent[:6] %}
+        {% for r in recent %}
           {% set d = (r.Daraja or '')|upper %}
-          <div class="rd-card">
+          <div class="rd-card{% if loop.index > 6 %} rd-extra{% endif %}">
             <div class="rd-top">
-              <span class="deg-badge {{ 'deg-phd' if d=='PHD' else 'deg-dsc' if d=='DSC' else 'deg-other' }}">{{ r.Daraja or '—' }}</span>
+              <div class="rd-head">
+                <div class="rd-avatar">
+                  {% if r.photo_url %}<img src="{{ r.photo_url }}" alt="{{ r.Olim_display }}">{% else %}<span>🎓</span>{% endif %}
+                </div>
+                <a class="rd-name" href="/olim/{{ r.Olim|urlencode }}">{{ r.Olim_display or r.Olim or "Noma'lum" }}</a>
+              </div>
               <span class="rd-date">{{ r.Sana or '' }}</span>
             </div>
-            <div class="rd-head">
-              <div class="rd-avatar">
-                {% if r.photo_url %}<img src="{{ r.photo_url }}" alt="{{ r.Olim_display }}">{% else %}<span>🎓</span>{% endif %}
-              </div>
-              <a class="rd-name" href="/olim/{{ r.Olim|urlencode }}">{{ r.Olim_display or r.Olim or "Noma'lum" }}</a>
-            </div>
             <div class="rd-mavzu">{{ r.Mavzu or "Mavzu ko'rsatilmagan" }}</div>
-            {% if r.Ixtisoslik %}<span class="rd-ix">{{ r.Ixtisoslik }}</span>{% endif %}
+            <div class="rd-bottom">
+              {% if r.Ixtisoslik %}<span class="rd-ix">{{ r.Ixtisoslik }}</span>{% endif %}
+              {% if d == 'PHD' %}<span class="deg-badge deg-phd">PhD</span>
+              {% elif d == 'DSC' %}<span class="deg-badge deg-dsc">DSc</span>
+              {% elif r.Daraja %}<span class="deg-badge deg-other">{{ r.Daraja }}</span>{% endif %}
+            </div>
           </div>
         {% endfor %}
       {% else %}
@@ -491,6 +517,9 @@ html { scroll-behavior: smooth; }
       {% endif %}
     </div>
     <div class="recent-foot">
+      {% if recent and recent|length > 6 %}
+      <button id="rd-more-btn" type="button">Yana ko'rsatish ↓</button>
+      {% endif %}
       <a href="/data" class="btn-outline-blue">Barcha dissertatsiyalar →</a>
     </div>
   </div>
@@ -524,6 +553,11 @@ html { scroll-behavior: smooth; }
         <div class="faq-q">Qanday ro'yxatdan o'taman?<span class="faq-icon">+</span></div>
         <div class="faq-a"><div class="faq-a-inner">Telegram orqali bir tugma bosish bilan kiring. Alohida ro'yxatdan o'tish shart emas — Telegram hisobingiz bilan avtomatik kirasiz.</div></div>
       </div>
+    </div>
+    <div class="faq-contact">
+      <h3>Barcha savollarga javob topmadingizmi?</h3>
+      <p>Administratorga to'g'ridan-to'g'ri murojaat yuboring</p>
+      <a href="https://t.me/send_kod_bot" target="_blank" rel="noopener noreferrer" class="btn-cta">Adminga yozish →</a>
     </div>
   </div>
 </section>
@@ -617,6 +651,16 @@ html { scroll-behavior: smooth; }
     nums.forEach(function (el) { co.observe(el); });
   } else {
     nums.forEach(countUp);
+  }
+
+  /* ── recent defenses: show more ── */
+  var rdMore = document.getElementById('rd-more-btn');
+  var rdGrid = document.getElementById('recent-grid');
+  if (rdMore && rdGrid) {
+    rdMore.addEventListener('click', function () {
+      rdGrid.classList.add('expanded');
+      rdMore.style.display = 'none';
+    });
   }
 
   /* ── FAQ accordion ── */

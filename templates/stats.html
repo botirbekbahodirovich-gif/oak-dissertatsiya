@@ -132,7 +132,7 @@
     document.getElementById('summary-chips').innerHTML = `
       <div class="chip"><i class="bi bi-collection" style="color:#4a9eff;"></i>Jami: <span>${(stats.total||0).toLocaleString('uz')}</span></div>
       <div class="chip"><i class="bi bi-award" style="color:#34d399;"></i>PhD: <span>${(stats.phd||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-patch-star" style="color:#b85001;"></i>DSc: <span>${(stats.dsc||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-patch-star" style="color:#e36403;"></i>DSc: <span>${(stats.dsc||0).toLocaleString('uz')}</span></div>
       <div class="chip"><i class="bi bi-person-lines-fill" style="color:#fb923c;"></i>Ilmiy rahbarlar: <span>${(stats.rahbarlar||0).toLocaleString('uz')}</span></div>
       <div class="chip"><i class="bi bi-building" style="color:#fbbf24;"></i>Muassasalar: <span>${(stats.muassasalar||0).toLocaleString('uz')}</span></div>
       <div class="chip"><i class="bi bi-mortarboard" style="color:#38bdf8;"></i>Olimlar: <span>${(stats.olim||0).toLocaleString('uz')}</span></div>
@@ -174,7 +174,7 @@
     // 3. PhD vs DSc doughnut
     const darajaLabels = d.daraja_ratio.map(r => r.daraja);
     const darajaCounts = d.daraja_ratio.map(r => r.count);
-    const darajaColors = darajaLabels.map(l => l.toUpperCase() === 'PHD' ? '#34d399' : l.toUpperCase() === 'DSC' ? '#b85001' : '#fbbf24');
+    const darajaColors = darajaLabels.map(l => l.toUpperCase() === 'PHD' ? '#34d399' : l.toUpperCase() === 'DSC' ? '#e36403' : '#fbbf24');
     new Chart(document.getElementById('chart-daraja'), {
       type: 'doughnut',
       data: { labels: darajaLabels, datasets: [{ data: darajaCounts,

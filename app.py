@@ -142,6 +142,75 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_yangiliklar_created ON yangiliklar(created_at)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_profiles (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL UNIQUE,
+                    photo_url VARCHAR(500),
+                    bio TEXT,
+                    scopus_url VARCHAR(500),
+                    wos_url VARCHAR(500),
+                    scholar_url VARCHAR(500),
+                    youtube_url VARCHAR(500),
+                    facebook_url VARCHAR(500),
+                    twitter_url VARCHAR(500),
+                    instagram_url VARCHAR(500),
+                    telegram_url VARCHAR(500),
+                    pinterest_url VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_maqolalar (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL,
+                    title VARCHAR(1000) NOT NULL,
+                    authors TEXT,
+                    journal VARCHAR(500),
+                    year INTEGER,
+                    citations INTEGER DEFAULT 0,
+                    url VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_konferensiyalar (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL,
+                    title VARCHAR(1000) NOT NULL,
+                    conference_name VARCHAR(500),
+                    location VARCHAR(500),
+                    date DATE,
+                    url VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_ish_faoliyati (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL,
+                    position VARCHAR(500) NOT NULL,
+                    organization VARCHAR(500),
+                    start_date DATE,
+                    end_date DATE,
+                    is_current BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_rasmlar (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL,
+                    image_url VARCHAR(500) NOT NULL,
+                    caption VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            for _t in ("olim_maqolalar", "olim_konferensiyalar", "olim_ish_faoliyati", "olim_rasmlar"):
+                cur.execute(
+                    f"CREATE INDEX IF NOT EXISTS idx_{_t}_name ON {_t}(olim_name)"
+                )
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
@@ -215,30 +284,53 @@ def home():
     top_rows = []
     news = []
     total_stats = {"dissertations": 0, "researchers": 0, "institutions": 0, "specialties": 0}
+    top_random_rows = []
     try:
+        import datetime
+        threshold = (datetime.date.today() - datetime.timedelta(days=3)).strftime("%Y-%m-%d")
         from data import get_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                # Recent 8 dissertations
+                # Recent dissertations — last 3 days, fallback to last 9
                 cur.execute(
                     "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
                     "FROM dissertations "
-                    "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
-                    "ORDER BY id DESC LIMIT 8"
+                    "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' AND sana >= %s "
+                    "ORDER BY sana DESC, id DESC LIMIT 30",
+                    (threshold,)
                 )
                 cols = [d[0] for d in cur.description]
                 rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                if not rows:
+                    cur.execute(
+                        "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
+                        "FROM dissertations "
+                        "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
+                        "ORDER BY sana DESC, id DESC LIMIT 9"
+                    )
+                    cols = [d[0] for d in cur.description]
+                    rows = [dict(zip(cols, row)) for row in cur.fetchall()]
 
-                # Most active supervisors
+                # Most active supervisors (top 20 by student count)
                 cur.execute(
                     "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
                     "MAX(ilmiy_rahbar_photo_url) AS photo_url "
                     "FROM dissertations "
                     "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
-                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 8"
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 20"
                 )
                 top_rows = cur.fetchall()
+
+                # Random 20 supervisors for the marquee
+                cur.execute(
+                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
+                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
+                    "FROM dissertations "
+                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY RANDOM() LIMIT 20"
+                )
+                top_random_rows = cur.fetchall()
 
                 # Aggregate totals
                 cur.execute(
@@ -272,7 +364,7 @@ def home():
         finally:
             conn.close()
     except Exception:
-        rows, top_rows = [], []
+        rows, top_rows, top_random_rows = [], [], []
 
     if not news:
         news = _placeholder_news()
@@ -289,15 +381,23 @@ def home():
         "photo_url": row.get("photo_url") or "",
     } for row in rows]
 
-    top_supervisors = [{
-        "name": r[0] or "",
-        "display": clean_olim_name(r[0] or ""),
-        "count": r[1] or 0,
-        "photo_url": r[2] or "",
-    } for r in top_rows]
+    def _sup_list(src):
+        return [{
+            "name": r[0] or "",
+            "display": clean_olim_name(r[0] or ""),
+            "count": r[1] or 0,
+            "photo_url": r[2] or "",
+        } for r in src]
+
+    top_supervisors = _sup_list(top_rows)
+    top_supervisors_random = _sup_list(top_random_rows)
+    # Combined list for the seamless marquee (top 20 + random 20)
+    top_marquee = top_supervisors + top_supervisors_random
 
     return render_template("home.html", recent=recent, news=news,
-                           top_supervisors=top_supervisors, total_stats=total_stats)
+                           top_supervisors=top_supervisors,
+                           top_supervisors_random=top_supervisors_random,
+                           top_marquee=top_marquee, total_stats=total_stats)
 
 
 @app.route("/dashboard")
@@ -619,6 +719,52 @@ def yangilik_detail(id):
     if not item:
         abort(404)
     return render_template("yangilik_detail.html", item=item)
+
+
+@app.route("/top-olimlar")
+def top_olimlar():
+    from data import get_connection, clean_olim_name
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 50
+    offset = (page - 1) * per_page
+    items = []
+    total = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) FROM (SELECT 1 FROM dissertations "
+                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
+                    "GROUP BY TRIM(ilmiy_rahbar)) t"
+                )
+                total = cur.fetchone()[0] or 0
+                cur.execute(
+                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
+                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
+                    "FROM dissertations "
+                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC, rahbar "
+                    "LIMIT %s OFFSET %s",
+                    (per_page, offset)
+                )
+                items = [{
+                    "rank": offset + i + 1,
+                    "name": r[0] or "",
+                    "display": clean_olim_name(r[0] or ""),
+                    "count": r[1] or 0,
+                    "photo_url": r[2] or "",
+                } for i, r in enumerate(cur.fetchall())]
+        finally:
+            conn.close()
+    except Exception:
+        items, total = [], 0
+
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return render_template("top_olimlar.html", items=items, page=page,
+                           total_pages=total_pages, total=total)
 
 
 @app.route("/about")

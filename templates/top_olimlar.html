@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Eng faol tadqiqotchilar — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.lite { background: #f8fafc; color: #0f172a; min-height: 70vh; padding: 56px 0 72px; }
+.lite-container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+.lite h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; text-align: center; }
+.lite .lite-sub { text-align: center; color: #64748b; font-size: 1.05rem; margin: 0 auto 40px; max-width: 620px; }
+.top-list { display: flex; flex-direction: column; gap: 12px; }
+.tl-row {
+  display: flex; align-items: center; gap: 16px; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 14px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.tl-row:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+.tl-rank { font-weight: 800; font-size: 1.05rem; color: #94a3b8; width: 38px; text-align: center; flex-shrink: 0; }
+.tl-rank.top { color: #f59e0b; }
+.tl-avatar {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: grid; place-items: center; font-size: 1.5rem; color: #fff;
+}
+.tl-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.tl-main { flex: 1; min-width: 0; }
+.tl-name { font-weight: 700; color: #1e40af; font-size: 1.05rem; text-decoration: none; }
+.tl-name:hover { text-decoration: underline; color: #1e40af; }
+.tl-sub { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
+.tl-badge { flex-shrink: 0; font-size: 0.8rem; font-weight: 700; background: #dbeafe; color: #2563eb; padding: 6px 14px; border-radius: 999px; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 40px; }
+.pager a, .pager span {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff;
+  color: #1e40af; font-weight: 600; font-size: 0.9rem; text-decoration: none;
+}
+.pager a:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; text-decoration: none; }
+.pager .cur { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.pager .disabled { color: #cbd5e1; pointer-events: none; }
+@media (max-width: 575px) { .lite h1 { font-size: 1.6rem; } .tl-badge { display: none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lite">
+  <div class="lite-container">
+    <h1>Eng faol tadqiqotchilar</h1>
+    <p class="lite-sub">Eng ko'p shogird chiqargan ilmiy rahbarlar — kamayish tartibida</p>
+    <div class="top-list">
+      {% for it in items %}
+      <div class="tl-row">
+        <div class="tl-rank{% if it.rank <= 3 %} top{% endif %}">{{ it.rank }}</div>
+        <div class="tl-avatar">
+          {% if it.photo_url %}<img src="{{ it.photo_url }}" alt="{{ it.display }}">{% else %}<span>🎓</span>{% endif %}
+        </div>
+        <div class="tl-main">
+          <a class="tl-name" href="/olim/{{ it.name|urlencode }}">{{ it.display or it.name }}</a>
+          <div class="tl-sub">{{ it.count }} ta dissertatsiya</div>
+        </div>
+        <span class="tl-badge">{{ it.count }} ta shogird</span>
+      </div>
+      {% else %}
+      <div class="tl-row"><div class="tl-main">Ma'lumot topilmadi.</div></div>
+      {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pager">
+      {% if page > 1 %}<a href="/top-olimlar?page={{ page - 1 }}">← Oldingi</a>{% else %}<span class="disabled">← Oldingi</span>{% endif %}
+      <span class="cur">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}<a href="/top-olimlar?page={{ page + 1 }}">Keyingi →</a>{% else %}<span class="disabled">Keyingi →</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

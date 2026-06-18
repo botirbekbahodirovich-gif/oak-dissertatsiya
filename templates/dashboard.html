@@ -85,7 +85,7 @@
   .font-size-controls button:hover { border-color: #4a9eff; color: #4a9eff; }
 
   /* daraja badges */
-  .badge-dsc.badge-role { background: #b85001 !important; color: #fff !important; cursor: default !important; }
+  .badge-dsc.badge-role { background: #e36403 !important; color: #fff !important; cursor: default !important; }
   .badge-phd.badge-role { background: #16a34a !important; color: #fff !important; cursor: default !important; }
 
   /* pagination */
@@ -121,7 +121,13 @@
   .daraja-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
   .daraja-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
   .daraja-btn[data-value="PhD"].active { background: #16a34a; border-color: #16a34a; }
-  .daraja-btn[data-value="DSc"].active { background: #b85001; border-color: #b85001; }
+  .daraja-btn[data-value="DSc"].active { background: #e36403; border-color: #e36403; }
+
+  /* view toggle (jadval / kartochka) */
+  .view-toggle { display: flex; gap: 8px; flex-shrink: 0; }
+  .vt-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); background: #e2e8f0; color: #64748b; font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .vt-btn:hover { color: #1e293b; }
+  .vt-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
 
   /* custom searchable select */
   .custom-select { position: relative; min-width: 120px; max-width: 220px; flex: 1 1 120px; }
@@ -259,6 +265,10 @@
     <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
       <div id="result-info" class="result-count">Topildi: <strong>—</strong> ta natija</div>
       <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
+        <div class="view-toggle" id="view-toggle">
+          <button type="button" class="vt-btn active" id="vt-table">📋 Jadval</button>
+          <button type="button" class="vt-btn" id="vt-card" onclick="alert('Kartochka ko‘rinishi tez orada qo‘shiladi!');">🃏 Kartochka</button>
+        </div>
         <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></span>
         <div class="col-toggle-wrap">
           <button id="btn-col-toggle" class="btn btn-secondary btn-sm" title="Ustunlarni boshqarish" style="padding:4px 8px;">
@@ -602,7 +612,7 @@
         html += `<span style="color:#16a34a;">PhD:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       (data.dsc_mavzu || []).forEach(m => {
-        html += `<span style="color:#b85001;">DSc:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+        html += `<span style="color:#e36403;">DSc:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       html += '</div>';
     }

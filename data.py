@@ -714,6 +714,35 @@ def olim_profile(name):
         "OR TRIM(COALESCE(opponent_3,'')) ILIKE %s",
         (like, like, like), order='sana DESC')
     fields = {d.get('Ixtisoslik', '').strip() for d in own if d.get('Ixtisoslik', '').strip()}
+
+    # Portfolio data (new profile tables) — empty if not yet filled in
+    profile = None
+    maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                def _fetch(sql, order=''):
+                    cur.execute(sql + (' ORDER BY ' + order if order else ''), (term,))
+                    cnames = [c[0] for c in cur.description]
+                    return [dict(zip(cnames, row)) for row in cur.fetchall()]
+
+                rows_p = _fetch("SELECT * FROM olim_profiles WHERE olim_name = %s")
+                profile = rows_p[0] if rows_p else None
+                maqolalar = _fetch("SELECT * FROM olim_maqolalar WHERE olim_name = %s",
+                                   "year DESC NULLS LAST, id DESC")
+                konferensiyalar = _fetch("SELECT * FROM olim_konferensiyalar WHERE olim_name = %s",
+                                         "date DESC NULLS LAST, id DESC")
+                ish_faoliyati = _fetch("SELECT * FROM olim_ish_faoliyati WHERE olim_name = %s",
+                                       "start_date DESC NULLS LAST, id DESC")
+                rasmlar = _fetch("SELECT * FROM olim_rasmlar WHERE olim_name = %s",
+                                 "created_at DESC, id DESC")
+        finally:
+            conn.close()
+    except Exception:
+        profile = None
+        maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
+
     stats = {
         'total': len(own),
         'phd': sum(1 for d in own if str(d.get('Daraja', '')).strip().upper() == 'PHD'),
@@ -721,9 +750,12 @@ def olim_profile(name):
         'fields': len(fields),
         'supervisor_count': len(as_supervisor),
         'opponent_count': len(as_opponent),
+        'maqola_count': len(maqolalar),
     }
     return render_template('olim_profile.html', olim_name=term, dissertations=own,
-                           as_supervisor=as_supervisor, as_opponent=as_opponent, stats=stats)
+                           as_supervisor=as_supervisor, as_opponent=as_opponent, stats=stats,
+                           profile=profile, maqolalar=maqolalar, konferensiyalar=konferensiyalar,
+                           ish_faoliyati=ish_faoliyati, rasmlar=rasmlar)
 
 
 def _summary_stats(rows):
