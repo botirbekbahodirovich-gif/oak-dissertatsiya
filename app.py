@@ -177,34 +177,74 @@ _run_startup_migrations()
 
 @app.route("/")
 def home():
+    from data import clean_olim_name
+    rows = []
+    top_rows = []
+    total_stats = {"dissertations": 0, "researchers": 0, "institutions": 0, "specialties": 0}
     try:
         from data import get_connection
         conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, olim, mavzu, daraja, sana, muassasa "
-                "FROM dissertations "
-                "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
-                "ORDER BY id DESC LIMIT 6"
-            )
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, row)) for row in cur.fetchall()]
-        conn.close()
+        try:
+            with conn.cursor() as cur:
+                # Recent 8 dissertations
+                cur.execute(
+                    "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik "
+                    "FROM dissertations "
+                    "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
+                    "ORDER BY id DESC LIMIT 8"
+                )
+                cols = [d[0] for d in cur.description]
+                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+                # Most active supervisors
+                cur.execute(
+                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt "
+                    "FROM dissertations "
+                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 8"
+                )
+                top_rows = cur.fetchall()
+
+                # Aggregate totals
+                cur.execute(
+                    "SELECT COUNT(*), "
+                    "COUNT(DISTINCT NULLIF(TRIM(olim), '')), "
+                    "COUNT(DISTINCT NULLIF(TRIM(muassasa), '')), "
+                    "COUNT(DISTINCT NULLIF(TRIM(ixtisoslik), '')) "
+                    "FROM dissertations"
+                )
+                srow = cur.fetchone()
+                if srow:
+                    total_stats = {
+                        "dissertations": srow[0] or 0,
+                        "researchers": srow[1] or 0,
+                        "institutions": srow[2] or 0,
+                        "specialties": srow[3] or 0,
+                    }
+        finally:
+            conn.close()
     except Exception:
-        rows = []
-    recent = []
-    if rows:
-        from data import clean_olim_name
-        recent = [{
-            "id": row.get("id"),
-            "Olim": row.get("olim", "") or "",
-            "Olim_display": clean_olim_name(row.get("olim", "") or ""),
-            "Mavzu": row.get("mavzu", "") or "",
-            "Daraja": row.get("daraja", "") or "",
-            "Sana": row.get("sana", "") or "",
-            "Muassasa": row.get("muassasa", "") or "",
-        } for row in rows]
-    return render_template("home.html", recent=recent)
+        rows, top_rows = [], []
+
+    recent = [{
+        "id": row.get("id"),
+        "Olim": row.get("olim", "") or "",
+        "Olim_display": clean_olim_name(row.get("olim", "") or ""),
+        "Mavzu": row.get("mavzu", "") or "",
+        "Daraja": row.get("daraja", "") or "",
+        "Sana": row.get("sana", "") or "",
+        "Muassasa": row.get("muassasa", "") or "",
+        "Ixtisoslik": row.get("ixtisoslik", "") or "",
+    } for row in rows]
+
+    top_supervisors = [{
+        "name": r[0] or "",
+        "display": clean_olim_name(r[0] or ""),
+        "count": r[1] or 0,
+    } for r in top_rows]
+
+    return render_template("home.html", recent=recent,
+                           top_supervisors=top_supervisors, total_stats=total_stats)
 
 
 @app.route("/dashboard")
