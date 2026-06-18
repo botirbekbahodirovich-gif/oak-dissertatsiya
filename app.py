@@ -30,6 +30,20 @@ def _inject_csrf_token():
     return dict(csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf())
 
 
+@app.context_processor
+def _inject_supervisor_counts():
+    """Expose cached supervisor → student-count lookup to every template."""
+    def supervisor_count(name):
+        if not name:
+            return 0
+        try:
+            from data import get_supervisor_counts
+            return get_supervisor_counts().get(str(name).strip(), 0)
+        except Exception:
+            return 0
+    return dict(supervisor_count=supervisor_count)
+
+
 
 def is_safe_relative_url(target: str) -> bool:
     if not target:

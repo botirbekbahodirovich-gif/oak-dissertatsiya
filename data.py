@@ -272,7 +272,7 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
         params.append(ilmiy_kengash)
     if sana_yil:
         clauses.append("sana LIKE %s")
-        params.append(f"{sana_yil}%")
+        params.append(f"%{sana_yil}%")
     clause = " WHERE " + " AND ".join(clauses) if clauses else ""
     return clause, params
 
@@ -300,7 +300,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort
                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     clause, params = _build_filter_clause(
         search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
-    # Always sort oldest → newest (sana ASC, id ASC) regardless of filters/scope.
+    # Default sort: newest → oldest (sana DESC, id DESC) regardless of filters/scope.
     pagination_clause = ''
     if page is not None and per_page is not None:
         try:
@@ -317,7 +317,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort
         'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
         'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
         'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
-        f'FROM dissertations d{clause} ORDER BY d.sana ASC, d.id ASC' + pagination_clause
+        f'FROM dissertations d{clause} ORDER BY d.sana DESC, d.id DESC' + pagination_clause
     )
     return _query_rows(sql, params)
 
@@ -330,11 +330,13 @@ _DISTINCT_LIMITS = {
 def _distinct_values(column, limit=None):
     if column not in _DISTINCT_LIMITS:
         return []
-    lim = limit or _DISTINCT_LIMITS[column]
+    lim = limit if limit is not None else _DISTINCT_LIMITS[column]
+    # ixtisoslik must list every unique code — no limit.
+    limit_clause = "" if (column == "ixtisoslik" or not lim) else f" LIMIT {int(lim)}"
     sql = (
         f"SELECT DISTINCT TRIM({column}) AS val FROM dissertations "
         f"WHERE {column} IS NOT NULL AND TRIM({column}) <> '' "
-        f"ORDER BY val LIMIT {int(lim)}"
+        f"ORDER BY val{limit_clause}"
     )
     conn = get_connection()
     try:
@@ -346,12 +348,12 @@ def _distinct_values(column, limit=None):
 
 
 def _distinct_years():
-    sql = """
-        SELECT DISTINCT SUBSTRING(TRIM(sana), 1, 4) AS yr
+    # Extract a 4-digit year from anywhere in the (free-form text) sana value.
+    sql = r"""
+        SELECT DISTINCT (regexp_match(TRIM(sana), '(19|20)\d{2}'))[1] AS yr
         FROM dissertations
-        WHERE sana IS NOT NULL AND TRIM(sana) ~ '^[0-9]{4}'
+        WHERE sana IS NOT NULL AND TRIM(sana) ~ '(19|20)\d{2}'
         ORDER BY yr DESC
-        LIMIT 50
     """
     conn = get_connection()
     try:

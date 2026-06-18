@@ -44,9 +44,8 @@
   transition: background 0.2s ease, transform 0.2s ease;
 }
 .op-soc:hover { background: rgba(255,255,255,0.3); color: #fff; transform: translateY(-2px); text-decoration: none; }
-.op-acad { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.op-acad a { font-size: 0.74rem; font-weight: 700; padding: 5px 11px; border-radius: 8px; background: rgba(255,255,255,0.16); color: #fff; text-decoration: none; }
-.op-acad a:hover { background: rgba(255,255,255,0.3); color: #fff; text-decoration: none; }
+.op-acad { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.op-soc.disabled, .op-acad .disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 .op-share {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: none;
   background: #fff; color: #1e40af; font-weight: 700; font-size: 0.95rem;
@@ -152,26 +151,33 @@
         <span><b>{{ stats.total }}</b> himoya</span>
         <span><b>{{ stats.maqola_count }}</b> maqola</span>
         <span><b>{{ stats.opponent_count }}</b> opponentlik</span>
-        {% if stats.supervisor_count %}<span><b>{{ stats.supervisor_count }}</b> shogird</span>{% endif %}
+        <span><b>{{ stats.supervisor_count or 0 }}</b> shogird</span>
       </div>
     </div>
 
     <div class="op-side">
-      {% if profile %}
       <div class="op-acad">
-        {% if profile.scopus_url %}<a href="{{ profile.scopus_url }}" target="_blank" rel="noopener">Scopus</a>{% endif %}
-        {% if profile.wos_url %}<a href="{{ profile.wos_url }}" target="_blank" rel="noopener">Web of Science</a>{% endif %}
-        {% if profile.scholar_url %}<a href="{{ profile.scholar_url }}" target="_blank" rel="noopener">Scholar</a>{% endif %}
+        {% set scopus = profile.scopus_url if profile else None %}
+        {% if scopus %}<a class="op-soc" href="{{ scopus }}" target="_blank" rel="noopener" title="Scopus">🔬</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">🔬</span>{% endif %}
+        {% set wos = profile.wos_url if profile else None %}
+        {% if wos %}<a class="op-soc" href="{{ wos }}" target="_blank" rel="noopener" title="Web of Science">📚</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">📚</span>{% endif %}
+        {% set scholar = profile.scholar_url if profile else None %}
+        {% if scholar %}<a class="op-soc" href="{{ scholar }}" target="_blank" rel="noopener" title="Google Scholar">🎓</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">🎓</span>{% endif %}
       </div>
       <div class="op-socials">
-        {% if profile.youtube_url %}<a class="op-soc" href="{{ profile.youtube_url }}" target="_blank" rel="noopener"><i class="bi bi-youtube"></i></a>{% endif %}
-        {% if profile.facebook_url %}<a class="op-soc" href="{{ profile.facebook_url }}" target="_blank" rel="noopener"><i class="bi bi-facebook"></i></a>{% endif %}
-        {% if profile.twitter_url %}<a class="op-soc" href="{{ profile.twitter_url }}" target="_blank" rel="noopener"><i class="bi bi-twitter-x"></i></a>{% endif %}
-        {% if profile.instagram_url %}<a class="op-soc" href="{{ profile.instagram_url }}" target="_blank" rel="noopener"><i class="bi bi-instagram"></i></a>{% endif %}
-        {% if profile.telegram_url %}<a class="op-soc" href="{{ profile.telegram_url }}" target="_blank" rel="noopener"><i class="bi bi-telegram"></i></a>{% endif %}
-        {% if profile.pinterest_url %}<a class="op-soc" href="{{ profile.pinterest_url }}" target="_blank" rel="noopener"><i class="bi bi-pinterest"></i></a>{% endif %}
+        {% set socials = [
+          (profile.youtube_url if profile else None, 'bi-youtube', 'YouTube'),
+          (profile.facebook_url if profile else None, 'bi-facebook', 'Facebook'),
+          (profile.twitter_url if profile else None, 'bi-twitter-x', 'Twitter/X'),
+          (profile.instagram_url if profile else None, 'bi-instagram', 'Instagram'),
+          (profile.telegram_url if profile else None, 'bi-telegram', 'Telegram'),
+          (profile.pinterest_url if profile else None, 'bi-pinterest', 'Pinterest')
+        ] %}
+        {% for url, icon, label in socials %}
+          {% if url %}<a class="op-soc" href="{{ url }}" target="_blank" rel="noopener" title="{{ label }}"><i class="bi {{ icon }}"></i></a>
+          {% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi {{ icon }}"></i></span>{% endif %}
+        {% endfor %}
       </div>
-      {% endif %}
       <button class="op-share" id="op-share-btn" type="button">ULASHISH 📨</button>
     </div>
   </div>
@@ -192,7 +198,8 @@
             <div class="op-card-meta">
               {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
               {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Muassasa %}<span>🏛️ Илмий тадқиқот иши бажарилган муассаса: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
               {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
               {% if d.Opponent_1 %}{% set _ = opps.append(d.Opponent_1) %}{% endif %}
@@ -215,7 +222,8 @@
             <div class="op-card-meta">
               {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
               {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Muassasa %}<span>🏛️ Илмий тадқиқот иши бажарилган муассаса: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
               {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
               {% if d.Opponent_1 %}{% set _ = opps.append(d.Opponent_1) %}{% endif %}
