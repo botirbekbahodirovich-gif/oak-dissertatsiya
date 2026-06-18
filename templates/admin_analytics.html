@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Admin tahlili — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .admin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  @media (max-width: 768px) { .admin-stats { grid-template-columns: 1fr; } }
+  .admin-card {
+    border-radius: 16px;
+    border: 1px solid var(--oak-border);
+    background: var(--oak-surface);
+    padding: 1.35rem 1.5rem;
+  }
+  .admin-card .card-label {
+    color: var(--oak-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .admin-card .card-value { font-size: 2rem; font-weight: 800; color: var(--oak-text); line-height: 1.1; }
+  .admin-card .card-sub { color: var(--oak-muted); font-size: 0.82rem; margin-top: 0.3rem; }
+  [data-bs-theme="light"] .admin-card .card-value { color: var(--oak-text-light); }
+  .dot-online {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #34d399; display: inline-block;
+    box-shadow: 0 0 0 0 rgba(52,211,153,0.6);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(52,211,153,0); }
+    100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+  }
+  .mini-bars { display: flex; align-items: flex-end; gap: 6px; height: 72px; margin-top: 0.5rem; }
+  .mini-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .mini-bar {
+    width: 100%;
+    min-height: 3px;
+    border-radius: 5px 5px 0 0;
+    background: linear-gradient(180deg, #4a9eff, #7c5cfc);
+  }
+  .mini-bar-label { color: var(--oak-muted); font-size: 0.66rem; }
+  .admin-section { margin-top: 1.5rem; }
+  .admin-section h2 {
+    font-size: 1.05rem; font-weight: 700; margin: 0 0 0.85rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .admin-table-panel { border-radius: 16px; overflow: hidden; border: 1px solid var(--oak-border); background: var(--oak-surface); }
+  .admin-table { width: 100%; margin: 0; }
+  .admin-table th { background: var(--oak-surface-2); color: var(--oak-muted); font-size: 0.72rem; letter-spacing: 0.5px; text-transform: uppercase; padding: 0.7rem 1rem; }
+  .admin-table td { padding: 0.65rem 1rem; font-size: 0.88rem; border-color: var(--oak-border); }
+  .admin-table tbody tr:hover td { background: rgba(74,158,255,0.06); }
+  .empty-cell { color: var(--oak-muted); text-align: center; padding: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1><i class="bi bi-speedometer2"></i> Admin tahlili</h1>
+    <p>Tashriflar va onlayn foydalanuvchilar statistikasi</p>
+  </div>
+</div>
+
+<div class="admin-stats">
+  <div class="admin-card">
+    <div class="card-label"><span class="dot-online"></span> Hozir online</div>
+    <div class="card-value"><span id="online-count">{{ online_now }}</span> <span style="font-size:1rem;color:var(--oak-muted);">kishi</span></div>
+    <div class="card-sub">So'nggi 5 daqiqada faol</div>
+  </div>
+  <div class="admin-card">
+    <div class="card-label">👥 Bugun tashrif</div>
+    <div class="card-value">{{ today_visits }} <span style="font-size:1rem;color:var(--oak-muted);">marta</span></div>
+    <div class="card-sub">{{ today_unique }} ta noyob foydalanuvchi</div>
+  </div>
+  <div class="admin-card">
+    <div class="card-label">📊 Haftalik trend</div>
+    {% if weekly %}
+      {% set ns = namespace(maxv=1) %}
+      {% for row in weekly %}{% if row[1] > ns.maxv %}{% set ns.maxv = row[1] %}{% endif %}{% endfor %}
+      <div class="mini-bars">
+        {% for row in weekly %}
+        <div class="mini-bar-col" title="{{ row[0] }}: {{ row[1] }} tashrif">
+          <div class="mini-bar" style="height: {{ (row[1] / ns.maxv * 100) | round(0, 'ceil') }}%;"></div>
+          <div class="mini-bar-label">{{ row[0].strftime('%d.%m') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card-sub">Ma'lumot yo'q</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="admin-section">
+  <h2><i class="bi bi-bar-chart-line-fill"></i> Eng ko'p tashrif qilingan sahifalar</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr><th>Sahifa</th><th style="text-align:right;">Tashriflar soni</th></tr>
+      </thead>
+      <tbody>
+        {% for page, cnt in top_pages %}
+        <tr><td>{{ page }}</td><td style="text-align:right;font-weight:700;">{{ cnt }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="empty-cell">Bugun tashriflar yo'q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="admin-section">
+  <h2><i class="bi bi-clock-history"></i> So'nggi tashrif buyurganlar</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr><th>Foydalanuvchi</th><th>Sahifa</th><th>IP</th><th>Vaqt</th></tr>
+      </thead>
+      <tbody>
+        {% for username, page, ip, visited_at in recent %}
+        <tr>
+          <td>{{ username }}</td>
+          <td>{{ page }}</td>
+          <td style="color:var(--oak-muted);">{{ ip }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ visited_at.strftime('%Y-%m-%d %H:%M') if visited_at else '' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="empty-cell">Tashriflar yo'q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function pollOnline() {
+  fetch('/api/online-count')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var el = document.getElementById('online-count');
+      if (el && typeof d.online !== 'undefined') el.textContent = d.online;
+    })
+    .catch(function() {})
+    .finally(function() { setTimeout(pollOnline, 30000); });
+})();
+</script>
+{% endblock %}

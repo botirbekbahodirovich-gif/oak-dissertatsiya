@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 import bcrypt
-from flask import Flask, render_template, redirect, url_for, jsonify
+from flask import Flask, render_template, redirect, url_for, jsonify, request, abort
 from urllib.parse import urlparse
 from flask_login import (LoginManager, UserMixin, logout_user,
                          login_required, current_user)
@@ -116,6 +116,19 @@ def _run_startup_migrations():
                     is_read BOOLEAN DEFAULT FALSE
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS page_visits (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    username TEXT,
+                    page TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    visited_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_time ON page_visits(visited_at)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_user ON page_visits(user_id)")
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
@@ -340,6 +353,94 @@ def profile():
     except Exception:
         stats = {"total": 0, "phd": 0, "dsc": 0, "muassasalar": 0}
     return render_template("profile.html", user=current_user, stats=stats)
+
+
+@app.before_request
+def track_visit():
+    if request.endpoint and not request.path.startswith('/static') and not request.path.startswith('/api/'):
+        try:
+            from data import get_connection
+            conn = get_connection()
+            cur = conn.cursor()
+            user_id = current_user.id if current_user.is_authenticated else None
+            username = current_user.username if current_user.is_authenticated else 'Anonim'
+            cur.execute("""
+                INSERT INTO page_visits (user_id, username, page, ip_address, user_agent)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, username, request.path, request.remote_addr,
+                  request.headers.get('User-Agent', '')[:200]))
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception:
+            pass  # never break the app if tracking fails
+
+
+@app.route('/api/online-count')
+def online_count():
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(DISTINCT COALESCE(user_id::text, ip_address))
+                    FROM page_visits
+                    WHERE visited_at > NOW() - INTERVAL '5 minutes'
+                """)
+                count = cur.fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:
+        count = 0
+    return jsonify({'online': count})
+
+
+@app.route('/admin/analytics')
+@login_required
+def admin_analytics():
+    if current_user.username != 'admin':
+        abort(403)
+    from data import get_connection
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            # Today's visits
+            cur.execute("SELECT COUNT(*) FROM page_visits WHERE visited_at::date = CURRENT_DATE")
+            today_visits = cur.fetchone()[0]
+
+            # Today's unique visitors
+            cur.execute("""SELECT COUNT(DISTINCT COALESCE(user_id::text, ip_address))
+                FROM page_visits WHERE visited_at::date = CURRENT_DATE""")
+            today_unique = cur.fetchone()[0]
+
+            # Online now (last 5 min)
+            cur.execute("""SELECT COUNT(DISTINCT COALESCE(user_id::text, ip_address))
+                FROM page_visits WHERE visited_at > NOW() - INTERVAL '5 minutes'""")
+            online_now = cur.fetchone()[0]
+
+            # Most visited pages today
+            cur.execute("""SELECT page, COUNT(*) AS cnt FROM page_visits
+                WHERE visited_at::date = CURRENT_DATE
+                GROUP BY page ORDER BY cnt DESC LIMIT 10""")
+            top_pages = cur.fetchall()
+
+            # Recent visitors (last 50)
+            cur.execute("""SELECT username, page, ip_address, visited_at FROM page_visits
+                ORDER BY visited_at DESC LIMIT 50""")
+            recent = cur.fetchall()
+
+            # Daily visits last 7 days
+            cur.execute("""SELECT visited_at::date AS d, COUNT(*) AS cnt FROM page_visits
+                WHERE visited_at > NOW() - INTERVAL '7 days'
+                GROUP BY d ORDER BY d""")
+            weekly = cur.fetchall()
+    finally:
+        conn.close()
+
+    return render_template('admin_analytics.html',
+        today_visits=today_visits, today_unique=today_unique, online_now=online_now,
+        top_pages=top_pages, recent=recent, weekly=weekly)
 
 
 if __name__ == "__main__":
