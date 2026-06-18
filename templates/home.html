@@ -111,6 +111,18 @@
 }
 .btn-ai-start:hover { opacity: 0.9; transform: translateY(-2px); color: #fff; text-decoration: none; }
 
+/* trust badge */
+.mini-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(74,158,255,0.15);
+  border: 2px solid var(--oak-bg, #0f1117);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  margin-left: -10px;
+}
+.mini-avatar:first-child { margin-left: 0; }
+
 /* secondary search */
 .hero-search-row {
   margin-bottom: 1rem;
@@ -358,6 +370,18 @@
       <button class="btn-ai-start" onclick="document.getElementById('ai-panel').classList.add('open')">
         <i class="bi bi-stars"></i> AI bilan boshlash
       </button>
+
+      <div class="trust-badge" style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:24px;">
+        <div class="avatar-stack" style="display:flex;">
+          <div class="mini-avatar">🎓</div>
+          <div class="mini-avatar">👨‍🏫</div>
+          <div class="mini-avatar">👩‍🏫</div>
+          <div class="mini-avatar">🎓</div>
+        </div>
+        <span style="color:#94a3b8;font-size:14px;">
+          <b id="user-count-badge" style="color:#4a9eff;font-size:16px;">...</b> foydalanuvchi ishlatmoqda
+        </span>
+      </div>
     </div>
 
     <!-- Secondary search -->
@@ -649,6 +673,16 @@
         function(x){ return '/specialization/' + encodeURIComponent(x.code); },
         function(x){ return x.nomi ? x.code + ' — ' + x.nomi : x.code; }
       );
+    }).catch(function(){});
+
+  /* /api/user-count (public) — trust badge */
+  fetch('/api/user-count')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('user-count-badge');
+      if (el && typeof d.count !== 'undefined') {
+        el.textContent = d.count.toLocaleString('uz-UZ') + '+';
+      }
     }).catch(function(){});
 
   /* AI typing animation */

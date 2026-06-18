@@ -396,6 +396,22 @@ def online_count():
     return jsonify({'online': count})
 
 
+@app.route('/api/user-count')
+def user_count():
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM users")
+                count = cur.fetchone()[0]
+        finally:
+            conn.close()
+    except Exception:
+        count = 0
+    return jsonify({'count': count})
+
+
 @app.route('/admin/analytics')
 @login_required
 def admin_analytics():
