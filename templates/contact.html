@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Aloqa — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.lite { background: #f8fafc; color: #0f172a; min-height: 70vh; padding: 56px 0 72px; }
+.lite-narrow { max-width: 620px; margin: 0 auto; padding: 0 24px; }
+.lite h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; text-align: center; }
+.lite .lite-sub { text-align: center; color: #64748b; font-size: 1.05rem; margin: 0 auto 36px; }
+.contact-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.contact-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+.contact-row:last-child { border-bottom: 0; }
+.contact-ic { width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; display: grid; place-items: center; font-size: 1.3rem; flex-shrink: 0; }
+.contact-lbl { font-size: 0.82rem; color: #94a3b8; }
+.contact-val { font-weight: 600; color: #1e40af; }
+.contact-val a { color: #1e40af; }
+@media (max-width: 639px) { .lite h1 { font-size: 1.6rem; } .contact-card { padding: 24px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lite">
+  <div class="lite-narrow">
+    <h1>Aloqa</h1>
+    <p class="lite-sub">Savollaringiz bo'lsa, Telegram orqali bog'laning</p>
+    <div class="contact-card">
+      <div class="contact-row">
+        <div class="contact-ic">📨</div>
+        <div>
+          <div class="contact-lbl">Telegram</div>
+          <div class="contact-val"><a href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer">@olimlar_uz</a></div>
+        </div>
+      </div>
+      <div class="contact-row">
+        <div class="contact-ic">✉️</div>
+        <div>
+          <div class="contact-lbl">Email</div>
+          <div class="contact-val"><a href="mailto:info@olimlar.uz">info@olimlar.uz</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

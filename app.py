@@ -129,6 +129,19 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_time ON page_visits(visited_at)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_user ON page_visits(user_id)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS yangiliklar (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(500) NOT NULL,
+                    content TEXT,
+                    summary VARCHAR(1000),
+                    image_url VARCHAR(500),
+                    source_url VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_published BOOLEAN DEFAULT TRUE
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_yangiliklar_created ON yangiliklar(created_at)")
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
@@ -175,11 +188,32 @@ def _run_startup_migrations():
 _run_startup_migrations()
 
 
+def _placeholder_news():
+    """Fallback news cards shown when the yangiliklar table is empty."""
+    import datetime
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    items = [
+        ("Olimlar.uz platformasi ishga tushirildi",
+         "Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi rasman ishga tushdi."),
+        ("OAK tizimida yangiliklar",
+         "Oliy Attestatsiya Komissiyasi tizimidagi so'nggi o'zgarishlar va e'lonlar haqida ma'lumot."),
+        ("AI tadqiqot yordamchisi qo'shildi",
+         "Endi sun'iy intellekt yordamida mavzu tanlash va adabiyotlar tahlilini amalga oshirish mumkin."),
+        ("27,000+ dissertatsiya bazaga yuklandi",
+         "Platformaga 27 mingdan ortiq dissertatsiya himoyasi haqida to'liq ma'lumot qo'shildi."),
+    ]
+    return [{
+        "id": 0, "title": t, "summary": s,
+        "created_at": today, "is_placeholder": True,
+    } for t, s in items]
+
+
 @app.route("/")
 def home():
     from data import clean_olim_name
     rows = []
     top_rows = []
+    news = []
     total_stats = {"dissertations": 0, "researchers": 0, "institutions": 0, "specialties": 0}
     try:
         from data import get_connection
@@ -188,7 +222,7 @@ def home():
             with conn.cursor() as cur:
                 # Recent 8 dissertations
                 cur.execute(
-                    "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik "
+                    "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
                     "FROM dissertations "
                     "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
                     "ORDER BY id DESC LIMIT 8"
@@ -198,7 +232,8 @@ def home():
 
                 # Most active supervisors
                 cur.execute(
-                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt "
+                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
+                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
                     "FROM dissertations "
                     "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
                     "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 8"
@@ -221,10 +256,26 @@ def home():
                         "institutions": srow[2] or 0,
                         "specialties": srow[3] or 0,
                     }
+
+                # Published news for the carousel
+                try:
+                    cur.execute(
+                        "SELECT id, title, summary, created_at FROM yangiliklar "
+                        "WHERE is_published = TRUE ORDER BY created_at DESC LIMIT 8"
+                    )
+                    news = [{
+                        "id": r[0], "title": r[1] or "", "summary": r[2] or "",
+                        "created_at": str(r[3])[:10] if r[3] else "", "is_placeholder": False,
+                    } for r in cur.fetchall()]
+                except Exception:
+                    news = []
         finally:
             conn.close()
     except Exception:
         rows, top_rows = [], []
+
+    if not news:
+        news = _placeholder_news()
 
     recent = [{
         "id": row.get("id"),
@@ -235,15 +286,17 @@ def home():
         "Sana": row.get("sana", "") or "",
         "Muassasa": row.get("muassasa", "") or "",
         "Ixtisoslik": row.get("ixtisoslik", "") or "",
+        "photo_url": row.get("photo_url") or "",
     } for row in rows]
 
     top_supervisors = [{
         "name": r[0] or "",
         "display": clean_olim_name(r[0] or ""),
         "count": r[1] or 0,
+        "photo_url": r[2] or "",
     } for r in top_rows]
 
-    return render_template("home.html", recent=recent,
+    return render_template("home.html", recent=recent, news=news,
                            top_supervisors=top_supervisors, total_stats=total_stats)
 
 
@@ -497,6 +550,110 @@ def admin_analytics():
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
         top_pages=top_pages, recent=recent, weekly=weekly)
+
+
+@app.route("/yangiliklar")
+def yangiliklar():
+    from data import get_connection
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 20
+    offset = (page - 1) * per_page
+    items = []
+    total = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM yangiliklar WHERE is_published = TRUE")
+                total = cur.fetchone()[0] or 0
+                cur.execute(
+                    "SELECT id, title, summary, created_at FROM yangiliklar "
+                    "WHERE is_published = TRUE ORDER BY created_at DESC "
+                    "LIMIT %s OFFSET %s",
+                    (per_page, offset)
+                )
+                items = [{
+                    "id": r[0], "title": r[1] or "", "summary": r[2] or "",
+                    "created_at": str(r[3])[:10] if r[3] else "", "is_placeholder": False,
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items, total = [], 0
+
+    if not items and page == 1:
+        items = _placeholder_news()
+        total = len(items)
+
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return render_template("yangiliklar.html", items=items, page=page,
+                           total_pages=total_pages, total=total)
+
+
+@app.route("/yangiliklar/<int:id>")
+def yangilik_detail(id):
+    from data import get_connection
+    item = None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, content, summary, source_url, created_at "
+                    "FROM yangiliklar WHERE id = %s AND is_published = TRUE",
+                    (id,)
+                )
+                r = cur.fetchone()
+                if r:
+                    item = {
+                        "id": r[0], "title": r[1] or "", "content": r[2] or "",
+                        "summary": r[3] or "", "source_url": r[4] or "",
+                        "created_at": str(r[5])[:16] if r[5] else "",
+                    }
+        finally:
+            conn.close()
+    except Exception:
+        item = None
+    if not item:
+        abort(404)
+    return render_template("yangilik_detail.html", item=item)
+
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/team")
+def team():
+    return render_template("team.html")
+
+
+@app.route("/vacancies")
+def vacancies():
+    return render_template("vacancies.html")
+
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+
+@app.route("/blog")
+def blog():
+    return render_template("blog.html")
+
+
+@app.route("/preparation")
+def preparation():
+    return render_template("preparation.html")
+
+
+@app.route("/courses")
+def courses():
+    return render_template("courses.html")
 
 
 if __name__ == "__main__":

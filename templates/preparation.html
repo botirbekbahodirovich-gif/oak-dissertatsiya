@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Himoyaga tayyorlanish — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.ph-page { background: #f8fafc; color: #0f172a; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; }
+.ph-inner { max-width: 560px; }
+.ph-emoji { font-size: 3.2rem; margin-bottom: 18px; }
+.ph-page h1 { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
+.ph-sub { color: #64748b; font-size: 1.08rem; line-height: 1.6; margin: 0 0 28px; }
+.ph-btn { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: #fff;
+  font-weight: 600; padding: 12px 28px; border-radius: 50px; text-decoration: none;
+  box-shadow: 0 4px 14px rgba(59,130,246,0.4); transition: background 0.3s ease, transform 0.3s ease; }
+.ph-btn:hover { background: #2563eb; color: #fff; transform: scale(1.02); text-decoration: none; }
+@media (max-width: 639px) { .ph-page h1 { font-size: 1.55rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph-page">
+  <div class="ph-inner">
+    <div class="ph-emoji">📚</div>
+    <h1>Himoyaga tayyorlanish</h1>
+    <p class="ph-sub">Himoyaga tayyorlanish bo'yicha materiallar tez orada qo'shiladi.</p>
+    <a href="/" class="ph-btn">Bosh sahifa →</a>
+  </div>
+</div>
+{% endblock %}

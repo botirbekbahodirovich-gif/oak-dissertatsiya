@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Yangiliklar — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.lite { background: #f8fafc; color: #0f172a; min-height: 70vh; padding: 56px 0 72px; }
+.lite-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.lite h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; text-align: center; }
+.lite .lite-sub { text-align: center; color: #64748b; font-size: 1.05rem; margin: 0 auto 40px; max-width: 640px; }
+.news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.ng-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 22px;
+  display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.ng-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); color: inherit; text-decoration: none; }
+.ng-title { font-weight: 700; color: #0f172a; font-size: 1.05rem; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ng-summary { font-size: 0.9rem; color: #64748b; line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.ng-foot { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 6px; }
+.ng-date { font-size: 0.8rem; color: #94a3b8; }
+.ng-more { font-size: 0.85rem; font-weight: 600; color: #3b82f6; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 44px; }
+.pager a, .pager span {
+  padding: 8px 16px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff;
+  color: #1e40af; font-weight: 600; font-size: 0.9rem; text-decoration: none;
+}
+.pager a:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; text-decoration: none; }
+.pager .cur { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.pager .disabled { color: #cbd5e1; pointer-events: none; }
+@media (max-width: 991px) { .news-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 639px) { .news-grid { grid-template-columns: 1fr; } .lite h1 { font-size: 1.6rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lite">
+  <div class="lite-container">
+    <h1>Fan va ta'lim yangiliklari</h1>
+    <p class="lite-sub">Ilmiy soha, OAK tizimi va platformamizdagi so'nggi yangiliklar</p>
+    <div class="news-grid">
+      {% for n in items %}
+        {% if n.is_placeholder %}
+          <div class="ng-card">
+            <div class="ng-title">{{ n.title }}</div>
+            <div class="ng-summary">{{ n.summary }}</div>
+            <div class="ng-foot"><span class="ng-date">{{ n.created_at }}</span></div>
+          </div>
+        {% else %}
+          <a class="ng-card" href="/yangiliklar/{{ n.id }}">
+            <div class="ng-title">{{ n.title }}</div>
+            <div class="ng-summary">{{ n.summary }}</div>
+            <div class="ng-foot"><span class="ng-date">{{ n.created_at }}</span><span class="ng-more">Batafsil →</span></div>
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pager">
+      {% if page > 1 %}<a href="/yangiliklar?page={{ page - 1 }}">← Oldingi</a>{% else %}<span class="disabled">← Oldingi</span>{% endif %}
+      <span class="cur">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}<a href="/yangiliklar?page={{ page + 1 }}">Keyingi →</a>{% else %}<span class="disabled">Keyingi →</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

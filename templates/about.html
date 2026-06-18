@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Biz haqimizda — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.lite { background: #f8fafc; color: #0f172a; min-height: 70vh; padding: 56px 0 72px; }
+.lite-narrow { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+.lite h1 { font-size: 2.2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px; text-align: center; }
+.about-mission { text-align: center; color: #3b82f6; font-weight: 700; font-size: 1.1rem; margin: 0 0 32px; }
+.about-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.about-card p { font-size: 1.02rem; color: #475569; line-height: 1.75; margin: 0 0 18px; }
+.about-card p:last-child { margin-bottom: 0; }
+.about-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 36px; }
+.as-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 22px 14px; text-align: center; }
+.as-num { font-size: 1.8rem; font-weight: 800; color: #1e40af; }
+.as-lbl { font-size: 0.85rem; color: #64748b; margin-top: 4px; }
+@media (max-width: 639px) { .about-stats { grid-template-columns: 1fr 1fr; } .lite h1 { font-size: 1.6rem; } .about-card { padding: 24px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lite">
+  <div class="lite-narrow">
+    <h1>Biz haqimizda</h1>
+    <div class="about-mission">Olimlar og'irini yengil qilish uchun yaratilgan</div>
+    <div class="about-card">
+      <p>Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. Platformamiz OAK (Oliy Attestatsiya Komissiyasi) tomonidan e'lon qilingan barcha dissertatsiya himoyalari haqida to'liq ma'lumot beradi.</p>
+      <p>Biz 27,000 dan ortiq dissertatsiya, 15,000+ tadqiqotchi va 200+ muassasa haqida ma'lumotlarni jamlagan holda, ilmiy jamoatchilikka xizmat qilmoqdamiz.</p>
+      <p>Maqsadimiz — har bir tadqiqotchiga o'z sohasidagi mavzular, ilmiy rahbarlar va tadqiqot yo'nalishlarini osongina topish imkonini berish.</p>
+    </div>
+    <div class="about-stats">
+      <div class="as-item"><div class="as-num">27,000+</div><div class="as-lbl">Dissertatsiyalar</div></div>
+      <div class="as-item"><div class="as-num">15,000+</div><div class="as-lbl">Tadqiqotchilar</div></div>
+      <div class="as-item"><div class="as-num">200+</div><div class="as-lbl">Muassasalar</div></div>
+      <div class="as-item"><div class="as-num">500+</div><div class="as-lbl">Ixtisosliklar</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
