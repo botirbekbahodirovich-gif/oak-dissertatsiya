@@ -225,7 +225,7 @@
             <div class="op-card-meta">
               {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
               {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ Илмий тадқиқот иши бажарилган муассаса: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Muassasa %}<span>🏛️ Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
               {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
               {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
@@ -249,7 +249,7 @@
             <div class="op-card-meta">
               {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
               {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ Илмий тадқиқот иши бажарилган муассаса: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Muassasa %}<span>🏛️ Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
               {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
               {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
