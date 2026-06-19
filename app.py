@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 import bcrypt
-from flask import Flask, render_template, redirect, url_for, jsonify, request, abort
+from flask import Flask, render_template, redirect, url_for, jsonify, request, abort, flash
 from urllib.parse import urlparse
 from flask_login import (LoginManager, UserMixin, logout_user,
                          login_required, current_user)
@@ -16,6 +16,12 @@ if not session_secret:
     )
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
+
+# Ensure the news image upload directory exists.
+try:
+    os.makedirs(os.path.join(app.static_folder, "uploads", "news"), exist_ok=True)
+except Exception:
+    pass
 
 from extensions import cache
 cache.init_app(app, config={
@@ -863,12 +869,13 @@ def admin_yangiliklar():
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, summary, created_at, is_published "
+                    "SELECT id, title, summary, created_at, is_published, image_url "
                     "FROM yangiliklar ORDER BY created_at DESC, id DESC"
                 )
                 items = [{
                     "id": r[0], "title": r[1] or "", "summary": r[2] or "",
                     "created_at": str(r[3])[:16] if r[3] else "", "is_published": r[4],
+                    "image_url": r[5] or "",
                 } for r in cur.fetchall()]
         finally:
             conn.close()
@@ -900,17 +907,37 @@ def _save_news_image():
     return f"/static/uploads/news/{saved}"
 
 
-def _yangilik_form_values():
+def _yangilik_form_values(existing_image=None):
     uploaded = _save_news_image()
-    image_url = uploaded or (request.form.get("image_url", "").strip() or None)
+    if request.form.get("remove_image"):
+        image_url = None
+    elif uploaded:
+        image_url = uploaded
+    else:
+        url_in = (request.form.get("image_url_input")
+                  or request.form.get("image_url") or "").strip()
+        image_url = url_in or existing_image or None
     return {
         "title": request.form.get("title", "").strip(),
-        "summary": request.form.get("summary", "").strip()[:1000],
+        "summary": request.form.get("summary", "").strip()[:500],
         "content": request.form.get("content", "").strip(),
         "image_url": image_url,
         "source_url": request.form.get("source_url", "").strip() or None,
         "is_published": bool(request.form.get("is_published")),
     }
+
+
+def _delete_local_news_image(image_url):
+    """Remove a locally-stored news image file from disk (ignore external URLs)."""
+    if not image_url or not image_url.startswith("/static/uploads/"):
+        return
+    try:
+        rel = image_url[len("/static/"):]  # e.g. uploads/news/123_x.jpg
+        path = os.path.join(app.static_folder, rel)
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
 
 
 @app.route("/admin/yangiliklar/add", methods=["GET", "POST"])
@@ -920,23 +947,26 @@ def admin_yangilik_add():
     from data import get_connection
     if request.method == "POST":
         v = _yangilik_form_values()
-        if v["title"]:
+        if not v["title"] or not v["summary"]:
+            flash("Sarlavha va qisqa matn majburiy.", "error")
+            return render_template("admin_yangilik_form.html", item=v, edit_mode=False)
+        try:
+            conn = get_connection()
             try:
-                conn = get_connection()
-                try:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            "INSERT INTO yangiliklar (title, summary, content, image_url, source_url, is_published) "
-                            "VALUES (%s, %s, %s, %s, %s, %s)",
-                            (v["title"], v["summary"], v["content"], v["image_url"], v["source_url"], v["is_published"])
-                        )
-                    conn.commit()
-                finally:
-                    conn.close()
-            except Exception:
-                pass
-            return redirect(url_for("admin_yangiliklar"))
-    return render_template("admin_yangilik_form.html", item=None, action="add")
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO yangiliklar (title, summary, content, image_url, source_url, is_published) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        (v["title"], v["summary"], v["content"], v["image_url"], v["source_url"], v["is_published"])
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Yangilik muvaffaqiyatli qo'shildi!", "success")
+        except Exception:
+            flash("Yangilik qo'shishda xatolik yuz berdi.", "error")
+        return redirect(url_for("admin_yangiliklar"))
+    return render_template("admin_yangilik_form.html", item=None, edit_mode=False)
 
 
 @app.route("/admin/yangiliklar/edit/<int:id>", methods=["GET", "POST"])
@@ -944,48 +974,61 @@ def admin_yangilik_add():
 def admin_yangilik_edit(id):
     _require_admin()
     from data import get_connection
-    if request.method == "POST":
-        v = _yangilik_form_values()
-        if v["title"]:
-            try:
-                conn = get_connection()
-                try:
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            "UPDATE yangiliklar SET title=%s, summary=%s, content=%s, "
-                            "image_url=%s, source_url=%s, is_published=%s WHERE id=%s",
-                            (v["title"], v["summary"], v["content"], v["image_url"],
-                             v["source_url"], v["is_published"], id)
-                        )
-                    conn.commit()
-                finally:
-                    conn.close()
-            except Exception:
-                pass
-            return redirect(url_for("admin_yangiliklar"))
-    item = None
-    try:
-        conn = get_connection()
+
+    def _load():
         try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT id, title, summary, content, image_url, source_url, is_published "
-                    "FROM yangiliklar WHERE id = %s", (id,)
-                )
-                r = cur.fetchone()
-                if r:
-                    item = {
-                        "id": r[0], "title": r[1] or "", "summary": r[2] or "",
-                        "content": r[3] or "", "image_url": r[4] or "",
-                        "source_url": r[5] or "", "is_published": r[6],
-                    }
-        finally:
-            conn.close()
-    except Exception:
-        item = None
-    if not item:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id, title, summary, content, image_url, source_url, is_published "
+                        "FROM yangiliklar WHERE id = %s", (id,))
+                    r = cur.fetchone()
+                    if r:
+                        return {
+                            "id": r[0], "title": r[1] or "", "summary": r[2] or "",
+                            "content": r[3] or "", "image_url": r[4] or "",
+                            "source_url": r[5] or "", "is_published": r[6],
+                        }
+            finally:
+                conn.close()
+        except Exception:
+            return None
+        return None
+
+    current = _load()
+    if not current:
         abort(404)
-    return render_template("admin_yangilik_form.html", item=item, action="edit")
+
+    if request.method == "POST":
+        v = _yangilik_form_values(existing_image=current.get("image_url") or None)
+        if not v["title"] or not v["summary"]:
+            flash("Sarlavha va qisqa matn majburiy.", "error")
+            v["id"] = id
+            return render_template("admin_yangilik_form.html", item=v, edit_mode=True)
+        # if the stored image changed/removed and it was a local file, drop it from disk
+        old_img = current.get("image_url") or ""
+        if old_img and old_img != (v["image_url"] or ""):
+            _delete_local_news_image(old_img)
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE yangiliklar SET title=%s, summary=%s, content=%s, "
+                        "image_url=%s, source_url=%s, is_published=%s, updated_at=CURRENT_TIMESTAMP "
+                        "WHERE id=%s",
+                        (v["title"], v["summary"], v["content"], v["image_url"],
+                         v["source_url"], v["is_published"], id))
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Yangilik yangilandi!", "success")
+        except Exception:
+            flash("Yangilikni yangilashda xatolik yuz berdi.", "error")
+        return redirect(url_for("admin_yangiliklar"))
+
+    return render_template("admin_yangilik_form.html", item=current, edit_mode=True)
 
 
 @app.route("/admin/yangiliklar/delete/<int:id>", methods=["POST"])
@@ -997,12 +1040,17 @@ def admin_yangilik_delete(id):
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                cur.execute("SELECT image_url FROM yangiliklar WHERE id = %s", (id,))
+                row = cur.fetchone()
                 cur.execute("DELETE FROM yangiliklar WHERE id = %s", (id,))
             conn.commit()
+            if row and row[0]:
+                _delete_local_news_image(row[0])
         finally:
             conn.close()
+        flash("Yangilik o'chirildi.", "success")
     except Exception:
-        pass
+        flash("O'chirishda xatolik yuz berdi.", "error")
     return redirect(url_for("admin_yangiliklar"))
 
 

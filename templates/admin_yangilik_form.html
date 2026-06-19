@@ -1,70 +1,122 @@
 {% extends "base.html" %}
-{% block title %}Admin — {% if action == 'edit' %}Yangilikni tahrirlash{% else %}Yangilik qo'shish{% endif %}{% endblock %}
+{% block title %}{% if edit_mode %}Yangilikni tahrirlash{% else %}Yangilik qo'shish{% endif %} — Admin{% endblock %}
 
 {% block extra_head %}
 <style>
-  .yf-wrap { max-width: 720px; margin: 0 auto; }
+  .yf-wrap { max-width: 800px; margin: 0 auto; }
   .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
-  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 1.5rem; }
-  .yf-group { margin-bottom: 1.1rem; }
-  .yf-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
+  .yf-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .yf-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .yf-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .yf-group { margin-bottom: 1.2rem; }
+  .yf-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
   .yf-input, .yf-textarea {
-    width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
-    border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; font-family: inherit;
+    width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0;
+    border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; font-family: inherit;
   }
-  .yf-input:focus, .yf-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+  .yf-input::placeholder, .yf-textarea::placeholder { color: #4b5563; }
+  .yf-input:focus, .yf-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
   .yf-textarea { resize: vertical; min-height: 80px; }
-  .yf-textarea.large { min-height: 180px; }
-  .yf-check { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-size: 0.92rem; }
-  .yf-check input { width: 18px; height: 18px; accent-color: #3b82f6; }
-  .yf-actions { display: flex; gap: 10px; margin-top: 1.2rem; }
-  .yf-save { background: #3b82f6; color: #fff; font-weight: 600; padding: 10px 24px; border: none; border-radius: 10px; cursor: pointer; }
+  .yf-counter { color: #64748b; font-size: 0.75rem; text-align: right; margin-top: 4px; }
+
+  /* image tabs */
+  .img-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .img-tab { background: #162032; border: 1px solid #334155; color: #94a3b8; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.86rem; font-weight: 600; }
+  .img-tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .img-pane { display: none; }
+  .img-pane.active { display: block; }
+  .file-btn { display: inline-flex; align-items: center; gap: 8px; background: #162032; border: 1px solid #334155; color: #cbd5e1; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+  .file-btn:hover { border-color: #3b82f6; }
+  #imageFileInput { display: none; }
+  #imagePreview img { max-width: 300px; border-radius: 12px; border: 1px solid #334155; margin-top: 8px; display: block; }
+  .img-remove { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.86rem; margin-top: 10px; }
+
+  /* toggle switch */
+  .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 999px; transition: 0.3s; }
+  .slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle-switch input:checked + .slider { background: #3b82f6; }
+  .toggle-switch input:checked + .slider::before { transform: translateX(22px); }
+  .toggle-row { display: flex; align-items: center; gap: 12px; }
+  .toggle-row label { margin: 0; color: #e2e8f0; font-weight: 600; font-size: 0.95rem; }
+
+  .yf-actions { display: flex; gap: 12px; margin-top: 1.4rem; }
+  .yf-save { background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 26px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; }
   .yf-save:hover { background: #2563eb; }
-  .yf-cancel { display: inline-flex; align-items: center; padding: 10px 20px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
+  .yf-cancel { display: inline-flex; align-items: center; padding: 11px 22px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
   .yf-cancel:hover { color: #e2e8f0; border-color: #475569; text-decoration: none; }
-  .yf-hint { font-size: 0.76rem; color: #64748b; margin-top: 4px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="yf-wrap">
-  <h1>{% if action == 'edit' %}✏️ Yangilikni tahrirlash{% else %}➕ Yangilik qo'shish{% endif %}</h1>
+  <h1>{% if edit_mode %}✏️ Yangilikni tahrirlash{% else %}➕ Yangilik qo'shish{% endif %}</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="yf-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
   <form method="post" class="yf-card" enctype="multipart/form-data"
-        action="{% if action == 'edit' %}/admin/yangiliklar/edit/{{ item.id }}{% else %}/admin/yangiliklar/add{% endif %}">
+        action="{% if edit_mode %}/admin/yangiliklar/edit/{{ item.id }}{% else %}/admin/yangiliklar/add{% endif %}">
     {{ csrf_token()|safe }}
+
     <div class="yf-group">
       <label>Sarlavha *</label>
-      <input class="yf-input" type="text" name="title" required value="{{ item.title if item else '' }}">
+      <input class="yf-input" type="text" name="title" required maxlength="500" placeholder="Yangilik sarlavhasi..." value="{{ item.title if item else '' }}">
     </div>
+
     <div class="yf-group">
-      <label>Qisqa matn (max 500 belgi)</label>
-      <textarea class="yf-textarea" name="summary" maxlength="500">{{ item.summary if item else '' }}</textarea>
+      <label>Qisqa matn *</label>
+      <textarea class="yf-textarea" name="summary" id="summary" maxlength="500" rows="3" placeholder="Qisqa tavsif (karuselda ko'rinadi)...">{{ item.summary if item else '' }}</textarea>
+      <div class="yf-counter"><span id="summaryCount">0</span>/500</div>
     </div>
+
     <div class="yf-group">
       <label>To'liq matn</label>
-      <textarea class="yf-textarea large" name="content">{{ item.content if item else '' }}</textarea>
+      <textarea class="yf-textarea" name="content" rows="10" placeholder="To'liq yangilik matni...">{{ item.content if item else '' }}</textarea>
     </div>
+
     <div class="yf-group">
       <label>Rasm</label>
-      <input class="yf-input" type="text" name="image_url" id="image_url" value="{{ item.image_url if item else '' }}" placeholder="Tashqi rasm URL manzili (https://...)" oninput="previewUrl()">
-      <div class="yf-hint">Variant A: tashqi rasm URL manzilini joylashtiring</div>
-      <input type="file" accept="image/*" id="image_file" name="image_file" class="yf-input" style="margin-top:8px;" onchange="previewFile()">
-      <div class="yf-hint">Variant B: kompyuteringizdan rasm yuklang (yuklansa, URL o'rniga ishlatiladi)</div>
-      <img id="img-preview" src="{{ item.image_url if item and item.image_url else '' }}" alt="" style="margin-top:10px;max-width:100%;max-height:220px;border-radius:10px;border:1px solid #334155;display:{{ 'block' if item and item.image_url else 'none' }};">
+      <div class="img-tabs">
+        <div class="img-tab active" data-pane="file" onclick="imgTab('file')">📁 Fayl yuklash</div>
+        <div class="img-tab" data-pane="url" onclick="imgTab('url')">🔗 URL orqali</div>
+      </div>
+      <div class="img-pane active" id="pane-file">
+        <label class="file-btn" for="imageFileInput">📁 Fayl tanlash</label>
+        <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" id="imageFileInput">
+        <div class="yf-counter" style="text-align:left;">Maksimal hajm: 5MB · JPEG, PNG, WEBP</div>
+      </div>
+      <div class="img-pane" id="pane-url">
+        <input class="yf-input" type="text" name="image_url_input" id="imageUrlInput" placeholder="https://example.com/image.jpg" value="{{ item.image_url if item and item.image_url and not (item.image_url.startswith('/static/')) else '' }}" oninput="previewUrl()">
+      </div>
+      <div id="imagePreview">
+        {% if item and item.image_url %}<img src="{{ item.image_url }}" alt="">{% endif %}
+      </div>
+      {% if edit_mode and item and item.image_url %}
+      <label class="img-remove"><input type="checkbox" name="remove_image" id="removeImage" onchange="onRemoveToggle()"> Rasmni o'chirish</label>
+      {% endif %}
     </div>
+
     <div class="yf-group">
-      <label>Manba URL</label>
-      <input class="yf-input" type="text" name="source_url" value="{{ item.source_url if item else '' }}">
-      <div class="yf-hint">Ixtiyoriy</div>
+      <label>Manba havolasi (ixtiyoriy)</label>
+      <input class="yf-input" type="text" name="source_url" placeholder="https://... (ixtiyoriy)" value="{{ item.source_url if item else '' }}">
     </div>
+
     <div class="yf-group">
-      <label class="yf-check">
-        <input type="checkbox" name="is_published" {% if (item and item.is_published) or not item %}checked{% endif %}>
-        Chop etish (saytda ko'rsatish)
-      </label>
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" name="is_published" {% if (item and item.is_published) or not item %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <label>Darhol chop etish</label>
+      </div>
     </div>
+
     <div class="yf-actions">
-      <button type="submit" class="yf-save">Saqlash</button>
+      <button type="submit" class="yf-save">💾 {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
       <a href="/admin/yangiliklar" class="yf-cancel">Bekor qilish</a>
     </div>
   </form>
@@ -73,21 +125,43 @@
 
 {% block scripts %}
 <script>
-function _showPreview(src) {
-  var p = document.getElementById('img-preview');
-  if (src) { p.src = src; p.style.display = 'block'; } else { p.style.display = 'none'; }
+// char counter
+var summary = document.getElementById('summary');
+var summaryCount = document.getElementById('summaryCount');
+function updateCount() { summaryCount.textContent = (summary.value || '').length; }
+summary.addEventListener('input', updateCount);
+updateCount();
+
+// image tabs
+function imgTab(which) {
+  document.querySelectorAll('.img-tab').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-pane') === which); });
+  document.getElementById('pane-file').classList.toggle('active', which === 'file');
+  document.getElementById('pane-url').classList.toggle('active', which === 'url');
+}
+function _setPreview(src) {
+  var box = document.getElementById('imagePreview');
+  box.innerHTML = src ? '<img src="' + src + '" alt="">' : '';
 }
 function previewUrl() {
-  if (!document.getElementById('image_file').files.length) {
-    _showPreview(document.getElementById('image_url').value.trim());
+  if (!document.getElementById('imageFileInput').files.length) {
+    _setPreview(document.getElementById('imageUrlInput').value.trim());
   }
 }
-function previewFile() {
-  var f = document.getElementById('image_file').files[0];
+document.getElementById('imageFileInput').addEventListener('change', function () {
+  var f = this.files[0];
   if (!f) { previewUrl(); return; }
+  if (f.size > 5 * 1024 * 1024) { alert('Fayl hajmi 5MB dan oshmasligi kerak.'); this.value = ''; return; }
+  var rm = document.getElementById('removeImage'); if (rm) rm.checked = false;
   var reader = new FileReader();
-  reader.onload = function (e) { _showPreview(e.target.result); };
+  reader.onload = function (e) { _setPreview(e.target.result); };
   reader.readAsDataURL(f);
+});
+function onRemoveToggle() {
+  if (document.getElementById('removeImage').checked) {
+    _setPreview('');
+    document.getElementById('imageFileInput').value = '';
+    document.getElementById('imageUrlInput').value = '';
+  }
 }
 </script>
 {% endblock %}
