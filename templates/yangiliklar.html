@@ -15,6 +15,9 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .ng-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); color: inherit; text-decoration: none; }
+.ng-card.has-img { padding: 0; overflow: hidden; }
+.ng-card .ng-img { width: 100%; height: 160px; background-size: cover; background-position: center; background-color: #162032; }
+.ng-card .ng-body { display: flex; flex-direction: column; gap: 10px; padding: 20px 22px; flex: 1; }
 .ng-title { font-weight: 700; color: #0f172a; font-size: 1.05rem; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ng-summary { font-size: 0.9rem; color: #64748b; line-height: 1.55;
@@ -49,10 +52,13 @@
             <div class="ng-foot"><span class="ng-date">{{ n.created_at }}</span></div>
           </div>
         {% else %}
-          <a class="ng-card" href="/yangiliklar/{{ n.id }}">
-            <div class="ng-title">{{ n.title }}</div>
-            <div class="ng-summary">{{ n.summary }}</div>
-            <div class="ng-foot"><span class="ng-date">{{ n.created_at }}</span><span class="ng-more">Batafsil →</span></div>
+          <a class="ng-card{% if n.image %} has-img{% endif %}" href="/yangiliklar/{{ n.id }}">
+            {% if n.image %}<div class="ng-img" style="background-image:url('{{ n.image }}');"></div>{% endif %}
+            <div class="ng-body">
+              <div class="ng-title">{{ n.title }}</div>
+              <div class="ng-summary">{{ n.summary }}</div>
+              <div class="ng-foot"><span class="ng-date">{{ n.created_at }}</span><span class="ng-more">Batafsil →</span></div>
+            </div>
           </a>
         {% endif %}
       {% endfor %}

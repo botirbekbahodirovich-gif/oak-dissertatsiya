@@ -27,6 +27,7 @@
     <div class="detail-card">
       <h1>{{ item.title }}</h1>
       <div class="detail-date">{{ item.created_at }}</div>
+      {% if item.image %}<img src="{{ item.image }}" alt="{{ item.title }}" style="width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin:14px 0 20px;border:1px solid #334155;">{% endif %}
       {% if item.summary %}<div class="detail-summary">{{ item.summary }}</div>{% endif %}
       {% if item.content %}<div class="detail-content">{{ item.content }}</div>{% endif %}
       {% if item.source_url %}<div class="detail-source">Manba: <a href="{{ item.source_url }}" target="_blank" rel="noopener noreferrer">{{ item.source_url }}</a></div>{% endif %}

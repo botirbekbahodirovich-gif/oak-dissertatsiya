@@ -319,7 +319,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort
         try:
             per_page = max(1, int(per_page))
         except (TypeError, ValueError):
-            per_page = 50
+            per_page = 25
         pagination_clause = ' LIMIT %s OFFSET %s'
         params = params + [per_page, (page - 1) * per_page]
     sql = (
@@ -474,7 +474,7 @@ data_bp = Blueprint('data', __name__)
 def _data_cache_key():
     a = request.args
     return (
-        f"data_{a.get('page',1)}_{a.get('per_page',50)}"
+        f"data_{a.get('page',1)}_{a.get('per_page',25)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
         f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
         f"_{a.get('scope','all')}"
@@ -498,9 +498,9 @@ def data():
     except ValueError:
         page = 1
     try:
-        per_page = int(a.get("per_page", 50))
+        per_page = int(a.get("per_page", 25))
     except ValueError:
-        per_page = 50
+        per_page = 25
 
     scope    = a.get("scope",    "all").strip()
     if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
@@ -773,10 +773,29 @@ def olim_profile(name):
         'opponent_count': len(as_opponent),
         'maqola_count': len(maqolalar),
     }
+    # Is the logged-in cabinet user the owner of this profile?
+    is_owner = False
+    try:
+        from flask import session
+        cab_uid = session.get('cabinet_user_id')
+        if cab_uid:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM olim_profiles WHERE cabinet_user_id = %s "
+                        "AND LOWER(TRIM(olim_name)) = LOWER(TRIM(%s)) LIMIT 1",
+                        (cab_uid, term))
+                    is_owner = cur.fetchone() is not None
+            finally:
+                conn.close()
+    except Exception:
+        is_owner = False
+
     # NOTE: do not pass `supervisor_count`/`opponent_count` as ints — `supervisor_count` would
     # shadow the global context-processor function of the same name used inside the template.
     # Counts are available via stats.supervisor_count / stats.opponent_count and *_works|length.
-    return render_template('olim_profile.html', olim_name=term, dissertations=own,
+    return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,
                            stats=stats, profile=profile, maqolalar=maqolalar,

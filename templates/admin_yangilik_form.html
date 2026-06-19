@@ -29,7 +29,7 @@
 {% block content %}
 <div class="yf-wrap">
   <h1>{% if action == 'edit' %}✏️ Yangilikni tahrirlash{% else %}➕ Yangilik qo'shish{% endif %}</h1>
-  <form method="post" class="yf-card"
+  <form method="post" class="yf-card" enctype="multipart/form-data"
         action="{% if action == 'edit' %}/admin/yangiliklar/edit/{{ item.id }}{% else %}/admin/yangiliklar/add{% endif %}">
     {{ csrf_token()|safe }}
     <div class="yf-group">
@@ -45,9 +45,12 @@
       <textarea class="yf-textarea large" name="content">{{ item.content if item else '' }}</textarea>
     </div>
     <div class="yf-group">
-      <label>Rasm URL</label>
-      <input class="yf-input" type="text" name="image_url" value="{{ item.image_url if item else '' }}">
-      <div class="yf-hint">Ixtiyoriy</div>
+      <label>Rasm</label>
+      <input class="yf-input" type="text" name="image_url" id="image_url" value="{{ item.image_url if item else '' }}" placeholder="Tashqi rasm URL manzili (https://...)" oninput="previewUrl()">
+      <div class="yf-hint">Variant A: tashqi rasm URL manzilini joylashtiring</div>
+      <input type="file" accept="image/*" id="image_file" name="image_file" class="yf-input" style="margin-top:8px;" onchange="previewFile()">
+      <div class="yf-hint">Variant B: kompyuteringizdan rasm yuklang (yuklansa, URL o'rniga ishlatiladi)</div>
+      <img id="img-preview" src="{{ item.image_url if item and item.image_url else '' }}" alt="" style="margin-top:10px;max-width:100%;max-height:220px;border-radius:10px;border:1px solid #334155;display:{{ 'block' if item and item.image_url else 'none' }};">
     </div>
     <div class="yf-group">
       <label>Manba URL</label>
@@ -66,4 +69,25 @@
     </div>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function _showPreview(src) {
+  var p = document.getElementById('img-preview');
+  if (src) { p.src = src; p.style.display = 'block'; } else { p.style.display = 'none'; }
+}
+function previewUrl() {
+  if (!document.getElementById('image_file').files.length) {
+    _showPreview(document.getElementById('image_url').value.trim());
+  }
+}
+function previewFile() {
+  var f = document.getElementById('image_file').files[0];
+  if (!f) { previewUrl(); return; }
+  var reader = new FileReader();
+  reader.onload = function (e) { _showPreview(e.target.result); };
+  reader.readAsDataURL(f);
+}
+</script>
 {% endblock %}

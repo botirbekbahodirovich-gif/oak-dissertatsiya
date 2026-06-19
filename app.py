@@ -169,6 +169,7 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_yangiliklar_created ON yangiliklar(created_at)")
+            cur.execute("ALTER TABLE yangiliklar ADD COLUMN IF NOT EXISTS image_data TEXT")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS olim_profiles (
                     id SERIAL PRIMARY KEY,
@@ -403,12 +404,13 @@ def home():
                 # Published news for the carousel
                 try:
                     cur.execute(
-                        "SELECT id, title, summary, created_at FROM yangiliklar "
+                        "SELECT id, title, summary, created_at, image_url, image_data FROM yangiliklar "
                         "WHERE is_published = TRUE ORDER BY created_at DESC LIMIT 8"
                     )
                     news = [{
                         "id": r[0], "title": r[1] or "", "summary": r[2] or "",
-                        "created_at": str(r[3])[:10] if r[3] else "", "is_placeholder": False,
+                        "created_at": str(r[3])[:10] if r[3] else "",
+                        "image": r[4] or r[5] or "", "is_placeholder": False,
                     } for r in cur.fetchall()]
                 except Exception:
                     news = []
@@ -509,28 +511,170 @@ def _compare_university(cur, name):
             "years": years}
 
 
+# ── Topic similarity analyzer (replaces the old university comparison) ──
+STOP_WORDS = {
+    # Uzbek (latin)
+    'va', 'uchun', 'ning', 'da', 'ni', 'ga', 'dan', 'bilan', "bo'lgan", 'ham', 'bu',
+    'shu', 'bir', 'har', "o'z", 'esa', 'yoki', 'lekin', 'chunki', 'haqida', 'orqali',
+    'asosida', "bo'yicha", "to'g'risida", 'rivojlantirish', 'takomillashtirish',
+    'shakllantirish', 'metodikasi', 'metodlari', 'asoslari', 'tahlili', 'masalalari',
+    # Cyrillic
+    'ва', 'учун', 'нинг', 'билан', 'ҳам', 'бу', 'шу', 'бир', 'ҳар', 'ёки', 'лекин',
+    'орқали', 'асосида', 'бўйича', 'ривожлантириш', 'такомиллаштириш', 'шакллантириш',
+}
+
+
+def _extract_keywords(text, limit=10):
+    import re
+    words = re.findall(r"[\w'’ʻ]+", (text or '').lower(), flags=re.UNICODE)
+    seen, out = set(), []
+    for w in words:
+        w = w.strip("'’ʻ")
+        if len(w) < 4 or w in STOP_WORDS or w in seen:
+            continue
+        seen.add(w)
+        out.append(w)
+        if len(out) >= limit:
+            break
+    return out
+
+
 @app.route("/compare")
+@app.route("/mavzu-tahlili")
 @login_required
 def compare():
-    from flask import request
+    return render_template("compare.html", ixtisosliklar=_compare_ixtisosliklar())
+
+
+def _compare_ixtisosliklar():
     from data import get_connection
-    uni1 = request.args.get("uni1", "").strip()
-    uni2 = request.args.get("uni2", "").strip()
-    data1 = data2 = None
-    if uni1 or uni2:
+    out = []
+    try:
+        conn = get_connection()
         try:
-            conn = get_connection()
-            try:
-                with conn.cursor() as cur:
-                    if uni1:
-                        data1 = _compare_university(cur, uni1)
-                    if uni2:
-                        data2 = _compare_university(cur, uni2)
-            finally:
-                conn.close()
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT TRIM(ixtisoslik) FROM dissertations "
+                    "WHERE ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> '' ORDER BY 1")
+                out = [r[0] for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        out = []
+    return out
+
+
+@app.route("/api/mavzu-tahlili", methods=["POST"])
+@csrf.exempt
+@login_required
+def api_mavzu_tahlili():
+    from data import get_connection, latin_to_cyrillic, clean_olim_name
+    body = request.get_json(silent=True) or {}
+    mavzu = (body.get("mavzu") or "").strip()
+    ixtisoslik = (body.get("ixtisoslik") or "").strip()
+    keywords = body.get("keywords") or _extract_keywords(mavzu)
+    keywords = [k.strip().lower() for k in keywords if k and len(k.strip()) >= 3][:10]
+    if not keywords:
+        return jsonify({"results": [], "total": 0, "keywords_used": []})
+
+    # build keyword variants (latin + cyrillic transliteration)
+    variants = []
+    for k in keywords:
+        variants.append(k)
+        try:
+            cyr = latin_to_cyrillic(k).lower()
+            if cyr and cyr != k:
+                variants.append(cyr)
         except Exception:
-            data1 = data2 = None
-    return render_template("compare.html", uni1=uni1, uni2=uni2, data1=data1, data2=data2)
+            pass
+    score_terms = " + ".join(["CASE WHEN LOWER(mavzu) LIKE %s THEN 1 ELSE 0 END"] * len(variants))
+    where_terms = " OR ".join(["LOWER(mavzu) LIKE %s"] * len(variants))
+    like_params = [f"%{v}%" for v in variants]
+    sql = (
+        f"SELECT id, olim, mavzu, daraja, sana, ixtisoslik, ixtisoslik_nomi, ilmiy_rahbar, "
+        f"({score_terms}) AS match_score FROM dissertations WHERE ({where_terms})"
+    )
+    params = list(like_params) + list(like_params)
+    if ixtisoslik:
+        sql += " AND TRIM(ixtisoslik) ILIKE %s"
+        params.append(ixtisoslik)
+    sql += " ORDER BY match_score DESC, id DESC LIMIT 50"
+    results = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                for r in cur.fetchall():
+                    results.append({
+                        "id": r[0], "olim": r[1] or "", "olim_short": clean_olim_name(r[1] or ""),
+                        "mavzu": r[2] or "", "daraja": (r[3] or "").upper(), "sana": r[4] or "",
+                        "ixtisoslik": r[5] or "", "ixtisoslik_nomi": r[6] or "",
+                        "ilmiy_rahbar": r[7] or "", "match_score": r[8] or 0,
+                    })
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"results": [], "total": 0, "keywords_used": keywords, "error": str(e)})
+    return jsonify({"results": results, "total": len(results), "keywords_used": keywords})
+
+
+@app.route("/api/mavzu-tahlili/ai", methods=["POST"])
+@csrf.exempt
+@login_required
+def api_mavzu_tahlili_ai():
+    from data import GROQ_API_KEY
+    body = request.get_json(silent=True) or {}
+    mavzu = (body.get("mavzu") or "").strip()
+    similar = body.get("similar_topics") or []
+    if not mavzu:
+        return jsonify({"error": "Mavzu kiritilmagan"}), 200
+    if not GROQ_API_KEY:
+        return jsonify({
+            "uniqueness_score": 5,
+            "analysis": "AI tahlil hozircha mavjud emas (Groq API kaliti sozlanmagan). "
+                        "Quyidagi o'xshash mavzular ro'yxatini ko'rib chiqing.",
+            "suggestions": [], "angles": [],
+        })
+    similar_list = "\n".join(f"- {t}" for t in similar[:10])
+    user_prompt = (
+        f"Taklif qilinayotgan mavzu: {mavzu}\n\n"
+        f"Topilgan o'xshash mavjud mavzular:\n{similar_list}\n\n"
+        "Tahlil qil: 1) Bu mavzu qanchalik noyob? (1-10 ball), "
+        "2) Qaysi mavjud mavzular eng o'xshash va nega? "
+        "3) Mavzuni yanada noyob qilish uchun 3 ta taklif. "
+        "4) O'rganilmagan yondashuvlarni taklif et."
+    )
+    try:
+        from groq import Groq
+        import json as _json
+        client = Groq(api_key=GROQ_API_KEY)
+        resp = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a dissertation topic analyzer for Uzbekistan. Given a proposed topic, "
+                    "analyze it and suggest improvements. Respond in Uzbek. Respond ONLY with a JSON "
+                    "object: {\"uniqueness_score\": <1-10 int>, \"analysis\": \"<text>\", "
+                    "\"suggestions\": [\"...\"], \"angles\": [\"...\"]}.")},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=900,
+            response_format={"type": "json_object"},
+        )
+        raw = (resp.choices[0].message.content or "").strip()
+        data = _json.loads(raw)
+        try:
+            data["uniqueness_score"] = int(data.get("uniqueness_score", 5))
+        except (TypeError, ValueError):
+            data["uniqueness_score"] = 5
+        data.setdefault("analysis", "")
+        data.setdefault("suggestions", [])
+        data.setdefault("angles", [])
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"uniqueness_score": 5, "analysis": f"AI tahlilda xatolik: {e}",
+                        "suggestions": [], "angles": []}), 200
 
 
 @app.route("/api/notifications/count")
@@ -733,12 +877,37 @@ def admin_yangiliklar():
     return render_template("admin_yangiliklar.html", items=items)
 
 
+def _save_news_image():
+    """Save an uploaded news image to static/uploads/news/ and return its web path, or None."""
+    f = request.files.get("image_file")
+    if not f or not f.filename:
+        return None
+    from werkzeug.utils import secure_filename
+    import time as _time
+    fname = secure_filename(f.filename)
+    if not fname:
+        return None
+    ext = os.path.splitext(fname)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        return None
+    upload_dir = os.path.join(app.static_folder, "uploads", "news")
+    os.makedirs(upload_dir, exist_ok=True)
+    saved = f"{int(_time.time())}_{fname}"
+    try:
+        f.save(os.path.join(upload_dir, saved))
+    except Exception:
+        return None
+    return f"/static/uploads/news/{saved}"
+
+
 def _yangilik_form_values():
+    uploaded = _save_news_image()
+    image_url = uploaded or (request.form.get("image_url", "").strip() or None)
     return {
         "title": request.form.get("title", "").strip(),
         "summary": request.form.get("summary", "").strip()[:1000],
         "content": request.form.get("content", "").strip(),
-        "image_url": request.form.get("image_url", "").strip() or None,
+        "image_url": image_url,
         "source_url": request.form.get("source_url", "").strip() or None,
         "is_published": bool(request.form.get("is_published")),
     }
@@ -854,14 +1023,15 @@ def yangiliklar():
                 cur.execute("SELECT COUNT(*) FROM yangiliklar WHERE is_published = TRUE")
                 total = cur.fetchone()[0] or 0
                 cur.execute(
-                    "SELECT id, title, summary, created_at FROM yangiliklar "
+                    "SELECT id, title, summary, created_at, image_url, image_data FROM yangiliklar "
                     "WHERE is_published = TRUE ORDER BY created_at DESC "
                     "LIMIT %s OFFSET %s",
                     (per_page, offset)
                 )
                 items = [{
                     "id": r[0], "title": r[1] or "", "summary": r[2] or "",
-                    "created_at": str(r[3])[:10] if r[3] else "", "is_placeholder": False,
+                    "created_at": str(r[3])[:10] if r[3] else "",
+                    "image": r[4] or r[5] or "", "is_placeholder": False,
                 } for r in cur.fetchall()]
         finally:
             conn.close()
@@ -886,7 +1056,7 @@ def yangilik_detail(id):
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, content, summary, source_url, created_at "
+                    "SELECT id, title, content, summary, source_url, created_at, image_url, image_data "
                     "FROM yangiliklar WHERE id = %s AND is_published = TRUE",
                     (id,)
                 )
@@ -896,6 +1066,7 @@ def yangilik_detail(id):
                         "id": r[0], "title": r[1] or "", "content": r[2] or "",
                         "summary": r[3] or "", "source_url": r[4] or "",
                         "created_at": str(r[5])[:16] if r[5] else "",
+                        "image": r[6] or r[7] or "",
                     }
         finally:
             conn.close()

@@ -1,135 +1,222 @@
 {% extends "base.html" %}
-{% block title %}Solishtirish — Olimlar.uz{% endblock %}
+{% block title %}Mavzu tahlili — Olimlar.uz{% endblock %}
+
 {% block extra_head %}
 <style>
-  .compare-form { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end; }
-  .compare-form .fld { flex:1 1 240px; min-width:200px; }
-  .compare-form label { display:block; font-size:0.78rem; font-weight:600; color:var(--oak-muted); margin-bottom:4px; }
-  .cmp-card { background:var(--oak-surface-2,#22262f); border:1px solid var(--oak-border); border-radius:14px; padding:1.25rem; height:100%; }
-  .cmp-name { font-size:1.05rem; font-weight:700; color:#e2e8f0; margin-bottom:0.9rem; line-height:1.4; min-height:2.8em; }
-  .cmp-nums { display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1rem; }
-  .cmp-num { flex:1; min-width:70px; text-align:center; background:rgba(255,255,255,0.03); border:1px solid var(--oak-border); border-radius:10px; padding:0.6rem 0.4rem; }
-  .cmp-num .v { font-size:1.3rem; font-weight:800; }
-  .cmp-num .l { font-size:0.7rem; color:var(--oak-muted); text-transform:uppercase; letter-spacing:0.4px; }
-  .cmp-sub-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--oak-muted); margin:1rem 0 0.5rem; }
-  .cmp-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.35rem; }
-  .cmp-list li { display:flex; justify-content:space-between; gap:0.5rem; font-size:0.84rem; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; }
-  .cmp-list li .nm { color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .cmp-list li .ct { color:#4a9eff; font-weight:700; flex-shrink:0; }
-  .cmp-empty { color:var(--oak-muted); font-style:italic; font-size:0.82rem; }
+.mt { max-width: 980px; margin: 0 auto; }
+.mt h1 { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; }
+.mt .sub { color: #94a3b8; margin: 0 0 22px; }
+.mt-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
+.mt-label { font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-bottom: 8px; display: block; }
+.mt-textarea { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 12px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; min-height: 96px; }
+.mt-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.mt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mt-chip { display: inline-flex; align-items: center; gap: 6px; background: #162032; border: 1px solid #334155; color: #cbd5e1; border-radius: 999px; padding: 5px 12px; font-size: 0.84rem; cursor: pointer; }
+.mt-chip.primary { background: rgba(59,130,246,0.18); border-color: #3b82f6; color: #93bbfc; }
+.mt-chip .x { color: #f87171; font-weight: 700; cursor: pointer; }
+.mt-chip-add { background: transparent; border: 1px dashed #475569; color: #94a3b8; }
+.mt-select { background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; max-width: 320px; }
+.mt-btn { background: #3b82f6; color: #fff; font-weight: 700; font-size: 1rem; padding: 13px 28px; border: none; border-radius: 12px; cursor: pointer; }
+.mt-btn:hover { background: #2563eb; }
+.mt-btn:disabled { opacity: 0.6; cursor: default; }
+.mt-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
+
+/* AI card */
+.ai-card { background: #1e293b; border: 1px solid #334155; border-left: 4px solid #3b82f6; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
+.ai-card h3 { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 12px; }
+.uniq { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.uniq-num { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+.uniq-num.low { color: #ef4444; } .uniq-num.mid { color: #f59e0b; } .uniq-num.high { color: #34d399; }
+.uniq-lbl { color: #cbd5e1; font-size: 0.95rem; }
+.ai-text { color: #cbd5e1; line-height: 1.65; white-space: pre-wrap; }
+.ai-sugg { list-style: none; padding: 0; margin: 14px 0 0; }
+.ai-sugg li { display: flex; gap: 8px; color: #cbd5e1; line-height: 1.5; margin-bottom: 8px; }
+.ai-sugg li .ic { color: #34d399; flex-shrink: 0; }
+.ai-loading { color: #94a3b8; display: flex; align-items: center; gap: 10px; }
+.spinner { width: 18px; height: 18px; border: 2px solid rgba(59,130,246,0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* results */
+.res-head { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 14px; }
+.res-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+.res-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.res-mavzu { font-weight: 700; color: #e2e8f0; line-height: 1.5; margin-bottom: 10px; }
+.res-mavzu mark { background: #fde68a; color: #1a1a1a; border-radius: 2px; padding: 0 2px; }
+.res-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 0.86rem; color: #94a3b8; }
+.res-meta a { color: #60a5fa; }
+.res-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
+.b-phd { background: #059669; } .b-dsc { background: #e36403; } .b-other { background: #64748b; }
+.match-badge { background: rgba(59,130,246,0.16); color: #93bbfc; font-weight: 700; font-size: 0.76rem; padding: 3px 10px; border-radius: 999px; }
+.skel { background: linear-gradient(90deg,#1e293b 25%,#243044 50%,#1e293b 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 14px; height: 92px; margin-bottom: 12px; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.load-more { display: block; margin: 8px auto 0; background: #162032; border: 1px solid #334155; color: #93bbfc; font-weight: 600; padding: 10px 22px; border-radius: 10px; cursor: pointer; }
+.load-more:hover { background: #334155; }
+.empty { color: #94a3b8; text-align: center; padding: 24px; }
 </style>
 {% endblock %}
+
 {% block content %}
-<div class="page-heading">
-  <div>
-    <h1><i class="bi bi-bar-chart-steps me-2" style="color:#4a9eff;"></i>Muassasalarni solishtirish</h1>
-    <p>Ikkita muassasani tanlang va ko'rsatkichlarini yonma-yon ko'ring.</p>
-  </div>
-</div>
+<div class="mt">
+  <h1>🔬 Mavzu tahlili</h1>
+  <p class="sub">O'xshash dissertatsiya mavzularini toping — mavzuingizni yozing, biz o'xshash tadqiqotlarni topamiz.</p>
 
-<div class="content-card mb-3">
-  <form class="compare-form" method="get" action="/compare">
-    <div class="fld">
-      <label for="uni1">Birinchi muassasa</label>
-      <input list="uni-list" id="uni1" name="uni1" class="form-control" value="{{ uni1 }}" placeholder="Muassasa nomini yozing..." autocomplete="off">
+  <div class="mt-card">
+    <label class="mt-label">Dissertatsiya mavzuingizni to'liq yozing</label>
+    <textarea id="mavzu" class="mt-textarea" placeholder="Masalan: Boshlang'ich sinf o'quvchilarining matematik tafakkurini rivojlantirishda innovatsion texnologiyalardan foydalanish metodikasi"></textarea>
+
+    <label class="mt-label" style="margin-top:16px;">Kalit so'zlar</label>
+    <div class="mt-chips" id="chips"></div>
+
+    <div class="mt-row">
+      <div>
+        <label class="mt-label">Ixtisoslik shifri (ixtiyoriy)</label>
+        <select id="ixtisoslik" class="mt-select">
+          <option value="">— Barchasi —</option>
+          {% for c in ixtisosliklar %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="mt-btn" id="analyze-btn" onclick="analyze()">🔍 O'xshash mavzularni topish</button>
     </div>
-    <div class="fld">
-      <label for="uni2">Ikkinchi muassasa</label>
-      <input list="uni-list" id="uni2" name="uni2" class="form-control" value="{{ uni2 }}" placeholder="Muassasa nomini yozing..." autocomplete="off">
+  </div>
+
+  <!-- AI analysis -->
+  <div id="ai-section" style="display:none;">
+    <div class="ai-card" id="ai-card">
+      <h3>🤖 AI Tahlil</h3>
+      <div id="ai-body"><div class="ai-loading"><span class="spinner"></span> AI tahlil qilmoqda...</div></div>
     </div>
-    <datalist id="uni-list"></datalist>
-    <div>
-      <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-left-right me-1"></i>Solishtirish</button>
-    </div>
-  </form>
-</div>
-
-{% macro cmp_card(d) %}
-<div class="cmp-card">
-  <div class="cmp-name">{{ d.name }}</div>
-  <div class="cmp-nums">
-    <div class="cmp-num"><div class="v" style="color:#4a9eff;">{{ d.total }}</div><div class="l">Jami</div></div>
-    <div class="cmp-num"><div class="v" style="color:#34d399;">{{ d.phd }}</div><div class="l">PhD</div></div>
-    <div class="cmp-num"><div class="v" style="color:#e36403;">{{ d.dsc }}</div><div class="l">DSc</div></div>
   </div>
-  <div class="cmp-sub-title">Top ilmiy rahbarlar</div>
-  {% if d.top_supervisors %}
-  <ul class="cmp-list">
-    {% for s in d.top_supervisors %}
-    <li><span class="nm"><a href="/olim/{{ s.name | urlencode }}" style="color:inherit;">{{ s.name }}</a></span><span class="ct">{{ s.count }}</span></li>
-    {% endfor %}
-  </ul>
-  {% else %}<div class="cmp-empty">Ma'lumot yo'q</div>{% endif %}
-  <div class="cmp-sub-title">Top ixtisoslik kodlari</div>
-  {% if d.top_ixtisosliklar %}
-  <ul class="cmp-list">
-    {% for ix in d.top_ixtisosliklar %}
-    <li><span class="nm"><a href="/specialization/{{ ix.code | urlencode }}" style="color:inherit;">{{ ix.code }}</a></span><span class="ct">{{ ix.count }}</span></li>
-    {% endfor %}
-  </ul>
-  {% else %}<div class="cmp-empty">Ma'lumot yo'q</div>{% endif %}
-</div>
-{% endmacro %}
 
-{% if data1 or data2 %}
-<div class="row g-3 mb-3">
-  <div class="col-12 col-md-6">
-    {% if data1 %}{{ cmp_card(data1) }}{% else %}<div class="cmp-card"><div class="cmp-empty">Birinchi muassasa tanlanmadi</div></div>{% endif %}
-  </div>
-  <div class="col-12 col-md-6">
-    {% if data2 %}{{ cmp_card(data2) }}{% else %}<div class="cmp-card"><div class="cmp-empty">Ikkinchi muassasa tanlanmadi</div></div>{% endif %}
+  <!-- similar results -->
+  <div id="results-section" style="display:none;">
+    <h2 class="res-head" id="results-head">📋 O'xshash mavzular</h2>
+    <div id="results"></div>
+    <button class="load-more" id="load-more" style="display:none;" onclick="showMore()">Yana 10 ta ko'rsatish</button>
   </div>
 </div>
-
-{% if (data1 and data1.years) or (data2 and data2.years) %}
-<div class="chart-card">
-  <div class="chart-title"><i class="bi bi-graph-up"></i>Yillik taqsimot</div>
-  <div class="chart-container" style="height:280px;"><canvas id="chart-years"></canvas></div>
-</div>
-{% endif %}
-{% else %}
-<div class="content-card" style="text-align:center;padding:3rem 1rem;color:var(--oak-muted);">
-  <i class="bi bi-bar-chart-steps" style="font-size:2.5rem;display:block;margin-bottom:0.75rem;opacity:0.4;"></i>
-  <div>Solishtirish uchun yuqorida ikkita muassasani tanlang.</div>
-</div>
-{% endif %}
 {% endblock %}
+
 {% block scripts %}
 <script>
-  // Populate datalist from /filters muassasa
-  fetch('/filters').then(r => r.json()).then(d => {
-    const dl = document.getElementById('uni-list');
-    (d.muassasa || []).forEach(m => {
-      const o = document.createElement('option');
-      o.value = m; dl.appendChild(o);
-    });
-  }).catch(() => {});
+var STOP = ['va','uchun','ning','da','ni','ga','dan','bilan',"bo'lgan",'ham','bu','shu','bir','har',"o'z",'esa','yoki','lekin','chunki','haqida','orqali','asosida',"bo'yicha","to'g'risida",'rivojlantirish','takomillashtirish','shakllantirish','metodikasi','tahlili','masalalari'];
+var keywords = [];
+var allResults = [], shownCount = 0, lastKeywords = [];
+var autoLocked = false;
 
-  const D1 = {{ data1|tojson if data1 else 'null' }};
-  const D2 = {{ data2|tojson if data2 else 'null' }};
-  const canvas = document.getElementById('chart-years');
-  if (canvas && (typeof Chart !== 'undefined')) {
-    const yearsSet = new Set();
-    [D1, D2].forEach(d => { if (d && d.years) d.years.forEach(y => yearsSet.add(y.year)); });
-    const years = Array.from(yearsSet).sort();
-    const mapOf = d => {
-      const m = {}; if (d && d.years) d.years.forEach(y => { m[y.year] = y.count; }); return m;
-    };
-    const m1 = mapOf(D1), m2 = mapOf(D2);
-    const datasets = [];
-    if (D1) datasets.push({ label: D1.name.length > 30 ? D1.name.slice(0,28)+'…' : D1.name,
-      data: years.map(y => m1[y] || 0), backgroundColor: 'rgba(74,158,255,0.65)', borderColor: '#4a9eff', borderWidth: 1, borderRadius: 4 });
-    if (D2) datasets.push({ label: D2.name.length > 30 ? D2.name.slice(0,28)+'…' : D2.name,
-      data: years.map(y => m2[y] || 0), backgroundColor: 'rgba(167,139,250,0.65)', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 4 });
-    new Chart(canvas, {
-      type: 'bar',
-      data: { labels: years, datasets: datasets },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#8899b4' } },
-          tooltip: { backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1, titleColor: '#e8edf5', bodyColor: '#8899b4', padding: 10, cornerRadius: 8 } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 10 } } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', stepSize: 1 }, beginAtZero: true } } }
-    });
-  }
+function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function renderChips() {
+  var box = document.getElementById('chips');
+  box.innerHTML = keywords.map(function (k, i) {
+    return '<span class="mt-chip' + (k.primary ? ' primary' : '') + '" onclick="togglePrimary(' + i + ')">' +
+      escapeHtml(k.word) + ' <span class="x" onclick="event.stopPropagation();removeKw(' + i + ')">✕</span></span>';
+  }).join('') + '<span class="mt-chip mt-chip-add" onclick="addKw()">+ qo\'shish</span>';
+}
+function extract(text) {
+  var words = (text.toLowerCase().match(/[0-9a-zʻ'’Ѐ-ӿ]+/g) || []);
+  var seen = {}, out = [];
+  words.forEach(function (w) {
+    w = w.replace(/^['’ʻ]+|['’ʻ]+$/g, '');
+    if (w.length < 4 || STOP.indexOf(w) !== -1 || seen[w]) return;
+    seen[w] = 1; out.push({ word: w, primary: false });
+  });
+  return out.slice(0, 10);
+}
+function togglePrimary(i) { keywords[i].primary = !keywords[i].primary; renderChips(); }
+function removeKw(i) { keywords.splice(i, 1); renderChips(); }
+function addKw() {
+  var w = prompt("Kalit so'z kiriting:");
+  if (w && w.trim()) { keywords.push({ word: w.trim().toLowerCase(), primary: false }); renderChips(); }
+}
+var mavzuEl = document.getElementById('mavzu');
+var debounce = null;
+mavzuEl.addEventListener('input', function () {
+  clearTimeout(debounce);
+  debounce = setTimeout(function () {
+    if (!autoLocked) { keywords = extract(mavzuEl.value); renderChips(); }
+  }, 500);
+});
+
+function analyze() {
+  var mavzu = mavzuEl.value.trim();
+  if (mavzu.length < 5) { alert("Iltimos, mavzuingizni yozing."); return; }
+  autoLocked = true;
+  var kws = keywords.filter(function (k) { return k.primary; }).map(function (k) { return k.word; });
+  if (!kws.length) kws = keywords.map(function (k) { return k.word; });
+  if (!kws.length) { kws = extract(mavzu).map(function (k) { return k.word; }); }
+  lastKeywords = kws;
+  var ix = document.getElementById('ixtisoslik').value;
+
+  document.getElementById('results-section').style.display = 'block';
+  document.getElementById('results').innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  document.getElementById('load-more').style.display = 'none';
+  document.getElementById('ai-section').style.display = 'block';
+  document.getElementById('ai-body').innerHTML = '<div class="ai-loading"><span class="spinner"></span> AI tahlil qilmoqda...</div>';
+
+  fetch('/api/mavzu-tahlili', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mavzu: mavzu, keywords: kws, ixtisoslik: ix })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    allResults = d.results || []; shownCount = 0;
+    document.getElementById('results-head').textContent = "📋 O'xshash mavzular (" + allResults.length + ' ta topildi)';
+    document.getElementById('results').innerHTML = '';
+    if (!allResults.length) { document.getElementById('results').innerHTML = '<div class="empty">O\'xshash mavzu topilmadi.</div>'; }
+    else { showMore(); }
+    runAI(mavzu, allResults.slice(0, 10).map(function (x) { return x.mavzu; }));
+  }).catch(function () {
+    document.getElementById('results').innerHTML = '<div class="empty">Qidiruvda xatolik.</div>';
+  });
+}
+
+function badgeFor(d) {
+  if (d === 'PHD') return '<span class="res-badge b-phd">PhD</span>';
+  if (d === 'DSC') return '<span class="res-badge b-dsc">DSc</span>';
+  return d ? '<span class="res-badge b-other">' + escapeHtml(d) + '</span>' : '';
+}
+function highlight(text) {
+  var out = escapeHtml(text);
+  lastKeywords.forEach(function (k) {
+    if (!k) return;
+    try { out = out.replace(new RegExp('(' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); } catch (e) {}
+  });
+  return out;
+}
+function showMore() {
+  var box = document.getElementById('results');
+  var slice = allResults.slice(shownCount, shownCount + 10);
+  slice.forEach(function (x) {
+    var ix = x.ixtisoslik ? (x.ixtisoslik + (x.ixtisoslik_nomi ? ' — ' + x.ixtisoslik_nomi : '')) : '';
+    var html = '<div class="res-card"><div class="res-mavzu">' + highlight(x.mavzu) + '</div><div class="res-meta">' +
+      '<span class="match-badge">' + x.match_score + " kalit so'z mos</span>" +
+      badgeFor(x.daraja) +
+      (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">👤 ' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
+      (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
+      (ix ? '<span>📎 ' + escapeHtml(ix) + '</span>' : '') +
+      (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">👨‍🏫 ' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
+      '</div></div>';
+    box.insertAdjacentHTML('beforeend', html);
+  });
+  shownCount += slice.length;
+  document.getElementById('load-more').style.display = shownCount < allResults.length ? 'block' : 'none';
+}
+
+function runAI(mavzu, similar) {
+  fetch('/api/mavzu-tahlili/ai', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mavzu: mavzu, similar_topics: similar })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    var score = d.uniqueness_score || 0;
+    var cls = score <= 3 ? 'low' : (score <= 6 ? 'mid' : 'high');
+    var lbl = score <= 3 ? "Juda o'xshash mavzular ko'p" : (score <= 6 ? "O'rtacha" : "Noyob mavzu");
+    var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:#64748b;">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
+    if (d.analysis) html += '<div class="ai-text">' + escapeHtml(d.analysis) + '</div>';
+    var sugg = (d.suggestions || []).concat(d.angles || []);
+    if (sugg.length) {
+      html += '<ul class="ai-sugg">' + sugg.map(function (s) { return '<li><span class="ic">✅</span><span>' + escapeHtml(s) + '</span></li>'; }).join('') + '</ul>';
+    }
+    document.getElementById('ai-body').innerHTML = html;
+  }).catch(function () {
+    document.getElementById('ai-body').innerHTML = '<div class="empty">AI tahlilni olishda xatolik.</div>';
+  });
+}
 </script>
 {% endblock %}
