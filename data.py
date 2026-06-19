@@ -295,12 +295,21 @@ def count_dissertations(search, daraja, muassasa, ixtisoslik,
     return _query_scalar(sql, params) or 0
 
 
+# Chronological newest→oldest ordering for the free-form DD.MM.YYYY `sana` text column.
+# Rewrites "DD.MM.YYYY" → "YYYYMMDD" (sortable); unparseable values sort last.
+_SANA_ORDER_DESC = (
+    r"NULLIF(regexp_replace(TRIM(d.sana), '^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(d.sana)) "
+    "DESC NULLS LAST, d.id DESC"
+)
+
+
 def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort_dir=None,
                         page=None, per_page=None,
                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
     clause, params = _build_filter_clause(
         search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
-    # Default sort: newest → oldest (sana DESC, id DESC) regardless of filters/scope.
+    # Default sort: newest → oldest. `sana` is free-form text in DD.MM.YYYY form, so a plain
+    # string sort is NOT chronological — convert DD.MM.YYYY → YYYYMMDD before ordering.
     pagination_clause = ''
     if page is not None and per_page is not None:
         try:
@@ -317,7 +326,7 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort
         'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
         'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
         'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
-        f'FROM dissertations d{clause} ORDER BY d.sana DESC, d.id DESC' + pagination_clause
+        f'FROM dissertations d{clause} ORDER BY {_SANA_ORDER_DESC}' + pagination_clause
     )
     return _query_rows(sql, params)
 

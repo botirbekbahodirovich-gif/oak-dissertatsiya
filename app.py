@@ -301,17 +301,19 @@ def home():
     top_random_rows = []
     try:
         import datetime
-        threshold = (datetime.date.today() - datetime.timedelta(days=3)).strftime("%Y-%m-%d")
+        # `sana` is free-form DD.MM.YYYY text — convert to YYYYMMDD for chronological compare/sort.
+        sana_key = r"NULLIF(regexp_replace(TRIM(sana), '^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(sana))"
+        threshold = (datetime.date.today() - datetime.timedelta(days=3)).strftime("%Y%m%d")
         from data import get_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                # Recent dissertations — last 3 days, fallback to last 9
+                # Recent dissertations — last 3 days, fallback to latest 9 (newest first)
                 cur.execute(
                     "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
                     "FROM dissertations "
-                    "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' AND sana >= %s "
-                    "ORDER BY sana DESC, id DESC LIMIT 30",
+                    f"WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' AND {sana_key} >= %s "
+                    f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 30",
                     (threshold,)
                 )
                 cols = [d[0] for d in cur.description]
@@ -321,7 +323,7 @@ def home():
                         "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
                         "FROM dissertations "
                         "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
-                        "ORDER BY sana DESC, id DESC LIMIT 9"
+                        f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 9"
                     )
                     cols = [d[0] for d in cur.description]
                     rows = [dict(zip(cols, row)) for row in cur.fetchall()]
