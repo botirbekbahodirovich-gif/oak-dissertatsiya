@@ -337,7 +337,7 @@
     if (!name) return '—';
     const display = escHtml(nameShortArg || name);
     const badge = supervisorBadge(name, count);
-    return `<a href="/supervisor/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="Bu rahbar boshqargan dissertatsiyalar">${display}</a>${badge}`;
+    return `<a href="/olim/${encodeURIComponent(name)}" onclick="event.stopPropagation()" title="Bu rahbar boshqargan dissertatsiyalar">${display}</a>${badge}`;
   }
   function ixtisoslikShifr(val) {
     if (!val) return '—';
@@ -397,7 +397,7 @@
               <div class="detail-item"><label>Mavzu (to'liq)</label><span>${escHtml(r.Mavzu || '—')}</span></div>
               <div class="detail-item"><label>Ixtisoslik</label><span>${escHtml(r.Ixtisoslik || '—')}</span></div>
               <div class="detail-item"><label>Muassasa</label><span>${escHtml(r.Muassasa || '—')}</span></div>
-              <div class="detail-item"><label>Ilmiy rahbar</label><span>${r.Ilmiy_rahbar ? `<a href="/supervisor/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link">${escHtml(r.Ilmiy_rahbar)}</a>${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}` : '—'}</span></div>
+              <div class="detail-item"><label>Ilmiy rahbar</label><span>${r.Ilmiy_rahbar ? `<a href="/olim/${encodeURIComponent(r.Ilmiy_rahbar)}" class="entity-link">${escHtml(r.Ilmiy_rahbar)}</a>${supervisorBadge(r.Ilmiy_rahbar, supervisorCount)}` : '—'}</span></div>
               <div class="detail-item"><label>Daraja</label><span>${escHtml(r.Daraja || '—')}</span></div>
               <div class="detail-item"><label>Sana</label><span>${fmtSana(r.Sana)}</span></div>
             </div>

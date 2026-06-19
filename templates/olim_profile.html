@@ -34,6 +34,13 @@
 .deg-pill { font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; color: #fff; }
 .deg-pill.phd { background: #059669; }
 .deg-pill.dsc { background: #e36403; }
+.deg-pill.role-sup { background: #2563eb; }
+.deg-pill.role-opp { background: #7c3aed; }
+.op-empty.role-empty { padding: 24px; margin-bottom: 8px; }
+.role-mavzu { font-size: 0.9rem; color: #0f172a; line-height: 1.4; font-weight: 600; }
+.role-mavzu a { color: inherit; }
+.role-student { font-weight: 700; }
+.role-student a { color: #60a5fa; }
 .op-stats { display: flex; gap: 8px 22px; flex-wrap: wrap; font-size: 0.95rem; color: rgba(255,255,255,0.92); }
 .op-stats b { color: #fff; font-size: 1.05rem; }
 .op-side { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
@@ -146,6 +153,8 @@
       <div class="op-degs">
         {% if stats.phd %}<span class="deg-pill phd">{{ stats.phd }} PhD</span>{% endif %}
         {% if stats.dsc %}<span class="deg-pill dsc">{{ stats.dsc }} DSc</span>{% endif %}
+        {% if as_supervisor %}<span class="deg-pill role-sup">👨‍🏫 Ilmiy rahbar</span>{% endif %}
+        {% if as_opponent %}<span class="deg-pill role-opp">📋 Opponent</span>{% endif %}
       </div>
       <div class="op-stats">
         <span><b>{{ stats.total }}</b> himoya</span>
@@ -187,7 +196,10 @@
 <div class="op-body">
   <div class="op-container">
 
-    <div class="op-sec-title"><i class="bi bi-journal-text" style="color:#3b82f6;"></i>Ilmiy ishlar <span class="cnt">{{ stats.total }}</span></div>
+    <div class="op-sec-title"><i class="bi bi-journal-text" style="color:#3b82f6;"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
+    {% if not dissertations %}
+    <div class="op-empty role-empty"><div class="ico">🎓</div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
+    {% endif %}
     <div class="diss-columns">
       <div class="diss-col">
         {% for d in dissertations if (d.Daraja or '')|upper != 'DSC' %}
@@ -239,6 +251,48 @@
         {% endfor %}
       </div>
     </div>
+
+    <!-- ═══ AS SUPERVISOR (shogirdlar) ═══ -->
+    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-person-badge" style="color:#2563eb;"></i>Ilmiy rahbarlik qilgan dissertatsiyalari <span class="cnt">{{ as_supervisor|length }} ta shogird</span></div>
+    {% if as_supervisor %}
+      {% for d in as_supervisor %}
+        {% set rd = (d.Daraja or '')|upper %}
+        <div class="role-item">
+          <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
+          <div class="role-main">
+            <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
+            <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
+            <div class="rm-sub">
+              {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
+              {% if d.Ixtisoslik %}<a href="/specialization/{{ d.Ixtisoslik|urlencode }}">📎 {{ d.Ixtisoslik }}</a>{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="op-empty role-empty"><div class="ico">👨‍🏫</div><div>Bu shaxs hali ilmiy rahbarlik qilmagan.</div></div>
+    {% endif %}
+
+    <!-- ═══ AS OPPONENT ═══ -->
+    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-people" style="color:#e36403;"></i>Opponent sifatida ishtirok etgan dissertatsiyalar <span class="cnt">{{ as_opponent|length }} ta ishtirok</span></div>
+    {% if as_opponent %}
+      {% for d in as_opponent %}
+        {% set rd = (d.Daraja or '')|upper %}
+        <div class="role-item">
+          <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
+          <div class="role-main">
+            <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
+            <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
+            <div class="rm-sub">
+              {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
+              {% if d.Muassasa %}<a href="/university/{{ d.Muassasa|urlencode }}">🏛️ {{ d.Muassasa }}</a>{% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="op-empty role-empty"><div class="ico">📋</div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
+    {% endif %}
 
     <!-- ═══ TABS ═══ -->
     <div class="op-tabs">
@@ -314,42 +368,6 @@
         <div class="op-empty"><div class="ico">🖼️</div><div>Hali rasmlar qo'shilmagan.</div></div>
       {% endif %}
     </div>
-
-    <!-- ═══ ROLES ═══ -->
-    {% if as_supervisor %}
-    <div class="op-sec-title" style="margin-top:40px;"><i class="bi bi-person-badge" style="color:#059669;"></i>{{ as_supervisor|length }} ta shogird chiqargan</div>
-    {% for d in as_supervisor %}
-      {% set rd = (d.Daraja or '')|upper %}
-      <div class="role-item">
-        <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
-        <div class="role-main">
-          <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
-          <div class="rm-sub">
-            {% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% endif %}
-            {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if as_opponent %}
-    <div class="op-sec-title" style="margin-top:40px;"><i class="bi bi-people" style="color:#e36403;"></i>{{ as_opponent|length }} ta himoyada opponent bo'lgan</div>
-    {% for d in as_opponent %}
-      {% set rd = (d.Daraja or '')|upper %}
-      <div class="role-item">
-        <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
-        <div class="role-main">
-          <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
-          <div class="rm-sub">
-            {% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% endif %}
-            {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-            {% if d.Muassasa %}<a href="/university/{{ d.Muassasa|urlencode }}">🏛️ {{ d.Muassasa }}</a>{% endif %}
-          </div>
-        </div>
-      </div>
-    {% endfor %}
-    {% endif %}
 
     <a href="/dashboard" class="op-back">← Ortga</a>
   </div>

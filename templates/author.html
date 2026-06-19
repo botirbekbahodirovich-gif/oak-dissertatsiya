@@ -28,7 +28,7 @@
               <td><a href="/specialization/{{ row.Ixtisoslik | urlencode }}">{{ row.Ixtisoslik }}</a></td>
               <td><a href="/university/{{ row.Muassasa | urlencode }}">{{ row.Muassasa }}</a></td>
               <td>
-                <a href="/supervisor/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a>
+                <a href="/olim/{{ row.Ilmiy_rahbar | urlencode }}">{{ row.Ilmiy_rahbar }}</a>
                 <span class="sup-badge-cell"></span>
                 <script>document.currentScript.previousElementSibling.innerHTML = supervisorBadge({{ row.Ilmiy_rahbar|tojson }}, {{ row.supervisor_count|default(1)|int }});</script>
               </td>

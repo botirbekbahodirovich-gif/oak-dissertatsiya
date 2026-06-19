@@ -56,7 +56,7 @@
   {% if d.top_supervisors %}
   <ul class="cmp-list">
     {% for s in d.top_supervisors %}
-    <li><span class="nm"><a href="/supervisor/{{ s.name | urlencode }}" style="color:inherit;">{{ s.name }}</a></span><span class="ct">{{ s.count }}</span></li>
+    <li><span class="nm"><a href="/olim/{{ s.name | urlencode }}" style="color:inherit;">{{ s.name }}</a></span><span class="ct">{{ s.count }}</span></li>
     {% endfor %}
   </ul>
   {% else %}<div class="cmp-empty">Ma'lumot yo'q</div>{% endif %}

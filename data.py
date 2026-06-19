@@ -711,19 +711,29 @@ def _query_full_diss(where_sql, params, order='sana DESC'):
         conn.close()
 
 
+# Newest→oldest ordering for the DD.MM.YYYY text `sana` column (no table alias).
+_SANA_ORDER_PLAIN = (
+    r"NULLIF(regexp_replace(TRIM(sana), '^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(sana)) "
+    "DESC NULLS LAST, id DESC"
+)
+
+
 @data_bp.route('/olim/<path:name>')
 @login_required
 def olim_profile(name):
     term = name.strip()
-    like = f'%{term}%'
-    own = _query_full_diss('TRIM(olim) ILIKE %s', (like,), order='sana DESC')
-    if not own:
-        abort(404)
-    as_supervisor = _query_full_diss('TRIM(COALESCE(ilmiy_rahbar,\'\')) ILIKE %s', (like,), order='sana DESC')
+    # Exact (case-insensitive) match so links resolve to the correct person in each role.
+    own = _query_full_diss('LOWER(TRIM(olim)) = LOWER(TRIM(%s))', (term,), order=_SANA_ORDER_PLAIN)
+    as_supervisor = _query_full_diss(
+        "LOWER(TRIM(COALESCE(ilmiy_rahbar,''))) = LOWER(TRIM(%s))", (term,), order=_SANA_ORDER_PLAIN)
     as_opponent = _query_full_diss(
-        "TRIM(COALESCE(opponent_1,'')) ILIKE %s OR TRIM(COALESCE(opponent_2,'')) ILIKE %s "
-        "OR TRIM(COALESCE(opponent_3,'')) ILIKE %s",
-        (like, like, like), order='sana DESC')
+        "LOWER(TRIM(COALESCE(opponent_1,''))) = LOWER(TRIM(%s)) "
+        "OR LOWER(TRIM(COALESCE(opponent_2,''))) = LOWER(TRIM(%s)) "
+        "OR LOWER(TRIM(COALESCE(opponent_3,''))) = LOWER(TRIM(%s))",
+        (term, term, term), order=_SANA_ORDER_PLAIN)
+    # A person may exist purely as a supervisor or opponent — only 404 if they have no role at all.
+    if not own and not as_supervisor and not as_opponent:
+        abort(404)
     fields = {d.get('Ixtisoslik', '').strip() for d in own if d.get('Ixtisoslik', '').strip()}
 
     # Portfolio data (new profile tables) — empty if not yet filled in
@@ -738,15 +748,15 @@ def olim_profile(name):
                     cnames = [c[0] for c in cur.description]
                     return [dict(zip(cnames, row)) for row in cur.fetchall()]
 
-                rows_p = _fetch("SELECT * FROM olim_profiles WHERE olim_name = %s")
+                rows_p = _fetch("SELECT * FROM olim_profiles WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))")
                 profile = rows_p[0] if rows_p else None
-                maqolalar = _fetch("SELECT * FROM olim_maqolalar WHERE olim_name = %s",
+                maqolalar = _fetch("SELECT * FROM olim_maqolalar WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))",
                                    "year DESC NULLS LAST, id DESC")
-                konferensiyalar = _fetch("SELECT * FROM olim_konferensiyalar WHERE olim_name = %s",
+                konferensiyalar = _fetch("SELECT * FROM olim_konferensiyalar WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))",
                                          "date DESC NULLS LAST, id DESC")
-                ish_faoliyati = _fetch("SELECT * FROM olim_ish_faoliyati WHERE olim_name = %s",
+                ish_faoliyati = _fetch("SELECT * FROM olim_ish_faoliyati WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))",
                                        "start_date DESC NULLS LAST, id DESC")
-                rasmlar = _fetch("SELECT * FROM olim_rasmlar WHERE olim_name = %s",
+                rasmlar = _fetch("SELECT * FROM olim_rasmlar WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))",
                                  "created_at DESC, id DESC")
         finally:
             conn.close()
@@ -763,10 +773,14 @@ def olim_profile(name):
         'opponent_count': len(as_opponent),
         'maqola_count': len(maqolalar),
     }
+    # NOTE: do not pass `supervisor_count`/`opponent_count` as ints — `supervisor_count` would
+    # shadow the global context-processor function of the same name used inside the template.
+    # Counts are available via stats.supervisor_count / stats.opponent_count and *_works|length.
     return render_template('olim_profile.html', olim_name=term, dissertations=own,
-                           as_supervisor=as_supervisor, as_opponent=as_opponent, stats=stats,
-                           profile=profile, maqolalar=maqolalar, konferensiyalar=konferensiyalar,
-                           ish_faoliyati=ish_faoliyati, rasmlar=rasmlar)
+                           as_supervisor=as_supervisor, as_opponent=as_opponent,
+                           shogirdlar=as_supervisor, opponent_works=as_opponent,
+                           stats=stats, profile=profile, maqolalar=maqolalar,
+                           konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar)
 
 
 def _summary_stats(rows):

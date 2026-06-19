@@ -158,7 +158,7 @@
         <div class="field-lbl">👨‍🏫 Ism</div>
         <div class="field-val" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
           {% if row.Ilmiy_rahbar %}
-            <a href="/supervisor/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>
+            <a href="/olim/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>
             <span id="sup-badge-detail"></span>
             <script>document.getElementById('sup-badge-detail').innerHTML = supervisorBadge({{ row.Ilmiy_rahbar|tojson }}, {{ row.supervisor_count|default(1)|int }});</script>
           {% else %}—{% endif %}
