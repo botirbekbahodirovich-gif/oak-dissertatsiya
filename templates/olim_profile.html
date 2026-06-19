@@ -187,6 +187,9 @@
           {% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi {{ icon }}"></i></span>{% endif %}
         {% endfor %}
       </div>
+      {% if cabinet_olim_name and cabinet_olim_name|lower == olim_name|lower %}
+      <a class="op-share" href="/cabinet" style="text-decoration:none;">Profilni tahrirlash ✏️</a>
+      {% endif %}
       <button class="op-share" id="op-share-btn" type="button">ULASHISH 📨</button>
     </div>
   </div>

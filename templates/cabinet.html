@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Mening kabinetim — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
+.cab { background: #0f172a; color: #e2e8f0; min-height: 90vh; }
+.cab-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 230px 1fr; gap: 24px; }
+.cab-side { position: sticky; top: 16px; align-self: start; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 12px; }
+.cab-side h2 { font-size: 0.95rem; color: #f1f5f9; margin: 6px 10px 12px; }
+.cab-nav { display: flex; flex-direction: column; gap: 2px; }
+.cab-nav button { display: flex; align-items: center; gap: 9px; background: none; border: none; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left; }
+.cab-nav button:hover { background: #162032; color: #e2e8f0; }
+.cab-nav button.active { background: #3b82f6; color: #fff; }
+.cab-logout { margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
+.cab-logout a { display: block; color: #fca5a5; font-size: 0.85rem; padding: 8px 12px; }
+.cab-main { min-width: 0; }
+.cab-panel { display: none; }
+.cab-panel.active { display: block; }
+.cab-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 18px; }
+.cab-section h3 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
+.cab-section .desc { color: #94a3b8; font-size: 0.88rem; margin: 0 0 18px; }
+.cab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cab-group { margin-bottom: 4px; }
+.cab-group.full { grid-column: 1 / -1; }
+.cab-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+.cab-input, .cab-select, .cab-textarea { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; font-family: inherit; }
+.cab-input:focus, .cab-select:focus, .cab-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.cab-textarea { resize: vertical; min-height: 90px; }
+.cab-input[readonly] { background: #0f172a; color: #94a3b8; }
+.cab-btn { background: #3b82f6; color: #fff; font-weight: 600; padding: 10px 22px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.92rem; }
+.cab-btn:hover { background: #2563eb; }
+.cab-btn-outline { background: transparent; color: #60a5fa; border: 1px solid #3b82f6; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 0.9rem; }
+.cab-btn-outline:hover { background: rgba(59,130,246,0.12); }
+.cab-btn-red { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.cab-btn-red:hover { background: #dc2626; }
+.cab-link-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.cab-link-ic { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; background: #162032; border: 1px solid #334155; border-radius: 9px; font-size: 1.05rem; }
+.cab-save-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.item-card { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.item-card .it-title { font-weight: 700; color: #e2e8f0; }
+.item-card .it-meta { font-size: 0.84rem; color: #94a3b8; margin-top: 3px; }
+.item-card .it-actions { display: flex; gap: 8px; margin-top: 10px; }
+.item-card .it-btn { font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: none; }
+.it-edit { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.it-del { background: rgba(239,68,68,0.15); color: #fca5a5; }
+.item-form { display: none; background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.item-form.open { display: block; }
+.search-results { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.sr-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; }
+.sr-name { font-weight: 600; color: #e2e8f0; }
+.sr-count { font-size: 0.8rem; color: #94a3b8; }
+.sr-claimed { color: #34d399; font-weight: 700; font-size: 0.85rem; }
+.claimed-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.claimed-chip { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: #34d399; border-radius: 999px; padding: 5px 14px; font-size: 0.85rem; }
+.gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.gallery figure { margin: 0; position: relative; }
+.gallery img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid #334155; }
+.gallery .gdel { position: absolute; top: 6px; right: 6px; }
+.cab-toast { position: fixed; top: 18px; right: 18px; z-index: 3000; padding: 12px 18px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; opacity: 0; transform: translateY(-10px); transition: opacity 0.25s, transform 0.25s; }
+.cab-toast.show { opacity: 1; transform: translateY(0); }
+.cab-toast.ok { background: #059669; color: #fff; }
+.cab-toast.err { background: #ef4444; color: #fff; }
+.cab-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.cab-hero-avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.8rem; flex-shrink: 0; }
+.cab-hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.cab-hero h1 { font-size: 1.3rem; color: #f1f5f9; margin: 0; }
+.cab-hero .sub { color: #94a3b8; font-size: 0.85rem; }
+@media (max-width: 880px) {
+  .cab-wrap { grid-template-columns: 1fr; }
+  .cab-side { position: static; }
+  .cab-nav { flex-direction: row; flex-wrap: wrap; }
+  .cab-grid { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="toast" class="cab-toast"></div>
+<div class="cab">
+  <div class="cab-wrap">
+    <!-- Sidebar -->
+    <aside class="cab-side">
+      <h2>🏠 Kabinet</h2>
+      <nav class="cab-nav">
+        <button class="active" data-panel="profil">📝 Profil</button>
+        <button data-panel="diss">📄 Dissertatsiyalar</button>
+        <button data-panel="maqolalar">📚 Maqolalar</button>
+        <button data-panel="konf">🎤 Konferensiyalar</button>
+        <button data-panel="ish">💼 Ish faoliyati</button>
+        <button data-panel="rasmlar">📸 Rasmlar</button>
+        <button data-panel="linklar">🔗 Linklar</button>
+      </nav>
+      <div class="cab-logout"><a href="/cabinet/api/logout">↩ Chiqish</a></div>
+    </aside>
+
+    <main class="cab-main">
+      <div class="cab-hero">
+        <div class="cab-hero-avatar">
+          {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="avatar">{% else %}🎓{% endif %}
+        </div>
+        <div>
+          <h1>{{ olim_name or (user.telegram_first_name or user.email or 'Tadqiqotchi') }}</h1>
+          <div class="sub">{% if olim_name %}Biriktirilgan profil: {{ olim_name }}{% else %}Dissertatsiyangizni biriktiring{% endif %}</div>
+        </div>
+      </div>
+
+      <!-- ── PROFIL (A) ── -->
+      <section class="cab-panel active" id="panel-profil">
+        <div class="cab-section">
+          <h3>Profil ma'lumotlari</h3>
+          <p class="desc">Shaxsiy ma'lumotlaringizni kiriting. "Saqlash" tugmasi profil va linklarni saqlaydi.</p>
+          <div class="cab-grid">
+            <div class="cab-group full">
+              <label>Avatar rasm URL</label>
+              <input class="cab-input" data-profile="photo_url" type="text" value="{{ profile.photo_url or '' }}" placeholder="https://...">
+            </div>
+            <div class="cab-group"><label>Ism</label><input class="cab-input nm" data-profile="first_name" type="text" value="{{ profile.first_name or '' }}"></div>
+            <div class="cab-group"><label>Familya</label><input class="cab-input nm" data-profile="last_name" type="text" value="{{ profile.last_name or '' }}"></div>
+            <div class="cab-group"><label>Otasining ismi</label><input class="cab-input nm" data-profile="patronymic" type="text" value="{{ profile.patronymic or '' }}"></div>
+            <div class="cab-group"><label>To'liq ism (avtomatik)</label><input class="cab-input" id="full-name" type="text" readonly></div>
+            <div class="cab-group">
+              <label>Ilmiy unvon</label>
+              <select class="cab-select" data-profile="title">
+                {% set t = profile.title or '' %}
+                <option value="" {% if not t %}selected{% endif %}>—</option>
+                {% for opt in ['PhD','DSc','Professor','Dotsent','Katta ilmiy xodim','Boshqa'] %}
+                <option value="{{ opt }}" {% if t == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="cab-group"><label>Lavozim</label><input class="cab-input" data-profile="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
+            <div class="cab-group"><label>Muassasa</label><input class="cab-input" list="muassasa-list" data-profile="institution" type="text" value="{{ profile.institution or '' }}"></div>
+            <datalist id="muassasa-list"></datalist>
+            <div class="cab-group"><label>Tug'ilgan yili</label><input class="cab-input" data-profile="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
+            <div class="cab-group full"><label>Bio / Qisqa ma'lumot</label><textarea class="cab-textarea" data-profile="bio" maxlength="1000">{{ profile.bio or '' }}</textarea></div>
+          </div>
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfile()">Saqlash</button></div>
+        </div>
+      </section>
+
+      <!-- ── DISSERTATSIYALAR / CLAIM (B) ── -->
+      <section class="cab-panel" id="panel-diss">
+        <div class="cab-section">
+          <h3>Dissertatsiyani biriktirish</h3>
+          <p class="desc">O'z ismingizni qidiring va "Bu men ✓" tugmasini bosing.</p>
+          {% if claimed %}
+          <div><strong style="color:#94a3b8;font-size:0.85rem;">Biriktirilgan:</strong>
+            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>
+          </div>
+          {% endif %}
+          <div style="margin-top:14px;">
+            <input class="cab-input" id="claim-search" type="text" placeholder="O'z dissertatsiyangizni toping (ism familiya)...">
+          </div>
+          <div class="search-results" id="claim-results"></div>
+        </div>
+      </section>
+
+      <!-- ── MAQOLALAR (D) ── -->
+      <section class="cab-panel" id="panel-maqolalar">
+        <div class="cab-section">
+          <h3>Maqolalar</h3>
+          <button class="cab-btn-outline" onclick="openForm('maqola')">Maqola qo'shish +</button>
+          <div class="item-form" id="form-maqola" style="margin-top:14px;">
+            <input type="hidden" id="maqola-id">
+            <div class="cab-grid">
+              <div class="cab-group full"><label>Maqola nomi *</label><input class="cab-input" id="maqola-title" type="text"></div>
+              <div class="cab-group"><label>Mualliflar</label><input class="cab-input" id="maqola-authors" type="text"></div>
+              <div class="cab-group"><label>Jurnal nomi</label><input class="cab-input" id="maqola-journal" type="text"></div>
+              <div class="cab-group"><label>Yil</label><input class="cab-input" id="maqola-year" type="number"></div>
+              <div class="cab-group"><label>Sitata soni</label><input class="cab-input" id="maqola-citations" type="number" value="0"></div>
+              <div class="cab-group full"><label>URL / DOI</label><input class="cab-input" id="maqola-url" type="text"></div>
+            </div>
+            <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('maqola')">Bekor</button><button class="cab-btn" onclick="saveItem('maqola')">Saqlash</button></div>
+          </div>
+          <div style="margin-top:14px;">
+            {% for m in maqolalar %}
+            <div class="item-card">
+              <div class="it-title">{{ m.title }}</div>
+              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
+              <div class="it-actions">
+                <button class="it-btn it-edit" onclick='editMaqola({{ m|tojson }})'>Tahrirlash ✏️</button>
+                <button class="it-btn it-del" onclick="delItem('maqola', {{ m.id }})">O'chirish 🗑️</button>
+              </div>
+            </div>
+            {% else %}<p class="desc">Hali maqola qo'shilmagan.</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── KONFERENSIYALAR (E) ── -->
+      <section class="cab-panel" id="panel-konf">
+        <div class="cab-section">
+          <h3>Konferensiyalar</h3>
+          <button class="cab-btn-outline" onclick="openForm('konf')">Konferensiya qo'shish +</button>
+          <div class="item-form" id="form-konf" style="margin-top:14px;">
+            <input type="hidden" id="konf-id">
+            <div class="cab-grid">
+              <div class="cab-group full"><label>Ma'ruza mavzusi *</label><input class="cab-input" id="konf-title" type="text"></div>
+              <div class="cab-group"><label>Konferensiya nomi</label><input class="cab-input" id="konf-conference_name" type="text"></div>
+              <div class="cab-group"><label>Joy</label><input class="cab-input" id="konf-location" type="text"></div>
+              <div class="cab-group"><label>Sana</label><input class="cab-input" id="konf-date" type="date"></div>
+              <div class="cab-group full"><label>URL</label><input class="cab-input" id="konf-url" type="text"></div>
+            </div>
+            <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('konf')">Bekor</button><button class="cab-btn" onclick="saveItem('konf')">Saqlash</button></div>
+          </div>
+          <div style="margin-top:14px;">
+            {% for k in konferensiyalar %}
+            <div class="item-card">
+              <div class="it-title">{{ k.title }}</div>
+              <div class="it-meta">{{ k.conference_name or '' }}{% if k.location %} · {{ k.location }}{% endif %}{% if k.date %} · {{ k.date }}{% endif %}</div>
+              <div class="it-actions">
+                <button class="it-btn it-edit" onclick='editKonf({{ k|tojson }})'>Tahrirlash ✏️</button>
+                <button class="it-btn it-del" onclick="delItem('konf', {{ k.id }})">O'chirish 🗑️</button>
+              </div>
+            </div>
+            {% else %}<p class="desc">Hali konferensiya qo'shilmagan.</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── ISH FAOLIYATI (F) ── -->
+      <section class="cab-panel" id="panel-ish">
+        <div class="cab-section">
+          <h3>Ish faoliyati</h3>
+          <button class="cab-btn-outline" onclick="openForm('ish')">Ish joyi qo'shish +</button>
+          <div class="item-form" id="form-ish" style="margin-top:14px;">
+            <input type="hidden" id="ish-id">
+            <div class="cab-grid">
+              <div class="cab-group"><label>Lavozim *</label><input class="cab-input" id="ish-position" type="text"></div>
+              <div class="cab-group"><label>Tashkilot *</label><input class="cab-input" id="ish-organization" type="text"></div>
+              <div class="cab-group"><label>Boshlanish sanasi</label><input class="cab-input" id="ish-start_date" type="date"></div>
+              <div class="cab-group"><label>Tugash sanasi</label><input class="cab-input" id="ish-end_date" type="date"></div>
+              <div class="cab-group full"><label class="cab-group" style="display:flex;align-items:center;gap:8px;color:#e2e8f0;"><input type="checkbox" id="ish-is_current" onchange="toggleCurrent()"> Hozir ishlayapman</label></div>
+            </div>
+            <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('ish')">Bekor</button><button class="cab-btn" onclick="saveItem('ish')">Saqlash</button></div>
+          </div>
+          <div style="margin-top:14px;">
+            {% for w in ish_faoliyati %}
+            <div class="item-card">
+              <div class="it-title">{{ w.position }}</div>
+              <div class="it-meta">{{ w.organization or '' }}{% if w.start_date %} · {{ w.start_date }}{% if w.end_date %} — {{ w.end_date }}{% elif w.is_current %} — hozir{% endif %}{% endif %}</div>
+              <div class="it-actions">
+                <button class="it-btn it-edit" onclick='editIsh({{ w|tojson }})'>Tahrirlash ✏️</button>
+                <button class="it-btn it-del" onclick="delItem('ish', {{ w.id }})">O'chirish 🗑️</button>
+              </div>
+            </div>
+            {% else %}<p class="desc">Hali ish faoliyati qo'shilmagan.</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── RASMLAR (G) ── -->
+      <section class="cab-panel" id="panel-rasmlar">
+        <div class="cab-section">
+          <h3>Rasmlar</h3>
+          <button class="cab-btn-outline" onclick="openForm('rasm')">Rasm qo'shish +</button>
+          <div class="item-form" id="form-rasm" style="margin-top:14px;">
+            <div class="cab-grid">
+              <div class="cab-group full"><label>Rasm URL *</label><input class="cab-input" id="rasm-image_url" type="text" placeholder="https://..."></div>
+              <div class="cab-group full"><label>Izoh</label><input class="cab-input" id="rasm-caption" type="text"></div>
+            </div>
+            <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('rasm')">Bekor</button><button class="cab-btn" onclick="saveItem('rasm')">Saqlash</button></div>
+          </div>
+          <div class="gallery" style="margin-top:14px;">
+            {% for img in rasmlar %}
+            <figure>
+              <img src="{{ img.image_url }}" alt="{{ img.caption or '' }}">
+              <button class="cab-btn-red gdel" onclick="delItem('rasm', {{ img.id }})">🗑️</button>
+            </figure>
+            {% else %}<p class="desc">Hali rasm qo'shilmagan.</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── LINKLAR (C) ── -->
+      <section class="cab-panel" id="panel-linklar">
+        <div class="cab-section">
+          <h3>Tashqi linklar</h3>
+          <p class="desc">Akademik profillar va ijtimoiy tarmoqlar. "Saqlash" profil bilan birga saqlanadi.</p>
+          {% set links = [
+            ('scopus_url','🔬','Scopus','https://www.scopus.com/authid/...'),
+            ('wos_url','📚','Web of Science','https://www.webofscience.com/...'),
+            ('scholar_url','🎓','Google Scholar','https://scholar.google.com/...'),
+            ('orcid_url','🆔','ORCID','https://orcid.org/0000-...'),
+            ('website_url','🌐','Shaxsiy veb-sayt','https://...'),
+            ('youtube_url','▶️','YouTube','https://youtube.com/@...'),
+            ('facebook_url','📘','Facebook','https://facebook.com/...'),
+            ('twitter_url','✖️','Twitter/X','https://x.com/...'),
+            ('instagram_url','📷','Instagram','https://instagram.com/...'),
+            ('telegram_url','✈️','Telegram','https://t.me/...'),
+            ('pinterest_url','📌','Pinterest','https://pinterest.com/...')
+          ] %}
+          {% for key, ic, label, ph in links %}
+          <div class="cab-link-row">
+            <div class="cab-link-ic">{{ ic }}</div>
+            <div style="flex:1;">
+              <label style="font-size:0.74rem;color:#94a3b8;">{{ label }}</label>
+              <input class="cab-input" data-profile="{{ key }}" type="text" value="{{ profile[key] or '' }}" placeholder="{{ ph }}">
+            </div>
+          </div>
+          {% endfor %}
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfile()">Saqlash</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // sidebar nav
+  document.querySelectorAll('.cab-nav button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.cab-nav button').forEach(function (x) { x.classList.remove('active'); });
+      document.querySelectorAll('.cab-panel').forEach(function (p) { p.classList.remove('active'); });
+      b.classList.add('active');
+      document.getElementById('panel-' + b.getAttribute('data-panel')).classList.add('active');
+    });
+  });
+  // full name auto
+  function updateFull() {
+    var parts = [];
+    document.querySelectorAll('.nm').forEach(function (i) { if (i.value.trim()) parts.push(i.value.trim()); });
+    document.getElementById('full-name').value = parts.join(' ');
+  }
+  document.querySelectorAll('.nm').forEach(function (i) { i.addEventListener('input', updateFull); });
+  updateFull();
+  // muassasa autocomplete
+  fetch('/filters').then(function (r) { return r.json(); }).then(function (d) {
+    var dl = document.getElementById('muassasa-list');
+    (d.muassasa || []).forEach(function (m) { var o = document.createElement('option'); o.value = m; dl.appendChild(o); });
+  }).catch(function () {});
+})();
+
+function toast(msg, ok) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'cab-toast show ' + (ok ? 'ok' : 'err');
+  setTimeout(function () { t.className = 'cab-toast ' + (ok ? 'ok' : 'err'); }, 2600);
+}
+function post(url, body) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+    .then(function (r) { return r.json(); });
+}
+
+function saveProfile() {
+  var data = {};
+  document.querySelectorAll('[data-profile]').forEach(function (el) { data[el.getAttribute('data-profile')] = el.value; });
+  post('/cabinet/api/profile/save', data).then(function (d) {
+    if (d.ok) toast('Saqlandi ✓', true); else toast(d.error || 'Xatolik', false);
+  }).catch(function () { toast('Tarmoq xatosi', false); });
+}
+
+// claim search
+var searchTimer = null;
+var claimSearch = document.getElementById('claim-search');
+if (claimSearch) {
+  claimSearch.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    var q = this.value.trim();
+    if (q.length < 2) { document.getElementById('claim-results').innerHTML = ''; return; }
+    searchTimer = setTimeout(function () {
+      fetch('/cabinet/api/search-olim?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
+        var box = document.getElementById('claim-results');
+        box.innerHTML = (d.results || []).map(function (it) {
+          var nm = it.name.replace(/'/g, "\\'");
+          return '<div class="sr-card"><div><div class="sr-name"></div><div class="sr-count">' + it.count + ' ta dissertatsiya</div></div>' +
+                 '<button class="cab-btn" onclick="claimName(\'' + nm + '\')">Bu men ✓</button></div>';
+        }).join('');
+        var cards = box.querySelectorAll('.sr-card');
+        (d.results || []).forEach(function (it, i) { cards[i].querySelector('.sr-name').textContent = it.name; });
+        if (!(d.results || []).length) box.innerHTML = '<p class="desc">Natija topilmadi.</p>';
+      });
+    }, 300);
+  });
+}
+function claimName(name) {
+  post('/cabinet/api/claim', { olim_name: name }).then(function (d) {
+    if (d.ok) { toast('Biriktirildi ✓', true); setTimeout(function () { location.reload(); }, 700); }
+    else toast(d.error || 'Xatolik', false);
+  });
+}
+
+// item forms
+function openForm(t) { clearForm(t); document.getElementById('form-' + t).classList.add('open'); }
+function closeForm(t) { document.getElementById('form-' + t).classList.remove('open'); }
+function clearForm(t) {
+  var f = document.getElementById('form-' + t);
+  f.querySelectorAll('input, textarea, select').forEach(function (el) {
+    if (el.type === 'checkbox') el.checked = false; else if (el.type === 'hidden') el.value = ''; else if (el.id !== '' && el.id.indexOf('-citations') === -1) el.value = '';
+  });
+  var cit = document.getElementById(t + '-citations'); if (cit) cit.value = '0';
+}
+var FIELDS = {
+  maqola: ['title', 'authors', 'journal', 'year', 'citations', 'url'],
+  konf: ['title', 'conference_name', 'location', 'date', 'url'],
+  ish: ['position', 'organization', 'start_date', 'end_date', 'is_current'],
+  rasm: ['image_url', 'caption']
+};
+var APIPATH = { maqola: 'maqola', konf: 'konferensiya', ish: 'ish', rasm: 'rasm' };
+function saveItem(t) {
+  var body = {};
+  FIELDS[t].forEach(function (f) {
+    var el = document.getElementById(t + '-' + f);
+    if (!el) return;
+    body[f] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
+  });
+  var idEl = document.getElementById(t + '-id');
+  var id = idEl ? idEl.value : '';
+  var url = '/cabinet/api/' + APIPATH[t] + '/' + (id ? 'edit/' + id : 'add');
+  post(url, body).then(function (d) {
+    if (d.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 600); }
+    else toast(d.error || 'Xatolik', false);
+  });
+}
+function delItem(t, id) {
+  if (!confirm("O'chirilsinmi?")) return;
+  post('/cabinet/api/' + APIPATH[t] + '/delete/' + id, {}).then(function (d) {
+    if (d.ok) { toast("O'chirildi", true); setTimeout(function () { location.reload(); }, 500); }
+    else toast(d.error || 'Xatolik', false);
+  });
+}
+function toggleCurrent() {
+  var c = document.getElementById('ish-is_current');
+  document.getElementById('ish-end_date').disabled = c.checked;
+}
+function fill(t, obj) {
+  openForm(t);
+  Object.keys(obj).forEach(function (k) {
+    var el = document.getElementById(t + '-' + k);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!obj[k]; else el.value = (obj[k] == null ? '' : obj[k]);
+  });
+  var idEl = document.getElementById(t + '-id'); if (idEl) idEl.value = obj.id || '';
+}
+function editMaqola(o) { fill('maqola', o); }
+function editKonf(o) { fill('konf', o); }
+function editIsh(o) { fill('ish', o); toggleCurrent(); }
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Kabinetga kirish — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
+.cab-auth { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 48px 16px; background: #0f172a; }
+.cab-card { width: 100%; max-width: 480px; background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 36px 32px; }
+.cab-card h1 { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; text-align: center; }
+.cab-card .sub { color: #94a3b8; text-align: center; margin: 0 0 26px; font-size: 0.95rem; }
+.cab-tg { display: flex; justify-content: center; margin-bottom: 8px; min-height: 48px; }
+.cab-divider { display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.82rem; margin: 18px 0; }
+.cab-divider::before, .cab-divider::after { content: ""; flex: 1; height: 1px; background: #334155; }
+.cab-group { margin-bottom: 14px; }
+.cab-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+.cab-input { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 13px; font-size: 0.95rem; }
+.cab-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.cab-btn { width: 100%; background: #3b82f6; color: #fff; font-weight: 600; font-size: 1rem; padding: 12px; border: none; border-radius: 10px; cursor: pointer; }
+.cab-btn:hover { background: #2563eb; }
+.cab-foot { text-align: center; margin-top: 18px; color: #94a3b8; font-size: 0.9rem; }
+.cab-foot a { color: #60a5fa; }
+.cab-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cab-auth">
+  <div class="cab-card">
+    <h1>🏠 Kabinetga kirish</h1>
+    <p class="sub">Ilmiy portfoliyongizni boshqaring</p>
+    {% if error %}<div class="cab-error">{{ error }}</div>{% endif %}
+
+    <div class="cab-tg" id="tg-login"></div>
+    <div class="cab-divider">yoki</div>
+
+    <form method="post" action="/cabinet/login">
+      <div class="cab-group">
+        <label>Email</label>
+        <input class="cab-input" type="email" name="email" placeholder="email@example.com" required>
+      </div>
+      <div class="cab-group">
+        <label>Parol</label>
+        <input class="cab-input" type="password" name="password" placeholder="••••••" required>
+      </div>
+      <button class="cab-btn" type="submit">Kirish</button>
+    </form>
+
+    <div class="cab-foot">Hisobingiz yo'qmi? <a href="/cabinet/register">Ro'yxatdan o'ting</a></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function onTelegramAuth(user) {
+  fetch('/cabinet/telegram', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user)
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { window.location.href = d.redirect || '/cabinet'; }
+    else { alert(d.error || 'Telegram orqali kirishda xatolik'); }
+  }).catch(function () { alert('Tarmoq xatosi'); });
+}
+(function () {
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://telegram.org/js/telegram-widget.js?22';
+  s.setAttribute('data-telegram-login', {{ telegram_bot_username|tojson }});
+  s.setAttribute('data-size', 'large');
+  s.setAttribute('data-onauth', 'onTelegramAuth(user)');
+  s.setAttribute('data-request-access', 'write');
+  document.getElementById('tg-login').appendChild(s);
+})();
+</script>
+{% endblock %}

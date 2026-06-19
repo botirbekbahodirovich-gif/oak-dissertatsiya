@@ -31,6 +31,16 @@ def _inject_csrf_token():
 
 
 @app.context_processor
+def _inject_cabinet():
+    """Expose cabinet (portfolio) session state to all templates."""
+    from flask import session
+    return dict(
+        cabinet_logged_in=bool(session.get('cabinet_user_id')),
+        cabinet_olim_name=session.get('cabinet_olim_name') or '',
+    )
+
+
+@app.context_processor
 def _inject_supervisor_counts():
     """Expose cached supervisor → student-count lookup to every template."""
     def supervisor_count(name):
@@ -87,11 +97,14 @@ from data import data_bp, query_dissertations
 csrf.exempt(data_bp)
 from analytics import analytics_bp
 from upload import upload_bp
+from cabinet import cabinet_bp
+csrf.exempt(cabinet_bp)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(upload_bp)
+app.register_blueprint(cabinet_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -225,6 +238,28 @@ def _run_startup_migrations():
                 cur.execute(
                     f"CREATE INDEX IF NOT EXISTS idx_{_t}_name ON {_t}(olim_name)"
                 )
+            # ── Cabinet (researcher portfolio) ──
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS cabinet_users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE,
+                    password_hash VARCHAR(255),
+                    telegram_id BIGINT UNIQUE,
+                    telegram_username VARCHAR(100),
+                    telegram_first_name VARCHAR(100),
+                    olim_name VARCHAR(500),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            for _col, _typ in (
+                ('first_name', 'VARCHAR(200)'), ('last_name', 'VARCHAR(200)'),
+                ('patronymic', 'VARCHAR(200)'), ('title', 'VARCHAR(200)'),
+                ('position', 'VARCHAR(300)'), ('institution', 'VARCHAR(500)'),
+                ('birth_year', 'INTEGER'), ('orcid_url', 'VARCHAR(500)'),
+                ('website_url', 'VARCHAR(500)'), ('cabinet_user_id', 'INTEGER'),
+            ):
+                cur.execute(f"ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS {_col} {_typ}")
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),
