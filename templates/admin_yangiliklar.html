@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Admin — Yangiliklar boshqaruvi{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.4rem; font-weight: 800; color: #f1f5f9; }
+  .adm-add { display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: #fff; font-weight: 600; padding: 9px 18px; border-radius: 10px; text-decoration: none; }
+  .adm-add:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .adm-table-wrap { border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.7rem 0.9rem; text-align: left; }
+  .adm-table td { padding: 0.7rem 0.9rem; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: top; }
+  .adm-table tr:hover td { background: #334155; }
+  .adm-trunc { max-width: 320px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pub-yes { color: #34d399; font-weight: 700; }
+  .pub-no { color: #f87171; font-weight: 700; }
+  .adm-actions { display: flex; gap: 6px; }
+  .adm-btn { font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; }
+  .adm-edit { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .adm-edit:hover { background: rgba(59,130,246,0.28); color: #93bbfc; text-decoration: none; }
+  .adm-del { background: rgba(248,113,113,0.15); color: #f87171; }
+  .adm-del:hover { background: rgba(248,113,113,0.28); }
+  .adm-empty { padding: 2rem; text-align: center; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1><i class="bi bi-newspaper"></i> Yangiliklar boshqaruvi</h1>
+  <a href="/admin/yangiliklar/add" class="adm-add"><i class="bi bi-plus-lg"></i> Yangilik qo'shish</a>
+</div>
+
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Sarlavha</th><th>Qisqa matn</th><th>Sana</th><th>Chop etilgan</th><th>Amallar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.id }}</td>
+        <td>{{ it.title }}</td>
+        <td class="adm-trunc">{{ it.summary }}</td>
+        <td style="white-space:nowrap;color:#94a3b8;">{{ it.created_at }}</td>
+        <td>{% if it.is_published %}<span class="pub-yes">Ha</span>{% else %}<span class="pub-no">Yo'q</span>{% endif %}</td>
+        <td>
+          <div class="adm-actions">
+            <a href="/admin/yangiliklar/edit/{{ it.id }}" class="adm-btn adm-edit">Tahrirlash</a>
+            <form action="/admin/yangiliklar/delete/{{ it.id }}" method="post" onsubmit="return confirm('Ushbu yangilik o‘chirilsinmi?');" style="display:inline;">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="adm-btn adm-del">O'chirish</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="adm-empty">Hali yangilik qo'shilmagan.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -668,6 +668,140 @@ def admin_analytics():
         top_pages=top_pages, recent=recent, weekly=weekly)
 
 
+def _require_admin():
+    if not current_user.is_authenticated or current_user.username != 'admin':
+        abort(403)
+
+
+@app.route("/admin/yangiliklar")
+@login_required
+def admin_yangiliklar():
+    _require_admin()
+    from data import get_connection
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, summary, created_at, is_published "
+                    "FROM yangiliklar ORDER BY created_at DESC, id DESC"
+                )
+                items = [{
+                    "id": r[0], "title": r[1] or "", "summary": r[2] or "",
+                    "created_at": str(r[3])[:16] if r[3] else "", "is_published": r[4],
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template("admin_yangiliklar.html", items=items)
+
+
+def _yangilik_form_values():
+    return {
+        "title": request.form.get("title", "").strip(),
+        "summary": request.form.get("summary", "").strip()[:1000],
+        "content": request.form.get("content", "").strip(),
+        "image_url": request.form.get("image_url", "").strip() or None,
+        "source_url": request.form.get("source_url", "").strip() or None,
+        "is_published": bool(request.form.get("is_published")),
+    }
+
+
+@app.route("/admin/yangiliklar/add", methods=["GET", "POST"])
+@login_required
+def admin_yangilik_add():
+    _require_admin()
+    from data import get_connection
+    if request.method == "POST":
+        v = _yangilik_form_values()
+        if v["title"]:
+            try:
+                conn = get_connection()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "INSERT INTO yangiliklar (title, summary, content, image_url, source_url, is_published) "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            (v["title"], v["summary"], v["content"], v["image_url"], v["source_url"], v["is_published"])
+                        )
+                    conn.commit()
+                finally:
+                    conn.close()
+            except Exception:
+                pass
+            return redirect(url_for("admin_yangiliklar"))
+    return render_template("admin_yangilik_form.html", item=None, action="add")
+
+
+@app.route("/admin/yangiliklar/edit/<int:id>", methods=["GET", "POST"])
+@login_required
+def admin_yangilik_edit(id):
+    _require_admin()
+    from data import get_connection
+    if request.method == "POST":
+        v = _yangilik_form_values()
+        if v["title"]:
+            try:
+                conn = get_connection()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "UPDATE yangiliklar SET title=%s, summary=%s, content=%s, "
+                            "image_url=%s, source_url=%s, is_published=%s WHERE id=%s",
+                            (v["title"], v["summary"], v["content"], v["image_url"],
+                             v["source_url"], v["is_published"], id)
+                        )
+                    conn.commit()
+                finally:
+                    conn.close()
+            except Exception:
+                pass
+            return redirect(url_for("admin_yangiliklar"))
+    item = None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, summary, content, image_url, source_url, is_published "
+                    "FROM yangiliklar WHERE id = %s", (id,)
+                )
+                r = cur.fetchone()
+                if r:
+                    item = {
+                        "id": r[0], "title": r[1] or "", "summary": r[2] or "",
+                        "content": r[3] or "", "image_url": r[4] or "",
+                        "source_url": r[5] or "", "is_published": r[6],
+                    }
+        finally:
+            conn.close()
+    except Exception:
+        item = None
+    if not item:
+        abort(404)
+    return render_template("admin_yangilik_form.html", item=item, action="edit")
+
+
+@app.route("/admin/yangiliklar/delete/<int:id>", methods=["POST"])
+@login_required
+def admin_yangilik_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM yangiliklar WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return redirect(url_for("admin_yangiliklar"))
+
+
 @app.route("/yangiliklar")
 def yangiliklar():
     from data import get_connection

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Admin — {% if action == 'edit' %}Yangilikni tahrirlash{% else %}Yangilik qo'shish{% endif %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .yf-wrap { max-width: 720px; margin: 0 auto; }
+  .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
+  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 1.5rem; }
+  .yf-group { margin-bottom: 1.1rem; }
+  .yf-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-input, .yf-textarea {
+    width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+    border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; font-family: inherit;
+  }
+  .yf-input:focus, .yf-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+  .yf-textarea { resize: vertical; min-height: 80px; }
+  .yf-textarea.large { min-height: 180px; }
+  .yf-check { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-size: 0.92rem; }
+  .yf-check input { width: 18px; height: 18px; accent-color: #3b82f6; }
+  .yf-actions { display: flex; gap: 10px; margin-top: 1.2rem; }
+  .yf-save { background: #3b82f6; color: #fff; font-weight: 600; padding: 10px 24px; border: none; border-radius: 10px; cursor: pointer; }
+  .yf-save:hover { background: #2563eb; }
+  .yf-cancel { display: inline-flex; align-items: center; padding: 10px 20px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
+  .yf-cancel:hover { color: #e2e8f0; border-color: #475569; text-decoration: none; }
+  .yf-hint { font-size: 0.76rem; color: #64748b; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="yf-wrap">
+  <h1>{% if action == 'edit' %}✏️ Yangilikni tahrirlash{% else %}➕ Yangilik qo'shish{% endif %}</h1>
+  <form method="post" class="yf-card"
+        action="{% if action == 'edit' %}/admin/yangiliklar/edit/{{ item.id }}{% else %}/admin/yangiliklar/add{% endif %}">
+    {{ csrf_token()|safe }}
+    <div class="yf-group">
+      <label>Sarlavha *</label>
+      <input class="yf-input" type="text" name="title" required value="{{ item.title if item else '' }}">
+    </div>
+    <div class="yf-group">
+      <label>Qisqa matn (max 500 belgi)</label>
+      <textarea class="yf-textarea" name="summary" maxlength="500">{{ item.summary if item else '' }}</textarea>
+    </div>
+    <div class="yf-group">
+      <label>To'liq matn</label>
+      <textarea class="yf-textarea large" name="content">{{ item.content if item else '' }}</textarea>
+    </div>
+    <div class="yf-group">
+      <label>Rasm URL</label>
+      <input class="yf-input" type="text" name="image_url" value="{{ item.image_url if item else '' }}">
+      <div class="yf-hint">Ixtiyoriy</div>
+    </div>
+    <div class="yf-group">
+      <label>Manba URL</label>
+      <input class="yf-input" type="text" name="source_url" value="{{ item.source_url if item else '' }}">
+      <div class="yf-hint">Ixtiyoriy</div>
+    </div>
+    <div class="yf-group">
+      <label class="yf-check">
+        <input type="checkbox" name="is_published" {% if (item and item.is_published) or not item %}checked{% endif %}>
+        Chop etish (saytda ko'rsatish)
+      </label>
+    </div>
+    <div class="yf-actions">
+      <button type="submit" class="yf-save">Saqlash</button>
+      <a href="/admin/yangiliklar" class="yf-cancel">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

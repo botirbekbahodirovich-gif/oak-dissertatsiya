@@ -377,6 +377,49 @@
       .btn-theme-toggle { top: 0.6rem; right: 0.6rem; width: 36px; height: 36px; }
       .brand-subtitle { display: none; }
     }
+
+    /* ════════════ GLOBAL DARK THEME (force dark across the whole site) ════════════ */
+    html, body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+    /* page wrappers used by the custom (formerly light) pages */
+    .hp, .lite, .op, .op-body, .ph-page { background: #0f172a !important; color: #e2e8f0 !important; }
+    /* section backgrounds */
+    .help-sec, .faq-sec, .final-sec, .top-sec, .hp .top-sec { background: #0f172a !important; }
+    .cap-sec, .recent-sec, .news-carousel-sec { background: #162032 !important; }
+    .hero-text-sec { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important; }
+    /* cards & panels */
+    .news-card, .help-card, .cap-card, .top-card, .rd-card, .faq-item,
+    .ng-card, .team-card, .contact-card, .about-card, .as-item, .detail-card,
+    .tl-row, .op-card, .op-list-card, .op-empty, .role-item, .lite .detail-card,
+    .admin-card, .admin-table-panel {
+      background: #1e293b !important; border-color: #334155 !important;
+    }
+    .pager a, .pager span { background: #1e293b !important; border-color: #334155 !important; color: #93bbfc !important; }
+    .pager .cur { background: #3b82f6 !important; color: #fff !important; }
+    /* headings → near-white */
+    .hp-h2, .hero-h1, .lite h1, .ph-page h1, .detail-card h1, .final-sec h2,
+    .about-mission, .op-sec-title, .help-card h3, .cap-card h3, .op-card h3,
+    .team-name, .nc-title, .ng-title, .faq-q, .lc-title { color: #f1f5f9 !important; }
+    /* body/muted text */
+    .hp-sub, .hp-eyebrow, .hero-p, .help-card p, .cap-list li, .lite-sub,
+    .ph-sub, .nc-summary, .nc-date, .rd-mavzu, .rd-date, .about-card p, .about-card,
+    .op-card-meta, .op-empty, .tl-sub, .team-bio, .team-role, .faq-a-inner,
+    .contact-lbl, .ng-summary, .ng-date, .detail-summary, .detail-content,
+    .op-stats, .trust-text, .lc-meta { color: #94a3b8 !important; }
+    .trust-text b, .final-text b { color: #e2e8f0 !important; }
+    /* links → light blue */
+    .rd-name, .top-name, .tl-name, .ng-more, .nc-title, .cc-name, .rd-name:hover,
+    .contact-val, .contact-val a, .role-main .rm-title, .role-main .rm-title a { color: #60a5fa !important; }
+    /* hero "new" badge / eyebrow chips stay readable */
+    .hp-eyebrow { background: #1e293b !important; }
+    .hero-newbadge { color: #94a3b8 !important; }
+    /* dashed empty-state border */
+    .op-empty { border-color: #334155 !important; }
+    /* dark scrollbar */
+    * { scrollbar-color: #334155 #0f172a; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -401,7 +444,8 @@
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') %} active{% endif %}"><i class="bi bi-arrow-left-right"></i>Solishtirish</a>
         <a href="/profile" class="nav-link{% if request.path == '/profile' %} active{% endif %}"><i class="bi bi-person-badge"></i>Profil</a>
         {% if current_user.username == 'admin' %}
-        <a href="/admin/analytics" class="nav-link{% if request.path.startswith('/admin') %} active{% endif %}"><i class="bi bi-speedometer2"></i>Admin</a>
+        <a href="/admin/analytics" class="nav-link{% if request.path == '/admin/analytics' %} active{% endif %}"><i class="bi bi-speedometer2"></i>Admin</a>
+        <a href="/admin/yangiliklar" class="nav-link{% if request.path.startswith('/admin/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar (admin)</a>
         {% endif %}
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
           <i class="bi bi-bell-fill"></i>
