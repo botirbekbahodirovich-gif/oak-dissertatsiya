@@ -391,6 +391,7 @@ html { scroll-behavior: smooth; }
         <div class="stat-emoji">🎓</div>
         <div class="stat-number" data-target="{{ total_stats.researchers or 15000 }}">0</div>
         <div class="stat-label">Tadqiqotchilar</div>
+        {% if gender_pct and (gender_pct.male or gender_pct.female) %}<div class="stat-gender" style="font-size:0.78rem;color:rgba(255,255,255,0.7);margin-top:4px;">👨 {{ gender_pct.male }}% erkak · 👩 {{ gender_pct.female }}% ayol</div>{% endif %}
       </div>
       <div class="stat-item">
         <div class="stat-emoji">🏛️</div>

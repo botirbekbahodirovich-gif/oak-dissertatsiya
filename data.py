@@ -200,8 +200,17 @@ def latin_to_cyrillic(text):
     return result
 
 
+# Name-ending patterns for the (approximate) gender filter on the free-form `olim` field.
+_FEMALE_LIKE = ['%овна', '%евна', '%ёвна', '%қизи', '%qizi',
+                '%ова', '%ева', '%ёва', '%ова %', '%ева %', '%ёва %',
+                '%ская', '%цкая', '%ская %', '%цкая %']
+_MALE_LIKE = ['%ович', '%евич', '%ёвич', "%ўғли", "%o'g'li", '%угли', '%уғли',
+              '%ов', '%ев', '%ёв', '%ов %', '%ев %', '%ёв %',
+              '%ский', '%цкий', '%ский %', '%цкий %']
+
+
 def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
-                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
+                         fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all', gender=''):
     search       = (search       or '').strip()
     daraja       = (daraja       or '').strip()
     muassasa     = (muassasa     or '').strip()
@@ -273,6 +282,11 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
     if sana_yil:
         clauses.append("sana LIKE %s")
         params.append(f"%{sana_yil}%")
+    gender = (gender or '').strip().lower()
+    if gender in ('male', 'female'):
+        pats = _MALE_LIKE if gender == 'male' else _FEMALE_LIKE
+        clauses.append("(" + " OR ".join(["LOWER(TRIM(olim)) LIKE %s"] * len(pats)) + ")")
+        params.extend(pats)
     clause = " WHERE " + " AND ".join(clauses) if clauses else ""
     return clause, params
 
@@ -288,9 +302,9 @@ def load_data():
 
 
 def count_dissertations(search, daraja, muassasa, ixtisoslik,
-                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all', gender=''):
     clause, params = _build_filter_clause(
-        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope, gender)
     sql = 'SELECT COUNT(*) FROM dissertations' + clause
     return _query_scalar(sql, params) or 0
 
@@ -305,9 +319,9 @@ _SANA_ORDER_DESC = (
 
 def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort_dir=None,
                         page=None, per_page=None,
-                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all'):
+                        fan_tarmoqi='', ilmiy_kengash='', sana_yil='', scope='all', gender=''):
     clause, params = _build_filter_clause(
-        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
+        search, daraja, muassasa, ixtisoslik, fan_tarmoqi, ilmiy_kengash, sana_yil, scope, gender)
     # Default sort: newest → oldest. `sana` is free-form text in DD.MM.YYYY form, so a plain
     # string sort is NOT chronological — convert DD.MM.YYYY → YYYYMMDD before ordering.
     pagination_clause = ''
@@ -477,7 +491,7 @@ def _data_cache_key():
         f"data_{a.get('page',1)}_{a.get('per_page',25)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
         f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
-        f"_{a.get('scope','all')}"
+        f"_{a.get('scope','all')}_{a.get('gender','')}"
     )
 
 
@@ -492,6 +506,9 @@ def data():
     fan_tarmoqi   = a.get("fan_tarmoqi",   "").strip()
     ilmiy_kengash = a.get("ilmiy_kengash", "").strip()
     sana_yil      = a.get("sana_yil",      "").strip()
+    gender        = a.get("gender",        "").strip().lower()
+    if gender not in ('male', 'female'):
+        gender = ''
     try:
         page = int(a.get("page", 1))
     except ValueError:
@@ -505,14 +522,14 @@ def data():
     if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
         scope = 'all'
     total = count_dissertations(search, daraja, muassasa, ixtisoslik,
-                                fan_tarmoqi, ilmiy_kengash, sana_yil, scope)
+                                fan_tarmoqi, ilmiy_kengash, sana_yil, scope, gender)
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = max(1, min(page, total_pages))
     rows = query_dissertations(
         search, daraja, muassasa, ixtisoslik,
         page=page, per_page=per_page,
         fan_tarmoqi=fan_tarmoqi, ilmiy_kengash=ilmiy_kengash,
-        sana_yil=sana_yil, scope=scope
+        sana_yil=sana_yil, scope=scope, gender=gender
     )
 
     return jsonify({

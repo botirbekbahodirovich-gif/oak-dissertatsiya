@@ -142,6 +142,9 @@
 
 {% block content %}
 {% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
+{% set gender = detect_gender(olim_name) %}
+{% set gender_emoji = '👨‍🎓' if gender == 'male' else ('👩‍🎓' if gender == 'female' else '🎓') %}
+{% set gender_icon = '👨' if gender == 'male' else ('👩' if gender == 'female' else '') %}
 <div class="op">
 
 <!-- ═══ HEADER ═══ -->
@@ -150,14 +153,14 @@
   <div class="op-container op-header-inner">
     <div class="op-avatar-wrap">
       <div class="op-avatar">
-        {% if photo %}<img src="{{ photo }}" alt="{{ olim_name }}">{% else %}<span>🎓</span>{% endif %}
+        {% if photo %}<img src="{{ photo }}" alt="{{ olim_name }}">{% else %}<span>{{ gender_emoji }}</span>{% endif %}
       </div>
       <span class="op-cam" title="Rasm yuklash (tez orada)">📷</span>
       <div><span class="op-works-badge">📋 Ilmiy ishlar {{ stats.total }}</span></div>
     </div>
 
     <div class="op-info">
-      <h1>{{ olim_name }}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
+      <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
       <div class="op-degs">
         {% if stats.phd %}<span class="deg-pill phd">{{ stats.phd }} PhD</span>{% endif %}
         {% if stats.dsc %}<span class="deg-pill dsc">{{ stats.dsc }} DSc</span>{% endif %}

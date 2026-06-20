@@ -50,6 +50,32 @@
   </div>
 </div>
 
+<!-- Gender statistics -->
+<h2 style="font-size:1.1rem;font-weight:700;color:#e8edf5;margin:0.5rem 0 1rem;"><i class="bi bi-gender-ambiguous me-2" style="color:#ec4899;"></i>Jins bo'yicha statistika</h2>
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-5">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-people-fill"></i>Tadqiqotchilar jins bo'yicha</div>
+      <div class="chart-container" style="height:300px;"><canvas id="chart-gender"></canvas></div>
+      <div id="gender-legend" style="text-align:center;margin-top:12px;color:#8899b4;font-size:0.85rem;line-height:1.8;"></div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-bar-chart-steps"></i>PhD va DSc — jins bo'yicha</div>
+      <div id="gender-degree-bars" style="display:flex;flex-direction:column;gap:20px;margin-top:24px;"></div>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-title"><i class="bi bi-graph-up-arrow"></i>Yillar bo'yicha jins taqsimoti</div>
+      <div class="chart-container" style="height:300px;"><canvas id="chart-gender-year"></canvas></div>
+    </div>
+  </div>
+</div>
+
 <!-- Row 2: Top supervisors -->
 <div class="row g-3 mb-3">
   <div class="col-12">
@@ -238,5 +264,61 @@
   }
 
   loadAndRender().catch(err => console.error('Analytics load error:', err));
+
+  // ── Gender statistics (server-injected, cached) ──
+  var GENDER = {{ {'stats': gender_stats, 'degree': gender_by_degree, 'year': gender_by_year} | tojson }};
+  (function renderGender() {
+    var gs = GENDER.stats || { male: 0, female: 0, unknown: 0 };
+    var total = (gs.male || 0) + (gs.female || 0) + (gs.unknown || 0);
+    function pct(n) { return total ? Math.round((n / total) * 100) : 0; }
+
+    new Chart(document.getElementById('chart-gender'), {
+      type: 'doughnut',
+      data: { labels: ['Erkak', 'Ayol', 'Aniqlanmagan'],
+        datasets: [{ data: [gs.male || 0, gs.female || 0, gs.unknown || 0],
+          backgroundColor: ['#3b82f6bb', '#ec4899bb', '#64748bbb'],
+          borderColor: ['#3b82f6', '#ec4899', '#64748b'], borderWidth: 2, hoverOffset: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
+        plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE,
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed)}%)` } } } }
+    });
+    document.getElementById('gender-legend').innerHTML =
+      '👨 Erkak: <b style="color:#3b82f6">' + (gs.male || 0) + '</b> (' + pct(gs.male || 0) + '%) &nbsp;·&nbsp; ' +
+      '👩 Ayol: <b style="color:#ec4899">' + (gs.female || 0) + '</b> (' + pct(gs.female || 0) + '%) &nbsp;·&nbsp; ' +
+      '❓ Aniqlanmagan: <b style="color:#94a3b8">' + (gs.unknown || 0) + '</b> (' + pct(gs.unknown || 0) + '%)';
+
+    // degree bars
+    var dg = GENDER.degree || {};
+    function bar(label, male, female) {
+      var t = (male + female) || 1;
+      var mp = Math.round(male / t * 100);
+      return '<div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#8899b4;margin-bottom:6px;">' +
+        '<span style="font-weight:700;color:#e8edf5;">' + label + '</span><span>👨 ' + male + ' · 👩 ' + female + '</span></div>' +
+        '<div style="display:flex;height:24px;border-radius:7px;overflow:hidden;background:#162032;">' +
+        (male ? '<div style="width:' + mp + '%;background:#3b82f6;" title="Erkak: ' + male + '"></div>' : '') +
+        (female ? '<div style="width:' + (100 - mp) + '%;background:#ec4899;" title="Ayol: ' + female + '"></div>' : '') +
+        '</div></div>';
+    }
+    document.getElementById('gender-degree-bars').innerHTML =
+      bar('PhD', dg.phd_male || 0, dg.phd_female || 0) +
+      bar('DSc', dg.dsc_male || 0, dg.dsc_female || 0);
+
+    // year stacked bar
+    var yr = GENDER.year || {};
+    var years = Object.keys(yr).sort();
+    if (years.length) {
+      new Chart(document.getElementById('chart-gender-year'), {
+        type: 'bar',
+        data: { labels: years, datasets: [
+          { label: 'Erkak', data: years.map(y => yr[y].male || 0), backgroundColor: '#3b82f6cc', borderRadius: 4 },
+          { label: 'Ayol', data: years.map(y => yr[y].female || 0), backgroundColor: '#ec4899cc', borderRadius: 4 }
+        ] },
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#8899b4', boxWidth: 12, padding: 14 } }, tooltip: { ...TOOLTIP_STYLE } },
+          scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#6b7a99', font: { size: 11 } } },
+            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 } }, beginAtZero: true } } }
+      });
+    }
+  })();
 </script>
 {% endblock %}

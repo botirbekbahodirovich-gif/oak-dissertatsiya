@@ -122,6 +122,8 @@
   .daraja-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
   .daraja-btn[data-value="PhD"].active { background: #16a34a; border-color: #16a34a; }
   .daraja-btn[data-value="DSc"].active { background: #e36403; border-color: #e36403; }
+  .gender-btn[data-gender="male"].active { background: #3b82f6; border-color: #3b82f6; }
+  .gender-btn[data-gender="female"].active { background: #ec4899; border-color: #ec4899; }
 
   /* view toggle (jadval / kartochka) */
   .view-toggle { display: flex; gap: 8px; flex-shrink: 0; }
@@ -232,6 +234,11 @@
         <button class="daraja-btn" data-value="PhD" id="btn-phd">PhD</button>
         <button class="daraja-btn" data-value="DSc" id="btn-dsc">DSc</button>
       </div>
+      <!-- Gender toggle buttons -->
+      <div class="daraja-buttons gender-buttons">
+        <button class="daraja-btn gender-btn" data-gender="male" id="btn-male">👨 Erkak</button>
+        <button class="daraja-btn gender-btn" data-gender="female" id="btn-female">👩 Ayol</button>
+      </div>
       <!-- Ixtisoslik searchable select -->
       <div class="custom-select" id="cs-ixtisoslik">
         <div class="select-trigger"><span class="selected-text">Ixtisoslik shifri</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
@@ -314,7 +321,7 @@
   let currentPage = 1;
   let currentTotal = 0;
   let currentRecords = [];
-  let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
+  let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'', gender:'' };
   let currentScope = 'all';
   let searchController = null;
   let summaryController = null;
@@ -566,6 +573,7 @@
 
     const darajaParam = p.get('daraja') || '';
     _setDaraja(darajaParam);
+    _setGender(p.get('gender') || '');
   }
 
   // ── Daraja toggle buttons ──────────────────────────────────────────────────
@@ -575,7 +583,7 @@
       b.classList.toggle('active', b.dataset.value === val);
     });
   }
-  document.querySelectorAll('.daraja-btn').forEach(btn => {
+  document.querySelectorAll('.daraja-btn:not(.gender-btn)').forEach(btn => {
     btn.addEventListener('click', () => {
       const val = btn.dataset.value;
       // clicking active button again → clear filter
@@ -584,6 +592,21 @@
       } else {
         _setDaraja(val);
       }
+      updateData(true);
+    });
+  });
+
+  // ── Gender toggle buttons (same pattern as daraja) ─────────────────────────
+  function _setGender(val) {
+    currentFilters.gender = val;
+    document.querySelectorAll('.gender-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.gender === val);
+    });
+  }
+  document.querySelectorAll('.gender-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.gender;
+      _setGender(btn.classList.contains('active') ? '' : val);
       updateData(true);
     });
   });
@@ -670,6 +693,7 @@
       daraja:     currentFilters.daraja,
       ixtisoslik: currentFilters.ixtisoslik,
       sana_yil:   currentFilters.sana_yil,
+      gender:     currentFilters.gender,
       page:       currentPage,
       per_page:   PER_PAGE,
       scope:      currentScope
@@ -752,10 +776,11 @@
     searchInput.value = ''; if (clearBtn) clearBtn.style.display = 'none';
     hideSummary();
     _setDaraja('');
+    _setGender('');
     currentScope = 'all';
     document.querySelectorAll('.scope-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === 'all'));
     customSelects.forEach(s => s.reset());
-    currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'' };
+    currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'', gender:'' };
     updateData(true);
   });
 

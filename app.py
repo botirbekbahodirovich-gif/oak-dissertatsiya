@@ -36,6 +36,45 @@ def _inject_csrf_token():
     return dict(csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf())
 
 
+_FEMALE_NAMES = {
+    'гулнора', 'дилноза', 'малика', 'мадина', 'нигора', 'наргиза', 'зулфия', 'феруза',
+    'шахло', 'барно', 'мунира', 'дилбар', 'нафиса', 'хилола', 'сарвиноз', 'камола',
+    'юлдуз', 'лола', 'севара', 'нодира', 'зиёда', 'мухаббат', 'гавхар', 'дурдона',
+    'матлуба', 'хуршида', 'азиза',
+}
+
+
+def detect_gender(full_name):
+    """Detect gender from Uzbek/Russian name patterns. Returns 'female', 'male', or 'unknown'."""
+    if not full_name or not full_name.strip():
+        return 'unknown'
+    name = full_name.strip().lower()
+    parts = name.split()
+    # Patronymic (otasining ismi) — most reliable
+    for part in parts:
+        if part.endswith(('овна', 'евна', 'ёвна', 'қизи', 'qizi')):
+            return 'female'
+        if part.endswith(('ович', 'евич', 'ёвич', 'ўғли', "o'g'li", 'угли', 'уғли')):
+            return 'male'
+    # Surname endings
+    for part in parts:
+        if part.endswith(('ова', 'ева', 'ёва', 'ская', 'цкая', 'ная', 'яна')):
+            return 'female'
+        if part.endswith(('ов', 'ев', 'ёв', 'ский', 'цкий', 'ной', 'ян')):
+            if len(part) > 3:
+                return 'male'
+    # Common Uzbek female first names
+    for part in parts:
+        if part in _FEMALE_NAMES:
+            return 'female'
+    return 'unknown'
+
+
+@app.context_processor
+def inject_gender_detector():
+    return dict(detect_gender=detect_gender)
+
+
 @app.context_processor
 def _inject_cabinet():
     """Expose cabinet (portfolio) session state to all templates."""
@@ -453,10 +492,21 @@ def home():
     # Combined list for the seamless marquee (top 20 + random 20)
     top_marquee = top_supervisors + top_supervisors_random
 
+    # Gender split (cached) for the Tadqiqotchilar stat card
+    gender_pct = {"male": 0, "female": 0}
+    try:
+        gs = compute_gender_stats()["gender_stats"]
+        gtot = (gs.get("male", 0) + gs.get("female", 0) + gs.get("unknown", 0)) or 1
+        gender_pct = {"male": round(gs.get("male", 0) / gtot * 100),
+                      "female": round(gs.get("female", 0) / gtot * 100)}
+    except Exception:
+        pass
+
     return render_template("home.html", recent=recent, news=news,
                            top_supervisors=top_supervisors,
                            top_supervisors_random=top_supervisors_random,
-                           top_marquee=top_marquee, total_stats=total_stats)
+                           top_marquee=top_marquee, total_stats=total_stats,
+                           gender_pct=gender_pct)
 
 
 @app.route("/dashboard")
@@ -464,9 +514,63 @@ def index():
     return render_template("dashboard.html")
 
 
+def compute_gender_stats():
+    """Gender breakdown over all dissertations. Cached 30 min (processes all records)."""
+    cached = cache.get("gender_stats_v1")
+    if cached is not None:
+        return cached
+    import re as _re
+    gender_stats = {"male": 0, "female": 0, "unknown": 0}
+    gender_by_degree = {"phd_male": 0, "phd_female": 0, "dsc_male": 0, "dsc_female": 0}
+    gender_by_year = {}
+    name_gender = {}
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT olim, daraja, sana FROM dissertations WHERE olim IS NOT NULL AND TRIM(olim) <> ''")
+                for olim, daraja, sana in cur.fetchall():
+                    g = name_gender.get(olim)
+                    if g is None:
+                        g = detect_gender(olim)
+                        name_gender[olim] = g
+                    dl = (daraja or "")
+                    deg = "phd" if ("PHD" in dl.upper() or "фан" in dl.lower()) else "dsc"
+                    if g in ("male", "female"):
+                        key = f"{deg}_{g}"
+                        if key in gender_by_degree:
+                            gender_by_degree[key] += 1
+                        m = _re.search(r"(19|20)\d{2}", sana or "")
+                        if m:
+                            yr = m.group(0)
+                            slot = gender_by_year.setdefault(yr, {"male": 0, "female": 0})
+                            slot[g] += 1
+        finally:
+            conn.close()
+        # distinct-researcher gender counts
+        for g in name_gender.values():
+            gender_stats[g] = gender_stats.get(g, 0) + 1
+    except Exception:
+        pass
+    weekly_years = sorted(gender_by_year.keys())[-12:]
+    result = {
+        "gender_stats": gender_stats,
+        "gender_by_degree": gender_by_degree,
+        "gender_by_year": {y: gender_by_year[y] for y in weekly_years},
+    }
+    cache.set("gender_stats_v1", result, timeout=1800)
+    return result
+
+
 @app.route("/stats")
 def stats_page():
-    return render_template("stats.html")
+    g = compute_gender_stats()
+    return render_template("stats.html",
+                           gender_stats=g["gender_stats"],
+                           gender_by_degree=g["gender_by_degree"],
+                           gender_by_year=g["gender_by_year"])
 
 
 def _compare_university(cur, name):
