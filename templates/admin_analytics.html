@@ -56,6 +56,13 @@
   .admin-table td { padding: 0.65rem 1rem; font-size: 0.88rem; border-color: var(--oak-border); }
   .admin-table tbody tr:hover td { background: rgba(74,158,255,0.06); }
   .empty-cell { color: var(--oak-muted); text-align: center; padding: 1.5rem; }
+  .vc-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+  .vc-num { font-weight: 800; font-size: 1rem; color: var(--oak-text); min-width: 42px; }
+  [data-bs-theme="light"] .vc-num { color: var(--oak-text-light); }
+  .vc-bar-track { flex: 1; height: 8px; background: rgba(74,158,255,0.1); border-radius: 999px; overflow: hidden; }
+  .vc-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4a9eff, #7c5cfc); }
+  .rank-cell { color: var(--oak-muted); font-weight: 700; }
+  .admin-table td.ip-mono { font-family: ui-monospace, monospace; color: #60a5fa; }
 </style>
 {% endblock %}
 
@@ -137,6 +144,67 @@
     </table>
   </div>
 </div>
+
+<div class="admin-section">
+  <h2>👥 Eng ko'p tashrif buyurgan foydalanuvchilar (IP bo'yicha)</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr>
+          <th>#</th><th>IP manzil</th><th>Tashriflar soni</th><th>Unikal sahifalar</th>
+          <th>Birinchi tashrif</th><th>Oxirgi tashrif</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set maxv = (top_visitors[0].visit_count if top_visitors else 1) or 1 %}
+        {% for v in top_visitors %}
+        <tr>
+          <td class="rank-cell">{{ loop.index }}</td>
+          <td class="ip-mono">{{ v.ip }}</td>
+          <td>
+            <div class="vc-cell">
+              <span class="vc-num">{{ v.visit_count }}</span>
+              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (v.visit_count / maxv * 100) | round(0, 'ceil') }}%;"></div></div>
+            </div>
+          </td>
+          <td style="font-weight:700;">{{ v.unique_pages }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.first_visit }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-cell">Tashriflar yo'q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if registered_users %}
+<div class="admin-section">
+  <h2>📋 Ro'yxatdan o'tgan foydalanuvchilar</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr>
+          <th>#</th><th>Email / Telegram</th><th>Bog'langan olim</th>
+          <th>Ro'yxatdan o'tgan sana</th><th>Oxirgi kirish</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in registered_users %}
+        <tr>
+          <td class="rank-cell">{{ loop.index }}</td>
+          <td>{% if u.email %}{{ u.email }}{% elif u.telegram_username %}@{{ u.telegram_username }}{% elif u.telegram_first_name %}{{ u.telegram_first_name }}{% else %}—{% endif %}</td>
+          <td>{% if u.olim_name %}<a href="/olim/{{ u.olim_name|urlencode }}" style="color:#60a5fa;">{{ u.olim_name }}</a>{% else %}<span style="color:var(--oak-muted);">—</span>{% endif %}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.created_at }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.last_login }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

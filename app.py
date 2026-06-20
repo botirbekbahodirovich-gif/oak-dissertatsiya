@@ -948,12 +948,49 @@ def admin_analytics():
                 WHERE visited_at > NOW() - INTERVAL '7 days'
                 GROUP BY d ORDER BY d""")
             weekly = cur.fetchall()
+
+            # Top visitors by IP
+            cur.execute("""
+                SELECT ip_address,
+                       COUNT(*) AS visit_count,
+                       MAX(visited_at) AS last_visit,
+                       MIN(visited_at) AS first_visit,
+                       COUNT(DISTINCT page) AS unique_pages
+                FROM page_visits
+                GROUP BY ip_address
+                ORDER BY visit_count DESC
+                LIMIT 20
+            """)
+            top_visitors = [{
+                "ip": r[0] or "—", "visit_count": r[1] or 0,
+                "last_visit": str(r[2])[:16] if r[2] else "",
+                "first_visit": str(r[3])[:16] if r[3] else "",
+                "unique_pages": r[4] or 0,
+            } for r in cur.fetchall()]
+
+            # Registered cabinet users (if any)
+            registered_users = []
+            try:
+                cur.execute("""
+                    SELECT id, email, telegram_username, telegram_first_name,
+                           olim_name, created_at, last_login
+                    FROM cabinet_users ORDER BY created_at DESC LIMIT 50
+                """)
+                registered_users = [{
+                    "id": r[0], "email": r[1] or "", "telegram_username": r[2] or "",
+                    "telegram_first_name": r[3] or "", "olim_name": r[4] or "",
+                    "created_at": str(r[5])[:16] if r[5] else "",
+                    "last_login": str(r[6])[:16] if r[6] else "",
+                } for r in cur.fetchall()]
+            except Exception:
+                registered_users = []
     finally:
         conn.close()
 
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
-        top_pages=top_pages, recent=recent, weekly=weekly)
+        top_pages=top_pages, recent=recent, weekly=weekly,
+        top_visitors=top_visitors, registered_users=registered_users)
 
 
 def _require_admin():
