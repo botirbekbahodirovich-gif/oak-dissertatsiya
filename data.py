@@ -345,6 +345,62 @@ def query_dissertations(search, daraja, muassasa, ixtisoslik, sort_by=None, sort
     return _query_rows(sql, params)
 
 
+def split_ixtisoslik(ixtisoslik_str):
+    """Split a combined specialty field into individual codes.
+    "01.01.01 05.01.07" / "13.00.02, 13.00.01" / "05.01.01;05.06.01" -> ["01.01.01", ...]"""
+    if not ixtisoslik_str or not str(ixtisoslik_str).strip():
+        return []
+    codes = re.findall(r'\d{2}\.\d{2}\.\d{2}', str(ixtisoslik_str))
+    seen, unique = set(), []
+    for c in codes:
+        if c not in seen:
+            seen.add(c)
+            unique.append(c)
+    return unique if unique else [str(ixtisoslik_str).strip()]
+
+
+def _all_individual_ixtisoslik(cache_key):
+    """Set of every individual specialty code across all dissertations."""
+    codes = set()
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT ixtisoslik FROM dissertations "
+                    "WHERE ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> ''")
+                for (val,) in cur.fetchall():
+                    for c in split_ixtisoslik(val):
+                        codes.add(c)
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return codes
+
+
+def list_individual_ixtisosliklar():
+    """Sorted list of individual specialty codes (cached 10 min). For filter dropdowns."""
+    key = 'ixtisoslik_individual_list'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    result = sorted(_all_individual_ixtisoslik(key))
+    cache.set(key, result, timeout=600)
+    return result
+
+
+def count_distinct_ixtisosliklar():
+    """Count of distinct individual specialty codes (cached 10 min)."""
+    key = 'ixtisoslik_individual_count'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    result = len(_all_individual_ixtisoslik(key))
+    cache.set(key, result, timeout=600)
+    return result
+
+
 _DISTINCT_LIMITS = {
     "daraja": 20, "ixtisoslik": 500, "fan_tarmoqi": 100,
     "muassasa": 500, "ilmiy_kengash": 200,
@@ -353,6 +409,9 @@ _DISTINCT_LIMITS = {
 def _distinct_values(column, limit=None):
     if column not in _DISTINCT_LIMITS:
         return []
+    if column == "ixtisoslik":
+        # split combined codes so the dropdown lists each specialty individually
+        return list_individual_ixtisosliklar()
     lim = limit if limit is not None else _DISTINCT_LIMITS[column]
     # ixtisoslik must list every unique code — no limit.
     limit_clause = "" if (column == "ixtisoslik" or not lim) else f" LIMIT {int(lim)}"
