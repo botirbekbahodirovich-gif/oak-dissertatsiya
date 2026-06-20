@@ -363,13 +363,57 @@ def _run_startup_migrations():
                     f"CREATE INDEX IF NOT EXISTS {idx_name} "
                     f"ON dissertations USING gin(({expr}) gin_trgm_ops)"
                 )
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS blog_posts (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(500) NOT NULL,
+                    slug VARCHAR(500) UNIQUE,
+                    summary VARCHAR(1000),
+                    content TEXT NOT NULL,
+                    category VARCHAR(100),
+                    image_url VARCHAR(500),
+                    author VARCHAR(200) DEFAULT 'Olimlar.uz jamoasi',
+                    views INTEGER DEFAULT 0,
+                    is_published BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_blog_created ON blog_posts(created_at)")
         conn.commit()
         conn.close()
     except Exception:
         pass
 
 
+def _seed_blog_posts():
+    """Insert starter blog posts once (only if the table is empty)."""
+    try:
+        from data import get_connection
+        from blog_seed import SEED_POSTS
+    except Exception:
+        return
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM blog_posts")
+                if (cur.fetchone()[0] or 0) > 0:
+                    return
+                for p in SEED_POSTS:
+                    cur.execute(
+                        "INSERT INTO blog_posts (title, slug, summary, content, category) "
+                        "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (slug) DO NOTHING",
+                        (p["title"], p["slug"], p["summary"], p["content"], p["category"]))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+
 _run_startup_migrations()
+_seed_blog_posts()
 
 
 def _placeholder_news():
@@ -1556,9 +1600,91 @@ def contact():
     return render_template("contact.html")
 
 
+BLOG_CATEGORIES = {
+    "maslahat": "Maslahat", "qollanma": "Qo'llanma",
+    "texnologiya": "Texnologiya", "yangilik": "Yangilik",
+}
+
+
 @app.route("/blog")
 def blog():
-    return render_template("blog.html")
+    from data import get_connection
+    category = (request.args.get("category") or "").strip()
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 12
+    offset = (page - 1) * per_page
+    posts, total = [], 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                where = "WHERE is_published = TRUE"
+                params = []
+                if category in BLOG_CATEGORIES:
+                    where += " AND category = %s"
+                    params.append(category)
+                cur.execute(f"SELECT COUNT(*) FROM blog_posts {where}", params)
+                total = cur.fetchone()[0] or 0
+                cur.execute(
+                    f"SELECT id, title, slug, summary, category, image_url, author, views, created_at "
+                    f"FROM blog_posts {where} ORDER BY created_at DESC, id DESC LIMIT %s OFFSET %s",
+                    params + [per_page, offset])
+                posts = [{
+                    "id": r[0], "title": r[1] or "", "slug": r[2] or "",
+                    "summary": r[3] or "", "category": r[4] or "",
+                    "category_label": BLOG_CATEGORIES.get(r[4] or "", r[4] or ""),
+                    "image_url": r[5] or "", "author": r[6] or "", "views": r[7] or 0,
+                    "created_at": str(r[8])[:10] if r[8] else "",
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        posts, total = [], 0
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    return render_template("blog.html", posts=posts, page=page, total_pages=total_pages,
+                           total=total, category=category, categories=BLOG_CATEGORIES)
+
+
+@app.route("/blog/<slug>")
+def blog_post(slug):
+    from data import get_connection
+    post = None
+    related = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, slug, summary, content, category, image_url, author, "
+                    "views, created_at FROM blog_posts WHERE slug = %s AND is_published = TRUE", (slug,))
+                r = cur.fetchone()
+                if r:
+                    post = {
+                        "id": r[0], "title": r[1] or "", "slug": r[2] or "",
+                        "summary": r[3] or "", "content": r[4] or "", "category": r[5] or "",
+                        "category_label": BLOG_CATEGORIES.get(r[5] or "", r[5] or ""),
+                        "image_url": r[6] or "", "author": r[7] or "", "views": (r[8] or 0) + 1,
+                        "created_at": str(r[9])[:10] if r[9] else "",
+                    }
+                    cur.execute("UPDATE blog_posts SET views = views + 1 WHERE id = %s", (r[0],))
+                    conn.commit()
+                    cur.execute(
+                        "SELECT title, slug, summary, category FROM blog_posts "
+                        "WHERE is_published = TRUE AND category = %s AND id <> %s "
+                        "ORDER BY created_at DESC LIMIT 3", (post["category"], post["id"]))
+                    related = [{
+                        "title": rr[0], "slug": rr[1], "summary": rr[2] or "",
+                        "category_label": BLOG_CATEGORIES.get(rr[3] or "", rr[3] or ""),
+                    } for rr in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        post = None
+    if not post:
+        abort(404)
+    return render_template("blog_post.html", post=post, related=related)
 
 
 @app.route("/preparation")

@@ -1,29 +1,169 @@
 {% extends "base.html" %}
-{% block title %}Malaka oshirish — Olimlar.uz{% endblock %}
+{% block title %}Malaka oshirish kurslari — Olimlar.uz{% endblock %}
 
 {% block extra_head %}
 <style>
 .content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.ph-page { background: #f8fafc; color: #0f172a; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; }
-.ph-inner { max-width: 560px; }
-.ph-emoji { font-size: 3.2rem; margin-bottom: 18px; }
-.ph-page h1 { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
-.ph-sub { color: #64748b; font-size: 1.08rem; line-height: 1.6; margin: 0 0 28px; }
-.ph-btn { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: #fff;
-  font-weight: 600; padding: 12px 28px; border-radius: 50px; text-decoration: none;
-  box-shadow: 0 4px 14px rgba(59,130,246,0.4); transition: background 0.3s ease, transform 0.3s ease; }
-.ph-btn:hover { background: #2563eb; color: #fff; transform: scale(1.02); text-decoration: none; }
-@media (max-width: 639px) { .ph-page h1 { font-size: 1.55rem; } }
+.crs { background: #0f172a; color: #e2e8f0; }
+.crs-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+/* hero */
+.crs-hero { background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,130,246,0.25) 0%, transparent 60%), linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 80px 0 72px; text-align: center; position: relative; overflow: hidden; }
+.crs-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #93bbfc; font-weight: 700; font-size: 0.82rem; padding: 7px 16px; border-radius: 999px; margin-bottom: 22px; }
+.crs-hero h1 { font-size: 2.8rem; font-weight: 900; color: #f8fafc; line-height: 1.15; margin: 0 0 18px; letter-spacing: -1px; }
+.crs-hero h1 .grad { background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.crs-hero p { font-size: 1.2rem; color: #94a3b8; max-width: 640px; margin: 0 auto 30px; line-height: 1.6; }
+.crs-cta { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; font-weight: 700; font-size: 1.05rem; padding: 15px 36px; border-radius: 50px; text-decoration: none; box-shadow: 0 10px 30px rgba(59,130,246,0.4); transition: transform 0.25s, box-shadow 0.25s; }
+.crs-cta:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(59,130,246,0.55); color: #fff; text-decoration: none; }
+.crs-cta-note { color: #64748b; font-size: 0.86rem; margin-top: 14px; }
+
+/* stats strip */
+.crs-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 44px; }
+.crs-stat { background: rgba(255,255,255,0.04); border: 1px solid #334155; border-radius: 14px; padding: 16px 26px; text-align: center; min-width: 150px; }
+.crs-stat .n { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; }
+.crs-stat .l { font-size: 0.82rem; color: #94a3b8; margin-top: 2px; }
+
+/* section */
+.crs-sec { padding: 72px 0; }
+.crs-sec.alt { background: #131c2e; }
+.crs-sec h2 { font-size: 2rem; font-weight: 800; color: #f1f5f9; text-align: center; margin: 0 0 10px; }
+.crs-sec .sub { text-align: center; color: #94a3b8; font-size: 1.05rem; max-width: 620px; margin: 0 auto 44px; }
+
+/* course cards */
+.crs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.crs-card { background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 28px; transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s; position: relative; }
+.crs-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 16px 40px rgba(0,0,0,0.3); }
+.crs-card .ico { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 1.7rem; margin-bottom: 18px; }
+.ico-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.ico-g { background: linear-gradient(135deg, #059669, #047857); }
+.ico-p { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.ico-o { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.ico-r { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.ico-c { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+.crs-card h3 { font-size: 1.2rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
+.crs-card p { font-size: 0.92rem; color: #94a3b8; line-height: 1.6; margin: 0 0 16px; }
+.crs-card .soon { display: inline-block; font-size: 0.72rem; font-weight: 700; color: #fbbf24; background: rgba(245,158,11,0.14); padding: 4px 12px; border-radius: 999px; }
+
+/* why / motivation */
+.why-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.why-card { display: flex; gap: 16px; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; }
+.why-card .wi { font-size: 1.8rem; flex-shrink: 0; }
+.why-card h4 { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin: 0 0 5px; }
+.why-card p { font-size: 0.9rem; color: #94a3b8; line-height: 1.55; margin: 0; }
+
+/* quote */
+.crs-quote { max-width: 760px; margin: 0 auto; text-align: center; }
+.crs-quote .q { font-size: 1.5rem; font-weight: 700; color: #e2e8f0; line-height: 1.5; font-style: italic; }
+.crs-quote .q span { color: #60a5fa; }
+.crs-quote .a { color: #94a3b8; margin-top: 16px; font-size: 0.95rem; }
+
+/* notify */
+.crs-final { text-align: center; }
+.crs-final h2 { margin-bottom: 14px; }
+.crs-final .tg { display: inline-flex; align-items: center; gap: 8px; background: #229ED9; color: #fff; font-weight: 700; padding: 13px 30px; border-radius: 50px; text-decoration: none; box-shadow: 0 8px 24px rgba(34,158,217,0.35); }
+.crs-final .tg:hover { background: #1c8dc2; color: #fff; text-decoration: none; }
+
+@media (max-width: 980px) { .crs-grid { grid-template-columns: repeat(2, 1fr); } .why-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .crs-hero h1 { font-size: 2rem; } .crs-grid { grid-template-columns: 1fr; } .crs-sec h2 { font-size: 1.6rem; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ph-page">
-  <div class="ph-inner">
-    <div class="ph-emoji">🎓</div>
-    <h1>Malaka oshirish va kurslar</h1>
-    <p class="ph-sub">Malaka oshirish kurslari tez orada qo'shiladi.</p>
-    <a href="/" class="ph-btn">Bosh sahifa →</a>
-  </div>
+<div class="crs">
+
+  <!-- HERO -->
+  <section class="crs-hero">
+    <div class="crs-container">
+      <div class="crs-badge">🚀 Tez kunda ishga tushadi</div>
+      <h1>Ilmiy salohiyatingizni<br><span class="grad">keyingi bosqichga</span> olib chiqing</h1>
+      <p>Dissertatsiya yozishdan ilmiy maqola nashrigacha — har bir bosqichda sizga yo'l ko'rsatadigan amaliy kurslar.</p>
+      <a href="https://t.me/olimlar_uz" target="_blank" rel="noopener" class="crs-cta">Birinchilardan bo'lib xabar oling →</a>
+      <div class="crs-cta-note">Kurslar tayyor bo'lishi bilan Telegram orqali xabar beramiz</div>
+
+      <div class="crs-stats">
+        <div class="crs-stat"><div class="n">27 000+</div><div class="l">Dissertatsiya bazada</div></div>
+        <div class="crs-stat"><div class="n">15 000+</div><div class="l">Tadqiqotchilar</div></div>
+        <div class="crs-stat"><div class="n">6</div><div class="l">Tayyorlanayotgan kurs</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COURSES -->
+  <section class="crs-sec">
+    <div class="crs-container">
+      <h2>Tayyorlanayotgan kurslar</h2>
+      <p class="sub">Tajribali olimlar va amaliyotchilar tomonidan tayyorlanayotgan bosqichma-bosqich dasturlar</p>
+      <div class="crs-grid">
+        <div class="crs-card">
+          <div class="ico ico-b">📑</div>
+          <h3>Dissertatsiya yozish asoslari</h3>
+          <p>Mavzu tanlashdan tortib himoyagacha — butun jarayonni qamrab oluvchi to'liq dastur.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+        <div class="crs-card">
+          <div class="ico ico-g">🔬</div>
+          <h3>Ilmiy maqola va nashr</h3>
+          <p>Sifatli maqola yozish, jurnal tanlash va xalqaro bazalarda nashr etish sirlari.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+        <div class="crs-card">
+          <div class="ico ico-p">📊</div>
+          <h3>Tadqiqot metodologiyasi</h3>
+          <p>Ilmiy tadqiqot usullari, ma'lumot to'plash va tahlil qilishning zamonaviy yondashuvlari.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+        <div class="crs-card">
+          <div class="ico ico-o">🎤</div>
+          <h3>Himoyaga tayyorgarlik</h3>
+          <p>Avtoreferat, taqdimot va himoyada ishonchli chiqish — amaliy mashqlar bilan.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+        <div class="crs-card">
+          <div class="ico ico-r">🤖</div>
+          <h3>Tadqiqotda AI vositalari</h3>
+          <p>Sun'iy intellektdan halol va samarali foydalanish — adabiyot tahlilidan matn tahririgacha.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+        <div class="crs-card">
+          <div class="ico ico-c">🌐</div>
+          <h3>Akademik ingliz tili</h3>
+          <p>Xalqaro jurnallar va konferensiyalar uchun ilmiy ingliz tilini egallash.</p>
+          <span class="soon">Tez kunda</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="crs-sec alt">
+    <div class="crs-container">
+      <h2>Nega aynan bizning kurslar?</h2>
+      <p class="sub">Nazariya emas — natijaga olib boradigan amaliy bilim</p>
+      <div class="why-grid">
+        <div class="why-card"><div class="wi">🎯</div><div><h4>Amaliyotga yo'naltirilgan</h4><p>Har bir dars real dissertatsiya va maqola misollariga asoslanadi. Darhol qo'llay olasiz.</p></div></div>
+        <div class="why-card"><div class="wi">👨‍🏫</div><div><h4>Tajribali ustozlar</h4><p>Yuzlab shogird yetishtirgan olimlar va muvaffaqiyatli himoya qilgan tadqiqotchilar.</p></div></div>
+        <div class="why-card"><div class="wi">⏱️</div><div><h4>O'z tezligingizda</h4><p>Onlayn format — istalgan vaqtda, istalgan joyda o'rganing. Ish va o'qishni birlashtiring.</p></div></div>
+        <div class="why-card"><div class="wi">💬</div><div><h4>Jamoa va qo'llab-quvvatlash</h4><p>Savollaringizga javob, tajriba almashinuvi va o'zaro motivatsiya beruvchi hamjamiyat.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE -->
+  <section class="crs-sec">
+    <div class="crs-container crs-quote">
+      <div class="q">"Ilm — sabr va izchillik mevasi. Bugun qo'ygan har bir qadamingiz <span>ertangi kashfiyotingizning</span> poydevoridir."</div>
+      <div class="a">— Olimlar.uz jamoasi</div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="crs-sec alt">
+    <div class="crs-container crs-final">
+      <h2>Birinchilardan bo'ling</h2>
+      <p class="sub">Kurslar ishga tushishi bilan maxsus takliflar va bepul materiallardan birinchi bo'lib foydalaning.</p>
+      <a href="https://t.me/olimlar_uz" target="_blank" rel="noopener" class="tg"><i class="bi bi-telegram"></i> Telegram kanalga obuna bo'lish</a>
+    </div>
+  </section>
+
 </div>
 {% endblock %}
