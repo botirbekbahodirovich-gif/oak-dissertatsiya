@@ -478,7 +478,7 @@ html { scroll-behavior: smooth; }
   <div class="hp-container fade-section">
     <h2>Olimlar.uz da o'z portfoliyoingizni shakllantiring</h2>
     <p class="p-sub">Barcha ilmiy ishlaringiz, maqolalaringiz va yutuqlaringizni bitta sahifada jamlang. Hamkasblaringiz va talabalaringiz sizni osongina topa olsin.</p>
-    <a href="/cabinet" class="btn-cta white">{% if cabinet_logged_in %}Kabinetga kirish →{% else %}Portfoliyoni yaratish →{% endif %}</a>
+    <a href="{% if cabinet_logged_in %}/cabinet{% else %}/cabinet/login{% endif %}" class="btn-cta white">{% if cabinet_logged_in %}Kabinetga kirish →{% else %}Portfoliyoni yaratish →{% endif %}</a>
     <div class="portfolio-features">
       <div class="pf-item"><span class="pf-icon">📄</span> Barcha ilmiy ishlaringiz bir joyda</div>
       <div class="pf-item"><span class="pf-icon">🔗</span> Qisqa link bilan ulashing</div>

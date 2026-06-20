@@ -48,6 +48,9 @@
 .item-form.open { display: block; }
 .search-results { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .sr-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; }
+.sr-mavzu { font-size: 0.8rem; color: #94a3b8; margin: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-deg { font-size: 0.68rem; font-weight: 700; color: #fff; padding: 1px 8px; border-radius: 999px; margin-right: 8px; }
+.sr-deg.phd { background: #059669; } .sr-deg.dsc { background: #e36403; }
 .sr-name { font-weight: 600; color: #e2e8f0; }
 .sr-count { font-size: 0.8rem; color: #94a3b8; }
 .sr-claimed { color: #34d399; font-weight: 700; font-size: 0.85rem; }
@@ -365,14 +368,24 @@ if (claimSearch) {
     searchTimer = setTimeout(function () {
       fetch('/cabinet/api/search-olim?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
         var box = document.getElementById('claim-results');
-        box.innerHTML = (d.results || []).map(function (it) {
+        var rows = d.results || [];
+        box.innerHTML = rows.map(function (it) {
           var nm = it.name.replace(/'/g, "\\'");
-          return '<div class="sr-card"><div><div class="sr-name"></div><div class="sr-count">' + it.count + ' ta dissertatsiya</div></div>' +
+          var deg = it.daraja === 'PHD' ? '<span class="sr-deg phd">PhD</span>'
+                  : (it.daraja === 'DSC' ? '<span class="sr-deg dsc">DSc</span>' : '');
+          return '<div class="sr-card"><div style="min-width:0;"><div class="sr-name"></div>' +
+                 '<div class="sr-mavzu"></div>' +
+                 '<div class="sr-count">' + deg + it.count + ' ta dissertatsiya</div></div>' +
                  '<button class="cab-btn" onclick="claimName(\'' + nm + '\')">Bu men ✓</button></div>';
         }).join('');
         var cards = box.querySelectorAll('.sr-card');
-        (d.results || []).forEach(function (it, i) { cards[i].querySelector('.sr-name').textContent = it.name; });
-        if (!(d.results || []).length) box.innerHTML = '<p class="desc">Natija topilmadi.</p>';
+        rows.forEach(function (it, i) {
+          cards[i].querySelector('.sr-name').textContent = it.name;
+          var mv = cards[i].querySelector('.sr-mavzu');
+          var txt = (it.mavzu || '').slice(0, 90);
+          mv.textContent = txt ? (txt + (it.mavzu.length > 90 ? '…' : '')) : '';
+        });
+        if (!rows.length) box.innerHTML = '<p class="desc">Natija topilmadi.</p>';
       });
     }, 300);
   });

@@ -52,7 +52,8 @@ def cabinet_login_required(view):
         if not session.get('cabinet_user_id'):
             if request.path.startswith('/cabinet/api/'):
                 return jsonify({"ok": False, "error": "auth"}), 401
-            return redirect(url_for('cabinet.login'))
+            return redirect(url_for('cabinet.login', next=request.full_path
+                                    if request.query_string else request.path))
         return view(*args, **kwargs)
     return wrapped
 
@@ -315,10 +316,13 @@ def search_olim():
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT TRIM(olim), COUNT(*) AS cnt FROM dissertations "
+                    "SELECT TRIM(olim), COUNT(*) AS cnt, MIN(mavzu) AS sample_mavzu, "
+                    "MIN(daraja) AS sample_daraja FROM dissertations "
                     "WHERE olim IS NOT NULL AND TRIM(olim) <> '' AND LOWER(TRIM(olim)) LIKE %s "
                     "GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 25", (like,))
-                results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+                results = [{"name": r[0], "count": r[1],
+                            "mavzu": r[2] or "", "daraja": (r[3] or "").upper()}
+                           for r in cur.fetchall()]
         finally:
             conn.close()
     except Exception:
