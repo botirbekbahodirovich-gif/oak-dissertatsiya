@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} — Vakansiya{% endblock %}
+
+{% block extra_head %}
+<style>
+  .vd-wrap { max-width: 800px; margin: 0 auto; padding: 8px 0 40px; }
+  .vd-back { display: inline-flex; align-items: center; gap: 6px; color: #94a3b8; text-decoration: none; font-size: 0.9rem; margin-bottom: 18px; }
+  .vd-back:hover { color: #e2e8f0; text-decoration: none; }
+  .vd-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
+  .vd-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .vd-badge { font-size: 0.78rem; font-weight: 700; padding: 5px 14px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .vd-badge.full_time { background: #059669; }
+  .vd-badge.part_time { background: #f59e0b; }
+  .vd-badge.project { background: #3b82f6; }
+  .vd-badge.internship { background: #8b5cf6; }
+  .vd-deadline { font-size: 0.88rem; font-weight: 600; color: #94a3b8; white-space: nowrap; }
+  .vd-deadline.past { color: #ef4444; }
+  .vd-deadline.soon { color: #f59e0b; }
+  .vd-title { font-size: 1.8rem; font-weight: 800; color: #f1f5f9; margin: 0 0 10px; line-height: 1.25; }
+  .vd-org { font-size: 1.15rem; font-weight: 700; color: #60a5fa; margin: 0 0 16px; }
+  .vd-org a { color: #60a5fa; text-decoration: none; }
+  .vd-org a:hover { text-decoration: underline; }
+  .vd-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid #334155; }
+  .vd-meta span { font-size: 0.95rem; color: #cbd5e1; }
+  .vd-meta .vd-salary { color: #34d399; font-weight: 700; }
+  .vd-section { margin-bottom: 24px; }
+  .vd-section h3 { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin: 0 0 10px; }
+  .vd-section .vd-text { font-size: 0.95rem; color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
+  .vd-apply { margin-top: 28px; padding-top: 24px; border-top: 1px solid #334155; }
+  .vd-contact { font-size: 0.95rem; color: #cbd5e1; margin-bottom: 16px; }
+  .vd-btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .vd-apply-btn { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: #fff; font-weight: 700; padding: 13px 28px; border-radius: 12px; text-decoration: none; font-size: 1rem; }
+  .vd-apply-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .vd-share-btn { display: inline-flex; align-items: center; gap: 8px; background: #162032; border: 1px solid #334155; color: #cbd5e1; font-weight: 600; padding: 13px 22px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; }
+  .vd-share-btn:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+  @media (max-width: 768px) {
+    .vd-card { padding: 22px; }
+    .vd-title { font-size: 1.4rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vd-wrap">
+  <a href="/vacancies" class="vd-back">← Barcha vakansiyalar</a>
+
+  <div class="vd-card">
+    <div class="vd-top">
+      <span class="vd-badge {{ item.vacancy_type }}">{{ item.type_label }}</span>
+      {% if item.deadline %}
+      <span class="vd-deadline" id="vd-deadline" data-deadline="{{ item.deadline }}">⏰ {{ item.deadline }}</span>
+      {% endif %}
+    </div>
+
+    <h1 class="vd-title">{{ item.title }}</h1>
+    <h2 class="vd-org">🏛️
+      {% if item.contact_url %}<a href="{{ item.contact_url }}" target="_blank" rel="noopener">{{ item.organization }}</a>
+      {% else %}{{ item.organization }}{% endif %}
+    </h2>
+
+    <div class="vd-meta">
+      {% if item.location %}<span>📍 {{ item.location }}</span>{% endif %}
+      {% if item.specialty %}<span>📋 {{ item.specialty }}</span>{% endif %}
+      {% if item.salary %}<span class="vd-salary">💰 {{ item.salary }}</span>{% endif %}
+    </div>
+
+    {% if item.description %}
+    <div class="vd-section">
+      <h3>Tavsif</h3>
+      <div class="vd-text">{{ item.description }}</div>
+    </div>
+    {% endif %}
+
+    {% if item.requirements %}
+    <div class="vd-section">
+      <h3>Talablar</h3>
+      <div class="vd-text">{{ item.requirements }}</div>
+    </div>
+    {% endif %}
+
+    <div class="vd-apply">
+      <h3 style="font-size:1.05rem;font-weight:700;color:#f1f5f9;margin:0 0 12px;">Murojaat qilish</h3>
+      {% if item.contact_info %}
+      <div class="vd-contact">{{ item.contact_info }}</div>
+      {% endif %}
+      <div class="vd-btn-row">
+        {% if item.contact_url %}
+        <a class="vd-apply-btn" href="{{ item.contact_url }}" target="_blank" rel="noopener">Murojaat qilish →</a>
+        {% endif %}
+        <a class="vd-share-btn" id="vd-share" href="#" target="_blank" rel="noopener">📨 Telegram orqali ulashish</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Telegram share link for the current vacancy
+(function () {
+  var share = document.getElementById('vd-share');
+  if (share) {
+    var url = window.location.href;
+    var text = {{ item.title|tojson }};
+    share.href = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text);
+  }
+  var el = document.getElementById('vd-deadline');
+  if (el) {
+    var now = new Date(); now.setHours(0, 0, 0, 0);
+    var d = new Date(el.getAttribute('data-deadline'));
+    if (!isNaN(d)) {
+      var diff = Math.floor((d - now) / 86400000);
+      if (diff < 0) el.classList.add('past');
+      else if (diff < 7) el.classList.add('soon');
+    }
+  }
+})();
+</script>
+{% endblock %}

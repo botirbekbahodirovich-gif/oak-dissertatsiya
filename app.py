@@ -216,6 +216,26 @@ def _run_startup_migrations():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_yangiliklar_created ON yangiliklar(created_at)")
             cur.execute("ALTER TABLE yangiliklar ADD COLUMN IF NOT EXISTS image_data TEXT")
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS vacancies (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(500) NOT NULL,
+                    organization VARCHAR(500) NOT NULL,
+                    location VARCHAR(300),
+                    specialty VARCHAR(300),
+                    requirements TEXT,
+                    description TEXT,
+                    salary VARCHAR(200),
+                    contact_info VARCHAR(500),
+                    contact_url VARCHAR(500),
+                    vacancy_type VARCHAR(100) DEFAULT 'full_time',
+                    is_published BOOLEAN DEFAULT TRUE,
+                    deadline DATE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_vacancies_created ON vacancies(created_at)")
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS olim_profiles (
                     id SERIAL PRIMARY KEY,
                     olim_name VARCHAR(500) NOT NULL UNIQUE,
@@ -380,6 +400,7 @@ def home():
     news = []
     total_stats = {"dissertations": 0, "researchers": 0, "institutions": 0, "specialties": 0}
     top_random_rows = []
+    active_vacancy_count = 0
     try:
         import datetime
         # `sana` is free-form DD.MM.YYYY text — convert to YYYYMMDD for chronological compare/sort.
@@ -459,6 +480,16 @@ def home():
                     } for r in cur.fetchall()]
                 except Exception:
                     news = []
+
+                # Active (published, not expired) vacancy count for the home banner
+                try:
+                    cur.execute(
+                        "SELECT COUNT(*) FROM vacancies WHERE is_published = TRUE "
+                        "AND (deadline IS NULL OR deadline >= CURRENT_DATE)"
+                    )
+                    active_vacancy_count = cur.fetchone()[0] or 0
+                except Exception:
+                    active_vacancy_count = 0
         finally:
             conn.close()
     except Exception:
@@ -513,7 +544,8 @@ def home():
                            top_supervisors=top_supervisors,
                            top_supervisors_random=top_supervisors_random,
                            top_marquee=top_marquee, total_stats=total_stats,
-                           gender_pct=gender_pct)
+                           gender_pct=gender_pct,
+                           active_vacancy_count=active_vacancy_count)
 
 
 @app.route("/dashboard")
@@ -1301,9 +1333,222 @@ def team():
     return render_template("team.html")
 
 
+VACANCY_TYPES = [
+    ("full_time", "To'liq stavka"),
+    ("part_time", "Yarim stavka"),
+    ("project", "Loyiha"),
+    ("internship", "Stajirovka"),
+]
+VACANCY_TYPE_LABELS = dict(VACANCY_TYPES)
+
+
+def _vacancy_from_row(cols, row):
+    v = dict(zip(cols, row))
+    v["type_label"] = VACANCY_TYPE_LABELS.get(v.get("vacancy_type"), "")
+    if v.get("deadline"):
+        v["deadline"] = str(v["deadline"])[:10]
+    return v
+
+
 @app.route("/vacancies")
 def vacancies():
-    return render_template("vacancies.html")
+    from data import get_connection
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM vacancies WHERE is_published = TRUE "
+                    "ORDER BY created_at DESC"
+                )
+                cols = [d[0] for d in cur.description]
+                items = [_vacancy_from_row(cols, r) for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template("vacancies.html", items=items, vacancy_types=VACANCY_TYPES)
+
+
+@app.route("/vacancies/<int:id>")
+def vacancy_detail(id):
+    from data import get_connection
+    item = None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM vacancies WHERE id = %s AND is_published = TRUE", (id,))
+                row = cur.fetchone()
+                if row:
+                    cols = [d[0] for d in cur.description]
+                    item = _vacancy_from_row(cols, row)
+        finally:
+            conn.close()
+    except Exception:
+        item = None
+    if not item:
+        abort(404)
+    return render_template("vacancy_detail.html", item=item)
+
+
+def _vacancy_form_values():
+    vtype = request.form.get("vacancy_type", "full_time").strip()
+    if vtype not in VACANCY_TYPE_LABELS:
+        vtype = "full_time"
+    return {
+        "title": request.form.get("title", "").strip()[:500],
+        "organization": request.form.get("organization", "").strip()[:500],
+        "location": request.form.get("location", "").strip()[:300] or None,
+        "specialty": request.form.get("specialty", "").strip()[:300] or None,
+        "requirements": request.form.get("requirements", "").strip() or None,
+        "description": request.form.get("description", "").strip() or None,
+        "salary": request.form.get("salary", "").strip()[:200] or None,
+        "contact_info": request.form.get("contact_info", "").strip()[:500] or None,
+        "contact_url": request.form.get("contact_url", "").strip()[:500] or None,
+        "vacancy_type": vtype,
+        "deadline": request.form.get("deadline", "").strip() or None,
+        "is_published": bool(request.form.get("is_published")),
+    }
+
+
+@app.route("/admin/vacancies")
+@login_required
+def admin_vacancies():
+    _require_admin()
+    from data import get_connection
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, organization, vacancy_type, deadline, is_published "
+                    "FROM vacancies ORDER BY created_at DESC, id DESC"
+                )
+                items = [{
+                    "id": r[0], "title": r[1] or "", "organization": r[2] or "",
+                    "vacancy_type": r[3] or "", "type_label": VACANCY_TYPE_LABELS.get(r[3], ""),
+                    "deadline": str(r[4])[:10] if r[4] else "", "is_published": r[5],
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template("admin_vacancies.html", items=items)
+
+
+@app.route("/admin/vacancies/add", methods=["GET", "POST"])
+@login_required
+def admin_vacancy_add():
+    _require_admin()
+    from data import get_connection
+    if request.method == "POST":
+        v = _vacancy_form_values()
+        if not v["title"] or not v["organization"]:
+            flash("Sarlavha va tashkilot majburiy.", "error")
+            return render_template("admin_vacancy_form.html", item=v, edit_mode=False,
+                                   vacancy_types=VACANCY_TYPES)
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO vacancies (title, organization, location, specialty, "
+                        "requirements, description, salary, contact_info, contact_url, "
+                        "vacancy_type, deadline, is_published) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (v["title"], v["organization"], v["location"], v["specialty"],
+                         v["requirements"], v["description"], v["salary"], v["contact_info"],
+                         v["contact_url"], v["vacancy_type"], v["deadline"], v["is_published"])
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Vakansiya qo'shildi!", "success")
+        except Exception:
+            flash("Vakansiya qo'shishda xatolik yuz berdi.", "error")
+        return redirect(url_for("admin_vacancies"))
+    return render_template("admin_vacancy_form.html", item=None, edit_mode=False,
+                           vacancy_types=VACANCY_TYPES)
+
+
+@app.route("/admin/vacancies/edit/<int:id>", methods=["GET", "POST"])
+@login_required
+def admin_vacancy_edit(id):
+    _require_admin()
+    from data import get_connection
+
+    def _load():
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM vacancies WHERE id = %s", (id,))
+                    row = cur.fetchone()
+                    if row:
+                        return _vacancy_from_row([d[0] for d in cur.description], row)
+            finally:
+                conn.close()
+        except Exception:
+            return None
+        return None
+
+    current = _load()
+    if not current:
+        abort(404)
+
+    if request.method == "POST":
+        v = _vacancy_form_values()
+        if not v["title"] or not v["organization"]:
+            flash("Sarlavha va tashkilot majburiy.", "error")
+            v["id"] = id
+            return render_template("admin_vacancy_form.html", item=v, edit_mode=True,
+                                   vacancy_types=VACANCY_TYPES)
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE vacancies SET title=%s, organization=%s, location=%s, "
+                        "specialty=%s, requirements=%s, description=%s, salary=%s, "
+                        "contact_info=%s, contact_url=%s, vacancy_type=%s, deadline=%s, "
+                        "is_published=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+                        (v["title"], v["organization"], v["location"], v["specialty"],
+                         v["requirements"], v["description"], v["salary"], v["contact_info"],
+                         v["contact_url"], v["vacancy_type"], v["deadline"], v["is_published"], id)
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Vakansiya yangilandi!", "success")
+        except Exception:
+            flash("Vakansiyani yangilashda xatolik yuz berdi.", "error")
+        return redirect(url_for("admin_vacancies"))
+
+    return render_template("admin_vacancy_form.html", item=current, edit_mode=True,
+                           vacancy_types=VACANCY_TYPES)
+
+
+@app.route("/admin/vacancies/delete/<int:id>", methods=["POST"])
+@login_required
+def admin_vacancy_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM vacancies WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+        flash("Vakansiya o'chirildi", "success")
+    except Exception:
+        flash("O'chirishda xatolik yuz berdi.", "error")
+    return redirect(url_for("admin_vacancies"))
 
 
 @app.route("/contact")

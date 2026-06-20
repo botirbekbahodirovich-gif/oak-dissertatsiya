@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Vakansiyalar boshqaruvi — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-add { display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 20px; border-radius: 10px; text-decoration: none; }
+  .adm-add:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .adm-table-wrap { border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; }
+  .adm-table td { padding: 0.7rem 0.9rem; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:nth-child(odd) td { background: #1e293b; }
+  .adm-table tbody tr:nth-child(even) td { background: #162032; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .type-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .type-badge.full_time { background: #059669; }
+  .type-badge.part_time { background: #f59e0b; }
+  .type-badge.project { background: #3b82f6; }
+  .type-badge.internship { background: #8b5cf6; }
+  .pub-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .pub-on { background: rgba(5,150,105,0.16); color: #34d399; }
+  .pub-off { background: rgba(148,163,184,0.16); color: #94a3b8; }
+  .adm-actions { display: flex; gap: 8px; align-items: center; }
+  .adm-btn { font-size: 0.95rem; padding: 5px 11px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; line-height: 1; }
+  .adm-edit { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .adm-edit:hover { background: rgba(59,130,246,0.28); text-decoration: none; }
+  .adm-del { background: rgba(239,68,68,0.15); color: #f87171; }
+  .adm-del:hover { background: rgba(239,68,68,0.28); }
+  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1>💼 Vakansiyalar boshqaruvi</h1>
+  <a href="/admin/vacancies/add" class="adm-add">➕ Vakansiya qo'shish</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+    <div class="adm-flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+{% endwith %}
+
+{% if items %}
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr>
+        <th>#</th><th>Sarlavha</th><th>Tashkilot</th><th>Turi</th><th>Muddati</th><th>Holati</th><th>Amallar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in items %}
+      <tr>
+        <td>{{ v.id }}</td>
+        <td>{{ v.title[:60] }}{% if v.title|length > 60 %}…{% endif %}</td>
+        <td style="color:#cbd5e1;">{{ v.organization[:40] }}{% if v.organization|length > 40 %}…{% endif %}</td>
+        <td><span class="type-badge {{ v.vacancy_type }}">{{ v.type_label }}</span></td>
+        <td style="white-space:nowrap;color:#94a3b8;">{{ v.deadline or '—' }}</td>
+        <td>
+          {% if v.is_published %}<span class="pub-badge pub-on">✅ Chop etilgan</span>
+          {% else %}<span class="pub-badge pub-off">⏸️ Qoralama</span>{% endif %}
+        </td>
+        <td>
+          <div class="adm-actions">
+            <a href="/admin/vacancies/edit/{{ v.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
+            <form method="POST" action="/admin/vacancies/delete/{{ v.id }}" onsubmit="return confirm('Rostdan o\'chirmoqchimisiz?')" style="display:inline;">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="adm-btn adm-del" title="O'chirish">🗑️</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="adm-table-wrap"><div class="adm-empty">Hali vakansiyalar yo'q. Birinchi vakansiyani qo'shing!</div></div>
+{% endif %}
+{% endblock %}

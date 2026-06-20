@@ -1,29 +1,137 @@
 {% extends "base.html" %}
-{% block title %}Vakansiyalar — Olimlar.uz{% endblock %}
+{% block title %}Vakansiyalar — Olimlar uchun ish takliflari{% endblock %}
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.ph-page { background: #f8fafc; color: #0f172a; min-height: 60vh; display: flex; align-items: center; justify-content: center; text-align: center; padding: 64px 24px; }
-.ph-inner { max-width: 560px; }
-.ph-emoji { font-size: 3.2rem; margin-bottom: 18px; }
-.ph-page h1 { font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
-.ph-sub { color: #64748b; font-size: 1.08rem; line-height: 1.6; margin: 0 0 28px; }
-.ph-btn { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6; color: #fff;
-  font-weight: 600; padding: 12px 28px; border-radius: 50px; text-decoration: none;
-  box-shadow: 0 4px 14px rgba(59,130,246,0.4); transition: background 0.3s ease, transform 0.3s ease; }
-.ph-btn:hover { background: #2563eb; color: #fff; transform: scale(1.02); text-decoration: none; }
-@media (max-width: 639px) { .ph-page h1 { font-size: 1.55rem; } }
+  .vac-wrap { max-width: 1100px; margin: 0 auto; padding: 8px 0 40px; }
+  .vac-head { text-align: center; margin-bottom: 1.75rem; }
+  .vac-head h1 { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
+  .vac-head p { color: #94a3b8; font-size: 1rem; margin: 0; }
+
+  .vac-filters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 2rem; }
+  .vac-pill { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 9px 18px; border-radius: 999px; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; }
+  .vac-pill:hover { border-color: #3b82f6; }
+  .vac-pill.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+
+  .vac-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .vac-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; transition: transform 0.15s, border-color 0.15s; display: flex; flex-direction: column; }
+  .vac-card:hover { transform: translateY(-2px); border-color: #475569; }
+  .vac-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .vac-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .vac-badge.full_time { background: #059669; }
+  .vac-badge.part_time { background: #f59e0b; }
+  .vac-badge.project { background: #3b82f6; }
+  .vac-badge.internship { background: #8b5cf6; }
+  .vac-deadline { font-size: 0.8rem; font-weight: 600; color: #94a3b8; white-space: nowrap; }
+  .vac-deadline.past { color: #ef4444; }
+  .vac-deadline.soon { color: #f59e0b; }
+
+  .vac-title { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; margin: 0 0 10px; line-height: 1.3; }
+  .vac-meta { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .vac-meta span { font-size: 0.88rem; color: #cbd5e1; }
+  .vac-meta .vac-org a { color: #60a5fa; text-decoration: none; }
+  .vac-meta .vac-org a:hover { text-decoration: underline; }
+  .vac-meta .vac-loc { color: #94a3b8; }
+  .vac-meta .vac-salary { color: #34d399; font-weight: 700; }
+
+  .vac-req { font-size: 0.86rem; color: #94a3b8; line-height: 1.5; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .vac-actions { display: flex; gap: 10px; margin-top: auto; }
+  .vac-btn { flex: 1; text-align: center; padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; text-decoration: none; cursor: pointer; border: none; }
+  .vac-btn.detail { background: #162032; border: 1px solid #334155; color: #cbd5e1; }
+  .vac-btn.detail:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+  .vac-btn.apply { background: #3b82f6; color: #fff; }
+  .vac-btn.apply:hover { background: #2563eb; color: #fff; text-decoration: none; }
+
+  .vac-empty { text-align: center; padding: 4rem 1rem; }
+  .vac-empty .emo { font-size: 64px; display: block; margin-bottom: 16px; }
+  .vac-empty h3 { color: #f1f5f9; font-size: 1.3rem; font-weight: 700; margin: 0 0 8px; }
+  .vac-empty p { color: #94a3b8; margin: 0 0 8px; }
+  .vac-empty a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .vac-grid { grid-template-columns: 1fr; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ph-page">
-  <div class="ph-inner">
-    <div class="ph-emoji">💼</div>
-    <h1>Vakansiyalar — Olimlar uchun taklif qilingan ishlar</h1>
-    <p class="ph-sub">Hozircha aktiv vakansiyalar yo'q. Tez orada yangi takliflar paydo bo'ladi!</p>
-    <a href="/" class="ph-btn">Bosh sahifa →</a>
+<div class="vac-wrap">
+  <div class="vac-head">
+    <h1>Vakansiyalar — Olimlar uchun ish takliflari</h1>
+    <p>Ilmiy soha mutaxassislari uchun eng so'nggi ish takliflari</p>
   </div>
+
+  {% if items %}
+  <div class="vac-filters">
+    <button class="vac-pill active" data-filter="all" onclick="filterVac('all', this)">Barchasi</button>
+    {% for val, label in vacancy_types %}
+    <button class="vac-pill" data-filter="{{ val }}" onclick="filterVac('{{ val }}', this)">{{ label }}</button>
+    {% endfor %}
+  </div>
+
+  <div class="vac-grid" id="vac-grid">
+    {% for v in items %}
+    <div class="vac-card" data-type="{{ v.vacancy_type }}">
+      <div class="vac-card-top">
+        <span class="vac-badge {{ v.vacancy_type }}">{{ v.type_label }}</span>
+        {% if v.deadline %}
+        <span class="vac-deadline" data-deadline="{{ v.deadline }}">⏰ {{ v.deadline }}</span>
+        {% endif %}
+      </div>
+      <h3 class="vac-title">{{ v.title }}</h3>
+      <div class="vac-meta">
+        <span class="vac-org">🏛️
+          {% if v.contact_url %}<a href="{{ v.contact_url }}" target="_blank" rel="noopener">{{ v.organization }}</a>
+          {% else %}{{ v.organization }}{% endif %}
+        </span>
+        {% if v.location %}<span class="vac-loc">📍 {{ v.location }}</span>{% endif %}
+        {% if v.specialty %}<span>📋 {{ v.specialty }}</span>{% endif %}
+        {% if v.salary %}<span class="vac-salary">💰 {{ v.salary }}</span>{% endif %}
+      </div>
+      {% if v.requirements %}
+      <div class="vac-req">{{ v.requirements[:200] }}{% if v.requirements|length > 200 %}...{% endif %}</div>
+      {% endif %}
+      <div class="vac-actions">
+        <a class="vac-btn detail" href="/vacancies/{{ v.id }}">Batafsil →</a>
+        {% if v.contact_url %}
+        <a class="vac-btn apply" href="{{ v.contact_url }}" target="_blank" rel="noopener">Murojaat qilish</a>
+        {% else %}
+        <a class="vac-btn apply" href="/vacancies/{{ v.id }}">Murojaat qilish</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="vac-empty">
+    <span class="emo">💼</span>
+    <h3>Hozircha aktiv vakansiyalar yo'q</h3>
+    <p>Tez orada yangi takliflar paydo bo'ladi!</p>
+    <p><a href="https://t.me/olimlar_uz" target="_blank" rel="noopener">Telegram kanalimizga obuna bo'ling</a></p>
+  </div>
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterVac(type, btn) {
+  document.querySelectorAll('.vac-pill').forEach(function (p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('#vac-grid .vac-card').forEach(function (c) {
+    c.style.display = (type === 'all' || c.getAttribute('data-type') === type) ? '' : 'none';
+  });
+}
+// Deadline coloring: red if past, yellow if < 7 days remaining
+(function () {
+  var now = new Date(); now.setHours(0, 0, 0, 0);
+  document.querySelectorAll('.vac-deadline[data-deadline]').forEach(function (el) {
+    var d = new Date(el.getAttribute('data-deadline'));
+    if (isNaN(d)) return;
+    var diff = Math.floor((d - now) / 86400000);
+    if (diff < 0) el.classList.add('past');
+    else if (diff < 7) el.classList.add('soon');
+  });
+})();
+</script>
 {% endblock %}

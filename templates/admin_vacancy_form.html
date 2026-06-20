@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Vakansiyani tahrirlash{% else %}Vakansiya qo'shish{% endif %} — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .yf-wrap { max-width: 800px; margin: 0 auto; }
+  .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
+  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
+  .yf-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .yf-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .yf-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .yf-group { margin-bottom: 1.2rem; }
+  .yf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .yf-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-input, .yf-textarea, .yf-select {
+    width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0;
+    border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; font-family: inherit;
+  }
+  .yf-input::placeholder, .yf-textarea::placeholder { color: #4b5563; }
+  .yf-input:focus, .yf-textarea:focus, .yf-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+  .yf-textarea { resize: vertical; min-height: 90px; }
+
+  .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 999px; transition: 0.3s; }
+  .slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle-switch input:checked + .slider { background: #3b82f6; }
+  .toggle-switch input:checked + .slider::before { transform: translateX(22px); }
+  .toggle-row { display: flex; align-items: center; gap: 12px; }
+  .toggle-row label { margin: 0; color: #e2e8f0; font-weight: 600; font-size: 0.95rem; }
+
+  .yf-actions { display: flex; gap: 12px; margin-top: 1.4rem; }
+  .yf-save { background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 26px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; }
+  .yf-save:hover { background: #2563eb; }
+  .yf-cancel { display: inline-flex; align-items: center; padding: 11px 22px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
+  .yf-cancel:hover { color: #e2e8f0; border-color: #475569; text-decoration: none; }
+
+  @media (max-width: 640px) { .yf-row { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="yf-wrap">
+  <h1>{% if edit_mode %}✏️ Vakansiyani tahrirlash{% else %}➕ Vakansiya qo'shish{% endif %}</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="yf-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="post" class="yf-card"
+        action="{% if edit_mode %}/admin/vacancies/edit/{{ item.id }}{% else %}/admin/vacancies/add{% endif %}">
+    {{ csrf_token()|safe }}
+
+    <div class="yf-group">
+      <label>Sarlavha *</label>
+      <input class="yf-input" type="text" name="title" required maxlength="500" placeholder="Vakansiya sarlavhasi..." value="{{ item.title if item else '' }}">
+    </div>
+
+    <div class="yf-group">
+      <label>Tashkilot *</label>
+      <input class="yf-input" type="text" name="organization" required maxlength="500" placeholder="Tashkilot nomi..." value="{{ item.organization if item else '' }}">
+    </div>
+
+    <div class="yf-row">
+      <div class="yf-group">
+        <label>Joylashuv</label>
+        <input class="yf-input" type="text" name="location" maxlength="300" placeholder="Masalan: Toshkent" value="{{ item.location if item and item.location else '' }}">
+      </div>
+      <div class="yf-group">
+        <label>Ixtisoslik</label>
+        <input class="yf-input" type="text" name="specialty" maxlength="300" placeholder="Masalan: Fizika" value="{{ item.specialty if item and item.specialty else '' }}">
+      </div>
+    </div>
+
+    <div class="yf-row">
+      <div class="yf-group">
+        <label>Ish turi</label>
+        <select class="yf-select" name="vacancy_type">
+          {% set cur_type = item.vacancy_type if item else 'full_time' %}
+          {% for val, label in vacancy_types %}
+          <option value="{{ val }}" {% if cur_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="yf-group">
+        <label>Maosh</label>
+        <input class="yf-input" type="text" name="salary" maxlength="200" placeholder="Masalan: 5-8 mln so'm" value="{{ item.salary if item and item.salary else '' }}">
+      </div>
+    </div>
+
+    <div class="yf-group">
+      <label>Tavsif</label>
+      <textarea class="yf-textarea" name="description" rows="6" placeholder="Vakansiya haqida to'liq ma'lumot...">{{ item.description if item and item.description else '' }}</textarea>
+    </div>
+
+    <div class="yf-group">
+      <label>Talablar</label>
+      <textarea class="yf-textarea" name="requirements" rows="5" placeholder="Nomzodga qo'yiladigan talablar...">{{ item.requirements if item and item.requirements else '' }}</textarea>
+    </div>
+
+    <div class="yf-row">
+      <div class="yf-group">
+        <label>Aloqa ma'lumoti</label>
+        <input class="yf-input" type="text" name="contact_info" maxlength="500" placeholder="Telefon, email..." value="{{ item.contact_info if item and item.contact_info else '' }}">
+      </div>
+      <div class="yf-group">
+        <label>Murojaat havolasi</label>
+        <input class="yf-input" type="text" name="contact_url" maxlength="500" placeholder="https://..." value="{{ item.contact_url if item and item.contact_url else '' }}">
+      </div>
+    </div>
+
+    <div class="yf-group">
+      <label>Muddati</label>
+      <input class="yf-input" type="date" name="deadline" value="{{ item.deadline if item and item.deadline else '' }}">
+    </div>
+
+    <div class="yf-group">
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" name="is_published" {% if (item and item.is_published) or not item %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <label>Chop etish</label>
+      </div>
+    </div>
+
+    <div class="yf-actions">
+      <button type="submit" class="yf-save">💾 {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
+      <a href="/admin/vacancies" class="yf-cancel">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

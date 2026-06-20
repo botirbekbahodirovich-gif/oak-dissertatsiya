@@ -529,6 +529,14 @@ html { scroll-behavior: smooth; }
       {% endif %}
       <a href="/data" class="btn-outline-blue">Barcha dissertatsiyalar →</a>
     </div>
+    {% if active_vacancy_count and active_vacancy_count > 0 %}
+    <div style="text-align:center;padding:24px;background:#1e293b;border-radius:16px;margin:32px auto 0;max-width:600px;border:1px solid #334155;">
+      <span style="font-size:1.5rem;">💼</span>
+      <h3 style="color:#f1f5f9;margin:8px 0;">{{ active_vacancy_count }} ta aktiv vakansiya</h3>
+      <p style="color:#94a3b8;">Ilmiy soha uchun yangi ish takliflari</p>
+      <a href="/vacancies" style="color:#3b82f6;font-weight:600;text-decoration:none;">Ko'rish →</a>
+    </div>
+    {% endif %}
   </div>
 </section>
 
