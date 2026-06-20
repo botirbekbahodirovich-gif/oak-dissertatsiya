@@ -482,7 +482,6 @@ def _data_cache_key():
 
 
 @data_bp.route('/data')
-@login_required
 @cache.cached(timeout=120, make_cache_key=_data_cache_key)
 def data():
     a = request.args
@@ -526,7 +525,6 @@ def data():
 
 
 @data_bp.route('/filters')
-@login_required
 @cache.cached(timeout=600, key_prefix='filters')
 def filters():
     return jsonify({
@@ -540,7 +538,6 @@ def filters():
 
 
 @data_bp.route('/search-stats')
-@login_required
 def search_stats():
     search = request.args.get('search', '').strip()
     if not search or len(search) < 2:
@@ -587,7 +584,6 @@ def search_stats():
 
 
 @data_bp.route('/search-summary')
-@login_required
 def search_summary():
     search = request.args.get('search', '').strip()
     if not search or len(search) < 2:
@@ -637,7 +633,6 @@ def search_summary():
 
 
 @data_bp.route('/search-as-opponent')
-@login_required
 def search_as_opponent():
     search = request.args.get('search', '').strip()
     if not search:
@@ -719,7 +714,6 @@ _SANA_ORDER_PLAIN = (
 
 
 @data_bp.route('/olim/<path:name>')
-@login_required
 def olim_profile(name):
     term = name.strip()
     # Exact (case-insensitive) match so links resolve to the correct person in each role.
@@ -837,7 +831,6 @@ def get_ixtisoslik_saturation(ixtisoslik_code):
 
 
 @data_bp.route('/dissertation/<int:id>')
-@login_required
 def dissertation(id):
     row = get_dissertation_detail_by_id(id)
     if not row:
@@ -848,7 +841,6 @@ def dissertation(id):
 
 
 @data_bp.route('/author/<path:name>')
-@login_required
 def author(name):
     rows = get_dissertations_by_field('Olim', name)
     if not rows:
@@ -857,7 +849,6 @@ def author(name):
 
 
 @data_bp.route('/supervisor/<path:name>')
-@login_required
 def supervisor(name):
     rows = get_dissertations_by_field('Ilmiy_rahbar', name)
     if not rows:
@@ -866,7 +857,6 @@ def supervisor(name):
 
 
 @data_bp.route('/university/<path:name>')
-@login_required
 def university(name):
     rows = get_dissertations_by_field('Muassasa', name)
     if not rows:
@@ -875,7 +865,6 @@ def university(name):
 
 
 @data_bp.route('/specialization/<path:code>')
-@login_required
 def specialization(code):
     rows = get_dissertations_by_field('Ixtisoslik', code)
     if not rows:

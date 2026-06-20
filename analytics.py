@@ -57,7 +57,6 @@ def stats_json():
 
 
 @analytics_bp.route('/analytics-data')
-@login_required
 @cache.cached(timeout=600, key_prefix='analytics_data')
 def analytics_data():
     rows = query_dissertations("", "", "", "", "id", "asc")

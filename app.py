@@ -460,13 +460,11 @@ def home():
 
 
 @app.route("/dashboard")
-@login_required
 def index():
     return render_template("dashboard.html")
 
 
 @app.route("/stats")
-@login_required
 def stats_page():
     return render_template("stats.html")
 
@@ -547,7 +545,6 @@ def _extract_keywords(text, limit=10):
 
 @app.route("/compare")
 @app.route("/mavzu-tahlili")
-@login_required
 def compare():
     return render_template("compare.html", ixtisosliklar=_compare_ixtisosliklar())
 
@@ -572,7 +569,6 @@ def _compare_ixtisosliklar():
 
 @app.route("/api/mavzu-tahlili", methods=["POST"])
 @csrf.exempt
-@login_required
 def api_mavzu_tahlili():
     from data import get_connection, latin_to_cyrillic, clean_olim_name
     body = request.get_json(silent=True) or {}
@@ -627,7 +623,6 @@ def api_mavzu_tahlili():
 
 @app.route("/api/mavzu-tahlili/ai", methods=["POST"])
 @csrf.exempt
-@login_required
 def api_mavzu_tahlili_ai():
     from data import GROQ_API_KEY
     body = request.get_json(silent=True) or {}
