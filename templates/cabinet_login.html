@@ -33,7 +33,7 @@
     <div class="cab-tg" id="tg-login"></div>
     <div class="cab-divider">yoki</div>
 
-    <form method="post" action="/cabinet/login">
+    <form method="post" action="/cabinet/login{% if next %}?next={{ next|urlencode }}{% endif %}">
       <div class="cab-group">
         <label>Email</label>
         <input class="cab-input" type="email" name="email" placeholder="email@example.com" required>
@@ -57,7 +57,10 @@ function onTelegramAuth(user) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(user)
   }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d.success) { window.location.href = d.redirect || '/cabinet'; }
+    if (d.success) {
+      var nxt = new URLSearchParams(window.location.search).get('next');
+      window.location.href = (nxt && nxt.charAt(0) === '/' && nxt.charAt(1) !== '/') ? nxt : (d.redirect || '/cabinet');
+    }
     else { alert(d.error || 'Telegram orqali kirishda xatolik'); }
   }).catch(function () { alert('Tarmoq xatosi'); });
 }

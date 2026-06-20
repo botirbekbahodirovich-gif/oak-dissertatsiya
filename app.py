@@ -546,7 +546,11 @@ def _extract_keywords(text, limit=10):
 @app.route("/compare")
 @app.route("/mavzu-tahlili")
 def compare():
-    return render_template("compare.html", ixtisosliklar=_compare_ixtisosliklar())
+    from flask import session
+    is_logged_in = ('user_id' in session or 'cabinet_user_id' in session
+                    or current_user.is_authenticated)
+    return render_template("compare.html", ixtisosliklar=_compare_ixtisosliklar(),
+                           is_logged_in=is_logged_in)
 
 
 def _compare_ixtisosliklar():

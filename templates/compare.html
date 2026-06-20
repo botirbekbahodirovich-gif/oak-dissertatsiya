@@ -52,6 +52,27 @@
 .load-more { display: block; margin: 8px auto 0; background: #162032; border: 1px solid #334155; color: #93bbfc; font-weight: 600; padding: 10px 22px; border-radius: 10px; cursor: pointer; }
 .load-more:hover { background: #334155; }
 .empty { color: #94a3b8; text-align: center; padding: 24px; }
+
+/* freemium blur wall */
+.freemium-bar { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.freemium-bar span { color: #60a5fa; font-size: 0.9rem; }
+.freemium-bar a { color: #3b82f6; font-weight: 600; font-size: 0.85rem; text-decoration: none; }
+.full-badge { background: rgba(5,150,105,0.16); color: #34d399; font-weight: 700; font-size: 0.78rem; padding: 3px 12px; border-radius: 999px; margin-left: 10px; }
+.blur-wall-container { position: relative; margin-top: 16px; min-height: 300px; }
+.blurred-results { filter: blur(8px); -webkit-filter: blur(8px); pointer-events: none; user-select: none; opacity: 0.6; }
+.lock-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: radial-gradient(ellipse at center, rgba(15,23,42,0.3) 0%, rgba(15,23,42,0.9) 70%); }
+.lock-card { background: #1e293b; border: 2px solid #3b82f6; border-radius: 20px; padding: 40px; text-align: center; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeInUp 0.5s ease; }
+.lock-card h2 { color: #f1f5f9; font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; }
+.lock-card .lc-sub { color: #94a3b8; font-size: 1rem; line-height: 1.6; margin-bottom: 24px; }
+.lock-card .lc-btn { background: #3b82f6; color: #fff; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 1rem; display: inline-block; width: 100%; max-width: 300px; }
+.lock-card .lc-btn:hover { background: #2563eb; }
+.lock-card .lc-reg { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
+.lock-card .lc-foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid #334155; color: #64748b; font-size: 0.8rem; }
+.ai-blur { filter: blur(6px); -webkit-filter: blur(6px); pointer-events: none; user-select: none; margin-top: 8px; }
+.ai-unlock { text-align: center; margin-top: 16px; }
+.ai-unlock a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 768px) { .lock-card { margin: 0 16px; padding: 24px; } }
 </style>
 {% endblock %}
 
@@ -90,6 +111,7 @@
   <!-- similar results -->
   <div id="results-section" style="display:none;">
     <h2 class="res-head" id="results-head">📋 O'xshash mavzular</h2>
+    <div id="freemium-bar"></div>
     <div id="results"></div>
     <button class="load-more" id="load-more" style="display:none;" onclick="showMore()">Yana 10 ta ko'rsatish</button>
   </div>
@@ -102,6 +124,8 @@ var STOP = ['va','uchun','ning','da','ni','ga','dan','bilan',"bo'lgan",'ham','bu
 var keywords = [];
 var allResults = [], shownCount = 0, lastKeywords = [];
 var autoLocked = false;
+var IS_LOGGED_IN = {{ 'true' if is_logged_in else 'false' }};
+var FREE_LIMIT = 5;
 
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function renderChips() {
@@ -157,14 +181,66 @@ function analyze() {
     body: JSON.stringify({ mavzu: mavzu, keywords: kws, ixtisoslik: ix })
   }).then(function (r) { return r.json(); }).then(function (d) {
     allResults = d.results || []; shownCount = 0;
-    document.getElementById('results-head').textContent = "📋 O'xshash mavzular (" + allResults.length + ' ta topildi)';
-    document.getElementById('results').innerHTML = '';
-    if (!allResults.length) { document.getElementById('results').innerHTML = '<div class="empty">O\'xshash mavzu topilmadi.</div>'; }
-    else { showMore(); }
+    var head = "📋 O'xshash mavzular (" + allResults.length + ' ta topildi)';
+    document.getElementById('results-head').innerHTML = escapeHtml(head) +
+      (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">✅ To\'liq natijalar</span>' : '');
+    renderResults();
     runAI(mavzu, allResults.slice(0, 10).map(function (x) { return x.mavzu; }));
   }).catch(function () {
     document.getElementById('results').innerHTML = '<div class="empty">Qidiruvda xatolik.</div>';
   });
+}
+
+function cardHtml(x) {
+  var ix = x.ixtisoslik ? (x.ixtisoslik + (x.ixtisoslik_nomi ? ' — ' + x.ixtisoslik_nomi : '')) : '';
+  return '<div class="res-card"><div class="res-mavzu">' + highlight(x.mavzu) + '</div><div class="res-meta">' +
+    '<span class="match-badge">' + x.match_score + " kalit so'z mos</span>" +
+    badgeFor(x.daraja) +
+    (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">👤 ' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
+    (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
+    (ix ? '<span>📎 ' + escapeHtml(ix) + '</span>' : '') +
+    (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">👨‍🏫 ' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
+    '</div></div>';
+}
+function blurCardHtml(x) {
+  return '<div class="res-card"><div class="res-mavzu">' + escapeHtml(x.mavzu) + '</div><div class="res-meta">' +
+    badgeFor(x.daraja) +
+    (x.olim ? '<span>👤 ' + escapeHtml(x.olim_short || x.olim) + '</span>' : '') +
+    (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
+    '</div></div>';
+}
+function renderResults() {
+  var box = document.getElementById('results');
+  var bar = document.getElementById('freemium-bar');
+  box.innerHTML = ''; bar.innerHTML = '';
+  if (!allResults.length) { box.innerHTML = '<div class="empty">O\'xshash mavzu topilmadi.</div>'; document.getElementById('load-more').style.display = 'none'; return; }
+  if (IS_LOGGED_IN) { shownCount = 0; showMore(); return; }
+
+  // ── not logged in: show FREE_LIMIT, blur the rest ──
+  document.getElementById('load-more').style.display = 'none';
+  if (allResults.length > FREE_LIMIT) {
+    bar.innerHTML = '<div class="freemium-bar"><span>📊 ' + allResults.length +
+      " ta natijadan " + FREE_LIMIT + ' tasi ko\'rsatilmoqda</span>' +
+      '<a href="/cabinet/login?next=/compare">Hammasini ko\'rish →</a></div>';
+  }
+  allResults.slice(0, FREE_LIMIT).forEach(function (x) { box.insertAdjacentHTML('beforeend', cardHtml(x)); });
+  if (allResults.length > FREE_LIMIT) {
+    var extra = allResults.length - FREE_LIMIT;
+    var blurred = allResults.slice(FREE_LIMIT, FREE_LIMIT + 4).map(blurCardHtml).join('');
+    var wall =
+      '<div class="blur-wall-container"><div class="blurred-results">' + blurred + '</div>' +
+      '<div class="lock-overlay"><div class="lock-card">' +
+        '<div style="font-size:3rem;margin-bottom:16px;">🔒</div>' +
+        '<h2>Yana ' + extra + " ta o'xshash mavzu topildi</h2>" +
+        '<p class="lc-sub">Barcha natijalarni ko\'rish va AI tahlildan to\'liq foydalanish uchun kabinetingizga kiring</p>' +
+        '<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">' +
+          '<a class="lc-btn" href="/cabinet/login?next=/compare">Kabinetga kirish →</a>' +
+          '<a class="lc-reg" href="/cabinet/register">Hisobingiz yo\'qmi? Ro\'yxatdan o\'ting</a>' +
+        '</div>' +
+        '<div class="lc-foot">✨ Kabinet bepul. Barcha natijalar, AI tahlil va shaxsiy portfolio imkoniyatlari.</div>' +
+      '</div></div></div>';
+    box.insertAdjacentHTML('beforeend', wall);
+  }
 }
 
 function badgeFor(d) {
@@ -183,18 +259,7 @@ function highlight(text) {
 function showMore() {
   var box = document.getElementById('results');
   var slice = allResults.slice(shownCount, shownCount + 10);
-  slice.forEach(function (x) {
-    var ix = x.ixtisoslik ? (x.ixtisoslik + (x.ixtisoslik_nomi ? ' — ' + x.ixtisoslik_nomi : '')) : '';
-    var html = '<div class="res-card"><div class="res-mavzu">' + highlight(x.mavzu) + '</div><div class="res-meta">' +
-      '<span class="match-badge">' + x.match_score + " kalit so'z mos</span>" +
-      badgeFor(x.daraja) +
-      (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">👤 ' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
-      (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
-      (ix ? '<span>📎 ' + escapeHtml(ix) + '</span>' : '') +
-      (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">👨‍🏫 ' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
-      '</div></div>';
-    box.insertAdjacentHTML('beforeend', html);
-  });
+  slice.forEach(function (x) { box.insertAdjacentHTML('beforeend', cardHtml(x)); });
   shownCount += slice.length;
   document.getElementById('load-more').style.display = shownCount < allResults.length ? 'block' : 'none';
 }
@@ -208,10 +273,20 @@ function runAI(mavzu, similar) {
     var cls = score <= 3 ? 'low' : (score <= 6 ? 'mid' : 'high');
     var lbl = score <= 3 ? "Juda o'xshash mavzular ko'p" : (score <= 6 ? "O'rtacha" : "Noyob mavzu");
     var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:#64748b;">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
-    if (d.analysis) html += '<div class="ai-text">' + escapeHtml(d.analysis) + '</div>';
-    var sugg = (d.suggestions || []).concat(d.angles || []);
-    if (sugg.length) {
-      html += '<ul class="ai-sugg">' + sugg.map(function (s) { return '<li><span class="ic">✅</span><span>' + escapeHtml(s) + '</span></li>'; }).join('') + '</ul>';
+    var analysis = d.analysis || '';
+    if (IS_LOGGED_IN) {
+      if (analysis) html += '<div class="ai-text">' + escapeHtml(analysis) + '</div>';
+      var sugg = (d.suggestions || []).concat(d.angles || []);
+      if (sugg.length) {
+        html += '<ul class="ai-sugg">' + sugg.map(function (s) { return '<li><span class="ic">✅</span><span>' + escapeHtml(s) + '</span></li>'; }).join('') + '</ul>';
+      }
+    } else {
+      // freemium: show first ~200 chars, blur the next chunk
+      html += '<div class="ai-text">' + escapeHtml(analysis.slice(0, 200)) + (analysis.length > 200 ? '…' : '') + '</div>';
+      if (analysis.length > 200) {
+        html += '<div class="ai-text ai-blur">' + escapeHtml(analysis.slice(200, 500)) + '</div>';
+      }
+      html += '<div class="ai-unlock"><a href="/cabinet/login?next=/compare">🔓 AI tahlilni to\'liq ko\'rish uchun kiring</a></div>';
     }
     document.getElementById('ai-body').innerHTML = html;
   }).catch(function () {

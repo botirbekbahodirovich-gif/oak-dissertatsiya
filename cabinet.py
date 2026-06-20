@@ -117,10 +117,20 @@ def cabinet():
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
+def _safe_next(target):
+    """Return a safe local redirect path, or None."""
+    if not target:
+        return None
+    if target.startswith('/') and not target.startswith('//') and '\\' not in target:
+        return target
+    return None
+
+
 @cabinet_bp.route('/cabinet/login', methods=['GET', 'POST'])
 def login():
+    nxt = _safe_next(request.values.get('next'))
     if session.get('cabinet_user_id'):
-        return redirect(url_for('cabinet.cabinet'))
+        return redirect(nxt or url_for('cabinet.cabinet'))
     error = None
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
@@ -138,13 +148,13 @@ def login():
                             _touch_login(cur, r[0])
                             conn.commit()
                             _set_session(r[0], r[2])
-                            return redirect(url_for('cabinet.cabinet'))
+                            return redirect(nxt or url_for('cabinet.cabinet'))
                         error = "Email yoki parol noto'g'ri."
                 finally:
                     conn.close()
             except Exception:
                 error = "Kirishda xatolik yuz berdi."
-    return render_template('cabinet_login.html', error=error,
+    return render_template('cabinet_login.html', error=error, next=nxt or '',
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
