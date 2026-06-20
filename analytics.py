@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_login import login_required
 from collections import Counter, defaultdict
 from datetime import datetime
-from data import get_connection, query_dissertations
+from data import get_connection, query_dissertations, split_ixtisoslik
 from extensions import cache
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -81,7 +81,11 @@ def analytics_data():
         for period in sorted(trend_counter)
     ]
 
-    ixtisoslik_counter = Counter(_normalize_text(row.get("Ixtisoslik")) for row in rows if row.get("Ixtisoslik"))
+    # Split combined codes so a dissertation with "01.01.01 05.01.07" counts for BOTH.
+    ixtisoslik_counter = Counter()
+    for row in rows:
+        for code in split_ixtisoslik(row.get("Ixtisoslik")):
+            ixtisoslik_counter[code] += 1
     top_ixtisosliklar = [
         {"ixtisoslik": name, "count": count}
         for name, count in ixtisoslik_counter.most_common(15)

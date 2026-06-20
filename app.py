@@ -492,6 +492,13 @@ def home():
     # Combined list for the seamless marquee (top 20 + random 20)
     top_marquee = top_supervisors + top_supervisors_random
 
+    # Specialties: split combined codes ("01.01.01 05.01.07" = 2 specialties), cached.
+    try:
+        from data import count_distinct_ixtisosliklar
+        total_stats["specialties"] = count_distinct_ixtisosliklar() or total_stats.get("specialties", 0)
+    except Exception:
+        pass
+
     # Gender split (cached) for the Tadqiqotchilar stat card
     gender_pct = {"male": 0, "female": 0}
     try:
@@ -658,21 +665,11 @@ def compare():
 
 
 def _compare_ixtisosliklar():
-    from data import get_connection
-    out = []
+    from data import list_individual_ixtisosliklar
     try:
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT DISTINCT TRIM(ixtisoslik) FROM dissertations "
-                    "WHERE ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> '' ORDER BY 1")
-                out = [r[0] for r in cur.fetchall()]
-        finally:
-            conn.close()
+        return list_individual_ixtisosliklar()
     except Exception:
-        out = []
-    return out
+        return []
 
 
 @app.route("/api/mavzu-tahlili", methods=["POST"])
@@ -706,8 +703,8 @@ def api_mavzu_tahlili():
     )
     params = list(like_params) + list(like_params)
     if ixtisoslik:
-        sql += " AND TRIM(ixtisoslik) ILIKE %s"
-        params.append(ixtisoslik)
+        sql += " AND ixtisoslik ILIKE %s"
+        params.append(f"%{ixtisoslik}%")
     sql += " ORDER BY match_score DESC, id DESC LIMIT 50"
     results = []
     try:

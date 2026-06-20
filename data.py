@@ -271,8 +271,9 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
         clauses.append("TRIM(muassasa) ILIKE %s")
         params.append(muassasa)
     if ixtisoslik:
-        clauses.append("TRIM(ixtisoslik) ILIKE %s")
-        params.append(ixtisoslik)
+        # CONTAINS match — the field may hold combined codes ("01.01.01 05.01.07")
+        clauses.append("ixtisoslik ILIKE %s")
+        params.append(f"%{ixtisoslik}%")
     if fan_tarmoqi:
         clauses.append("TRIM(COALESCE(fan_tarmoqi,'')) = %s")
         params.append(fan_tarmoqi)
@@ -891,8 +892,8 @@ def get_ixtisoslik_saturation(ixtisoslik_code):
         return cached
     try:
         count = _query_scalar(
-            "SELECT COUNT(*) FROM dissertations WHERE TRIM(ixtisoslik) = TRIM(%s)",
-            (code,)
+            "SELECT COUNT(*) FROM dissertations WHERE ixtisoslik ILIKE %s",
+            (f"%{code}%",)
         ) or 0
     except Exception:
         return None
