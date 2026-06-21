@@ -684,6 +684,141 @@ def stats_page():
                            gender_by_year=g["gender_by_year"])
 
 
+def _trends_data():
+    """One-pass aggregation of all trend metrics over the dissertations table. Cached 30 min."""
+    cached = cache.get("trends_data_v1")
+    if cached is not None:
+        return cached
+    import re
+    from data import get_connection, split_ixtisoslik
+    full = re.compile(r'^(\d{2})\.(\d{2})\.(\d{4})$')
+    anyyear = re.compile(r'(19|20)\d{2}')
+
+    yearly = {}        # year -> {cnt, phd, dsc}
+    spec_year = {}     # code -> {year: cnt}
+    spec_total = {}    # code -> cnt
+    uni_year = {}      # uni -> {year: cnt}
+    uni_total = {}
+    monthly = {}       # 'YYYY-MM' -> cnt
+    gender_year = {}   # year -> {male, female}
+    adv_year = {}      # advisor -> {year: cnt}
+    adv_students = {}  # advisor -> set(students)
+
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT daraja, sana, ixtisoslik, muassasa, ilmiy_rahbar, olim FROM dissertations")
+                for daraja, sana, ixt, muas, rahbar, olim in cur.fetchall():
+                    s = (sana or '').strip()
+                    mon = None
+                    m = full.match(s)
+                    if m:
+                        mon, yr = m.group(2), m.group(3)
+                    else:
+                        ym = anyyear.search(s)
+                        yr = ym.group(0) if ym else None
+                    if not yr:
+                        continue
+                    year = int(yr)
+                    dl = (daraja or '')
+                    yslot = yearly.setdefault(year, {"cnt": 0, "phd": 0, "dsc": 0})
+                    yslot["cnt"] += 1
+                    if 'PHD' in dl.upper() or 'фан' in dl.lower():
+                        yslot["phd"] += 1
+                    if 'DSC' in dl.upper() or 'док' in dl.lower():
+                        yslot["dsc"] += 1
+                    for code in split_ixtisoslik(ixt):
+                        spec_total[code] = spec_total.get(code, 0) + 1
+                        spec_year.setdefault(code, {})
+                        spec_year[code][year] = spec_year[code].get(year, 0) + 1
+                    u = (muas or '').strip()
+                    if u:
+                        uni_total[u] = uni_total.get(u, 0) + 1
+                        uni_year.setdefault(u, {})
+                        uni_year[u][year] = uni_year[u].get(year, 0) + 1
+                    if mon:
+                        key = f"{year:04d}-{mon}"
+                        monthly[key] = monthly.get(key, 0) + 1
+                    gd = detect_gender(olim)
+                    if gd in ('male', 'female'):
+                        gslot = gender_year.setdefault(year, {"male": 0, "female": 0})
+                        gslot[gd] += 1
+                    rb = (rahbar or '').strip()
+                    if rb:
+                        adv_year.setdefault(rb, {})
+                        adv_year[rb][year] = adv_year[rb].get(year, 0) + 1
+                        ol = (olim or '').strip()
+                        if ol:
+                            adv_students.setdefault(rb, set()).add(ol.lower())
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    years_all = sorted(yearly.keys())
+    if not years_all:
+        empty = {"yearly": [], "key_stats": {}, "spec_trend": {"years": [], "codes": [], "data": {}},
+                 "growing": [], "declining": [], "uni_trend": {"years": [], "unis": [], "data": {}},
+                 "monthly": [], "gender": [], "advisors": {"years": [], "list": []}}
+        cache.set("trends_data_v1", empty, 1800)
+        return empty
+
+    max_year = years_all[-1]
+    last5 = list(range(max_year - 4, max_year + 1))
+
+    yearly_list = [{"year": y, "cnt": yearly[y]["cnt"], "phd": yearly[y]["phd"], "dsc": yearly[y]["dsc"]}
+                   for y in years_all]
+    peak = max(years_all, key=lambda y: yearly[y]["cnt"])
+    low = min(years_all, key=lambda y: yearly[y]["cnt"])
+    avg = round(sum(yearly[y]["cnt"] for y in years_all) / len(years_all))
+    key_stats = {"peak_year": peak, "peak_cnt": yearly[peak]["cnt"],
+                 "low_year": low, "low_cnt": yearly[low]["cnt"], "avg": avg}
+
+    top15 = [c for c, _ in sorted(spec_total.items(), key=lambda kv: -kv[1])[:15]]
+    spec_trend = {"years": last5, "codes": top15,
+                  "data": {c: [spec_year.get(c, {}).get(y, 0) for y in last5] for c in top15}}
+
+    y_this, y_prev = max_year, max_year - 1
+    growth = []
+    for code, _ in spec_total.items():
+        prev = spec_year.get(code, {}).get(y_prev, 0)
+        cur_ = spec_year.get(code, {}).get(y_this, 0)
+        if prev >= 3:
+            growth.append({"code": code, "pct": round((cur_ - prev) / prev * 100),
+                           "this": cur_, "prev": prev})
+    growing = sorted(growth, key=lambda x: -x["pct"])[:10]
+    declining = sorted([g for g in growth if g["pct"] < 0], key=lambda x: x["pct"])[:10]
+
+    uni_years = years_all[-8:]
+    top_unis = [u for u, _ in sorted(uni_total.items(), key=lambda kv: -kv[1])[:10]]
+    uni_trend = {"years": uni_years, "unis": top_unis,
+                 "data": {u: [uni_year.get(u, {}).get(y, 0) for y in uni_years] for u in top_unis}}
+
+    months_sorted = sorted(monthly.keys())[-24:]
+    monthly_list = [{"key": k, "cnt": monthly[k]} for k in months_sorted]
+
+    gender_list = [{"year": y, "male": gender_year.get(y, {}).get("male", 0),
+                    "female": gender_year.get(y, {}).get("female", 0)} for y in years_all]
+
+    adv_top = sorted(adv_students.items(), key=lambda kv: -len(kv[1]))[:10]
+    advisors = {"years": last5, "list": [
+        {"name": name, "total": len(studs),
+         "spark": [adv_year.get(name, {}).get(y, 0) for y in last5]}
+        for name, studs in adv_top]}
+
+    result = {"yearly": yearly_list, "key_stats": key_stats, "spec_trend": spec_trend,
+              "growing": growing, "declining": declining, "uni_trend": uni_trend,
+              "monthly": monthly_list, "gender": gender_list, "advisors": advisors}
+    cache.set("trends_data_v1", result, 1800)
+    return result
+
+
+@app.route("/trends")
+def trends():
+    return render_template("trends.html", t=_trends_data())
+
+
 def _compare_university(cur, name):
     """Aggregate comparison data for one university."""
     name = (name or "").strip()
