@@ -201,6 +201,8 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_time ON page_visits(visited_at)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_user ON page_visits(user_id)")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS user_id INTEGER")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS username VARCHAR(200)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
@@ -913,10 +915,27 @@ def track_visit():
     if request.endpoint and not request.path.startswith('/static') and not request.path.startswith('/api/'):
         try:
             from data import get_connection
+            from flask import session
             conn = get_connection()
             cur = conn.cursor()
-            user_id = current_user.id if current_user.is_authenticated else None
-            username = current_user.username if current_user.is_authenticated else 'Anonim'
+            user_id = None
+            username = None
+            try:
+                if current_user.is_authenticated:
+                    user_id = current_user.id
+                    username = (getattr(current_user, 'username', None)
+                                or getattr(current_user, 'email', None) or str(current_user.id))
+                elif session.get('cabinet_user_id'):
+                    user_id = session['cabinet_user_id']
+                    username = session.get('cabinet_olim_name') or None
+                    if not username:
+                        cur.execute("SELECT olim_name, telegram_username, email "
+                                    "FROM cabinet_users WHERE id = %s", (user_id,))
+                        cab = cur.fetchone()
+                        if cab:
+                            username = cab[0] or cab[1] or cab[2]
+            except Exception:
+                pass
             cur.execute("""
                 INSERT INTO page_visits (user_id, username, page, ip_address, user_agent)
                 VALUES (%s, %s, %s, %s, %s)
@@ -1124,6 +1143,8 @@ def admin_analytics():
             # Top visitors by IP
             cur.execute("""
                 SELECT ip_address,
+                       MAX(username) AS username,
+                       MAX(user_id) AS user_id,
                        COUNT(*) AS visit_count,
                        MAX(visited_at) AS last_visit,
                        MIN(visited_at) AS first_visit,
@@ -1134,11 +1155,36 @@ def admin_analytics():
                 LIMIT 20
             """)
             top_visitors = [{
-                "ip": r[0] or "—", "visit_count": r[1] or 0,
-                "last_visit": str(r[2])[:16] if r[2] else "",
-                "first_visit": str(r[3])[:16] if r[3] else "",
-                "unique_pages": r[4] or 0,
+                "ip": r[0] or "—",
+                "username": r[1] or "", "user_id": r[2],
+                "visit_count": r[3] or 0,
+                "last_visit": str(r[4])[:16] if r[4] else "",
+                "first_visit": str(r[5])[:16] if r[5] else "",
+                "unique_pages": r[6] or 0,
             } for r in cur.fetchall()]
+
+            # Top visitors grouped by username
+            top_users = []
+            try:
+                cur.execute("""
+                    SELECT username, MAX(user_id) AS user_id,
+                           COUNT(*) AS visit_count,
+                           COUNT(DISTINCT ip_address) AS device_count,
+                           COUNT(DISTINCT page) AS unique_pages,
+                           MAX(visited_at) AS last_visit
+                    FROM page_visits
+                    WHERE username IS NOT NULL AND username <> '' AND username <> 'Anonim'
+                    GROUP BY username
+                    ORDER BY visit_count DESC
+                    LIMIT 20
+                """)
+                top_users = [{
+                    "username": r[0] or "", "user_id": r[1], "visit_count": r[2] or 0,
+                    "device_count": r[3] or 0, "unique_pages": r[4] or 0,
+                    "last_visit": str(r[5])[:16] if r[5] else "",
+                } for r in cur.fetchall()]
+            except Exception:
+                top_users = []
 
             # Registered cabinet users (if any)
             registered_users = []
@@ -1162,7 +1208,7 @@ def admin_analytics():
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
         top_pages=top_pages, recent=recent, weekly=weekly,
-        top_visitors=top_visitors, registered_users=registered_users)
+        top_visitors=top_visitors, top_users=top_users, registered_users=registered_users)
 
 
 def _require_admin():

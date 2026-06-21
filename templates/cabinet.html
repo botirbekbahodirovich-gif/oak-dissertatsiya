@@ -150,7 +150,7 @@
           <p class="desc">O'z ismingizni qidiring va "Bu men ✓" tugmasini bosing.</p>
           {% if claimed %}
           <div><strong style="color:#94a3b8;font-size:0.85rem;">Biriktirilgan:</strong>
-            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>
+            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 10px;border-radius:50px;font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">✕ Ajratish</button></span>{% endfor %}</div>
           </div>
           {% endif %}
           <div style="margin-top:14px;">
@@ -394,6 +394,33 @@ function claimName(name) {
   post('/cabinet/api/claim', { olim_name: name }).then(function (d) {
     if (d.ok) { toast('Biriktirildi ✓', true); setTimeout(function () { location.reload(); }, 700); }
     else toast(d.error || 'Xatolik', false);
+  });
+}
+function unclaimDissertation(btn, olimName) {
+  if (!confirm("'" + olimName + "' nomli dissertatsiyani profilingizdan ajratmoqchimisiz?\n\nBu amalni bekor qilib bo'lmaydi.")) return;
+  btn.disabled = true;
+  btn.textContent = '⏳...';
+  var csrfToken = (document.querySelector('input[name=csrf_token]') || {}).value || '';
+  fetch('/cabinet/api/unclaim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    body: JSON.stringify({ olim_name: olimName })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (data.success) {
+      btn.textContent = '✓ Ajratildi';
+      btn.style.borderColor = '#059669';
+      btn.style.color = '#34d399';
+      setTimeout(function () { location.reload(); }, 800);
+    } else {
+      alert(data.error || 'Xatolik yuz berdi');
+      btn.disabled = false; btn.textContent = '✕ Ajratish';
+    }
+  })
+  .catch(function () {
+    alert('Server bilan aloqa xatosi');
+    btn.disabled = false; btn.textContent = '✕ Ajratish';
   });
 }
 

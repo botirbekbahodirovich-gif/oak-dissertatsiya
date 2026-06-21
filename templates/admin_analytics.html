@@ -151,7 +151,7 @@
     <table class="admin-table table">
       <thead>
         <tr>
-          <th>#</th><th>IP manzil</th><th>Tashriflar soni</th><th>Unikal sahifalar</th>
+          <th>#</th><th>Foydalanuvchi</th><th>IP manzil</th><th>Tashriflar soni</th><th>Unikal sahifalar</th>
           <th>Birinchi tashrif</th><th>Oxirgi tashrif</th>
         </tr>
       </thead>
@@ -160,6 +160,7 @@
         {% for v in top_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
+          <td>{% if v.username %}<span style="color:#60a5fa;font-weight:600;">{{ v.username }}</span>{% else %}<span style="color:#64748b;font-size:0.8rem;">Mehmon</span>{% endif %}</td>
           <td class="ip-mono">{{ v.ip }}</td>
           <td>
             <div class="vc-cell">
@@ -172,12 +173,46 @@
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="empty-cell">Tashriflar yo'q</td></tr>
+        <tr><td colspan="7" class="empty-cell">Tashriflar yo'q</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+{% if top_users %}
+<div class="admin-section">
+  <h2>🧑‍💻 Foydalanuvchilar bo'yicha</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr>
+          <th>#</th><th>Foydalanuvchi</th><th>Tashriflar soni</th><th>Qurilmalar</th>
+          <th>Unikal sahifalar</th><th>Oxirgi tashrif</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set umax = (top_users[0].visit_count if top_users else 1) or 1 %}
+        {% for u in top_users %}
+        <tr>
+          <td class="rank-cell">{{ loop.index }}</td>
+          <td><span style="color:#60a5fa;font-weight:600;">{{ u.username }}</span></td>
+          <td>
+            <div class="vc-cell">
+              <span class="vc-num">{{ u.visit_count }}</span>
+              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (u.visit_count / umax * 100) | round(0, 'ceil') }}%;"></div></div>
+            </div>
+          </td>
+          <td style="font-weight:700;">{{ u.device_count }}</td>
+          <td style="font-weight:700;">{{ u.unique_pages }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.last_visit }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 
 {% if registered_users %}
 <div class="admin-section">

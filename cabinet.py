@@ -361,6 +361,49 @@ def claim():
     return jsonify({"ok": True, "olim_name": name})
 
 
+@cabinet_bp.route('/cabinet/api/unclaim', methods=['POST'])
+@cabinet_login_required
+def unclaim():
+    user = current_cabinet_user()
+    data = request.get_json(silent=True) or {}
+    name = (data.get('olim_name') or '').strip()
+    if not name:
+        return jsonify({"success": False, "error": "Ism kiritilmagan"}), 400
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # the claimed profile row for this name must belong to this user
+                cur.execute(
+                    "SELECT id FROM olim_profiles "
+                    "WHERE cabinet_user_id = %s AND LOWER(TRIM(olim_name)) = LOWER(TRIM(%s)) LIMIT 1",
+                    (user['id'], name))
+                row = cur.fetchone()
+                if not row:
+                    return jsonify({"success": False, "error": "Bu dissertatsiya sizga biriktirilmagan"}), 400
+                # release the claim on this profile
+                cur.execute("UPDATE olim_profiles SET cabinet_user_id = NULL WHERE id = %s", (row[0],))
+                # if it was the user's primary name, repoint to another remaining claim (or clear)
+                new_primary = None
+                if (user.get('olim_name') or '').strip().lower() == name.lower():
+                    cur.execute(
+                        "SELECT olim_name FROM olim_profiles "
+                        "WHERE cabinet_user_id = %s AND olim_name IS NOT NULL ORDER BY id LIMIT 1",
+                        (user['id'],))
+                    rem = cur.fetchone()
+                    new_primary = rem[0] if rem else None
+                    cur.execute("UPDATE cabinet_users SET olim_name = %s WHERE id = %s",
+                                (new_primary, user['id']))
+            conn.commit()
+            if (user.get('olim_name') or '').strip().lower() == name.lower():
+                session['cabinet_olim_name'] = new_primary or ''
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 200
+    return jsonify({"success": True, "message": "Dissertatsiya ajratildi"})
+
+
 # ── generic portfolio item CRUD ────────────────────────────────────────────
 def _insert_item(table, fields, form):
     name = _olim_name()
