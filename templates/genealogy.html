@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}{{ olim_name }} — Ilmiy shajara{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.gp { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 22px 0 40px; }
+.gp-wrap { max-width: 1320px; margin: 0 auto; padding: 0 20px; }
+.gp-crumb { font-size: 0.85rem; color: #64748b; margin-bottom: 12px; }
+.gp-crumb a { color: #60a5fa; text-decoration: none; }
+.gp-crumb a:hover { text-decoration: underline; }
+.gp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.gp-head h1 { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin: 0; }
+.gp-head h1 small { color: #94a3b8; font-weight: 600; font-size: 0.95rem; }
+.gp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gp-btn { background: #162032; border: 1px solid #334155; color: #93bbfc; font-size: 0.85rem; font-weight: 600; padding: 8px 16px; border-radius: 10px; cursor: pointer; text-decoration: none; }
+.gp-btn:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+.gp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; }
+.gp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.gp-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.gp-stage { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 16px; height: 74vh; min-height: 540px; overflow: hidden; }
+.gp-stage svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.gp-stage svg:active { cursor: grabbing; }
+.gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
+.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 7px 11px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.74rem; color: #475569; pointer-events: none; }
+.gen-node .gn-name { fill: #f1f5f9; font-weight: 700; font-size: 12px; }
+.gen-node .gn-emoji { font-size: 13px; }
+.gen-node .gn-badge-t { fill: #fff; font-size: 10px; font-weight: 800; }
+.gen-node .gn-plus circle { fill: #3b82f6; }
+.gen-node .gn-plus text { fill: #fff; font-size: 15px; font-weight: 800; }
+.gen-node:hover .gn-rect { filter: brightness(1.12); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gp">
+  <div class="gp-wrap">
+    <div class="gp-crumb"><a href="/">Bosh sahifa</a> › <a href="/olim/{{ olim_name|urlencode }}">Olim profili</a> › Ilmiy shajara</div>
+    <div class="gp-head">
+      <h1>🌳 {{ olim_name }} <small>— ilmiy shajara daraxti</small></h1>
+      <div class="gp-actions">
+        <button type="button" class="gp-btn" id="gen-reset">🔄 Qayta joylashtirish</button>
+        <a class="gp-btn" href="/olim/{{ olim_name|urlencode }}">← Profilga qaytish</a>
+      </div>
+    </div>
+    <div class="gp-legend">
+      <span><i class="dot" style="background:#1e40af;border:2px solid #3b82f6;"></i> Markaziy olim</span>
+      <span><i class="dot" style="background:#1e3a8a;"></i> Ilmiy rahbar</span>
+      <span><i class="dot" style="background:#059669;"></i> PhD shogird</span>
+      <span><i class="dot" style="background:#e36403;"></i> DSc shogird</span>
+      <span><i class="dot" style="background:#334155;"></i> Hamkasb</span>
+    </div>
+    <div class="gp-stage" id="gen-stage">
+      <div class="gen-loading" id="gen-loading">🌳 Shajara daraxtini qurilmoqda...</div>
+      <div class="gen-empty" id="gen-empty" style="display:none;">
+        <div style="font-size:2.6rem;margin-bottom:10px;">🌳</div>
+        <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
+        <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
+      </div>
+      <svg id="gen-svg" style="display:none;"></svg>
+      <div class="gen-tooltip" id="gen-tooltip"></div>
+      <div class="gen-hint">🖱️ Suring · ⚲ aylantiring · tugmani bosing → profilga o'ting · "+" → kengaytiring</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="/static/js/genealogy.js"></script>
+<script>
+(function () {
+  var OLIM = {{ olim_name|tojson }};
+  var genApi = null;
+  fetch('/api/genealogy/' + encodeURIComponent(OLIM))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      document.getElementById('gen-loading').style.display = 'none';
+      var hasTree = (data.parents && data.parents.length) || (data.children && data.children.length) || (data.siblings && data.siblings.length);
+      if (!hasTree) { document.getElementById('gen-empty').style.display = 'flex'; return; }
+      document.getElementById('gen-svg').style.display = 'block';
+      genApi = window.renderGenealogy({ svg: '#gen-svg', data: data, tooltip: '#gen-tooltip', centerName: OLIM });
+    })
+    .catch(function () {
+      document.getElementById('gen-loading').style.display = 'none';
+      document.getElementById('gen-empty').style.display = 'flex';
+    });
+  document.getElementById('gen-reset').addEventListener('click', function () { if (genApi) genApi.reset(); });
+})();
+</script>
+{% endblock %}

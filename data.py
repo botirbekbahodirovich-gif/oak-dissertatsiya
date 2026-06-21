@@ -866,11 +866,18 @@ def olim_profile(name):
     # NOTE: do not pass `supervisor_count`/`opponent_count` as ints — `supervisor_count` would
     # shadow the global context-processor function of the same name used inside the template.
     # Counts are available via stats.supervisor_count / stats.opponent_count and *_works|length.
+    # Genealogy preview counts (from already-fetched rows — no extra queries):
+    tree_parents = len({d.get('Ilmiy_rahbar', '').strip()
+                        for d in own if d.get('Ilmiy_rahbar', '').strip()})
+    tree_children = len({d.get('Olim', '').strip()
+                         for d in as_supervisor if d.get('Olim', '').strip()})
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,
                            stats=stats, profile=profile, maqolalar=maqolalar,
-                           konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar)
+                           konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
+                           tree_parents=tree_parents, tree_children=tree_children)
 
 
 def _summary_stats(rows):

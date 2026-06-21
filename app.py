@@ -965,6 +965,122 @@ def user_count():
     return jsonify({'count': count})
 
 
+# ── Academic genealogy (ilmiy shajara) ─────────────────────────────────────
+def _gen_degree(darajalar):
+    up = [str(d or '').upper() for d in darajalar]
+    if any('DSC' in d for d in up):
+        return 'DSc'
+    if any('PHD' in d for d in up):
+        return 'PhD'
+    return None
+
+
+def _genealogy_data(name, depth=2, child_cap=40, sibling_cap=30):
+    """Build the genealogy tree (parents↑, children↓, siblings↔) for a researcher."""
+    from data import get_connection, get_supervisor_counts
+    name = (name or '').strip()
+    res = {
+        "center": {"name": name, "degree": None, "dissertation_count": 0},
+        "parents": [], "children": [], "siblings": [],
+    }
+    if not name:
+        return res
+    try:
+        sup_counts = get_supervisor_counts()
+    except Exception:
+        sup_counts = {}
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            def degree_of(person):
+                cur.execute("SELECT daraja FROM dissertations WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s))", (person,))
+                return _gen_degree([r[0] for r in cur.fetchall()])
+
+            # center
+            cur.execute("SELECT daraja FROM dissertations WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s))", (name,))
+            crows = [r[0] for r in cur.fetchall()]
+            res["center"]["dissertation_count"] = len(crows)
+            res["center"]["degree"] = _gen_degree(crows)
+
+            # parents (this person's advisors) + their advisors (grandparents)
+            cur.execute(
+                "SELECT DISTINCT TRIM(ilmiy_rahbar) FROM dissertations "
+                "WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
+                "AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''", (name,))
+            parent_names = [r[0] for r in cur.fetchall()]
+            for pn in parent_names:
+                grand = []
+                if depth >= 2:
+                    cur.execute(
+                        "SELECT DISTINCT TRIM(ilmiy_rahbar) FROM dissertations "
+                        "WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
+                        "AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''", (pn,))
+                    gnames = [r[0] for r in cur.fetchall()]
+                    for gpn in gnames:
+                        grand.append({"name": gpn, "degree": degree_of(gpn)})
+                res["parents"].append({"name": pn, "degree": degree_of(pn), "parents": grand})
+
+            # children (students), with how many students each of them has
+            cur.execute(
+                "SELECT TRIM(olim), daraja FROM dissertations "
+                "WHERE LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)) "
+                "AND olim IS NOT NULL AND TRIM(olim) <> ''", (name,))
+            childmap = {}
+            for o, d in cur.fetchall():
+                childmap.setdefault(o, []).append(d)
+            children = [{
+                "name": cn, "degree": _gen_degree(drs),
+                "children_count": int(sup_counts.get(cn, 0)),
+            } for cn, drs in childmap.items()]
+            children.sort(key=lambda x: (-x["children_count"], x["name"]))
+            res["children"] = children[:child_cap]
+
+            # siblings (other students of the same advisors)
+            sib = {}
+            for pn in parent_names:
+                cur.execute(
+                    "SELECT TRIM(olim), daraja FROM dissertations "
+                    "WHERE LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)) "
+                    "AND LOWER(TRIM(olim)) <> LOWER(TRIM(%s)) "
+                    "AND olim IS NOT NULL AND TRIM(olim) <> ''", (pn, name))
+                for o, d in cur.fetchall():
+                    sib.setdefault(o, []).append(d)
+            res["siblings"] = [{"name": sn, "degree": _gen_degree(drs)}
+                               for sn, drs in list(sib.items())[:sibling_cap]]
+    finally:
+        conn.close()
+    return res
+
+
+@app.route('/api/genealogy/<path:name>')
+@cache.cached(timeout=900)
+def api_genealogy(name):
+    try:
+        return jsonify(_genealogy_data(name, depth=2))
+    except Exception as e:
+        return jsonify({"center": {"name": name, "degree": None, "dissertation_count": 0},
+                        "parents": [], "children": [], "siblings": [], "error": str(e)})
+
+
+@app.route('/api/genealogy/expand/<path:name>')
+def api_genealogy_expand(name):
+    """Immediate parents + children only (1 level) for live tree expansion."""
+    try:
+        d = _genealogy_data(name, depth=1)
+        return jsonify({
+            "name": name,
+            "parents": [{"name": p["name"], "degree": p["degree"]} for p in d["parents"]],
+            "children": d["children"],
+        })
+    except Exception as e:
+        return jsonify({"name": name, "parents": [], "children": [], "error": str(e)})
+
+
+@app.route('/genealogy/<path:name>')
+def genealogy_page(name):
+    return render_template('genealogy.html', olim_name=name.strip())
+
+
 @app.route('/admin/analytics')
 @login_required
 def admin_analytics():

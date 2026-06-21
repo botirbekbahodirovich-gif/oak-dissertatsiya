@@ -137,6 +137,28 @@
   .op-info h1 { font-size: 1.5rem; }
   .op-avatar { width: 110px; height: 110px; font-size: 2.6rem; }
 }
+
+/* ── genealogy tree ── */
+.gen-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.gen-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.78rem; color: #94a3b8; }
+.gen-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.gen-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.gen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.gen-btn { background: #162032; border: 1px solid #334155; color: #93bbfc; font-size: 0.82rem; font-weight: 600; padding: 7px 14px; border-radius: 9px; cursor: pointer; text-decoration: none; }
+.gen-btn:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+.gen-stage { position: relative; background: #0f172a; border: 1px solid #334155; border-radius: 16px; height: 560px; overflow: hidden; }
+.gen-stage svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.gen-stage svg:active { cursor: grabbing; }
+.gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
+.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.8rem; padding: 7px 11px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 240px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; color: #475569; white-space: nowrap; pointer-events: none; }
+.gen-node .gn-name { fill: #f1f5f9; font-weight: 700; font-size: 12px; }
+.gen-node .gn-emoji { font-size: 13px; }
+.gen-node .gn-badge-t { fill: #fff; font-size: 10px; font-weight: 800; }
+.gen-node .gn-plus circle { fill: #3b82f6; }
+.gen-node .gn-plus text { fill: #fff; font-size: 15px; font-weight: 800; }
+.gen-node:hover .gn-rect { filter: brightness(1.12); }
+@media (max-width: 768px) { .gen-stage { height: 460px; } }
 </style>
 {% endblock %}
 
@@ -322,6 +344,7 @@
       {% if is_owner %}<a class="op-edit-ic" href="/cabinet#ish" title="Tahrirlash">✏️</a>{% endif %}
       <button class="op-tab" data-tab="rasmlar">Rasmlar</button>
       {% if is_owner %}<a class="op-edit-ic" href="/cabinet#rasmlar" title="Tahrirlash">✏️</a>{% endif %}
+      <button class="op-tab" data-tab="shajara" id="tab-btn-shajara">🌳 Ilmiy shajara{% if tree_parents or tree_children %} ({{ tree_parents }}↑ {{ tree_children }}↓){% endif %}</button>
     </div>
 
     <div class="op-tabpane active" id="tab-maqolalar">
@@ -391,6 +414,33 @@
       {% endif %}
     </div>
 
+    <div class="op-tabpane" id="tab-shajara">
+      <div class="gen-toolbar">
+        <div class="gen-legend">
+          <span><i class="dot" style="background:#1e40af;border:2px solid #3b82f6;"></i> Markaz</span>
+          <span><i class="dot" style="background:#1e3a8a;"></i> Rahbar</span>
+          <span><i class="dot" style="background:#059669;"></i> PhD shogird</span>
+          <span><i class="dot" style="background:#e36403;"></i> DSc shogird</span>
+          <span><i class="dot" style="background:#334155;"></i> Hamkasb</span>
+        </div>
+        <div class="gen-actions">
+          <button type="button" class="gen-btn" id="gen-reset">🔄 Qayta joylashtirish</button>
+          <a class="gen-btn" href="/genealogy/{{ olim_name|urlencode }}">To'liq ekranda ko'rish →</a>
+        </div>
+      </div>
+      <div class="gen-stage" id="gen-stage">
+        <div class="gen-loading" id="gen-loading">🌳 Shajara daraxtini qurilmoqda...</div>
+        <div class="gen-empty" id="gen-empty" style="display:none;">
+          <div style="font-size:2.4rem;margin-bottom:10px;">🌳</div>
+          <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
+          <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
+        </div>
+        <svg id="gen-svg" style="display:none;"></svg>
+        <div class="gen-tooltip" id="gen-tooltip"></div>
+        <div class="gen-hint">🖱️ Sichqoncha bilan suring · ⚲ Aylantiring · Tugmani bosing → profilga o'ting</div>
+      </div>
+    </div>
+
     <a href="/dashboard" class="op-back">← Ortga</a>
   </div>
 </div>
@@ -398,6 +448,8 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="/static/js/genealogy.js"></script>
 <script>
 (function () {
   // tabs
@@ -410,6 +462,31 @@
       if (pane) pane.classList.add('active');
     });
   });
+
+  // ── genealogy: lazy-load tree when the tab is first opened ──
+  var genLoaded = false, genApi = null;
+  var OLIM = {{ olim_name|tojson }};
+  function loadGenealogy() {
+    if (genLoaded) return;
+    genLoaded = true;
+    fetch('/api/genealogy/' + encodeURIComponent(OLIM))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById('gen-loading').style.display = 'none';
+        var hasTree = (data.parents && data.parents.length) || (data.children && data.children.length) || (data.siblings && data.siblings.length);
+        if (!hasTree) { document.getElementById('gen-empty').style.display = 'flex'; return; }
+        document.getElementById('gen-svg').style.display = 'block';
+        genApi = window.renderGenealogy({ svg: '#gen-svg', data: data, tooltip: '#gen-tooltip', centerName: OLIM });
+      })
+      .catch(function () {
+        document.getElementById('gen-loading').style.display = 'none';
+        document.getElementById('gen-empty').style.display = 'flex';
+      });
+  }
+  var shajaraBtn = document.getElementById('tab-btn-shajara');
+  if (shajaraBtn) shajaraBtn.addEventListener('click', loadGenealogy);
+  var resetBtn = document.getElementById('gen-reset');
+  if (resetBtn) resetBtn.addEventListener('click', function () { if (genApi) genApi.reset(); });
   // share
   var share = document.getElementById('op-share-btn');
   if (share) {
