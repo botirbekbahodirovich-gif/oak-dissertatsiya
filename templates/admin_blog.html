@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Blog boshqaruvi — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-add { display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 20px; border-radius: 10px; text-decoration: none; }
+  .adm-add:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .adm-table-panel { border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; }
+  .adm-table td { padding: 0.7rem 0.9rem; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:nth-child(even) td { background: #162032; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .cat-chip { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(59,130,246,0.16); color: #60a5fa; white-space: nowrap; }
+  .pub-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .pub-on { background: rgba(5,150,105,0.16); color: #34d399; }
+  .pub-off { background: rgba(148,163,184,0.16); color: #94a3b8; }
+  .adm-actions { display: flex; gap: 8px; align-items: center; }
+  .adm-btn { font-size: 0.95rem; padding: 5px 11px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; line-height: 1; }
+  .adm-view { background: rgba(148,163,184,0.15); color: #cbd5e1; }
+  .adm-edit { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .adm-edit:hover { background: rgba(59,130,246,0.28); text-decoration: none; }
+  .adm-del { background: rgba(239,68,68,0.15); color: #f87171; }
+  .adm-del:hover { background: rgba(239,68,68,0.28); }
+  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1>📝 Blog boshqaruvi</h1>
+  <a href="/admin/blog/add" class="adm-add">➕ Maqola qo'shish</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+{% endwith %}
+
+{% if items %}
+<div class="adm-table-panel">
+  <table class="adm-table">
+    <thead>
+      <tr><th>#</th><th>Sarlavha</th><th>Kategoriya</th><th>👁</th><th>Sana</th><th>Holati</th><th>Amallar</th></tr>
+    </thead>
+    <tbody>
+      {% for n in items %}
+      <tr>
+        <td>{{ n.id }}</td>
+        <td>{{ n.title[:60] }}{% if n.title|length > 60 %}…{% endif %}</td>
+        <td>{% if n.category %}<span class="cat-chip">{{ n.category_label }}</span>{% endif %}</td>
+        <td style="font-weight:700;">{{ n.views }}</td>
+        <td style="white-space:nowrap;color:#94a3b8;">{{ n.created_at }}</td>
+        <td>{% if n.is_published %}<span class="pub-badge pub-on">✅ Chop etilgan</span>{% else %}<span class="pub-badge pub-off">⏸️ Qoralama</span>{% endif %}</td>
+        <td>
+          <div class="adm-actions">
+            <a href="/blog/{{ n.slug }}" target="_blank" rel="noopener" class="adm-btn adm-view" title="Ko'rish">👁</a>
+            <a href="/admin/blog/edit/{{ n.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
+            <form method="POST" action="/admin/blog/delete/{{ n.id }}" onsubmit="return confirm('Maqola o\'chirilsinmi?')" style="display:inline;">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="adm-btn adm-del" title="O'chirish">🗑️</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="adm-table-panel"><div class="adm-empty">Hali maqolalar yo'q. Birinchi maqolani qo'shing!</div></div>
+{% endif %}
+{% endblock %}

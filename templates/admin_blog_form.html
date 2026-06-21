@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Maqolani tahrirlash{% else %}Maqola qo'shish{% endif %} — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .yf-wrap { max-width: 820px; margin: 0 auto; }
+  .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
+  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
+  .yf-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .yf-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .yf-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .yf-group { margin-bottom: 1.2rem; }
+  .yf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .yf-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-input, .yf-textarea, .yf-select { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; font-family: inherit; }
+  .yf-input::placeholder, .yf-textarea::placeholder { color: #4b5563; }
+  .yf-input:focus, .yf-textarea:focus, .yf-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+  .yf-textarea { resize: vertical; min-height: 80px; }
+  .yf-textarea.large { min-height: 240px; }
+  .yf-hint { font-size: 0.76rem; color: #64748b; margin-top: 4px; }
+  #img-preview { margin-top: 10px; max-width: 100%; max-height: 220px; border-radius: 10px; border: 1px solid #334155; }
+  .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 999px; transition: 0.3s; }
+  .slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle-switch input:checked + .slider { background: #3b82f6; }
+  .toggle-switch input:checked + .slider::before { transform: translateX(22px); }
+  .toggle-row { display: flex; align-items: center; gap: 12px; }
+  .toggle-row label { margin: 0; color: #e2e8f0; font-weight: 600; font-size: 0.95rem; }
+  .yf-actions { display: flex; gap: 12px; margin-top: 1.4rem; }
+  .yf-save { background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 26px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; }
+  .yf-save:hover { background: #2563eb; }
+  .yf-cancel { display: inline-flex; align-items: center; padding: 11px 22px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
+  .yf-cancel:hover { color: #e2e8f0; border-color: #475569; text-decoration: none; }
+  @media (max-width: 640px) { .yf-row { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="yf-wrap">
+  <h1>{% if edit_mode %}✏️ Maqolani tahrirlash{% else %}➕ Maqola qo'shish{% endif %}</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="yf-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  <form method="post" class="yf-card"
+        action="{% if edit_mode %}/admin/blog/edit/{{ item.id }}{% else %}/admin/blog/add{% endif %}">
+    {{ csrf_token()|safe }}
+    <div class="yf-group">
+      <label>Sarlavha *</label>
+      <input class="yf-input" type="text" name="title" id="title" required maxlength="500" placeholder="Maqola sarlavhasi..." value="{{ item.title if item else '' }}">
+    </div>
+    <div class="yf-row">
+      <div class="yf-group">
+        <label>Slug (URL)</label>
+        <input class="yf-input" type="text" name="slug" id="slug" placeholder="avto-generatsiya" value="{{ item.slug if item else '' }}">
+        <div class="yf-hint">Bo'sh qoldirilsa sarlavhadan avtomatik yaratiladi</div>
+      </div>
+      <div class="yf-group">
+        <label>Kategoriya</label>
+        <select class="yf-select" name="category">
+          {% set cur = item.category if item else '' %}
+          <option value="" {% if not cur %}selected{% endif %}>—</option>
+          {% for key, label in categories.items() %}
+          <option value="{{ key }}" {% if cur == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="yf-group">
+      <label>Qisqa matn</label>
+      <textarea class="yf-textarea" name="summary" maxlength="1000" rows="3" placeholder="Listingda ko'rinadigan qisqa tavsif...">{{ item.summary if item else '' }}</textarea>
+    </div>
+    <div class="yf-group">
+      <label>To'liq matn *</label>
+      <textarea class="yf-textarea large" name="content" required placeholder="Maqola matni... (paragraflarni bo'sh qator bilan ajrating)">{{ item.content if item else '' }}</textarea>
+    </div>
+    <div class="yf-group">
+      <label>Rasm URL</label>
+      <input class="yf-input" type="text" name="image_url" id="image_url" placeholder="https://..." value="{{ item.image_url if item else '' }}" oninput="document.getElementById('img-preview').style.display=this.value?'block':'none';document.getElementById('img-preview').src=this.value;">
+      <img id="img-preview" src="{{ item.image_url if item and item.image_url else '' }}" alt="" style="display:{{ 'block' if item and item.image_url else 'none' }};">
+    </div>
+    <div class="yf-group">
+      <div class="toggle-row">
+        <label class="toggle-switch">
+          <input type="checkbox" name="is_published" {% if (item and item.is_published) or not item %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+        <label>Chop etish</label>
+      </div>
+    </div>
+    <div class="yf-actions">
+      <button type="submit" class="yf-save">💾 {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
+      <a href="/admin/blog" class="yf-cancel">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// auto-fill slug from title (only when slug untouched / add mode)
+(function () {
+  var title = document.getElementById('title');
+  var slug = document.getElementById('slug');
+  var editMode = {{ 'true' if edit_mode else 'false' }};
+  var touched = editMode || (slug.value.trim().length > 0);
+  slug.addEventListener('input', function () { touched = true; });
+  function slugify(s) {
+    return (s || '').toLowerCase().replace(/['’`]/g, '').replace(/[^a-z0-9Ѐ-ӿ]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 200);
+  }
+  title.addEventListener('input', function () { if (!touched) slug.value = slugify(title.value); });
+})();
+</script>
+{% endblock %}

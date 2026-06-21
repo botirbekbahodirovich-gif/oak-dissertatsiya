@@ -446,6 +446,7 @@
         {% if current_user.username == 'admin' %}
         <a href="/admin/analytics" class="nav-link{% if request.path == '/admin/analytics' %} active{% endif %}"><i class="bi bi-speedometer2"></i>Admin</a>
         <a href="/admin/yangiliklar" class="nav-link{% if request.path.startswith('/admin/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar (admin)</a>
+        <a href="/admin/blog" class="nav-link{% if request.path.startswith('/admin/blog') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Blog (admin)</a>
         <a href="/admin/vacancies" class="nav-link{% if request.path.startswith('/admin/vacancies') %} active{% endif %}"><i class="bi bi-briefcase"></i>Vakansiyalar</a>
         {% endif %}
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">

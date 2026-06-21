@@ -382,6 +382,13 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_blog_created ON blog_posts(created_at)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS course_subscribers (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) NOT NULL UNIQUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
         conn.commit()
         conn.close()
     except Exception:
@@ -586,11 +593,30 @@ def home():
     except Exception:
         pass
 
+    # Latest 3 blog posts
+    latest_blog = []
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT title, slug, summary, created_at FROM blog_posts "
+                    "WHERE is_published = TRUE ORDER BY created_at DESC, id DESC LIMIT 3")
+                latest_blog = [{
+                    "title": r[0] or "", "slug": r[1] or "", "summary": r[2] or "",
+                    "created_at": str(r[3])[:10] if r[3] else "",
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        latest_blog = []
+
     return render_template("home.html", recent=recent, news=news,
                            top_supervisors=top_supervisors,
                            top_supervisors_random=top_supervisors_random,
                            top_marquee=top_marquee, total_stats=total_stats,
-                           gender_pct=gender_pct,
+                           gender_pct=gender_pct, latest_blog=latest_blog,
                            active_vacancy_count=active_vacancy_count)
 
 
@@ -1846,7 +1872,182 @@ def blog_post(slug):
         post = None
     if not post:
         abort(404)
-    return render_template("blog_post.html", post=post, related=related)
+    return render_template("blog_detail.html", post=post, related=related)
+
+
+def _slugify(text):
+    import re
+    s = (text or "").strip().lower()
+    s = s.replace("'", "").replace("'", "").replace("`", "")
+    s = re.sub(r"[^a-z0-9Ѐ-ӿ]+", "-", s).strip("-")
+    return s[:200] or "post"
+
+
+def _blog_form_values():
+    title = request.form.get("title", "").strip()
+    slug = (request.form.get("slug", "").strip() or _slugify(title))
+    return {
+        "title": title,
+        "slug": _slugify(slug),
+        "summary": request.form.get("summary", "").strip()[:1000],
+        "content": request.form.get("content", "").strip(),
+        "category": request.form.get("category", "").strip(),
+        "image_url": request.form.get("image_url", "").strip() or None,
+        "is_published": bool(request.form.get("is_published")),
+    }
+
+
+@app.route("/admin/blog")
+@login_required
+def admin_blog():
+    _require_admin()
+    from data import get_connection
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, slug, category, views, is_published, created_at "
+                    "FROM blog_posts ORDER BY created_at DESC, id DESC")
+                items = [{
+                    "id": r[0], "title": r[1] or "", "slug": r[2] or "", "category": r[3] or "",
+                    "category_label": BLOG_CATEGORIES.get(r[3] or "", r[3] or ""),
+                    "views": r[4] or 0, "is_published": r[5],
+                    "created_at": str(r[6])[:16] if r[6] else "",
+                } for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template("admin_blog.html", items=items)
+
+
+@app.route("/admin/blog/add", methods=["GET", "POST"])
+@login_required
+def admin_blog_add():
+    _require_admin()
+    from data import get_connection
+    if request.method == "POST":
+        v = _blog_form_values()
+        if not v["title"] or not v["content"]:
+            flash("Sarlavha va to'liq matn majburiy.", "error")
+            return render_template("admin_blog_form.html", item=v, edit_mode=False, categories=BLOG_CATEGORIES)
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO blog_posts (title, slug, summary, content, category, image_url, is_published) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (v["title"], v["slug"], v["summary"], v["content"], v["category"],
+                         v["image_url"], v["is_published"]))
+                conn.commit()
+                flash("Maqola qo'shildi!", "success")
+            finally:
+                conn.close()
+        except Exception:
+            flash("Saqlashda xatolik (slug takrorlangan bo'lishi mumkin).", "error")
+            return render_template("admin_blog_form.html", item=v, edit_mode=False, categories=BLOG_CATEGORIES)
+        return redirect(url_for("admin_blog"))
+    return render_template("admin_blog_form.html", item=None, edit_mode=False, categories=BLOG_CATEGORIES)
+
+
+@app.route("/admin/blog/edit/<int:id>", methods=["GET", "POST"])
+@login_required
+def admin_blog_edit(id):
+    _require_admin()
+    from data import get_connection
+
+    def _load():
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id, title, slug, summary, content, category, image_url, is_published "
+                        "FROM blog_posts WHERE id = %s", (id,))
+                    r = cur.fetchone()
+                    if r:
+                        return {"id": r[0], "title": r[1] or "", "slug": r[2] or "",
+                                "summary": r[3] or "", "content": r[4] or "", "category": r[5] or "",
+                                "image_url": r[6] or "", "is_published": r[7]}
+            finally:
+                conn.close()
+        except Exception:
+            return None
+        return None
+
+    current = _load()
+    if not current:
+        abort(404)
+    if request.method == "POST":
+        v = _blog_form_values()
+        if not v["title"] or not v["content"]:
+            flash("Sarlavha va to'liq matn majburiy.", "error")
+            v["id"] = id
+            return render_template("admin_blog_form.html", item=v, edit_mode=True, categories=BLOG_CATEGORIES)
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE blog_posts SET title=%s, slug=%s, summary=%s, content=%s, category=%s, "
+                        "image_url=%s, is_published=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+                        (v["title"], v["slug"], v["summary"], v["content"], v["category"],
+                         v["image_url"], v["is_published"], id))
+                conn.commit()
+                flash("Maqola yangilandi!", "success")
+            finally:
+                conn.close()
+        except Exception:
+            flash("Yangilashda xatolik (slug takrorlangan bo'lishi mumkin).", "error")
+            v["id"] = id
+            return render_template("admin_blog_form.html", item=v, edit_mode=True, categories=BLOG_CATEGORIES)
+        return redirect(url_for("admin_blog"))
+    return render_template("admin_blog_form.html", item=current, edit_mode=True, categories=BLOG_CATEGORIES)
+
+
+@app.route("/admin/blog/delete/<int:id>", methods=["POST"])
+@login_required
+def admin_blog_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM blog_posts WHERE id = %s", (id,))
+            conn.commit()
+            flash("Maqola o'chirildi.", "success")
+        finally:
+            conn.close()
+    except Exception:
+        flash("O'chirishda xatolik.", "error")
+    return redirect(url_for("admin_blog"))
+
+
+@app.route("/api/course-subscribe", methods=["POST"])
+@csrf.exempt
+def course_subscribe():
+    from data import get_connection
+    data = request.get_json(silent=True) or request.form
+    email = (data.get("email") or "").strip().lower()
+    if not email or "@" not in email or len(email) > 255:
+        return jsonify({"success": False, "error": "Email noto'g'ri"}), 200
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO course_subscribers (email) VALUES (%s) ON CONFLICT (email) DO NOTHING",
+                    (email,))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return jsonify({"success": False, "error": "Xatolik yuz berdi"}), 200
+    return jsonify({"success": True, "message": "Rahmat! Sizga xabar beramiz."})
 
 
 @app.route("/preparation")
