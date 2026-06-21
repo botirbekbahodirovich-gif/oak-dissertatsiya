@@ -819,6 +819,204 @@ def trends():
     return render_template("trends.html", t=_trends_data())
 
 
+# ── Collaboration graph (advisor / student / opponent network) ─────────────
+def _collab_index():
+    """Build the collaboration adjacency index once. Cached 30 min (in-memory)."""
+    cached = cache.get("collab_index_v1")
+    if cached is not None:
+        return cached
+    from data import get_connection
+    from collections import Counter, defaultdict
+    adj = defaultdict(set)            # name -> set of connected names (advisor + opponent)
+    adv_w = Counter()                 # (advisor, student) -> count
+    opp_w = Counter()                 # (opponent, defender) -> count
+    students_by_advisor = defaultdict(set)
+    advisor_of = defaultdict(set)     # student -> set advisors
+    opp_count = Counter()             # name -> times they were an opponent
+    deg_map = {}                      # name -> 'PhD'/'DSc'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT olim, daraja, ilmiy_rahbar, opponent_1, opponent_2, opponent_3 "
+                    "FROM dissertations")
+                def _ok(n):
+                    n = (n or '').strip()
+                    if len(n) < 4:
+                        return ''
+                    low = n.lower()
+                    if 'ф.и.ш' in low or 'f.i.sh' in low or low in ('номаълум', "noma'lum"):
+                        return ''
+                    return n
+                for olim, daraja, rahbar, o1, o2, o3 in cur.fetchall():
+                    o = _ok(olim)
+                    if o and daraja:
+                        up = daraja.upper()
+                        cur_d = deg_map.get(o)
+                        if 'DSC' in up or 'док' in (daraja or '').lower():
+                            deg_map[o] = 'DSc'
+                        elif ('PHD' in up or 'фан' in (daraja or '').lower()) and cur_d != 'DSc':
+                            deg_map[o] = 'PhD'
+                    r = _ok(rahbar)
+                    if r and o:
+                        adv_w[(r, o)] += 1
+                        students_by_advisor[r].add(o)
+                        advisor_of[o].add(r)
+                        adj[r].add(o); adj[o].add(r)
+                    for opp in (o1, o2, o3):
+                        opp = _ok(opp)
+                        if opp and o and opp != o:
+                            opp_w[(opp, o)] += 1
+                            opp_count[opp] += 1
+                            adj[opp].add(o); adj[o].add(opp)
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    idx = {
+        "adj": adj, "adv_w": adv_w, "opp_w": opp_w,
+        "students_by_advisor": students_by_advisor, "advisor_of": advisor_of,
+        "opp_count": opp_count, "deg_map": deg_map,
+        "lower_map": {n.lower(): n for n in adj.keys()},
+        "by_conn": sorted(adj.keys(), key=lambda n: -len(adj[n])),
+    }
+    cache.set("collab_index_v1", idx, 1800)
+    return idx
+
+
+def _collab_role(idx, name):
+    students = len(idx["students_by_advisor"].get(name, ()))
+    opponents = int(idx["opp_count"].get(name, 0))
+    advisors = len(idx["advisor_of"].get(name, ()))
+    if students >= 3 and students >= opponents:
+        role = "advisor"
+    elif opponents > 0 and opponents >= students and opponents >= advisors:
+        role = "opponent"
+    elif students > 0:
+        role = "mixed"
+    else:
+        role = "student"
+    return role, students, opponents, advisors
+
+
+def _collab_nodes_edges(idx, node_set, center=None, with_siblings=False, sibling_for=None):
+    adj = idx["adj"]
+    group_map = {"advisor": 1, "mixed": 2, "student": 3, "opponent": 4}
+    nodes = []
+    for n in node_set:
+        role, students, opponents, advisors = _collab_role(idx, n)
+        nodes.append({
+            "id": n, "connections": len(adj.get(n, ())),
+            "degree": idx["deg_map"].get(n), "role": role, "group": group_map[role],
+            "students": students, "opponents": opponents, "advisors": advisors,
+            "center": (n == center),
+        })
+    edges = []
+    seen = set()
+    for (a, b), w in idx["adv_w"].items():
+        if a in node_set and b in node_set:
+            edges.append({"source": a, "target": b, "type": "advisor", "weight": int(w)})
+            seen.add((a, b))
+    for (a, b), w in idx["opp_w"].items():
+        if a in node_set and b in node_set and (a, b) not in seen:
+            edges.append({"source": a, "target": b, "type": "opponent", "weight": int(w)})
+    if with_siblings and sibling_for:
+        sibs = sibling_for & node_set
+        for s in sibs:
+            edges.append({"source": center, "target": s, "type": "sibling", "weight": 1})
+    return nodes, edges
+
+
+def _collab_search(name, max_nodes=120):
+    idx = _collab_index()
+    center = idx["lower_map"].get((name or "").strip().lower())
+    if not center:
+        return {"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}}
+    adj = idx["adj"]
+    S = {center}
+    neigh = sorted(adj.get(center, ()), key=lambda n: -len(adj[n]))[:60]
+    S.update(neigh)
+    # academic siblings (other students of the center's advisors)
+    sibs = set()
+    for a in idx["advisor_of"].get(center, ()):
+        sibs |= idx["students_by_advisor"].get(a, set())
+    sibs.discard(center)
+    for s in list(sibs)[:30]:
+        if len(S) >= max_nodes:
+            break
+        S.add(s)
+    # level 2
+    for n in neigh[:20]:
+        if len(S) >= max_nodes:
+            break
+        for m in sorted(adj.get(n, ()), key=lambda x: -len(adj[x]))[:6]:
+            if len(S) >= max_nodes:
+                break
+            S.add(m)
+    nodes, edges = _collab_nodes_edges(idx, S, center=center, with_siblings=True, sibling_for=sibs)
+    most = max(nodes, key=lambda x: x["connections"])["id"] if nodes else ""
+    return {"nodes": nodes, "edges": edges, "center": center,
+            "stats": {"total_nodes": len(nodes), "total_edges": len(edges), "most_connected": most}}
+
+
+def _collab_full(node_limit=150):
+    """Edge-driven selection — walk the strongest connections so the map is dense, not a cloud of disconnected hubs."""
+    idx = _collab_index()
+    ranked = [(-w, a, b) for (a, b), w in idx["adv_w"].items()]
+    ranked += [(-w, a, b) for (a, b), w in idx["opp_w"].items()]
+    ranked.sort()
+    S = set()
+    for _negw, a, b in ranked:
+        new = {a, b} - S
+        if not new:
+            continue
+        if len(S) + len(new) > node_limit:
+            if len(S) >= node_limit:
+                break
+            continue
+        S |= new
+    nodes, edges = _collab_nodes_edges(idx, S)
+    most = max(nodes, key=lambda x: x["connections"])["id"] if nodes else ""
+    return {"nodes": nodes, "edges": edges,
+            "stats": {"total_nodes": len(nodes), "total_edges": len(edges), "most_connected": most}}
+
+
+@app.route("/collaboration")
+def collaboration():
+    return render_template("collaboration.html")
+
+
+@app.route("/api/collaboration")
+def api_collaboration():
+    name = (request.args.get("name") or "").strip()
+    mode = (request.args.get("mode") or "").strip()
+    try:
+        if mode == "full":
+            return jsonify(_collab_full())
+        if name:
+            return jsonify(_collab_search(name))
+    except Exception as e:
+        return jsonify({"nodes": [], "edges": [], "stats": {}, "error": str(e)})
+    return jsonify({"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}})
+
+
+@app.route("/api/collaboration/search")
+def api_collaboration_search():
+    q = (request.args.get("q") or "").strip().lower()
+    if len(q) < 2:
+        return jsonify({"results": []})
+    idx = _collab_index()
+    adj = idx["adj"]
+    out = []
+    for n in idx["by_conn"]:
+        if q in n.lower():
+            out.append({"name": n, "connections": len(adj[n])})
+            if len(out) >= 15:
+                break
+    return jsonify({"results": out})
+
+
 def _compare_university(cur, name):
     """Aggregate comparison data for one university."""
     name = (name or "").strip()

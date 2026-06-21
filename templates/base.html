@@ -440,6 +440,7 @@
         <a href="/dashboard" class="nav-link{% if request.path == '/dashboard' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali<span id="nav-total-badge" style="display:none;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(74,158,255,0.14);color:#4a9eff;font-size:0.7rem;font-weight:700;vertical-align:middle;"></span></a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
         <a href="/trends" class="nav-link{% if request.path.startswith('/trends') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i>Trendlar</a>
+        <a href="/collaboration" class="nav-link{% if request.path.startswith('/collaboration') %} active{% endif %}"><i class="bi bi-diagram-3"></i>Hamkorlik</a>
         <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}

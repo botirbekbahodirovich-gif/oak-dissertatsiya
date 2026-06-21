@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Hamkorlik xaritasi — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.cg { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 0 0 48px; }
+.cg-hero { background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 100%); padding: 40px 0 34px; text-align: center; }
+.cg-hero h1 { font-size: 2.05rem; font-weight: 800; color: #fff; margin: 0 0 8px; }
+.cg-hero p { color: rgba(255,255,255,0.9); font-size: 1.02rem; margin: 0; }
+.cg-wrap { max-width: 1280px; margin: 0 auto; padding: 22px 20px 0; }
+
+.cg-search { display: flex; gap: 12px; flex-wrap: wrap; align-items: stretch; margin-bottom: 18px; }
+.cg-search-box { position: relative; flex: 1; min-width: 240px; }
+.cg-input { width: 100%; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-radius: 12px; padding: 13px 16px; font-size: 1rem; }
+.cg-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.cg-drop { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #1e293b; border: 1px solid #334155; border-radius: 12px; z-index: 30; overflow: hidden; display: none; box-shadow: 0 16px 40px rgba(0,0,0,0.45); max-height: 320px; overflow-y: auto; }
+.cg-drop.open { display: block; }
+.cg-drop-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; cursor: pointer; font-size: 0.9rem; color: #e2e8f0; }
+.cg-drop-item:hover { background: #243044; }
+.cg-drop-item .cnt { background: rgba(59,130,246,0.16); color: #60a5fa; font-weight: 700; font-size: 0.76rem; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.cg-full-btn { background: #162032; border: 1px solid #334155; color: #93bbfc; font-weight: 700; padding: 0 22px; border-radius: 12px; cursor: pointer; white-space: nowrap; font-size: 0.95rem; }
+.cg-full-btn:hover { border-color: #3b82f6; color: #fff; }
+
+.cg-main { display: grid; grid-template-columns: 1fr 320px; gap: 18px; }
+.cg-stage { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 16px; height: 70vh; min-height: 520px; overflow: hidden; }
+.cg-stage svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.cg-stage svg:active { cursor: grabbing; }
+.cg-placeholder, .cg-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 24px; }
+.cg-spin { width: 26px; height: 26px; border: 3px solid rgba(59,130,246,0.3); border-top-color: #3b82f6; border-radius: 50%; animation: cgspin 0.8s linear infinite; margin-bottom: 12px; }
+@keyframes cgspin { to { transform: rotate(360deg); } }
+.cg-warn { color: #fbbf24; font-size: 0.84rem; margin-top: 8px; }
+.cg-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 8px 12px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 6; max-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.cg-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; color: #475569; pointer-events: none; text-align: center; }
+
+/* info panel */
+.cg-info { position: absolute; top: 14px; right: 14px; width: 280px; max-width: calc(100% - 28px); background: #1e293b; border: 1px solid #3b82f6; border-radius: 14px; padding: 18px; z-index: 8; transform: translateX(120%); transition: transform 0.3s ease; box-shadow: 0 16px 40px rgba(0,0,0,0.5); }
+.cg-info.open { transform: translateX(0); }
+.cg-info .ip-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 1rem; cursor: pointer; }
+.cg-info h3 { font-size: 1.05rem; font-weight: 800; color: #f1f5f9; margin: 0 28px 10px 0; }
+.cg-info .ip-deg { font-size: 0.72rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; color: #fff; }
+.cg-info .ip-deg.phd { background: #059669; } .cg-info .ip-deg.dsc { background: #e36403; }
+.cg-info .ip-stats { color: #cbd5e1; font-size: 0.86rem; margin-bottom: 14px; }
+.cg-info .ip-stats b { color: #f1f5f9; }
+.cg-info .ip-sub { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
+.cg-info .ip-conn { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.cg-info .ip-conn a { color: #60a5fa; font-size: 0.86rem; text-decoration: none; }
+.cg-info .ip-conn a:hover { text-decoration: underline; }
+.cg-info .ip-actions { display: flex; flex-direction: column; gap: 8px; }
+.cg-info .ip-btn { display: block; text-align: center; background: #3b82f6; color: #fff; font-weight: 700; padding: 9px; border-radius: 10px; text-decoration: none; font-size: 0.88rem; }
+.cg-info .ip-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
+.cg-info .ip-btn.ghost { background: #162032; border: 1px solid #334155; color: #93bbfc; }
+
+/* sidebar */
+.cg-side .side-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 18px 20px; margin-bottom: 16px; }
+.cg-side h3 { font-size: 1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 12px; }
+.cg-stat-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #162032; font-size: 0.9rem; }
+.cg-stat-row:last-child { border-bottom: none; }
+.cg-stat-row .l { color: #94a3b8; } .cg-stat-row .v { color: #f1f5f9; font-weight: 700; }
+.legend-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 0.85rem; color: #cbd5e1; }
+.legend-line { width: 26px; height: 0; border-top-width: 3px; border-top-style: solid; flex-shrink: 0; }
+.legend-dot { border-radius: 50%; flex-shrink: 0; }
+
+@media (max-width: 980px) { .cg-main { grid-template-columns: 1fr; } .cg-stage { height: 56vh; } .cg-info { width: 240px; } }
+@media (max-width: 560px) { .cg-stage { height: 50vh; min-height: 380px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cg">
+  <div class="cg-hero">
+    <h1>🔗 Hamkorlik xaritasi</h1>
+    <p>Ilmiy rahbar, shogird va opponent aloqalarini vizual ko'ring</p>
+  </div>
+
+  <div class="cg-wrap">
+    <div class="cg-search">
+      <div class="cg-search-box">
+        <input class="cg-input" id="cg-search" type="text" placeholder="Olim ismini yozing..." autocomplete="off">
+        <div class="cg-drop" id="cg-drop"></div>
+      </div>
+      <button class="cg-full-btn" id="cg-full">🗺️ To'liq xarita</button>
+    </div>
+
+    <div class="cg-main">
+      <div class="cg-stage" id="cg-stage">
+        <div class="cg-placeholder" id="cg-placeholder">
+          <div style="font-size:2.6rem;margin-bottom:10px;">🔗</div>
+          <div>Olim ismini qidiring yoki "To'liq xarita"ni tanlang.</div>
+          <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Aloqalar ilmiy rahbar, shogird va opponent bog'lanishlaridan quriladi.</div>
+        </div>
+        <div class="cg-loading" id="cg-loading" style="display:none;"><div class="cg-spin"></div><div>🔗 Aloqalar qurilmoqda...</div><div class="cg-warn" id="cg-warn"></div></div>
+        <svg id="cg-svg" style="display:none;"></svg>
+        <div class="cg-tooltip" id="cg-tooltip"></div>
+        <div class="cg-info" id="cg-info"></div>
+        <div class="cg-hint">🖱️ Tugunni torting · ⚲ aylantiring · 1× bosing = ajratib ko'rsatish · 2× = profil · o'ng tugma = markazga qo'yish</div>
+      </div>
+
+      <aside class="cg-side">
+        <div class="side-card">
+          <h3>📊 Statistika</h3>
+          <div class="cg-stat-row"><span class="l">Jami olimlar</span><span class="v" id="st-nodes">—</span></div>
+          <div class="cg-stat-row"><span class="l">Jami aloqalar</span><span class="v" id="st-edges">—</span></div>
+          <div class="cg-stat-row"><span class="l">Eng ko'p aloqador</span><span class="v" id="st-most" style="font-size:0.82rem;max-width:160px;text-align:right;">—</span></div>
+        </div>
+        <div class="side-card">
+          <h3>🎨 Ranglar izohi</h3>
+          <div class="legend-row"><span class="legend-line" style="border-top-color:#3b82f6;"></span> Ilmiy rahbar → Shogird</div>
+          <div class="legend-row"><span class="legend-line" style="border-top-color:#e36403;border-top-style:dashed;"></span> Opponent aloqasi</div>
+          <div class="legend-row"><span class="legend-line" style="border-top-color:#059669;border-top-style:dotted;"></span> Akademik aka-uka</div>
+        </div>
+        <div class="side-card">
+          <h3>⬤ Tugun o'lchamlari</h3>
+          <div class="legend-row"><span class="legend-dot" style="width:22px;height:22px;background:#1e40af;"></span> Katta = ko'p aloqaga ega</div>
+          <div class="legend-row"><span class="legend-dot" style="width:11px;height:11px;background:#059669;"></span> Kichik = kam aloqa</div>
+          <div style="color:#64748b;font-size:0.8rem;margin-top:8px;line-height:1.5;">🔵 ko'k = rahbar · 🟢 yashil = shogird · 🟠 sariq = opponent</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="/static/js/collaboration.js"></script>
+<script>
+(function () {
+  var input = document.getElementById('cg-search');
+  var drop = document.getElementById('cg-drop');
+  var graph = null;
+  var debounce = null;
+
+  function setStats(s) {
+    document.getElementById('st-nodes').textContent = s.total_nodes || 0;
+    document.getElementById('st-edges').textContent = s.total_edges || 0;
+    document.getElementById('st-most').textContent = s.most_connected || '—';
+  }
+  function showState(which, warn) {
+    document.getElementById('cg-placeholder').style.display = which === 'placeholder' ? 'flex' : 'none';
+    document.getElementById('cg-loading').style.display = which === 'loading' ? 'flex' : 'none';
+    document.getElementById('cg-svg').style.display = which === 'graph' ? 'block' : 'none';
+    document.getElementById('cg-warn').textContent = warn || '';
+    if (which !== 'graph') document.getElementById('cg-info').classList.remove('open');
+  }
+  function recenter(name) { loadGraph('/api/collaboration?name=' + encodeURIComponent(name)); input.value = name; drop.classList.remove('open'); }
+  function loadGraph(url, warn) {
+    showState('loading', warn);
+    if (graph) graph.stop();
+    fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      if (!data.nodes || !data.nodes.length) {
+        showState('placeholder');
+        document.getElementById('cg-placeholder').querySelector('div:nth-child(2)').textContent = 'Aloqa topilmadi. Boshqa ism bilan urinib ko\'ring.';
+        setStats(data.stats || {});
+        return;
+      }
+      showState('graph');
+      setStats(data.stats || {});
+      graph = window.renderCollab({ svg: '#cg-svg', data: data, tooltip: '#cg-tooltip', info: 'cg-info', onRecenter: recenter });
+    }).catch(function () { showState('placeholder'); });
+  }
+
+  // search dropdown
+  input.addEventListener('input', function () {
+    clearTimeout(debounce);
+    var q = this.value.trim();
+    if (q.length < 2) { drop.classList.remove('open'); return; }
+    debounce = setTimeout(function () {
+      fetch('/api/collaboration/search?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
+        var rows = d.results || [];
+        if (!rows.length) { drop.classList.remove('open'); return; }
+        drop.innerHTML = rows.map(function (it) {
+          var nm = it.name.replace(/"/g, '&quot;');
+          return '<div class="cg-drop-item" data-name="' + nm + '"><span></span><span class="cnt">' + it.connections + ' aloqa</span></div>';
+        }).join('');
+        var items = drop.querySelectorAll('.cg-drop-item');
+        rows.forEach(function (it, i) {
+          items[i].querySelector('span').textContent = it.name;
+          items[i].addEventListener('click', function () { recenter(it.name); });
+        });
+        drop.classList.add('open');
+      });
+    }, 400);
+  });
+  document.addEventListener('click', function (e) { if (!drop.contains(e.target) && e.target !== input) drop.classList.remove('open'); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); var q = this.value.trim(); if (q) { drop.classList.remove('open'); loadGraph('/api/collaboration?name=' + encodeURIComponent(q)); } }
+  });
+
+  document.getElementById('cg-full').addEventListener('click', function () {
+    loadGraph('/api/collaboration?mode=full', 'Katta hajmdagi ma\'lumot — yuklanishi biroz vaqt olishi mumkin');
+  });
+
+  // deep-link: ?name=
+  var params = new URLSearchParams(window.location.search);
+  var pn = params.get('name');
+  if (pn) { input.value = pn; loadGraph('/api/collaboration?name=' + encodeURIComponent(pn)); }
+})();
+</script>
+{% endblock %}
