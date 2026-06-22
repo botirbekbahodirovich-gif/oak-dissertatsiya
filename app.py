@@ -2587,6 +2587,227 @@ def courses():
     return render_template("courses.html")
 
 
+# ════════════════════════════════════════════════════════════════════
+#  SEO: sitemap.xml, robots.txt, OG default image
+# ════════════════════════════════════════════════════════════════════
+SITE_BASE = "https://www.olimlar.uz"
+
+
+def _build_sitemap_xml():
+    """Build the sitemap XML string. Cached 6 hours."""
+    cached = cache.get("sitemap_xml_v1")
+    if cached is not None:
+        return cached
+    from xml.sax.saxutils import escape
+    from urllib.parse import quote
+    static_pages = [
+        ("/", "daily", "1.0"), ("/data", "daily", "0.9"),
+        ("/compare", "weekly", "0.8"), ("/stats", "weekly", "0.7"),
+        ("/trends", "weekly", "0.7"), ("/clustering", "weekly", "0.7"),
+        ("/collaboration", "weekly", "0.7"), ("/top-olimlar", "weekly", "0.7"),
+        ("/blog", "weekly", "0.6"), ("/courses", "monthly", "0.5"),
+        ("/vacancies", "weekly", "0.5"), ("/yangiliklar", "daily", "0.6"),
+        ("/about", "monthly", "0.4"), ("/heatmap", "weekly", "0.6"),
+    ]
+    top_olimlar, blog_posts = [], []
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT DISTINCT olim FROM dissertations "
+                    "WHERE olim IS NOT NULL AND TRIM(olim) <> '' ORDER BY olim LIMIT 500")
+                top_olimlar = [r[0] for r in cur.fetchall()]
+                try:
+                    cur.execute("SELECT slug FROM blog_posts WHERE is_published = TRUE")
+                    blog_posts = [r[0] for r in cur.fetchall() if r[0]]
+                except Exception:
+                    blog_posts = []
+        finally:
+            conn.close()
+    except Exception:
+        top_olimlar, blog_posts = [], []
+
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for loc, freq, pri in static_pages:
+        parts.append(
+            f"  <url><loc>{SITE_BASE}{loc}</loc>"
+            f"<changefreq>{freq}</changefreq><priority>{pri}</priority></url>")
+    for name in top_olimlar:
+        loc = f"{SITE_BASE}/olim/{quote(str(name), safe='')}"
+        parts.append(
+            f"  <url><loc>{escape(loc)}</loc>"
+            f"<changefreq>monthly</changefreq><priority>0.5</priority></url>")
+    for slug in blog_posts:
+        loc = f"{SITE_BASE}/blog/{quote(str(slug), safe='')}"
+        parts.append(
+            f"  <url><loc>{escape(loc)}</loc>"
+            f"<changefreq>monthly</changefreq><priority>0.5</priority></url>")
+    parts.append("</urlset>")
+    xml = "\n".join(parts)
+    cache.set("sitemap_xml_v1", xml, timeout=21600)
+    return xml
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    from flask import Response
+    return Response(_build_sitemap_xml(), mimetype="application/xml")
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    from flask import Response
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin/\n"
+        "Disallow: /cabinet/\n"
+        "Disallow: /api/\n"
+        "Disallow: /login\n"
+        "Disallow: /register\n"
+        "Disallow: /notifications\n"
+        "\n"
+        f"Sitemap: {SITE_BASE}/sitemap.xml\n"
+    )
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/static/og-default.png")
+def og_default_image():
+    """Branded placeholder OG image (SVG). Replace with a real PNG later."""
+    from flask import Response
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">'
+        '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">'
+        '<stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#1e3a8a"/>'
+        '</linearGradient></defs>'
+        '<rect width="1200" height="630" fill="url(#g)"/>'
+        '<text x="600" y="300" fill="#ffffff" font-family="Inter,Arial,sans-serif" '
+        'font-size="92" font-weight="800" text-anchor="middle">Olimlar.uz</text>'
+        '<text x="600" y="380" fill="#93c5fd" font-family="Inter,Arial,sans-serif" '
+        'font-size="38" text-anchor="middle">Ilmiy-tadqiqot ma\'lumotlar bazasi</text>'
+        '</svg>'
+    )
+    return Response(svg, mimetype="image/svg+xml")
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Research Heatmap — regional research activity map
+# ════════════════════════════════════════════════════════════════════
+UZ_REGIONS = {
+    'Toshkent': ['Toshkent', 'Ташкент', 'ТАТУ', 'ТДЮУ', 'ТошДТУ', 'ТошДУ', 'ТГПУ', 'ТГЭУ', 'ТДШИ', 'ЎзМУ', 'НУУз'],
+    'Samarqand': ['Самарканд', 'Самарқанд', 'Samarqand', 'СамДУ', 'СамГУ', 'СамМИ'],
+    'Buxoro': ['Бухар', 'Бухоро', 'Buxoro', 'БухДУ', 'БухГУ'],
+    "Farg'ona": ['Фарган', 'Фарғона', 'Fargona', 'ФарДУ', 'ФарГУ', 'ФарПИ'],
+    'Andijon': ['Андижан', 'Андижон', 'Andijon', 'АндДУ', 'АндГУ', 'АндМИ'],
+    'Namangan': ['Наманган', 'Namangan', 'НамДУ', 'НамМИ'],
+    'Navoiy': ['Навои', 'Навоий', 'Navoiy', 'НавДУ'],
+    'Qashqadaryo': ['Қашқадарё', 'Кашкадар', 'Qashqadaryo', 'Карши', 'Қарши', 'Qarshi'],
+    'Surxondaryo': ['Сурхандар', 'Сурхондар', 'Surxondaryo', 'Термез', 'Термиз', 'Termiz'],
+    'Jizzax': ['Жиззах', 'Jizzax', 'ЖизДПИ'],
+    'Sirdaryo': ['Сырдар', 'Сирдар', 'Sirdaryo', 'Гулистан', 'Гулистон', 'Guliston'],
+    'Xorazm': ['Хорезм', 'Хоразм', 'Xorazm', 'Урганч', 'Ургенч', 'Urgench'],
+    "Qoraqalpog'iston": ['Каракалпак', 'Қорақалпоғ', 'Qoraqalpog', 'Нукус', 'Nukus'],
+}
+
+
+def detect_region(muassasa):
+    if not muassasa:
+        return 'Toshkent'
+    ml = muassasa.lower()
+    for region, keywords in UZ_REGIONS.items():
+        for kw in keywords:
+            if kw.lower() in ml:
+                return region
+    return 'Toshkent'
+
+
+def _compute_heatmap_data():
+    """Aggregate dissertations by detected region. Cached 6 hours."""
+    cached = cache.get("heatmap_data_v1")
+    if cached is not None:
+        return cached
+    import re as _re
+    region_names = list(UZ_REGIONS.keys())
+    regions = {r: {"total": 0, "phd": 0, "dsc": 0, "specialties": {}, "years": {}}
+               for r in region_names}
+    uni_stats = {}
+    total = 0
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT muassasa, daraja, ixtisoslik, sana FROM dissertations "
+                    "WHERE muassasa IS NOT NULL AND TRIM(muassasa) <> ''")
+                for muassasa, daraja, ixtisoslik, sana in cur.fetchall():
+                    region = detect_region(muassasa)
+                    R = regions[region]
+                    R["total"] += 1
+                    total += 1
+                    dl = (daraja or "").upper()
+                    dlow = (daraja or "").lower()
+                    is_phd = ("PHD" in dl or "фан" in dlow)
+                    is_dsc = ("DSC" in dl or "док" in dlow)
+                    if is_phd:
+                        R["phd"] += 1
+                    elif is_dsc:
+                        R["dsc"] += 1
+                    uni = (muassasa or "").strip()
+                    us = uni_stats.setdefault(
+                        uni, {"name": uni, "count": 0, "phd": 0, "dsc": 0, "region": region})
+                    us["count"] += 1
+                    if is_phd:
+                        us["phd"] += 1
+                    elif is_dsc:
+                        us["dsc"] += 1
+                    ix = (ixtisoslik or "").strip()
+                    if ix:
+                        R["specialties"][ix] = R["specialties"].get(ix, 0) + 1
+                    m = _re.search(r"(19|20)\d{2}", sana or "")
+                    if m:
+                        yr = m.group(0)
+                        R["years"][yr] = R["years"].get(yr, 0) + 1
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    region_unis = {r: [] for r in region_names}
+    for us in uni_stats.values():
+        region_unis.get(us["region"], []).append(us)
+
+    out_regions = []
+    for r in region_names:
+        R = regions[r]
+        unis = sorted(region_unis[r], key=lambda x: -x["count"])
+        specs = sorted(R["specialties"].items(), key=lambda x: -x[1])
+        years = sorted(R["years"].items())
+        out_regions.append({
+            "name": r, "total": R["total"], "phd": R["phd"], "dsc": R["dsc"],
+            "uni_count": len(unis),
+            "top_universities": [{"name": u["name"], "count": u["count"]} for u in unis[:5]],
+            "top_specialties": [{"name": n, "count": c} for n, c in specs[:5]],
+            "years": [{"year": y, "count": c} for y, c in years],
+        })
+    out_regions.sort(key=lambda x: -x["total"])
+    top_universities = sorted(uni_stats.values(), key=lambda x: -x["count"])[:20]
+    result = {"regions": out_regions, "total": total, "top_universities": top_universities}
+    cache.set("heatmap_data_v1", result, timeout=21600)
+    return result
+
+
+@app.route("/heatmap")
+def heatmap():
+    data = _compute_heatmap_data()
+    return render_template("heatmap.html", regions=data["regions"],
+                           total=data["total"], top_universities=data["top_universities"])
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     app.run(host="0.0.0.0", port=port, debug=False)

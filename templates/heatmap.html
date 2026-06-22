@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Tadqiqot xaritasi — Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston viloyatlari bo'yicha ilmiy-tadqiqot faoliyati xaritasi. Dissertatsiyalar zichligi, universitetlar, ixtisosliklar.{% endblock %}
+{% block og_title %}🗺️ Tadqiqot xaritasi — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .hm-wrap { max-width: 1150px; margin: 0 auto; padding: 8px 0 40px; }
+  .hm-head { text-align: center; margin-bottom: 1.75rem; }
+  .hm-head h1 { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
+  .hm-head p { color: #94a3b8; font-size: 1rem; margin: 0; }
+
+  .hm-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+  .hm-card h2 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 16px; }
+
+  .hm-map-area { position: relative; }
+  #uz-map { width: 100%; max-height: 520px; display: block; }
+  #uz-map path { transition: filter 0.15s; }
+  #uz-map path:hover { filter: brightness(1.25); }
+  #uz-map text { fill: #e2e8f0; font-size: 13px; font-weight: 600; pointer-events: none; text-anchor: middle; }
+
+  #map-tooltip {
+    position: fixed; z-index: 50; pointer-events: none; display: none;
+    background: #0f172a; border: 1px solid #475569; border-radius: 8px;
+    padding: 8px 12px; font-size: 0.85rem; color: #f1f5f9; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  #map-tooltip b { color: #60a5fa; }
+
+  .hm-legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: 12px; }
+  .hm-legend .lg { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; color: #94a3b8; }
+  .hm-legend .sw { width: 16px; height: 16px; border-radius: 4px; }
+
+  #region-detail { display: none; }
+  .rd-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px; }
+  .rd-name { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; }
+  .rd-total { color: #60a5fa; font-weight: 700; font-size: 1.05rem; }
+  .rd-split { color: #94a3b8; margin: 4px 0 14px; font-size: 0.92rem; }
+  .rd-split b.phd { color: #34d399; } .rd-split b.dsc { color: #f59e0b; }
+  .rd-list { list-style: none; padding: 0; margin: 0; }
+  .rd-list h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0 0 8px; }
+  .rd-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.86rem; color: #cbd5e1; padding: 4px 0; border-bottom: 1px solid #28344a; }
+  .rd-list li span:last-child { color: #60a5fa; font-weight: 700; }
+  .rd-spark { margin-top: 10px; }
+
+  table.hm-table { width: 100%; border-collapse: collapse; }
+  table.hm-table th { text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; padding: 8px 10px; border-bottom: 1px solid #334155; }
+  table.hm-table td { padding: 9px 10px; font-size: 0.88rem; color: #e2e8f0; border-bottom: 1px solid #28344a; vertical-align: middle; }
+  .hm-bar-cell { min-width: 180px; }
+  .hm-bar-track { background: #162032; border-radius: 6px; height: 22px; position: relative; overflow: hidden; }
+  .hm-bar-fill { background: linear-gradient(90deg, #2563eb, #60a5fa); height: 100%; border-radius: 6px; min-width: 2px; }
+  .hm-bar-pct { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.76rem; color: #cbd5e1; font-weight: 600; }
+  .hm-rank { color: #64748b; font-weight: 700; }
+  .num-phd { color: #34d399; font-weight: 700; } .num-dsc { color: #f59e0b; font-weight: 700; }
+
+  .uni-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .uni-card { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+  .uni-card .un { font-weight: 700; color: #f1f5f9; font-size: 0.92rem; margin-bottom: 8px; line-height: 1.35; }
+  .uni-card .meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .reg-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(59,130,246,0.18); color: #93c5fd; }
+  .uni-card .cnt { color: #60a5fa; font-weight: 800; }
+  .uni-card .sp { font-size: 0.78rem; color: #94a3b8; }
+
+  @media (max-width: 820px) {
+    .rd-grid { grid-template-columns: 1fr; }
+    .uni-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hm-wrap">
+  <div class="hm-head">
+    <h1>🗺️ Tadqiqot xaritasi</h1>
+    <p>Viloyatlar bo'yicha ilmiy-tadqiqot faoliyati</p>
+  </div>
+
+  <!-- SECTION 2: MAP -->
+  <div class="hm-card">
+    <div class="hm-map-area">
+      <svg id="uz-map" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="hm-legend">
+      <span class="lg"><span class="sw" style="background:#1e3a5f"></span> &lt; 100</span>
+      <span class="lg"><span class="sw" style="background:#2563eb"></span> 100–500</span>
+      <span class="lg"><span class="sw" style="background:#3b82f6"></span> 500–2000</span>
+      <span class="lg"><span class="sw" style="background:#60a5fa"></span> 2000+</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3: REGION DETAIL (on click) -->
+  <div class="hm-card" id="region-detail">
+    <div class="rd-grid">
+      <div>
+        <h3 class="rd-name" id="rd-name">—</h3>
+        <div class="rd-total"><span id="rd-total">0</span> ta dissertatsiya</div>
+        <div class="rd-split">PhD: <b class="phd" id="rd-phd">0</b> &nbsp;|&nbsp; DSc: <b class="dsc" id="rd-dsc">0</b></div>
+        <div class="rd-spark"><canvas id="region-spark" height="120"></canvas></div>
+      </div>
+      <div>
+        <ul class="rd-list">
+          <h4>Top universitetlar</h4>
+          <div id="rd-unis"></div>
+        </ul>
+      </div>
+      <div>
+        <ul class="rd-list">
+          <h4>Top ixtisosliklar</h4>
+          <div id="rd-specs"></div>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: RANKING TABLE -->
+  <div class="hm-card">
+    <h2>Viloyatlar reytingi</h2>
+    <table class="hm-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Viloyat</th><th class="hm-bar-cell">Dissertatsiyalar</th>
+          <th>PhD</th><th>DSc</th><th>Universitetlar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set max_total = (regions|map(attribute='total')|max) if regions else 1 %}
+        {% for r in regions %}
+        <tr>
+          <td class="hm-rank">{{ loop.index }}</td>
+          <td>{{ r.name }}</td>
+          <td class="hm-bar-cell">
+            <div class="hm-bar-track">
+              <div class="hm-bar-fill" style="width: {{ ((r.total / max_total * 100) if max_total else 0)|round(1) }}%;"></div>
+              <span class="hm-bar-pct">{{ r.total }} ({{ ((r.total / total * 100) if total else 0)|round(1) }}%)</span>
+            </div>
+          </td>
+          <td class="num-phd">{{ r.phd }}</td>
+          <td class="num-dsc">{{ r.dsc }}</td>
+          <td>{{ r.uni_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 5: TOP UNIVERSITIES -->
+  <div class="hm-card">
+    <h2>Top 20 universitet</h2>
+    <div class="uni-grid">
+      {% for u in top_universities %}
+      <div class="uni-card">
+        <div class="un">{{ u.name }}</div>
+        <div class="meta">
+          <span class="reg-badge">{{ u.region }}</span>
+          <span class="cnt">{{ u.count }}</span>
+          <span class="sp">PhD {{ u.phd }} · DSc {{ u.dsc }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div id="map-tooltip"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.HEATMAP_DATA = {{ regions|tojson }};</script>
+<script src="/static/js/heatmap.js"></script>
+{% endblock %}

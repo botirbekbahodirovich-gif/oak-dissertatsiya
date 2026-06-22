@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ olim_name }} — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ olim_name }} — ilmiy profil. {{ dissertations|length }} ta dissertatsiya, {{ shogirdlar|length }} ta shogird. Olimlar.uz{% endblock %}
+{% block og_title %}{{ olim_name }} — Olimlar.uz{% endblock %}
 
 {% block extra_head %}
 <style>
