@@ -3,8 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Olimlar.uz — dissertatsiya bazasi" />
   <title>{% block title %}Olimlar.uz{% endblock %}</title>
+  {% block meta %}
+  <meta name="description" content="{% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 27,000+ dissertatsiya, tadqiqotchi profillari, AI mavzu tahlili.{% endblock %}">
+  <meta name="keywords" content="{% block meta_keywords %}dissertatsiya, olimlar, PhD, DSc, OAK, ilmiy tadqiqot, O'zbekiston, ilmiy rahbar, avtoreferat, himoya{% endblock %}">
+  <meta name="author" content="Olimlar.uz">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="{{ request.url }}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+  <meta property="og:description" content="{{ self.meta_description() }}">
+  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:site_name" content="Olimlar.uz">
+  <meta property="og:image" content="{% block og_image %}https://www.olimlar.uz/static/og-default.png{% endblock %}">
+  <meta property="og:locale" content="uz_UZ">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ self.og_title() }}">
+  <meta name="twitter:description" content="{{ self.meta_description() }}">
+  <meta name="twitter:image" content="{{ self.og_image() }}">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Olimlar.uz",
+    "url": "https://www.olimlar.uz",
+    "description": "O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://www.olimlar.uz/data?q={search_term}",
+      "query-input": "required name=search_term"
+    }
+  }
+  </script>
+  {% endblock %}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -441,6 +478,8 @@
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
         <a href="/trends" class="nav-link{% if request.path.startswith('/trends') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i>Trendlar</a>
         <a href="/collaboration" class="nav-link{% if request.path.startswith('/collaboration') %} active{% endif %}"><i class="bi bi-diagram-3"></i>Hamkorlik</a>
+        <a href="/clustering" class="nav-link{% if request.path.startswith('/clustering') %} active{% endif %}"><i class="bi bi-grid-1x2"></i>Klasterlar</a>
+        <a href="/heatmap" class="nav-link{% if request.path.startswith('/heatmap') %} active{% endif %}"><i class="bi bi-geo-alt-fill"></i>Xarita</a>
         <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}

@@ -1017,6 +1017,200 @@ def api_collaboration_search():
     return jsonify({"results": out})
 
 
+# ── Topic clustering (keyword-based grouping of dissertation topics) ────────
+_IXT_GROUPS = {  # ixtisoslik prefix -> (group key, color)
+    "13": ("education", "#059669"), "05": ("technical", "#3b82f6"),
+    "14": ("medical", "#ef4444"), "08": ("economics", "#f59e0b"),
+    "12": ("law", "#8b5cf6"),
+}
+
+
+def _ixt_group(code):
+    pre = (code or "")[:2]
+    return _IXT_GROUPS.get(pre, ("other", "#64748b"))
+
+
+def _cluster_trend(year_counts):
+    yrs = sorted(year_counts.keys())
+    if len(yrs) < 4:
+        return "stable"
+    recent = sum(year_counts[y] for y in yrs[-2:])
+    prev = sum(year_counts[y] for y in yrs[-4:-2]) or 0
+    if recent > prev * 1.2:
+        return "growing"
+    if recent < prev * 0.8:
+        return "declining"
+    return "stable"
+
+
+def _clustering_build():
+    """Keyword-based clustering of dissertation topics. Cached 1 hour."""
+    cached = cache.get("clustering_v1")
+    if cached is not None:
+        return cached
+    import re
+    from collections import Counter, defaultdict
+    from itertools import combinations
+    from data import get_connection
+
+    yre = re.compile(r'(19|20)\d{2}')
+    docs = []
+    kw_docs = defaultdict(set)
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, mavzu, ixtisoslik, daraja, olim, sana, ilmiy_rahbar "
+                    "FROM dissertations WHERE mavzu IS NOT NULL AND TRIM(mavzu) <> ''")
+                for did, mavzu, ixt, daraja, olim, sana, rahbar in cur.fetchall():
+                    kws = set(_extract_keywords(mavzu or ""))
+                    ym = yre.search(sana or "")
+                    docs.append({
+                        "id": did, "mavzu": (mavzu or "").strip(), "ixtisoslik": (ixt or "").strip(),
+                        "daraja": (daraja or "").strip(), "olim": (olim or "").strip(),
+                        "sana": (sana or "").strip(), "rahbar": (rahbar or "").strip(),
+                        "year": int(ym.group(0)) if ym else None, "kws": kws,
+                    })
+                    i = len(docs) - 1
+                    for kw in kws:
+                        kw_docs[kw].add(i)
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    if not docs:
+        empty = {"clusters": [], "total_clusters": 0, "clustered": 0, "unclustered": 0, "total": 0}
+        cache.set("clustering_v1", empty, 3600)
+        return empty
+
+    sig = {kw for kw, s in kw_docs.items() if len(s) >= 15}
+    pair_co = Counter()
+    for d in docs:
+        sk = sorted(kw for kw in d["kws"] if kw in sig)
+        for a, b in combinations(sk, 2):
+            pair_co[(a, b)] += 1
+
+    assigned = [False] * len(docs)
+    clusters = []
+    for (k1, k2), _co in pair_co.most_common(200):
+        if len(clusters) >= 30:
+            break
+        members = [i for i in (kw_docs[k1] & kw_docs[k2]) if not assigned[i]]
+        if len(members) < 8:
+            continue
+        for i in members:
+            assigned[i] = True
+        members.sort(key=lambda i: -(docs[i]["year"] or 0))
+        kc = Counter()
+        adv = Counter()
+        grp = Counter()
+        yc = Counter()
+        phd = dsc = 0
+        for i in members:
+            d = docs[i]
+            for kw in d["kws"]:
+                if kw in sig:
+                    kc[kw] += 1
+            if d["rahbar"]:
+                adv[d["rahbar"]] += 1
+            for code in (d["ixtisoslik"] or "").replace(",", " ").split():
+                grp[_ixt_group(code)[0]] += 1
+            if d["year"]:
+                yc[d["year"]] += 1
+            up = d["daraja"].upper()
+            if "DSC" in up:
+                dsc += 1
+            elif "PHD" in up:
+                phd += 1
+        top_kw = [k for k, _ in kc.most_common(4)]
+        title = " · ".join(w.capitalize() for w in top_kw[:3]) or "Klaster"
+        group = grp.most_common(1)[0][0] if grp else "other"
+        color = next((c for g, c in _IXT_GROUPS.values() if g == group), "#64748b")
+        years = sorted(y for y in yc)
+        yr_range = f"{years[0]}-{years[-1]}" if years else "—"
+        full_members = [{
+            "id": docs[i]["id"], "mavzu": docs[i]["mavzu"], "olim": docs[i]["olim"],
+            "daraja": docs[i]["daraja"], "sana": docs[i]["sana"],
+            "ixtisoslik": docs[i]["ixtisoslik"], "rahbar": docs[i]["rahbar"],
+        } for i in members]
+        clusters.append({
+            "id": len(clusters) + 1, "title": title, "keywords": top_kw,
+            "count": len(members), "dissertations": full_members[:50],
+            "_members": full_members, "top_advisors": [a for a, _ in adv.most_common(2)],
+            "year_range": yr_range, "trend": _cluster_trend(yc),
+            "group": group, "color": color, "phd": phd, "dsc": dsc,
+            "year_counts": {str(y): yc[y] for y in years},
+        })
+
+    clusters.sort(key=lambda c: -c["count"])
+    for n, c in enumerate(clusters, 1):
+        c["id"] = n
+    clustered = sum(1 for a in assigned if a)
+    result = {
+        "clusters": clusters, "total_clusters": len(clusters),
+        "clustered": clustered, "unclustered": len(docs) - clustered, "total": len(docs),
+    }
+    cache.set("clustering_v1", result, 3600)
+    return result
+
+
+def _clustering_public(data):
+    """Strip heavy `_members` for the page/API payload."""
+    out = {k: v for k, v in data.items() if k != "clusters"}
+    out["clusters"] = [{k: v for k, v in c.items() if k != "_members"} for c in data["clusters"]]
+    return out
+
+
+@app.route("/clustering")
+def topic_clustering():
+    data = _clustering_build()
+    biggest = data["clusters"][0] if data["clusters"] else None
+    return render_template("clustering.html", summary={
+        "total_clusters": data["total_clusters"], "clustered": data["clustered"],
+        "unclustered": data["unclustered"], "total": data["total"],
+        "biggest_title": biggest["title"] if biggest else "—",
+        "biggest_count": biggest["count"] if biggest else 0,
+    })
+
+
+@app.route("/api/clustering")
+def api_clustering():
+    try:
+        return jsonify(_clustering_public(_clustering_build()))
+    except Exception as e:
+        return jsonify({"clusters": [], "total_clusters": 0, "clustered": 0,
+                        "unclustered": 0, "total": 0, "error": str(e)})
+
+
+@app.route("/clustering/<int:cluster_id>")
+def cluster_detail(cluster_id):
+    data = _clustering_build()
+    cluster = next((c for c in data["clusters"] if c["id"] == cluster_id), None)
+    if not cluster:
+        abort(404)
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 25
+    members = cluster.get("_members", [])
+    total = len(members)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    rows = members[(page - 1) * per_page: page * per_page]
+    kwset = set(cluster["keywords"])
+    related = sorted(
+        ((len(kwset & set(c["keywords"])), c) for c in data["clusters"] if c["id"] != cluster_id),
+        key=lambda t: -t[0])
+    related = [c for n, c in related if n > 0][:3]
+    related = [{"id": c["id"], "title": c["title"], "count": c["count"], "keywords": c["keywords"]} for c in related]
+    return render_template("cluster_detail.html",
+                           cluster={k: v for k, v in cluster.items() if k != "_members"},
+                           rows=rows, page=page, total_pages=total_pages, total=total,
+                           related=related)
+
+
 def _compare_university(cur, name):
     """Aggregate comparison data for one university."""
     name = (name or "").strip()

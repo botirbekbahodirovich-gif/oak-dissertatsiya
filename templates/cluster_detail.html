@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ cluster.title }} — Klaster{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.cd { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 28px 0 56px; }
+.cd-wrap { max-width: 960px; margin: 0 auto; padding: 0 22px; }
+.cd-back { display: inline-flex; align-items: center; gap: 6px; color: #60a5fa; text-decoration: none; font-size: 0.9rem; margin-bottom: 18px; }
+.cd-back:hover { text-decoration: underline; }
+.cd h1 { font-size: 1.9rem; font-weight: 800; color: #f1f5f9; line-height: 1.25; margin: 0 0 14px; }
+.cd-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.cd-tag { background: rgba(59,130,246,0.15); color: #60a5fa; font-size: 0.84rem; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+.cd-stats { display: flex; flex-wrap: wrap; gap: 10px 22px; color: #94a3b8; font-size: 0.92rem; margin-bottom: 22px; }
+.cd-stats b { color: #f1f5f9; }
+.cd-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 22px; }
+.cd-card h3 { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 14px; }
+.cd-diss { padding: 14px 0; border-bottom: 1px solid #162032; }
+.cd-diss:last-child { border-bottom: none; }
+.cd-diss .dm { color: #e2e8f0; font-size: 0.96rem; line-height: 1.5; font-weight: 600; }
+.cd-diss .ds { display: flex; flex-wrap: wrap; gap: 6px 16px; color: #94a3b8; font-size: 0.84rem; margin-top: 6px; align-items: center; }
+.cd-diss .ds a { color: #60a5fa; text-decoration: none; } .cd-diss .ds a:hover { text-decoration: underline; }
+.deg { font-size: 0.7rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: #fff; }
+.deg.phd { background: #059669; } .deg.dsc { background: #e36403; } .deg.other { background: #64748b; }
+.sup-badge { background: #1e3a5f; color: #60a5fa; font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 4px; text-decoration: none; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px; }
+.pager a, .pager span { padding: 8px 16px; border-radius: 10px; border: 1px solid #334155; background: #1e293b; color: #93bbfc; font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.pager a:hover { background: #3b82f6; color: #fff; border-color: #3b82f6; text-decoration: none; }
+.pager .cur { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.pager .disabled { color: #475569; pointer-events: none; }
+.rel-card { display: block; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; text-decoration: none; }
+.rel-card:hover { border-color: #3b82f6; }
+.rel-card .rt { color: #93bbfc; font-weight: 700; font-size: 0.96rem; }
+.rel-card .rm { color: #94a3b8; font-size: 0.82rem; margin-top: 3px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cd">
+  <div class="cd-wrap">
+    <a class="cd-back" href="/clustering">← Barcha klasterlar</a>
+    <h1>🧩 {{ cluster.title }}</h1>
+    <div class="cd-tags">{% for k in cluster.keywords %}<span class="cd-tag">{{ k }}</span>{% endfor %}</div>
+    <div class="cd-stats">
+      <span><b>{{ cluster.count }}</b> ta dissertatsiya</span>
+      <span>📅 <b>{{ cluster.year_range }}</b></span>
+      <span>Trend: <b>{% if cluster.trend == 'growing' %}📈 O'smoqda{% elif cluster.trend == 'declining' %}📉 Kamaymoqda{% else %}➡️ Barqaror{% endif %}</b></span>
+      <span><b style="color:#34d399;">{{ cluster.phd }}</b> PhD · <b style="color:#fb923c;">{{ cluster.dsc }}</b> DSc</span>
+    </div>
+
+    {% if cluster.year_counts %}
+    <div class="cd-card">
+      <h3>📊 Yillar bo'yicha taqsimot</h3>
+      <div style="height:240px;"><canvas id="yearChart"></canvas></div>
+    </div>
+    {% endif %}
+
+    <div class="cd-card">
+      <h3>📄 Dissertatsiyalar</h3>
+      {% for d in rows %}
+      <div class="cd-diss">
+        <div class="dm">{{ d.mavzu }}</div>
+        <div class="ds">
+          {% set dl = (d.daraja or '')|upper %}
+          <span class="deg {{ 'dsc' if 'DSC' in dl else 'phd' if 'PHD' in dl else 'other' }}">{{ 'DSc' if 'DSC' in dl else 'PhD' if 'PHD' in dl else (d.daraja or '—') }}</span>
+          {% if d.olim %}<a href="/olim/{{ d.olim|urlencode }}">👤 {{ d.olim }}</a>{% endif %}
+          {% if d.sana %}<span>📅 {{ d.sana }}</span>{% endif %}
+          {% if d.ixtisoslik %}<a href="/specialization/{{ d.ixtisoslik|urlencode }}">📎 {{ d.ixtisoslik }}</a>{% endif %}
+          {% if d.rahbar %}<span>👨‍🏫 <a href="/olim/{{ d.rahbar|urlencode }}">{{ d.rahbar }}</a><a class="sup-badge" href="/olim/{{ d.rahbar|urlencode }}" title="Shogird">{{ supervisor_count(d.rahbar) }} 👨‍🎓</a></span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if total_pages > 1 %}
+      <div class="pager">
+        {% if page > 1 %}<a href="/clustering/{{ cluster.id }}?page={{ page - 1 }}">← Oldingi</a>{% else %}<span class="disabled">← Oldingi</span>{% endif %}
+        <span class="cur">{{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}<a href="/clustering/{{ cluster.id }}?page={{ page + 1 }}">Keyingi →</a>{% else %}<span class="disabled">Keyingi →</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if related %}
+    <div class="cd-card">
+      <h3>🔗 O'xshash klasterlar</h3>
+      {% for r in related %}
+      <a class="rel-card" href="/clustering/{{ r.id }}">
+        <div class="rt">{{ r.title }}</div>
+        <div class="rm">{{ r.count }} ta dissertatsiya · {{ r.keywords[:3]|join(', ') }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if cluster.year_counts %}
+<script>
+(function () {
+  var yc = {{ cluster.year_counts|tojson }};
+  var years = Object.keys(yc).sort();
+  Chart.defaults.color = '#94a3b8';
+  new Chart(document.getElementById('yearChart'), {
+    type: 'bar',
+    data: { labels: years, datasets: [{ label: 'Dissertatsiyalar', data: years.map(function (y) { return yc[y]; }), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 } },
+      scales: { x: { grid: { display: false } }, y: { grid: { color: '#1e293b' }, beginAtZero: true } } }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

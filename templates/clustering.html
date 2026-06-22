@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Mavzular klasterlari — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.cl { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 0 0 56px; }
+.cl-hero { background: linear-gradient(135deg, #6d28d9 0%, #3b82f6 100%); padding: 40px 0 34px; text-align: center; }
+.cl-hero h1 { font-size: 2.05rem; font-weight: 800; color: #fff; margin: 0 0 8px; }
+.cl-hero p { color: rgba(255,255,255,0.9); font-size: 1.02rem; margin: 0; }
+.cl-wrap { max-width: 1240px; margin: 0 auto; padding: 22px 22px 0; }
+
+/* filter bar */
+.cl-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+.cl-toggle { display: flex; background: #1e293b; border: 1px solid #334155; border-radius: 10px; overflow: hidden; }
+.cl-toggle button { background: none; border: none; color: #94a3b8; padding: 9px 14px; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+.cl-toggle button.active { background: #3b82f6; color: #fff; }
+.cl-sel, .cl-search { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 9px 13px; font-size: 0.88rem; }
+.cl-search { flex: 1; min-width: 180px; }
+.cl-sel:focus, .cl-search:focus { outline: none; border-color: #3b82f6; }
+
+/* stats */
+.cl-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.cl-stat { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px 18px; }
+.cl-stat .l { color: #94a3b8; font-size: 0.8rem; } .cl-stat .v { color: #f1f5f9; font-size: 1.5rem; font-weight: 800; margin-top: 3px; }
+.cl-stat .v.sm { font-size: 1rem; }
+
+/* cards */
+.cl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.cc { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+.cc:hover { transform: translateY(-3px); border-color: #475569; box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+.cc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.cc-num { background: #162032; color: #94a3b8; font-weight: 800; font-size: 0.78rem; padding: 3px 10px; border-radius: 8px; }
+.cc-trend { font-size: 1.1rem; }
+.cc h3 { font-size: 1.08rem; font-weight: 800; color: #f1f5f9; line-height: 1.35; margin: 0 0 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.7em; }
+.cc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cc-tag { background: rgba(59,130,246,0.15); color: #60a5fa; font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
+.cc-count { font-size: 1.6rem; font-weight: 800; color: #60a5fa; }
+.cc-count span { font-size: 0.82rem; color: #94a3b8; font-weight: 600; }
+.cc-meta { font-size: 0.82rem; color: #94a3b8; margin-top: 4px; }
+.cc-ratio { height: 7px; border-radius: 999px; overflow: hidden; background: #162032; display: flex; margin: 12px 0; }
+.cc-ratio .phd { background: #059669; } .cc-ratio .dsc { background: #e36403; }
+.cc-bot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cc-adv { font-size: 0.8rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-more { background: #162032; border: 1px solid #334155; color: #93bbfc; font-size: 0.8rem; font-weight: 700; padding: 6px 14px; border-radius: 9px; cursor: pointer; white-space: nowrap; text-decoration: none; }
+.cc-more:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+.cc-expand { display: none; margin-top: 14px; border-top: 1px solid #334155; padding-top: 12px; }
+.cc-expand.open { display: block; }
+.cc-diss { padding: 8px 0; border-bottom: 1px solid #162032; font-size: 0.85rem; }
+.cc-diss:last-child { border-bottom: none; }
+.cc-diss .dm { color: #cbd5e1; line-height: 1.4; }
+.cc-diss .ds { color: #94a3b8; font-size: 0.78rem; margin-top: 3px; }
+.cc-diss a { color: #60a5fa; text-decoration: none; } .cc-diss a:hover { text-decoration: underline; }
+.deg { font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; color: #fff; }
+.deg.phd { background: #059669; } .deg.dsc { background: #e36403; } .deg.other { background: #64748b; }
+
+/* bubble */
+#cl-bubble { width: 100%; height: 600px; }
+#cl-bubble svg { width: 100%; height: 100%; }
+.bubble-tip { position: fixed; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 8px 12px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 20; max-width: 280px; }
+
+/* table */
+.cl-table-wrap { border: 1px solid #334155; border-radius: 14px; overflow: hidden; }
+.cl-table { width: 100%; border-collapse: collapse; }
+.cl-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; padding: 10px 12px; text-align: left; cursor: pointer; white-space: nowrap; }
+.cl-table td { padding: 10px 12px; font-size: 0.86rem; color: #e2e8f0; border-top: 1px solid #334155; }
+.cl-table tbody tr:hover td { background: #243044; cursor: pointer; }
+
+.cl-view { display: none; } .cl-view.active { display: block; }
+.cl-empty { text-align: center; color: #94a3b8; padding: 4rem; }
+@media (max-width: 980px) { .cl-grid { grid-template-columns: repeat(2, 1fr); } .cl-stats { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .cl-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cl">
+  <div class="cl-hero">
+    <h1>🧩 Mavzular klasterlari</h1>
+    <p>Dissertatsiya mavzulari o'xshashlik bo'yicha guruhlangan — o'xshash tadqiqotlarni toping</p>
+  </div>
+  <div class="cl-wrap">
+
+    <div class="cl-stats">
+      <div class="cl-stat"><div class="l">🧩 Jami klasterlar</div><div class="v">{{ summary.total_clusters }}</div></div>
+      <div class="cl-stat"><div class="l">📄 Klasterlangan</div><div class="v">{{ summary.clustered }} <span style="font-size:0.9rem;color:#64748b;">({{ (summary.clustered / summary.total * 100)|round|int if summary.total else 0 }}%)</span></div></div>
+      <div class="cl-stat"><div class="l">❓ Klasterlanmagan</div><div class="v">{{ summary.unclustered }}</div></div>
+      <div class="cl-stat"><div class="l">🏆 Eng katta</div><div class="v sm">{{ summary.biggest_title }} <span style="color:#60a5fa;">({{ summary.biggest_count }})</span></div></div>
+    </div>
+
+    <div class="cl-bar">
+      <div class="cl-toggle">
+        <button data-view="cards" class="active">🗂️ Kartalar</button>
+        <button data-view="bubble">🔵 Bubble</button>
+        <button data-view="table">📊 Jadval</button>
+      </div>
+      <select class="cl-sel" id="cl-sort">
+        <option value="size">Eng katta</option>
+        <option value="new">Eng yangi</option>
+        <option value="growth">O'sish bo'yicha</option>
+      </select>
+      <input class="cl-search" id="cl-q" type="text" placeholder="Klaster qidirish (kalit so'z)...">
+    </div>
+
+    <div class="cl-view active" id="view-cards"><div class="cl-grid" id="cards-grid"></div></div>
+    <div class="cl-view" id="view-bubble"><div id="cl-bubble"></div></div>
+    <div class="cl-view" id="view-table">
+      <div class="cl-table-wrap"><table class="cl-table"><thead><tr>
+        <th data-k="id">#</th><th data-k="title">Klaster nomi</th><th data-k="count">Mavzular</th>
+        <th>Kalit so'zlar</th><th>Yillar</th><th>Trend</th><th>PhD/DSc</th>
+      </tr></thead><tbody id="table-body"></tbody></table></div>
+    </div>
+
+    <div class="cl-empty" id="cl-loading">🧩 Klasterlar yuklanmoqda...</div>
+  </div>
+</div>
+<div class="bubble-tip" id="bubble-tip"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+(function () {
+  var ALL = [], shown = [], bubbleDrawn = false;
+  function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function trendIcon(t) { return t === 'growing' ? '📈' : t === 'declining' ? '📉' : '➡️'; }
+  function degClass(d) { d = (d || '').toUpperCase(); return d.indexOf('DSC') >= 0 ? 'dsc' : d.indexOf('PHD') >= 0 ? 'phd' : 'other'; }
+  function degLabel(d) { d = (d || '').toUpperCase(); return d.indexOf('DSC') >= 0 ? 'DSc' : d.indexOf('PHD') >= 0 ? 'PhD' : (d || '—'); }
+
+  function cardHtml(c) {
+    var tags = (c.keywords || []).slice(0, 4).map(function (k) { return '<span class="cc-tag">' + esc(k) + '</span>'; }).join('');
+    var tot = (c.phd + c.dsc) || 1;
+    var adv = (c.top_advisors || []).join(', ');
+    return '<div class="cc" data-id="' + c.id + '">' +
+      '<div class="cc-top"><span class="cc-num">#' + c.id + '</span><span class="cc-trend" title="' + c.trend + '">' + trendIcon(c.trend) + '</span></div>' +
+      '<h3>' + esc(c.title) + '</h3>' +
+      '<div class="cc-tags">' + tags + '</div>' +
+      '<div class="cc-count">' + c.count + ' <span>ta dissertatsiya</span></div>' +
+      '<div class="cc-meta">📅 ' + esc(c.year_range) + '</div>' +
+      '<div class="cc-ratio"><div class="phd" style="width:' + (c.phd / tot * 100) + '%"></div><div class="dsc" style="width:' + (c.dsc / tot * 100) + '%"></div></div>' +
+      '<div class="cc-bot"><span class="cc-adv">' + (adv ? '👨‍🏫 ' + esc(adv) : '') + '</span>' +
+      '<button class="cc-more" onclick="toggleCard(this,' + c.id + ')">Batafsil →</button></div>' +
+      '<div class="cc-expand" id="exp-' + c.id + '"></div></div>';
+  }
+  window.toggleCard = function (btn, id) {
+    var exp = document.getElementById('exp-' + id);
+    var c = ALL.find(function (x) { return x.id === id; });
+    if (exp.classList.contains('open')) { exp.classList.remove('open'); btn.textContent = 'Batafsil →'; return; }
+    if (!exp.innerHTML) {
+      var list = (c.dissertations || []).slice(0, 10).map(function (d) {
+        return '<div class="cc-diss"><div class="dm"><span class="deg ' + degClass(d.daraja) + '">' + degLabel(d.daraja) + '</span> ' + esc(d.mavzu.slice(0, 110)) + (d.mavzu.length > 110 ? '…' : '') + '</div>' +
+          '<div class="ds">' + (d.olim ? '<a href="/olim/' + encodeURIComponent(d.olim) + '">' + esc(d.olim) + '</a> · ' : '') + esc(d.sana) + (d.ixtisoslik ? ' · ' + esc(d.ixtisoslik) : '') + '</div></div>';
+      }).join('');
+      var more = c.count > 10 ? '<a class="cc-more" style="display:inline-block;margin-top:10px;" href="/clustering/' + c.id + '">Barchasini ko\'rish (' + c.count + ') →</a>' : '';
+      exp.innerHTML = list + more;
+    }
+    exp.classList.add('open'); btn.textContent = 'Yopish ↑';
+  };
+
+  function tableRow(c) {
+    var kws = (c.keywords || []).slice(0, 3).join(', ');
+    return '<tr onclick="location.href=\'/clustering/' + c.id + '\'"><td>' + c.id + '</td><td>' + esc(c.title) + '</td>' +
+      '<td style="font-weight:700;color:#60a5fa;">' + c.count + '</td><td style="color:#94a3b8;">' + esc(kws) + '</td>' +
+      '<td>' + esc(c.year_range) + '</td><td>' + trendIcon(c.trend) + '</td><td>' + c.phd + '/' + c.dsc + '</td></tr>';
+  }
+
+  function render() {
+    document.getElementById('cards-grid').innerHTML = shown.map(cardHtml).join('') || '<div class="cl-empty">Klaster topilmadi.</div>';
+    document.getElementById('table-body').innerHTML = shown.map(tableRow).join('');
+    bubbleDrawn = false;
+    if (document.getElementById('view-bubble').classList.contains('active')) drawBubble();
+  }
+  function applyFilters() {
+    var q = document.getElementById('cl-q').value.trim().toLowerCase();
+    var sort = document.getElementById('cl-sort').value;
+    shown = ALL.filter(function (c) {
+      if (!q) return true;
+      return c.title.toLowerCase().indexOf(q) >= 0 || (c.keywords || []).some(function (k) { return k.toLowerCase().indexOf(q) >= 0; });
+    });
+    if (sort === 'size') shown.sort(function (a, b) { return b.count - a.count; });
+    else if (sort === 'new') shown.sort(function (a, b) { return (b.year_range.split('-')[1] || 0) - (a.year_range.split('-')[1] || 0); });
+    else if (sort === 'growth') shown.sort(function (a, b) { var o = { growing: 0, stable: 1, declining: 2 }; return o[a.trend] - o[b.trend] || b.count - a.count; });
+    render();
+  }
+
+  function drawBubble() {
+    if (bubbleDrawn) return; bubbleDrawn = true;
+    var box = document.getElementById('cl-bubble');
+    box.innerHTML = '';
+    var W = box.clientWidth || 900, H = 600;
+    var tip = d3.select('#bubble-tip');
+    var root = d3.hierarchy({ children: shown }).sum(function (d) { return d.count || 0; });
+    d3.pack().size([W, H]).padding(6)(root);
+    var svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+    var g = svg.selectAll('g').data(root.leaves()).enter().append('g')
+      .attr('transform', function (d) { return 'translate(' + d.x + ',' + d.y + ')'; })
+      .style('cursor', 'pointer')
+      .on('click', function (ev, d) { location.href = '/clustering/' + d.data.id; })
+      .on('mousemove', function (ev, d) {
+        tip.html('<b>' + esc(d.data.title) + '</b><br>' + d.data.count + ' ta · ' + esc((d.data.keywords || []).join(', ')))
+          .style('opacity', 1).style('left', (ev.clientX + 14) + 'px').style('top', (ev.clientY + 14) + 'px');
+      })
+      .on('mouseleave', function () { tip.style('opacity', 0); });
+    g.append('circle').attr('r', 0).attr('fill', function (d) { return d.data.color || '#3b82f6'; })
+      .attr('fill-opacity', 0.82).attr('stroke', function (d) { return d.data.color || '#3b82f6'; }).attr('stroke-width', 1.5)
+      .transition().duration(700).attr('r', function (d) { return d.r; });
+    g.append('text').attr('text-anchor', 'middle').attr('dy', '0.3em').attr('fill', '#fff')
+      .style('pointer-events', 'none').style('font-weight', '700')
+      .style('font-size', function (d) { return Math.max(8, Math.min(15, d.r / 4)) + 'px'; })
+      .text(function (d) { var n = Math.floor(d.r / 5); return d.r > 26 ? d.data.title.slice(0, n) + (d.data.title.length > n ? '…' : '') : ''; });
+  }
+
+  // view toggle
+  document.querySelectorAll('.cl-toggle button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.cl-toggle button').forEach(function (x) { x.classList.remove('active'); });
+      document.querySelectorAll('.cl-view').forEach(function (v) { v.classList.remove('active'); });
+      b.classList.add('active');
+      document.getElementById('view-' + b.getAttribute('data-view')).classList.add('active');
+      if (b.getAttribute('data-view') === 'bubble') drawBubble();
+    });
+  });
+  document.getElementById('cl-sort').addEventListener('change', applyFilters);
+  document.getElementById('cl-q').addEventListener('input', applyFilters);
+  // table sort
+  document.querySelectorAll('.cl-table th[data-k]').forEach(function (th) {
+    th.addEventListener('click', function () {
+      var k = th.getAttribute('data-k');
+      shown.sort(function (a, b) { return typeof a[k] === 'number' ? b[k] - a[k] : String(a[k]).localeCompare(String(b[k])); });
+      document.getElementById('table-body').innerHTML = shown.map(tableRow).join('');
+    });
+  });
+
+  fetch('/api/clustering').then(function (r) { return r.json(); }).then(function (d) {
+    document.getElementById('cl-loading').style.display = 'none';
+    ALL = d.clusters || [];
+    if (!ALL.length) { document.getElementById('cards-grid').innerHTML = '<div class="cl-empty">Klaster topilmadi.</div>'; return; }
+    applyFilters();
+  }).catch(function () { document.getElementById('cl-loading').textContent = 'Yuklashda xatolik.'; });
+})();
+</script>
+{% endblock %}
