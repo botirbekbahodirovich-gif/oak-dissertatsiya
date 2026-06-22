@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-W7W6N8V7PY"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-W7W6N8V7PY');
+  </script>
+
   <title>{% block title %}Olimlar.uz{% endblock %}</title>
   {% block meta %}
   <meta name="description" content="{% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 27,000+ dissertatsiya, tadqiqotchi profillari, AI mavzu tahlili.{% endblock %}">
