@@ -1501,6 +1501,31 @@ def track_visit():
             pass  # never break the app if tracking fails
 
 
+@app.before_request
+def api_protection():
+    # Protect data API endpoints from scraping
+    protected_paths = ['/data', '/api/']
+
+    if any(request.path.startswith(p) for p in protected_paths):
+        # Rate limit: max 60 requests per minute per IP
+        ip = request.remote_addr
+        cache_key = f'rate_limit:{ip}'
+        current = cache.get(cache_key) or 0
+
+        if current > 60:
+            return jsonify({'error': 'Rate limit exceeded. Iltimos, biroz kuting.'}), 429
+
+        cache.set(cache_key, current + 1, timeout=60)
+
+        # Block obvious scraping (automated user agents)
+        ua = request.headers.get('User-Agent', '').lower()
+        scrapy_agents = ['scrapy', 'wget', 'curl', 'python-requests', 'httpclient', 'bot', 'spider', 'crawl']
+
+        if any(agent in ua for agent in scrapy_agents):
+            if not request.path.startswith('/api/oak/'):  # Allow our own scraper
+                return jsonify({'error': 'Automated access blocked'}), 403
+
+
 @app.route('/api/online-count')
 def online_count():
     from data import get_connection

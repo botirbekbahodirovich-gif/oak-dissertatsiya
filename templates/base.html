@@ -467,6 +467,80 @@
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* ── Data protection — prevent easy copy ── */
+    .table-container,
+    .dissertation-card,
+    .result-card,
+    .olim-card,
+    .top-olim-card,
+    #dataTable,
+    #dataTable td,
+    #dataTable th,
+    .accordion-content,
+    .search-results,
+    [data-protected] {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    /* Allow selection on inputs, form fields and copyable content pages */
+    input, textarea, select, .ai-chat-input, .ai-msg-bot, .ai-msg-user,
+    .blog-content, .preparation-content, .about-content {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+    }
+    /* Disable callout / drag-select on tables */
+    #dataTable, .table-container {
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    #dataTable td, #dataTable th {
+        pointer-events: auto; /* keep clicks working for accordion/links */
+    }
+    #dataTable::selection,
+    #dataTable td::selection,
+    #dataTable th::selection,
+    .dissertation-card::selection,
+    .result-card::selection {
+        background: transparent !important;
+        color: inherit !important;
+    }
+    /* Watermark overlay on data tables */
+    .table-container { position: relative; }
+    .table-container::before {
+        content: "Olimlar.uz";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 5rem;
+        font-weight: 800;
+        color: rgba(59, 130, 246, 0.03);
+        pointer-events: none;
+        z-index: 1;
+        white-space: nowrap;
+        user-select: none;
+    }
+    /* Print protection */
+    @media print {
+        #dataTable,
+        .table-container,
+        .dissertation-card,
+        .result-card,
+        [data-protected] {
+            display: none !important;
+        }
+        body::after {
+            content: "Ma'lumotlarni chop etish taqiqlangan. Premium obuna bilan eksport qiling. — Olimlar.uz";
+            display: block;
+            text-align: center;
+            font-size: 1.5rem;
+            padding: 100px 20px;
+            color: #333;
+        }
+    }
   </style>
   {% block extra_head %}{% endblock %}
 </head>
@@ -837,6 +911,66 @@
       sendMessage(b.textContent.trim());
     });
   });
+})();
+</script>
+
+<!-- Data protection: disable right-click / select-all / bulk-copy on data areas -->
+<script>
+(function() {
+    // Disable right-click on data areas
+    document.addEventListener('contextmenu', function(e) {
+        const target = e.target;
+        const protectedSelectors = ['#dataTable', '.table-container', '.dissertation-card',
+            '.result-card', '.olim-card', '.accordion-content', '.search-results',
+            '.top-olim-card', '[data-protected]'];
+
+        for (const sel of protectedSelectors) {
+            if (target.closest(sel)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+
+    // Disable Ctrl+A select all on data pages
+    document.addEventListener('keydown', function(e) {
+        const isDataPage = document.querySelector('#dataTable, .table-container, [data-protected]');
+        if (!isDataPage) return;
+
+        // Block Ctrl+A (select all)
+        if (e.ctrlKey && e.key === 'a') {
+            const tag = e.target.tagName.toLowerCase();
+            if (tag !== 'input' && tag !== 'textarea') {
+                e.preventDefault();
+                return false;
+            }
+        }
+
+        // Block Ctrl+C on protected areas (not in inputs)
+        if (e.ctrlKey && e.key === 'c') {
+            const selection = window.getSelection();
+            const tag = e.target.tagName.toLowerCase();
+            if (tag !== 'input' && tag !== 'textarea' && selection.toString().length > 50) {
+                e.preventDefault();
+                showCopyWarning();
+                return false;
+            }
+        }
+    });
+
+    // Copy warning toast
+    function showCopyWarning() {
+        let toast = document.getElementById('copyWarningToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'copyWarningToast';
+            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #ef4444;color:#f87171;padding:12px 24px;border-radius:12px;z-index:99999;font-size:0.9rem;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;text-align:center;';
+            toast.innerHTML = '🔒 Ma\'lumotlarni nusxalash taqiqlangan.<br><span style="font-size:0.8rem;color:#94a3b8;">Premium obuna bilan eksport qilish mumkin.</span>';
+            document.body.appendChild(toast);
+        }
+        toast.style.display = 'block';
+        setTimeout(function() { toast.style.display = 'none'; }, 3000);
+    }
 })();
 </script>
 </body>
