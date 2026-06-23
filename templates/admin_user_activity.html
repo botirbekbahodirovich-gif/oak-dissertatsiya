@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Foydalanuvchi faoliyati — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .ua-back { display:inline-flex; align-items:center; gap:6px; color:#60a5fa; text-decoration:none; font-size:0.9rem; margin-bottom:16px; }
+  .ua-back:hover { text-decoration:underline; color:#93bbfc; }
+  .ua-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+  .ua-id { font-size:1.6rem; font-weight:800; color:#f1f5f9; word-break:break-all; }
+  .ua-badge { font-size:0.78rem; font-weight:700; padding:4px 14px; border-radius:999px; }
+  .ua-badge.reg { background:rgba(5,150,105,0.18); color:#34d399; }
+  .ua-badge.guest { background:rgba(148,163,184,0.18); color:#94a3b8; }
+  .ua-sub { color:#94a3b8; font-size:0.9rem; margin-bottom:24px; }
+  .ua-sub a { color:#60a5fa; text-decoration:none; }
+
+  .admin-summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  @media (max-width:768px){ .admin-summary-grid{ grid-template-columns:repeat(2,1fr); } }
+  .admin-stat-card { background:#1e293b; border:1px solid #334155; border-radius:12px; padding:16px; text-align:center; }
+  .admin-stat-icon { font-size:1.4rem; display:block; margin-bottom:4px; }
+  .admin-stat-number { font-size:1.3rem; font-weight:800; color:#f1f5f9; display:block; word-break:break-word; }
+  .admin-stat-label { font-size:0.72rem; color:#64748b; }
+
+  .ua-section { margin-top:28px; }
+  .ua-section h2 { font-size:1.05rem; font-weight:700; color:#f1f5f9; margin:0 0 14px; }
+
+  .activity-date-group { margin-bottom:24px; }
+  .activity-date-header { color:#f1f5f9; font-size:1rem; padding-bottom:8px; border-bottom:1px solid #334155; margin-bottom:8px; }
+  .activity-item { display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:8px; margin-bottom:2px; }
+  .activity-item:hover { background:#162032; }
+  .activity-time { color:#64748b; font-size:0.8rem; min-width:64px; font-family:monospace; }
+  .activity-page { color:#e2e8f0; font-size:0.85rem; word-break:break-all; }
+
+  .freq-row { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .freq-label { min-width:200px; max-width:200px; color:#cbd5e1; font-size:0.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .freq-track { flex:1; height:14px; background:rgba(74,158,255,0.1); border-radius:999px; overflow:hidden; }
+  .freq-bar { height:100%; border-radius:999px; background:linear-gradient(90deg,#4a9eff,#7c5cfc); }
+  .freq-count { min-width:40px; text-align:right; color:#94a3b8; font-size:0.8rem; font-weight:700; }
+
+  .hour-grid { display:flex; flex-wrap:wrap; gap:4px; }
+  .hour-cell { display:inline-flex; align-items:center; justify-content:center; width:48px; height:40px; border-radius:6px; font-size:0.7rem; color:white; border:1px solid #334155; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="ua-back" href="/admin/analytics">← Barcha foydalanuvchilar</a>
+
+<div class="ua-head">
+  <span class="ua-id">{{ user_info.username or user_info.identifier }}</span>
+  {% if user_info.registered %}
+    <span class="ua-badge reg">Ro'yxatdan o'tgan</span>
+  {% else %}
+    <span class="ua-badge guest">Mehmon</span>
+  {% endif %}
+</div>
+<div class="ua-sub">
+  {% if user_info.type == 'ip' %}🌐 IP: {{ user_info.identifier }}{% endif %}
+  {% if user_info.email %} · ✉️ {{ user_info.email }}{% endif %}
+  {% if user_info.telegram_username %} · 📱 @{{ user_info.telegram_username }}{% endif %}
+  {% if user_info.olim_name %} · 🎓 <a href="/olim/{{ user_info.olim_name|urlencode }}">{{ user_info.olim_name }}</a>{% endif %}
+  · {{ stats.device_info }} · {{ stats.referrer_info }}
+</div>
+
+<!-- Primary stats -->
+<div class="admin-summary-grid">
+  <div class="admin-stat-card"><span class="admin-stat-icon">📊</span><span class="admin-stat-number">{{ stats.total_visits }}</span><span class="admin-stat-label">Jami tashriflar</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">📄</span><span class="admin-stat-number">{{ stats.unique_pages }}</span><span class="admin-stat-label">Unikal sahifalar</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">📅</span><span class="admin-stat-number">{{ stats.first_visit }}</span><span class="admin-stat-label">Birinchi tashrif</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">🕐</span><span class="admin-stat-number">{{ stats.last_visit }}</span><span class="admin-stat-label">Oxirgi tashrif</span></div>
+</div>
+<!-- Secondary stats -->
+<div class="admin-summary-grid">
+  <div class="admin-stat-card"><span class="admin-stat-icon">📈</span><span class="admin-stat-number">{{ stats.avg_visits_per_day }}</span><span class="admin-stat-label">Kuniga o'rtacha</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">📱</span><span class="admin-stat-number">{{ stats.devices }}</span><span class="admin-stat-label">Qurilmalar</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">🌐</span><span class="admin-stat-number" style="font-size:0.95rem;">{{ stats.referrer_info }}</span><span class="admin-stat-label">Manba</span></div>
+  <div class="admin-stat-card"><span class="admin-stat-icon">🏆</span><span class="admin-stat-number" style="font-size:0.85rem;">{{ stats.most_visited_page }}</span><span class="admin-stat-label">Eng ko'p sahifa</span></div>
+</div>
+
+<!-- Page frequency -->
+{% if top_pages_freq %}
+<div class="ua-section">
+  <h2>📊 Eng ko'p tashrif qilingan sahifalar</h2>
+  {% for page, cnt in top_pages_freq %}
+  <div class="freq-row">
+    <span class="freq-label" title="{{ page }}">{{ page }}</span>
+    <div class="freq-track"><div class="freq-bar" style="width: {{ (cnt / max_page_count * 100) | round(0, 'ceil') }}%;"></div></div>
+    <span class="freq-count">{{ cnt }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Hour heatmap -->
+<div class="ua-section">
+  <h2>🕐 Faollik (soatlar bo'yicha)</h2>
+  <div class="hour-grid">
+    {% for hour in range(24) %}
+    <div class="hour-cell" style="background-color: rgba(59,130,246,{{ (0.12 + (hour_counts[hour] / max_hour_count) * 0.88) | round(2) if hour_counts[hour] else 0.05 }});" title="{{ hour }}:00 — {{ hour_counts[hour] }} tashrif">
+      {{ '%02d'|format(hour) }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Timeline -->
+<div class="ua-section">
+  <h2>🗒 Faoliyat tarixi</h2>
+  {% for date, visits in visits_by_date.items() %}
+  <div class="activity-date-group">
+    <h3 class="activity-date-header">📅 {{ date }}</h3>
+    {% for v in visits %}
+    <div class="activity-item">
+      <span class="activity-time">{{ v.time }}</span>
+      <span class="activity-page">
+        {% if '/olim/' in v.page %}👤 {{ v.page }}
+        {% elif '/data' in v.page or '/dashboard' in v.page %}📊 {{ v.page }}
+        {% elif '/compare' in v.page %}🔬 {{ v.page }}
+        {% elif '/blog' in v.page %}📝 {{ v.page }}
+        {% elif '/cabinet' in v.page %}🏠 {{ v.page }}
+        {% elif v.page == '/' %}🏠 Bosh sahifa
+        {% else %}📄 {{ v.page }}{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p style="color:#64748b;">Faoliyat topilmadi.</p>
+  {% endfor %}
+</div>
+{% endblock %}

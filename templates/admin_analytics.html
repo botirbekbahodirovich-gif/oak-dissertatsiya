@@ -63,6 +63,26 @@
   .vc-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4a9eff, #7c5cfc); }
   .rank-cell { color: var(--oak-muted); font-weight: 700; }
   .admin-table td.ip-mono { font-family: ui-monospace, monospace; color: #60a5fa; }
+  .admin-table a { color: #60a5fa; text-decoration: none; }
+  .admin-table a:hover { color: #93bbfc; text-decoration: underline; }
+
+  /* Quick summary row */
+  .admin-summary-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+  @media (max-width: 1024px) { .admin-summary-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px) { .admin-summary-grid { grid-template-columns: repeat(2, 1fr); } }
+  .admin-stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; text-align: center; }
+  .admin-stat-icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+  .admin-stat-number { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; display: block; }
+  .admin-stat-label { font-size: 0.75rem; color: #64748b; }
+
+  /* Live online user cards */
+  .online-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .online-card { display: block; background: var(--oak-surface); border: 1px solid var(--oak-border); border-radius: 12px; padding: 12px 14px; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+  .online-card:hover { border-color: #34d399; transform: translateY(-2px); }
+  .online-card .oc-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .online-card .oc-name { font-weight: 700; color: #e2e8f0; font-size: 0.9rem; }
+  .online-card .oc-page { color: #60a5fa; font-size: 0.8rem; word-break: break-all; }
+  .online-card .oc-time { color: #64748b; font-size: 0.72rem; margin-top: 4px; }
 </style>
 {% endblock %}
 
@@ -73,6 +93,58 @@
     <p>Tashriflar va onlayn foydalanuvchilar statistikasi</p>
   </div>
 </div>
+
+<!-- Quick summary -->
+<div class="admin-summary-grid">
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">🟢</span>
+    <span class="admin-stat-number">{{ online_now }}</span>
+    <span class="admin-stat-label">Hozir onlayn</span>
+  </div>
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">👥</span>
+    <span class="admin-stat-number">{{ today_unique }}</span>
+    <span class="admin-stat-label">Bugungi tashriflar</span>
+  </div>
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">📝</span>
+    <span class="admin-stat-number">{{ new_today_count }}</span>
+    <span class="admin-stat-label">Bugun ro'yxatdan</span>
+  </div>
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">👤</span>
+    <span class="admin-stat-number">{{ registered_count }}</span>
+    <span class="admin-stat-label">Jami foydalanuvchilar</span>
+  </div>
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">📊</span>
+    <span class="admin-stat-number">{{ total_dissertations }}</span>
+    <span class="admin-stat-label">Dissertatsiyalar</span>
+  </div>
+  <div class="admin-stat-card">
+    <span class="admin-stat-icon">📰</span>
+    <span class="admin-stat-number">{{ total_news }}</span>
+    <span class="admin-stat-label">Yangiliklar</span>
+  </div>
+</div>
+
+{% if online_users %}
+<div class="admin-section">
+  <h2><span class="dot-online"></span> Hozir onlayn ({{ online_users|length }})</h2>
+  <div class="online-grid">
+    {% for u in online_users %}
+    <a class="online-card" href="/admin/user-activity/{{ u.user_id or u.ip }}">
+      <div class="oc-top">
+        <span class="dot-online"></span>
+        <span class="oc-name">{{ u.username or 'Mehmon' }}</span>
+      </div>
+      <div class="oc-page">{{ u.page }}</div>
+      <div class="oc-time">{{ u.visited_at|uztime }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <div class="admin-stats">
   <div class="admin-card">
@@ -150,10 +222,10 @@
       <tbody>
         {% for username, page, ip, visited_at in recent %}
         <tr>
-          <td>{{ username }}</td>
+          <td>{% if username and username != 'Mehmon' %}<a href="/admin/user-activity/{{ username }}">{{ username }}</a>{% else %}<span style="color:#64748b;">Mehmon</span>{% endif %}</td>
           <td>{{ page }}</td>
-          <td style="color:var(--oak-muted);">{{ ip }}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{{ visited_at.strftime('%Y-%m-%d %H:%M') if visited_at else '' }}</td>
+          <td style="color:var(--oak-muted);">{% if ip %}<a href="/admin/user-activity/{{ ip }}">{{ ip }}</a>{% else %}—{% endif %}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ visited_at|uztime }}</td>
         </tr>
         {% else %}
         <tr><td colspan="4" class="empty-cell">Tashriflar yo'q</td></tr>
@@ -178,8 +250,8 @@
         {% for v in top_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td>{% if v.username %}<span style="color:#60a5fa;font-weight:600;">{{ v.username }}</span>{% else %}<span style="color:#64748b;font-size:0.8rem;">Mehmon</span>{% endif %}</td>
-          <td class="ip-mono">{{ v.ip }}</td>
+          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">Mehmon</span>{% endif %}</td>
+          <td class="ip-mono"><a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a></td>
           <td>
             <div class="vc-cell">
               <span class="vc-num">{{ v.visit_count }}</span>
@@ -214,7 +286,7 @@
         {% for u in top_users %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td><span style="color:#60a5fa;font-weight:600;">{{ u.username }}</span></td>
+          <td><a href="/admin/user-activity/{{ u.user_id or u.username }}" style="color:#60a5fa;font-weight:600;">{{ u.username }}</a></td>
           <td>
             <div class="vc-cell">
               <span class="vc-num">{{ u.visit_count }}</span>
@@ -247,10 +319,10 @@
         {% for u in registered_users %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td>{% if u.email %}{{ u.email }}{% elif u.telegram_username %}@{{ u.telegram_username }}{% elif u.telegram_first_name %}{{ u.telegram_first_name }}{% else %}—{% endif %}</td>
+          <td><a href="/admin/user-activity/{{ u.id }}" style="color:#60a5fa;">{% if u.email %}{{ u.email }}{% elif u.telegram_username %}@{{ u.telegram_username }}{% elif u.telegram_first_name %}{{ u.telegram_first_name }}{% else %}#{{ u.id }}{% endif %}</a></td>
           <td>{% if u.olim_name %}<a href="/olim/{{ u.olim_name|urlencode }}" style="color:#60a5fa;">{{ u.olim_name }}</a>{% else %}<span style="color:var(--oak-muted);">—</span>{% endif %}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.created_at }}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.last_login }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.created_at|uztime }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.last_login|uztime }}</td>
         </tr>
         {% endfor %}
       </tbody>

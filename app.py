@@ -31,6 +31,77 @@ cache.init_app(app, config={
 
 from flask_wtf.csrf import generate_csrf
 
+# ── Timezone: Uzbekistan / Tashkent (UTC+5) ─────────────────────────────────
+import time as _time
+from datetime import datetime, timezone, timedelta
+os.environ['TZ'] = 'Asia/Tashkent'
+try:
+    _time.tzset()
+except Exception:
+    pass  # tzset is unavailable on some platforms (e.g. Windows)
+UZT = timezone(timedelta(hours=5))
+
+
+def uz_now():
+    """Current time in Uzbekistan (UTC+5)."""
+    return datetime.now(UZT)
+
+
+@app.template_filter('uztime')
+def uz_time_filter(dt):
+    """Format a timestamp in Tashkent time. Naive datetimes are assumed UTC
+    (timestamps are stored in UTC by the database)."""
+    if dt is None or dt == '':
+        return ''
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt)
+        except Exception:
+            return dt
+    if not isinstance(dt, datetime):
+        return str(dt)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(UZT).strftime('%d.%m.%Y %H:%M')
+
+
+def parse_device(ua):
+    """Human-readable device + browser from a User-Agent string."""
+    ua = (ua or '').lower()
+    if 'mobile' in ua or 'android' in ua or 'iphone' in ua or 'ipad' in ua:
+        device = '📱 Mobil'
+    else:
+        device = '💻 Kompyuter'
+    if 'edg' in ua:
+        browser = 'Edge'
+    elif 'chrome' in ua:
+        browser = 'Chrome'
+    elif 'firefox' in ua:
+        browser = 'Firefox'
+    elif 'safari' in ua:
+        browser = 'Safari'
+    else:
+        browser = 'Boshqa'
+    return f"{device} — {browser}"
+
+
+def parse_referrer(ref):
+    """Human-readable traffic source from a Referer header."""
+    if not ref:
+        return "🔗 To'g'ridan-to'g'ri"
+    r = ref.lower()
+    if 'google' in r:
+        return '🔍 Google'
+    if 't.me' in r or 'telegram' in r:
+        return '📱 Telegram'
+    if 'facebook' in r:
+        return '📘 Facebook'
+    if 'instagram' in r:
+        return '📷 Instagram'
+    if 'olimlar.uz' in r:
+        return '🏠 Olimlar.uz'
+    return '🌐 ' + ref[:50]
+
 @app.context_processor
 def _inject_csrf_token():
     return dict(csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf())
@@ -219,6 +290,9 @@ def _run_startup_migrations():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_user ON page_visits(user_id)")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS user_id INTEGER")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS username VARCHAR(200)")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS user_agent TEXT")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS referrer VARCHAR(500)")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
@@ -1509,11 +1583,19 @@ def track_visit():
             # distinguish registered users from anonymous visitors.
             if not user_id and not username:
                 username = "Mehmon"
+            # Stable per-session id so visits can be grouped into sessions.
+            sid = session.get('visit_sid')
+            if not sid:
+                import uuid as _uuid
+                sid = _uuid.uuid4().hex
+                session['visit_sid'] = sid
             cur.execute("""
-                INSERT INTO page_visits (user_id, username, page, ip_address, user_agent)
-                VALUES (%s, %s, %s, %s, %s)
+                INSERT INTO page_visits
+                    (user_id, username, page, ip_address, user_agent, referrer, session_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (user_id, username, request.path, request.remote_addr,
-                  request.headers.get('User-Agent', '')[:200]))
+                  request.headers.get('User-Agent', '')[:500],
+                  request.headers.get('Referer', '')[:500], sid))
             conn.commit()
             cur.close()
             conn.close()
@@ -1848,8 +1930,7 @@ def admin_analytics():
                 registered_users = [{
                     "id": r[0], "email": r[1] or "", "telegram_username": r[2] or "",
                     "telegram_first_name": r[3] or "", "olim_name": r[4] or "",
-                    "created_at": str(r[5])[:16] if r[5] else "",
-                    "last_login": str(r[6])[:16] if r[6] else "",
+                    "created_at": r[5], "last_login": r[6],
                 } for r in cur.fetchall()]
             except Exception:
                 registered_users = []
@@ -1875,6 +1956,39 @@ def admin_analytics():
                 guest_count = cur.fetchone()[0] or 0
             except Exception:
                 guest_count = 0
+
+            # Totals for the summary row
+            total_dissertations = 0
+            total_news = 0
+            try:
+                cur.execute("SELECT COUNT(*) FROM dissertations")
+                total_dissertations = cur.fetchone()[0] or 0
+            except Exception:
+                total_dissertations = 0
+            try:
+                cur.execute("SELECT COUNT(*) FROM yangiliklar WHERE is_published = TRUE")
+                total_news = cur.fetchone()[0] or 0
+            except Exception:
+                total_news = 0
+
+            # Live online users (last 5 min) — one row per distinct visitor,
+            # showing the page they are currently on.
+            online_users = []
+            try:
+                cur.execute("""
+                    SELECT DISTINCT ON (COALESCE(user_id::text, ip_address))
+                           ip_address, username, user_id, page, visited_at
+                    FROM page_visits
+                    WHERE visited_at > NOW() - INTERVAL '5 minutes'
+                    ORDER BY COALESCE(user_id::text, ip_address), visited_at DESC
+                """)
+                online_users = [{
+                    "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
+                    "page": r[3] or "/", "visited_at": r[4],
+                } for r in cur.fetchall()]
+                online_users.sort(key=lambda u: u["visited_at"] or 0, reverse=True)
+            except Exception:
+                online_users = []
     finally:
         conn.close()
 
@@ -1883,7 +1997,141 @@ def admin_analytics():
         top_pages=top_pages, recent=recent, weekly=weekly,
         top_visitors=top_visitors, top_users=top_users, registered_users=registered_users,
         registered_count=registered_count, new_today_count=new_today_count,
-        guest_count=guest_count)
+        guest_count=guest_count, total_dissertations=total_dissertations,
+        total_news=total_news, online_users=online_users)
+
+
+@app.route('/admin/user-activity/<identifier>')
+@login_required
+def admin_user_activity(identifier):
+    if current_user.username != 'admin':
+        abort(403)
+    from collections import OrderedDict, Counter
+    from data import get_connection
+
+    def _to_uzt(dt):
+        if not isinstance(dt, datetime):
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(UZT)
+
+    is_ip = identifier.replace('.', '').isdigit() and '.' in identifier
+    user_info = {'type': 'ip' if is_ip else 'user', 'identifier': identifier,
+                 'username': '', 'email': '', 'telegram_username': '',
+                 'olim_name': '', 'registered': False, 'user_id': None}
+    rows = []
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if is_ip:
+                cur.execute("""
+                    SELECT page, visited_at, user_agent, referrer, username, user_id
+                    FROM page_visits WHERE ip_address = %s
+                    ORDER BY visited_at DESC LIMIT 200
+                """, (identifier,))
+                rows = cur.fetchall()
+                for r in rows:
+                    if r[4]:
+                        user_info['username'] = r[4]
+                        user_info['user_id'] = r[5]
+                        break
+            else:
+                uid = None
+                try:
+                    uid = int(identifier)
+                except Exception:
+                    uid = None
+                cur.execute("""
+                    SELECT page, visited_at, user_agent, referrer, username, user_id
+                    FROM page_visits WHERE user_id = %s OR username = %s
+                    ORDER BY visited_at DESC LIMIT 200
+                """, (uid, identifier))
+                rows = cur.fetchall()
+                user_info['username'] = (rows[0][4] if rows else '') or identifier
+                user_info['user_id'] = uid if uid is not None else (rows[0][5] if rows else None)
+                # Enrich from cabinet_users if registered
+                try:
+                    if uid is not None:
+                        cur.execute("""SELECT id, email, telegram_username, olim_name
+                                       FROM cabinet_users WHERE id = %s""", (uid,))
+                    else:
+                        cur.execute("""SELECT id, email, telegram_username, olim_name
+                                       FROM cabinet_users
+                                       WHERE email = %s OR telegram_username = %s OR olim_name = %s""",
+                                    (identifier, identifier, identifier))
+                    cu = cur.fetchone()
+                    if cu:
+                        user_info['registered'] = True
+                        user_info['user_id'] = cu[0]
+                        user_info['email'] = cu[1] or ''
+                        user_info['telegram_username'] = cu[2] or ''
+                        user_info['olim_name'] = cu[3] or ''
+                except Exception:
+                    pass
+    finally:
+        conn.close()
+
+    # Build per-visit dicts (converted to Tashkent time)
+    activities = []
+    for page, visited_at, ua, ref, _uname, _uid in rows:
+        uz = _to_uzt(visited_at)
+        activities.append({
+            'page': page or '/', 'visited_at': visited_at, 'uz': uz,
+            'user_agent': ua or '', 'referrer': ref or '',
+        })
+
+    # Stats
+    pages = [a['page'] for a in activities]
+    uz_dates = [a['uz'] for a in activities if a['uz']]
+    page_counter = Counter(pages)
+    most_visited_page = page_counter.most_common(1)[0][0] if page_counter else '—'
+    distinct_days = len({d.date() for d in uz_dates}) or 1
+    devices = len({a['user_agent'] for a in activities if a['user_agent']})
+    last_dt = max(uz_dates) if uz_dates else None
+    first_dt = min(uz_dates) if uz_dates else None
+
+    stats = {
+        'total_visits': len(activities),
+        'unique_pages': len(page_counter),
+        'first_visit': first_dt.strftime('%d.%m.%Y %H:%M') if first_dt else '—',
+        'last_visit': last_dt.strftime('%d.%m.%Y %H:%M') if last_dt else '—',
+        'most_visited_page': most_visited_page,
+        'avg_visits_per_day': round(len(activities) / distinct_days, 1),
+        'devices': devices,
+    }
+
+    # Most common device / referrer
+    dev_counter = Counter(parse_device(a['user_agent']) for a in activities if a['user_agent'])
+    ref_counter = Counter(parse_referrer(a['referrer']) for a in activities)
+    stats['device_info'] = dev_counter.most_common(1)[0][0] if dev_counter else '—'
+    stats['referrer_info'] = ref_counter.most_common(1)[0][0] if ref_counter else '—'
+
+    # Timeline grouped by date (already DESC by visited_at)
+    visits_by_date = OrderedDict()
+    for a in activities:
+        if not a['uz']:
+            continue
+        key = a['uz'].strftime('%d.%m.%Y')
+        visits_by_date.setdefault(key, []).append({
+            'time': a['uz'].strftime('%H:%M'), 'page': a['page'],
+        })
+
+    # Page frequency (top 10) for CSS bar chart
+    top_pages_freq = page_counter.most_common(10)
+    max_page_count = top_pages_freq[0][1] if top_pages_freq else 1
+
+    # Hour-of-day heatmap (Tashkent hours)
+    hour_counts = [0] * 24
+    for d in uz_dates:
+        hour_counts[d.hour] += 1
+    max_hour_count = max(hour_counts) if any(hour_counts) else 1
+
+    return render_template('admin_user_activity.html',
+        user_info=user_info, activities=activities, stats=stats,
+        visits_by_date=visits_by_date, top_pages_freq=top_pages_freq,
+        max_page_count=max_page_count, hour_counts=hour_counts,
+        max_hour_count=max_hour_count)
 
 
 def _require_admin():
