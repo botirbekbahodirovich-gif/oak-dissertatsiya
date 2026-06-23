@@ -1023,5 +1023,96 @@
     }
 })();
 </script>
+
+{% if not is_logged_in %}
+<!-- Mandatory registration popup (non-logged-in users, after 30s) -->
+<div id="authOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:20px;max-width:460px;width:90%;padding:40px;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:popupSlideIn 0.4s ease;">
+
+    <div style="font-size:3.5rem;margin-bottom:16px;">🎓</div>
+
+    <h2 style="color:#f1f5f9;font-size:1.5rem;font-weight:700;margin-bottom:8px;">
+      Davom etish uchun ro'yxatdan o'ting
+    </h2>
+
+    <p style="color:#94a3b8;font-size:0.95rem;line-height:1.6;margin-bottom:28px;">
+      27,000+ dissertatsiya, mavzu tahlili, ilmiy shajara va boshqa imkoniyatlardan foydalanish uchun tizimga kiring.
+    </p>
+
+    <!-- Telegram login button -->
+    <a href="/cabinet/login" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#0088cc;color:white;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;transition:background 0.2s;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      Telegram orqali kirish
+    </a>
+
+    <!-- Email login button -->
+    <a href="/cabinet/login" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1e293b;color:#60a5fa;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:0.95rem;border:1px solid #334155;transition:all 0.2s;margin-bottom:20px;">
+      📧 Email orqali kirish
+    </a>
+
+    <!-- Register link -->
+    <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">
+      Hisobingiz yo'qmi? <a href="/cabinet/register" style="color:#3b82f6;font-weight:600;text-decoration:none;">Ro'yxatdan o'ting</a>
+    </p>
+
+    <!-- Skip button (small, subtle) -->
+    <button id="authSkipBtn" onclick="dismissAuthPopup()" style="background:none;border:none;color:#475569;font-size:0.8rem;cursor:pointer;padding:8px;text-decoration:underline;">
+      Keyinroq (hozircha davom etish)
+    </button>
+
+    <!-- Benefits -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;text-align:left;">
+      <p style="color:#64748b;font-size:0.75rem;margin-bottom:8px;">✨ Ro'yxatdan o'tish bepul. Siz quyidagilardan foydalanasiz:</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+        <span style="color:#94a3b8;font-size:0.75rem;">✅ Mavzu tahlili</span>
+        <span style="color:#94a3b8;font-size:0.75rem;">✅ AI yordamchi</span>
+        <span style="color:#94a3b8;font-size:0.75rem;">✅ Ilmiy shajara</span>
+        <span style="color:#94a3b8;font-size:0.75rem;">✅ Shaxsiy portfolio</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+@keyframes popupSlideIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+</style>
+
+<script>
+(function() {
+  // Do not block these pages — let users browse / sign up freely
+  const freePaths = ['/cabinet/login', '/cabinet/register', '/about', '/contact'];
+  if (freePaths.includes(window.location.pathname)) return;
+
+  // Check if already dismissed in this browser session
+  if (sessionStorage.getItem('authPopupDismissed')) return;
+
+  // Show popup after 30 seconds
+  setTimeout(function() {
+    // Double-check not dismissed
+    if (sessionStorage.getItem('authPopupDismissed')) return;
+
+    const overlay = document.getElementById('authOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+  }, 30000); // 30 seconds
+})();
+
+function dismissAuthPopup() {
+  const overlay = document.getElementById('authOverlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    // Remember dismissal for this browser session
+    sessionStorage.setItem('authPopupDismissed', 'true');
+  }
+}
+</script>
+{% endif %}
 </body>
 </html>

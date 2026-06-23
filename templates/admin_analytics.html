@@ -104,6 +104,24 @@
   </div>
 </div>
 
+<div class="admin-stats">
+  <div class="admin-card">
+    <div class="card-label">🎓 Ro'yxatdan o'tgan foydalanuvchilar</div>
+    <div class="card-value">{{ registered_count }} <span style="font-size:1rem;color:var(--oak-muted);">kishi</span></div>
+    <div class="card-sub">Jami hisoblar soni</div>
+  </div>
+  <div class="admin-card">
+    <div class="card-label">🆕 Bugungi yangi ro'yxatdan o'tganlar</div>
+    <div class="card-value">{{ new_today_count }} <span style="font-size:1rem;color:var(--oak-muted);">kishi</span></div>
+    <div class="card-sub">Bugun ochilgan hisoblar</div>
+  </div>
+  <div class="admin-card">
+    <div class="card-label">👤 Mehmonlar (ro'yxatdan o'tmagan)</div>
+    <div class="card-value">{{ guest_count }} <span style="font-size:1rem;color:var(--oak-muted);">kishi</span></div>
+    <div class="card-sub">Noyob mehmon IP manzillari</div>
+  </div>
+</div>
+
 <div class="admin-section">
   <h2><i class="bi bi-bar-chart-line-fill"></i> Eng ko'p tashrif qilingan sahifalar</h2>
   <div class="admin-table-panel">

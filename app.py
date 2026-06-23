@@ -99,6 +99,22 @@ def _inject_supervisor_counts():
     return dict(supervisor_count=supervisor_count)
 
 
+@app.context_processor
+def inject_auth_status():
+    from flask import session
+    is_logged_in = False
+    current_username = None
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            is_logged_in = True
+            current_username = getattr(current_user, 'username', None)
+        elif 'cabinet_user_id' in session:
+            is_logged_in = True
+    except Exception:
+        pass
+    return dict(is_logged_in=is_logged_in, current_username=current_username)
+
+
 
 def is_safe_relative_url(target: str) -> bool:
     if not target:
@@ -1489,6 +1505,10 @@ def track_visit():
                             username = cab[0] or cab[1] or cab[2]
             except Exception:
                 pass
+            # Guests (no account) are logged as "Mehmon" so analytics can
+            # distinguish registered users from anonymous visitors.
+            if not user_id and not username:
+                username = "Mehmon"
             cur.execute("""
                 INSERT INTO page_visits (user_id, username, page, ip_address, user_agent)
                 VALUES (%s, %s, %s, %s, %s)
@@ -1819,13 +1839,37 @@ def admin_analytics():
                 } for r in cur.fetchall()]
             except Exception:
                 registered_users = []
+
+            # ── Summary: registered users / today's new sign-ups / guests ──
+            registered_count = 0
+            new_today_count = 0
+            guest_count = 0
+            try:
+                cur.execute("SELECT COUNT(*) FROM cabinet_users")
+                registered_count = cur.fetchone()[0] or 0
+            except Exception:
+                registered_count = 0
+            try:
+                cur.execute("SELECT COUNT(*) FROM cabinet_users WHERE created_at >= CURRENT_DATE")
+                new_today_count = cur.fetchone()[0] or 0
+            except Exception:
+                new_today_count = 0
+            try:
+                # Distinct guest visitors (no account → logged as "Mehmon"), by IP
+                cur.execute("""SELECT COUNT(DISTINCT ip_address) FROM page_visits
+                    WHERE user_id IS NULL AND (username = 'Mehmon' OR username IS NULL)""")
+                guest_count = cur.fetchone()[0] or 0
+            except Exception:
+                guest_count = 0
     finally:
         conn.close()
 
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
         top_pages=top_pages, recent=recent, weekly=weekly,
-        top_visitors=top_visitors, top_users=top_users, registered_users=registered_users)
+        top_visitors=top_visitors, top_users=top_users, registered_users=registered_users,
+        registered_count=registered_count, new_today_count=new_today_count,
+        guest_count=guest_count)
 
 
 def _require_admin():
