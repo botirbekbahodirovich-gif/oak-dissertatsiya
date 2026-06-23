@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}Mavzu tahlili — Olimlar.uz{% endblock %}
 
 {% block extra_head %}
@@ -99,6 +100,8 @@
       <button class="mt-btn" id="analyze-btn" onclick="analyze()">🔍 O'xshash mavzularni topish</button>
     </div>
   </div>
+
+  {{ ad_banner('compare-top', 'inline') }}
 
   <!-- AI analysis -->
   <div id="ai-section" style="display:none;">

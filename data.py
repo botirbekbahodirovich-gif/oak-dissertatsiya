@@ -92,7 +92,7 @@ def get_connection():
 
 
 def get_supervisor_counts() -> dict:
-    """Returns {trimmed_name: count} for all supervisors. Cached 5 min."""
+    """Returns {trimmed_name: count} for all supervisors. Cached 15 min."""
     key = 'supervisor_counts'
     cached = cache.get(key)
     if cached is not None:
@@ -112,7 +112,7 @@ def get_supervisor_counts() -> dict:
             conn.close()
     except Exception:
         result = {}
-    cache.set(key, result, timeout=300)
+    cache.set(key, result, timeout=900)
     return result
 
 

@@ -1526,6 +1526,45 @@ def api_protection():
                 return jsonify({'error': 'Automated access blocked'}), 403
 
 
+@app.after_request
+def add_cache_headers(response):
+    # Long cache for static assets
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=86400'  # 1 day
+        return response
+    # Never cache user-specific or admin pages, or POST requests
+    if (request.method == 'POST'
+            or request.path.startswith('/cabinet')
+            or request.path.startswith('/admin')
+            or request.path.startswith('/api/oak/')):
+        response.headers['Cache-Control'] = 'no-store'
+        return response
+    # Short private client cache for the data table API
+    if request.path.startswith('/data'):
+        response.headers['Cache-Control'] = 'private, max-age=60'  # 1 min client cache
+    return response
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('errors/404.html'), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('errors/500.html'), 500
+
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('errors/403.html'), 403
+
+
+@app.errorhandler(429)
+def rate_limited(e):
+    return render_template('errors/429.html'), 429
+
+
 @app.route('/api/online-count')
 def online_count():
     from data import get_connection

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}Blog — Olimlar.uz{% endblock %}
 
 {% block extra_head %}
@@ -65,6 +66,7 @@
           <div class="bp-meta"><span>📅 {{ p.created_at }}</span><span>👁 {{ p.views }}</span></div>
         </div>
       </a>
+      {% if loop.index == 3 %}<div style="grid-column:1/-1;">{{ ad_banner('blog-mid', 'horizontal') }}</div>{% endif %}
       {% endfor %}
     </div>
 

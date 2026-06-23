@@ -1,0 +1,12 @@
+{% macro ad_banner(position, size='horizontal') %}
+<div class="ad-container ad-{{ position }} ad-{{ size }}" data-ad-position="{{ position }}">
+  <div class="ad-placeholder">
+    <span class="ad-label">Reklama</span>
+    <!-- Replace this div content with actual ad code -->
+    <div class="ad-slot" id="ad-{{ position }}">
+      <p class="ad-cta">Shu joyda sizning reklamangiz bo'lishi mumkin</p>
+      <a href="https://t.me/olimlar_uz" class="ad-contact">Reklama joylashtirish →</a>
+    </div>
+  </div>
+</div>
+{% endmacro %}

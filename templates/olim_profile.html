@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}{{ olim_name }} — Olimlar.uz{% endblock %}
 {% block meta_description %}{{ olim_name }} — ilmiy profil. {{ dissertations|length }} ta dissertatsiya, {{ shogirdlar|length }} ta shogird. Olimlar.uz{% endblock %}
 {% block og_title %}{{ olim_name }} — Olimlar.uz{% endblock %}
@@ -238,6 +239,8 @@
 <div class="op-body" data-protected>
   <div class="op-container">
 
+    {{ ad_banner('profile-top', 'horizontal') }}
+
     <div class="op-sec-title"><i class="bi bi-journal-text" style="color:#3b82f6;"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
     {% if not dissertations %}
     <div class="op-empty role-empty"><div class="ico">🎓</div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
@@ -335,6 +338,8 @@
     {% else %}
       <div class="op-empty role-empty"><div class="ico">📋</div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
     {% endif %}
+
+    {{ ad_banner('profile-mid', 'inline') }}
 
     <!-- ═══ TABS ═══ -->
     <div class="op-tabs">

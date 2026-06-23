@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}Tahlil — Olimlar.uz{% endblock %}
 {% block meta_description %}O'zbekiston ilmiy-tadqiqot statistikasi. PhD, DSc, muassasalar, ixtisosliklar.{% endblock %}
 {% block extra_head %}
@@ -50,6 +51,8 @@
     </div>
   </div>
 </div>
+
+{{ ad_banner('stats-mid', 'horizontal') }}
 
 <!-- Gender statistics -->
 <h2 style="font-size:1.1rem;font-weight:700;color:#e8edf5;margin:0.5rem 0 1rem;"><i class="bi bi-gender-ambiguous me-2" style="color:#ec4899;"></i>Jins bo'yicha statistika</h2>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}Olimlar.uz — Olimlar uchun yagona tadqiqot ma'lumotlar bazasi{% endblock %}
 {% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 27,000+ dissertatsiya, tadqiqotchi profillari, mavzu tahlili, AI yordamchi.{% endblock %}
 {% block og_title %}Olimlar.uz — Olimlar uchun barcha qulayliklar{% endblock %}
@@ -349,6 +350,8 @@ html { scroll-behavior: smooth; }
   </div>
 </section>
 
+{{ ad_banner('home-hero', 'horizontal') }}
+
 <!-- ════ SECTION 3: HOW IT HELPS ════ -->
 <section class="help-sec">
   <div class="hp-container fade-section">
@@ -408,6 +411,8 @@ html { scroll-behavior: smooth; }
     </div>
   </div>
 </section>
+
+{{ ad_banner('home-stats', 'horizontal') }}
 
 <!-- ════ SECTION 4: CAPABILITIES ════ -->
 <section class="cap-sec">
@@ -617,6 +622,8 @@ html { scroll-behavior: smooth; }
     <a href="/data" class="btn-cta green">Bepul boshlash →</a>
   </div>
 </section>
+
+{{ ad_banner('home-footer', 'horizontal') }}
 
 </div>
 {% endblock %}

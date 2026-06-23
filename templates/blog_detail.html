@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}{{ post.title }} — Olimlar.uz Blog{% endblock %}
 {% block meta_description %}{{ post.summary }}{% endblock %}
 {% block og_title %}{{ post.title }} — Olimlar.uz Blog{% endblock %}
@@ -68,6 +69,8 @@
         <p>Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. Dissertatsiya, ilmiy karyera va akademik yo'l bo'yicha foydali maqolalar.</p>
       </div>
     </div>
+
+    {{ ad_banner('blog-post', 'horizontal') }}
 
     {% if related %}
     <div class="bd-related">

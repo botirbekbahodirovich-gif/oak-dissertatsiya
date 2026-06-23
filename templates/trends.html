@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "ad_macros.html" import ad_banner %}
 {% block title %}Trend Analytics — Olimlar.uz{% endblock %}
 {% block meta_description %}O'zbekiston ilmiy-tadqiqot yo'nalishlari tahlili. Yillar bo'yicha statistika, ixtisosliklar trendi.{% endblock %}
 
@@ -75,6 +76,8 @@
         </div>
       </div>
     </div>
+
+    {{ ad_banner('trends-mid', 'horizontal') }}
 
     <!-- SECTION 3: specialties -->
     <div class="tr-sec">
