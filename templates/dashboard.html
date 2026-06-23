@@ -193,6 +193,34 @@
     .custom-select { min-width: 100px; }
     .daraja-btn { padding: 5px 10px; font-size: 12px; }
   }
+
+  /* ── Card view ── */
+  .card-view-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px 0; }
+  @media (max-width: 1024px) { .card-view-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .card-view-grid { grid-template-columns: 1fr; } }
+  .diss-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; transition: transform 0.2s, box-shadow 0.2s; position: relative; user-select: none; }
+  .diss-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .diss-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .diss-card-badge { color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; }
+  .diss-card-date { color: #64748b; font-size: 0.8rem; }
+  .diss-card-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 12px; }
+  .diss-card-name { margin: 0 0 8px; font-size: 1rem; font-weight: 700; }
+  .diss-card-name a { color: #60a5fa; text-decoration: none; }
+  .diss-card-name a:hover { color: #93bbfc; }
+  .diss-card-mavzu { color: #94a3b8; font-size: 0.85rem; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .diss-card-meta { margin-bottom: 8px; }
+  .diss-card-ixt { background: #162032; color: #60a5fa; padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; border: 1px solid #334155; }
+  .diss-card-rahbar { color: #94a3b8; font-size: 0.8rem; margin-bottom: 12px; }
+  .diss-card-rahbar a { color: #60a5fa; text-decoration: none; }
+  .supervisor-badge { font-size: 0.7rem; background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 50px; margin-left: 4px; }
+  .diss-card-footer { padding-top: 12px; border-top: 1px solid #334155; }
+  .diss-card-link { color: #3b82f6; text-decoration: none; font-size: 0.8rem; font-weight: 600; }
+  .diss-card-link:hover { color: #60a5fa; }
+  .no-cards { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #64748b; font-size: 1.1rem; }
+  .card-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; padding: 20px 0; }
+  .card-page-btn { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
+  .card-page-btn:hover { background: #334155; }
+  .card-page-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
 </style>
 {% endblock %}
 {% block content %}
@@ -278,7 +306,7 @@
       <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
         <div class="view-toggle" id="view-toggle">
           <button type="button" class="vt-btn active" id="vt-table">📋 Jadval</button>
-          <button type="button" class="vt-btn" id="vt-card" onclick="alert('Kartochka ko‘rinishi tez orada qo‘shiladi!');">🃏 Kartochka</button>
+          <button type="button" class="vt-btn" id="vt-card">🃏 Kartochka</button>
         </div>
         <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></span>
         <div class="col-toggle-wrap">
@@ -316,6 +344,13 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Card view (alternative to table; shares same data source & filters) -->
+    <div id="cardViewContainer" data-protected style="display:none;">
+      <div id="cardGrid" class="card-view-grid"><!-- Cards rendered here by JS --></div>
+      <div id="cardPagination" class="card-pagination"><!-- Pagination for card view --></div>
+    </div>
+
     <div class="pagination-bar" id="pagination-bar"></div>
   </div>
 
@@ -895,6 +930,135 @@
     updateData(true);
     initResizeHandles();
   });
+
+  // ════════════════════════════════════════════════════════════════════
+  // CARD VIEW (additive — reuses the table's data source, filters & paging)
+  // ════════════════════════════════════════════════════════════════════
+  let cardViewOn = false;
+
+  // Wrap renderRows so that, whenever the table re-renders (search / filter /
+  // page change), the card grid stays in sync — without altering table logic.
+  const _origRenderRows = renderRows;
+  renderRows = function (records, startIndex) {
+    _origRenderRows(records, startIndex);
+    if (cardViewOn) renderCards(records);
+  };
+
+  function createDissertationCard(d) {
+    const card = document.createElement('div');
+    card.className = 'diss-card';
+
+    const daraja = (d.Daraja || '').toUpperCase();
+    const isPhd = daraja === 'PHD' || daraja.includes('ФАН') || (d.Daraja || '').toLowerCase().includes('phd');
+    const degreeColor = isPhd ? '#059669' : '#e36403';
+    const degreeText = isPhd ? 'PhD' : 'DSc';
+    const supervisorCount = d.supervisor_count || 0;
+
+    const olimName = d.Olim || '';
+    const olimDisp = d.Olim_short || d.Olim || '—';
+    const rahbarName = d.Ilmiy_rahbar || '';
+    const rahbarDisp = d.Ilmiy_rahbar_short || d.Ilmiy_rahbar || '';
+    const shifr = ixtisoslikShifr(d.Ixtisoslik);
+    const oakUrl = d.Link || (d.oak_id ? 'https://oak.uz/pages/' + d.oak_id : '');
+
+    let html = '';
+    html += '<div class="diss-card-header">';
+    html += '<span class="diss-card-badge" style="background:' + degreeColor + '">' + degreeText + '</span>';
+    html += '<span class="diss-card-date">' + escHtml(fmtSana(d.Sana)) + '</span>';
+    html += '</div>';
+    html += '<div class="diss-card-avatar">🎓</div>';
+    html += '<h3 class="diss-card-name">';
+    html += olimName
+      ? '<a href="/olim/' + encodeURIComponent(olimName) + '">' + escHtml(olimDisp) + '</a>'
+      : escHtml(olimDisp);
+    html += '</h3>';
+    html += '<p class="diss-card-mavzu">' + escHtml(d.Mavzu || '') + '</p>';
+    if (d.Ixtisoslik) {
+      html += '<div class="diss-card-meta"><span class="diss-card-ixt" title="' + escHtml(d.Ixtisoslik) + '">' + escHtml(shifr) + '</span></div>';
+    }
+    html += '<div class="diss-card-rahbar">';
+    if (rahbarName) {
+      html += '👨‍🏫 <a href="/olim/' + encodeURIComponent(rahbarName) + '">' + escHtml(rahbarDisp) + '</a>';
+      if (supervisorCount > 0) html += '<span class="supervisor-badge">' + supervisorCount + ' 👨‍🎓</span>';
+    } else {
+      html += '<span style="color:#64748b;">—</span>';
+    }
+    html += '</div>';
+    if (oakUrl) {
+      html += '<div class="diss-card-footer"><a href="' + escHtml(oakUrl) + '" target="_blank" rel="noopener" class="diss-card-link">OAK saytida →</a></div>';
+    }
+    card.innerHTML = html;
+    return card;
+  }
+
+  function renderCards(records) {
+    const grid = document.getElementById('cardGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    if (!records || records.length === 0) {
+      grid.innerHTML = '<div class="no-cards"><p>😕 Natija topilmadi</p></div>';
+      renderCardPagination(currentPage, 0, 0);
+      return;
+    }
+    records.forEach(function (d) { grid.appendChild(createDissertationCard(d)); });
+    const totalPages = Math.max(1, Math.ceil((currentTotal || 0) / PER_PAGE));
+    renderCardPagination(currentPage, totalPages, currentTotal || 0);
+  }
+
+  function renderCardPagination(page, totalPages, totalRecords) {
+    const container = document.getElementById('cardPagination');
+    if (!container) return;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    let html = '<span style="color:#64748b;font-size:0.85rem;margin-right:12px;">Sahifa ' + page + ' / ' + totalPages + ' (' + (totalRecords || 0).toLocaleString('uz') + ' ta natija)</span>';
+    if (page > 1) html += '<button class="card-page-btn" data-cpg="' + (page - 1) + '">← Oldingi</button>';
+    let start = Math.max(1, page - 2);
+    let end = Math.min(totalPages, start + 4);
+    if (end - start < 4) start = Math.max(1, end - 4);
+    for (let i = start; i <= end; i++) {
+      html += '<button class="card-page-btn ' + (i === page ? 'active' : '') + '" data-cpg="' + i + '">' + i + '</button>';
+    }
+    if (page < totalPages) html += '<button class="card-page-btn" data-cpg="' + (page + 1) + '">Keyingi →</button>';
+    container.innerHTML = html;
+    container.querySelectorAll('.card-page-btn[data-cpg]').forEach(function (b) {
+      b.addEventListener('click', function () { cardGoToPage(+b.dataset.cpg); });
+    });
+  }
+
+  // Reuse the table's fetcher so filters/search apply automatically.
+  function cardGoToPage(page) {
+    if (page === currentPage) return;
+    currentPage = page;
+    updateData();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  (function initCardToggle() {
+    const btnTable = document.getElementById('vt-table');
+    const btnCard = document.getElementById('vt-card');
+    const tableScroll = document.querySelector('.table-scroll');
+    const pager = document.getElementById('pagination-bar');
+    const cardContainer = document.getElementById('cardViewContainer');
+    if (!btnTable || !btnCard || !cardContainer) return;
+
+    btnCard.addEventListener('click', function () {
+      cardViewOn = true;
+      btnCard.classList.add('active');
+      btnTable.classList.remove('active');
+      if (tableScroll) tableScroll.style.display = 'none';
+      if (pager) pager.style.display = 'none';
+      cardContainer.style.display = 'block';
+      renderCards(currentRecords);
+    });
+
+    btnTable.addEventListener('click', function () {
+      cardViewOn = false;
+      btnTable.classList.add('active');
+      btnCard.classList.remove('active');
+      if (tableScroll) tableScroll.style.display = '';
+      if (pager) pager.style.display = '';
+      cardContainer.style.display = 'none';
+    });
+  })();
 </script>
 <script>
   async function loadAndRenderStats() {
