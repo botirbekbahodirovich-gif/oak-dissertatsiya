@@ -14,6 +14,15 @@
   </script>
 
   <title>{% block title %}Olimlar.uz{% endblock %}</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#1e40af">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Olimlar.uz">
+  <link rel="apple-touch-icon" href="/static/icons/icon.svg">
+
   {% block meta %}
   <meta name="description" content="{% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 27,000+ dissertatsiya, tadqiqotchi profillari, AI mavzu tahlili.{% endblock %}">
   <meta name="keywords" content="{% block meta_keywords %}dissertatsiya, olimlar, PhD, DSc, OAK, ilmiy tadqiqot, O'zbekiston, ilmiy rahbar, avtoreferat, himoya{% endblock %}">
@@ -1114,5 +1123,82 @@ function dismissAuthPopup() {
 }
 </script>
 {% endif %}
+
+<!-- Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/sw.js', {scope: '/'})
+      .then(function(reg) {
+        console.log('SW registered:', reg.scope);
+      })
+      .catch(function(err) {
+        console.log('SW registration failed:', err);
+      });
+  });
+}
+</script>
+
+<!-- PWA custom install banner -->
+<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:1px solid #334155;padding:16px 20px;z-index:9998;box-shadow:0 -4px 20px rgba(0,0,0,0.3);">
+  <div style="max-width:600px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:2rem;">📊</span>
+      <div>
+        <p style="color:#f1f5f9;font-weight:600;font-size:0.9rem;margin:0;">Olimlar.uz ni o'rnating</p>
+        <p style="color:#94a3b8;font-size:0.75rem;margin:0;">Telefoningizda app sifatida ishlating</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button id="pwaInstallBtn" style="background:#3b82f6;color:white;border:none;padding:8px 20px;border-radius:50px;font-weight:600;font-size:0.85rem;cursor:pointer;">O'rnatish</button>
+      <button id="pwaInstallDismiss" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;padding:4px 8px;">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let deferredPrompt;
+  const banner = document.getElementById('pwaInstallBanner');
+  const installBtn = document.getElementById('pwaInstallBtn');
+  const dismissBtn = document.getElementById('pwaInstallDismiss');
+
+  // Check if already dismissed
+  if (localStorage.getItem('pwaInstallDismissed')) return;
+  // Check if already installed
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show banner after 10 seconds
+    setTimeout(function() {
+      if (banner) banner.style.display = 'block';
+    }, 10000);
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', function() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(function(result) {
+          if (result.outcome === 'accepted') {
+            console.log('PWA installed');
+          }
+          deferredPrompt = null;
+          banner.style.display = 'none';
+        });
+      }
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', function() {
+      banner.style.display = 'none';
+      localStorage.setItem('pwaInstallDismissed', 'true');
+    });
+  }
+})();
+</script>
 </body>
 </html>

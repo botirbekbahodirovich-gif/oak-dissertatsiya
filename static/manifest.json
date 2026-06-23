@@ -1,0 +1,35 @@
+{
+  "name": "Olimlar.uz — Ilmiy-tadqiqot platformasi",
+  "short_name": "Olimlar.uz",
+  "description": "O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "uz",
+  "categories": ["education", "research"],
+  "icons": [
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dissertatsiyalar jadvali",
+      "short_name": "Jadval",
+      "url": "/dashboard",
+      "icons": [{"src": "/static/icons/icon.svg", "sizes": "any"}]
+    },
+    {
+      "name": "Mavzu tahlili",
+      "short_name": "Tahlil",
+      "url": "/compare",
+      "icons": [{"src": "/static/icons/icon.svg", "sizes": "any"}]
+    }
+  ]
+}

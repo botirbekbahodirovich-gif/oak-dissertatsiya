@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Oflayn — Olimlar.uz{% endblock %}
+{% block content %}
+<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px 20px;">
+  <div style="max-width:500px;">
+    <div style="font-size:5rem;margin-bottom:16px;">📡</div>
+    <h1 style="color:#f1f5f9;font-size:2rem;font-weight:700;margin-bottom:12px;">Internet aloqasi yo'q</h1>
+    <p style="color:#94a3b8;font-size:1rem;line-height:1.6;margin-bottom:24px;">
+      Hozirda internet aloqangiz yo'q. Iltimos, aloqani tekshirib qaytadan urinib ko'ring.
+    </p>
+    <button onclick="location.reload()" style="background:#3b82f6;color:white;padding:12px 28px;border-radius:50px;border:none;font-weight:600;font-size:1rem;cursor:pointer;">
+      🔄 Qayta urinish
+    </button>
+  </div>
+</div>
+{% endblock %}

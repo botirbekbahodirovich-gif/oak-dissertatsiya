@@ -1565,6 +1565,20 @@ def add_cache_headers(response):
     return response
 
 
+@app.route('/offline')
+def offline():
+    return render_template('offline.html')
+
+
+@app.route('/sw.js')
+def service_worker():
+    # Serve the service worker from root so its scope can be "/"
+    return app.send_static_file('sw.js'), 200, {
+        'Content-Type': 'application/javascript',
+        'Service-Worker-Allowed': '/'
+    }
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('errors/404.html'), 404
