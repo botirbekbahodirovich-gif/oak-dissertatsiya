@@ -239,73 +239,75 @@
 </div>
 
 <div class="admin-section">
-  <h2>👥 Eng ko'p tashrif buyurgan foydalanuvchilar (IP bo'yicha)</h2>
+  <h2>👤 Ro'yxatdan o'tgan foydalanuvchilar</h2>
   <div class="admin-table-panel">
     <table class="admin-table table">
       <thead>
         <tr>
-          <th>#</th><th>Foydalanuvchi</th><th>IP manzil</th><th>Tashriflar soni</th><th>Unikal sahifalar</th>
-          <th>Birinchi tashrif</th><th>Oxirgi tashrif</th>
+          <th>#</th><th>Ism</th><th>Tashriflar</th><th>Qurilmalar soni</th><th>Unikal sahifalar</th>
+          <th>Birinchi</th><th>Oxirgi</th><th>Amal</th>
         </tr>
       </thead>
       <tbody>
-        {% set maxv = (top_visitors[0].visit_count if top_visitors else 1) or 1 %}
-        {% for v in top_visitors %}
+        {% set rmax = (registered_visitors[0].visit_count if registered_visitors else 1) or 1 %}
+        {% for v in registered_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td>{{ flag(v.country) }} {% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
-          <td class="ip-mono"><a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a></td>
+          <td>{{ flag(v.country) }} <a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a></td>
           <td>
             <div class="vc-cell">
               <span class="vc-num">{{ v.visit_count }}</span>
-              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (v.visit_count / maxv * 100) | round(0, 'ceil') }}%;"></div></div>
+              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (v.visit_count / rmax * 100) | round(0, 'ceil') }}%;"></div></div>
             </div>
           </td>
+          <td style="font-weight:700;">{{ v.ip_count }}</td>
           <td style="font-weight:700;">{{ v.unique_pages }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.first_visit }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Oxirgi IP bo'yicha bloklash" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🚫 Bloklash</button>{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="empty-cell">Tashriflar yo'q</td></tr>
+        <tr><td colspan="8" class="empty-cell">Ro'yxatdan o'tgan tashrif yo'q</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-{% if top_users %}
 <div class="admin-section">
-  <h2>🧑‍💻 Foydalanuvchilar bo'yicha</h2>
+  <h2>👻 Mehmonlar</h2>
   <div class="admin-table-panel">
     <table class="admin-table table">
       <thead>
         <tr>
-          <th>#</th><th>Foydalanuvchi</th><th>Tashriflar soni</th><th>Qurilmalar</th>
-          <th>Unikal sahifalar</th><th>Oxirgi tashrif</th>
+          <th>#</th><th>IP</th><th>Tashriflar</th><th>Unikal sahifalar</th>
+          <th>Birinchi</th><th>Oxirgi</th><th>Amal</th>
         </tr>
       </thead>
       <tbody>
-        {% set umax = (top_users[0].visit_count if top_users else 1) or 1 %}
-        {% for u in top_users %}
+        {% set gmax = (guest_visitors[0].visit_count if guest_visitors else 1) or 1 %}
+        {% for v in guest_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td><a href="/admin/user-activity/{{ u.user_id or u.username }}" style="color:#60a5fa;font-weight:600;">{{ u.username }}</a></td>
+          <td class="ip-mono">{{ flag(v.country) }} <a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a></td>
           <td>
             <div class="vc-cell">
-              <span class="vc-num">{{ u.visit_count }}</span>
-              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (u.visit_count / umax * 100) | round(0, 'ceil') }}%;"></div></div>
+              <span class="vc-num">{{ v.visit_count }}</span>
+              <div class="vc-bar-track"><div class="vc-bar" style="width: {{ (v.visit_count / gmax * 100) | round(0, 'ceil') }}%;"></div></div>
             </div>
           </td>
-          <td style="font-weight:700;">{{ u.device_count }}</td>
-          <td style="font-weight:700;">{{ u.unique_pages }}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{{ u.last_visit }}</td>
+          <td style="font-weight:700;">{{ v.unique_pages }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.first_visit }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🚫 Bloklash</button>{% endif %}</td>
         </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty-cell">Mehmon tashrifi yo'q</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-{% endif %}
 
 <!-- 📢 Broadcast -->
 <div class="admin-section">

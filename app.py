@@ -2037,27 +2037,34 @@ def admin_analytics():
                 FROM page_visits WHERE visited_at > NOW() - INTERVAL '5 minutes'""")
             online_now = cur.fetchone()[0]
 
-            # Recent visitors — one row per IP, latest activity first (last 24h)
-            cur.execute("""
-                SELECT ip_address,
+            # Identity = registered username (case-folded) for real accounts,
+            # else the IP. Guests are logged as 'Mehmon'/'Anonim' so they group by IP.
+            _ID = ("CASE WHEN username IS NOT NULL AND TRIM(username) <> '' "
+                   "AND username NOT IN ('Mehmon', 'Anonim') "
+                   "THEN LOWER(TRIM(username)) ELSE ip_address END")
+
+            # Recent visitors — one row per identity, latest activity first (last 24h)
+            cur.execute(f"""
+                SELECT {_ID} AS identity,
                        MAX(username) AS username,
                        MAX(user_id) AS user_id,
                        (array_agg(page ORDER BY visited_at DESC))[1] AS last_page,
                        MAX(visited_at) AS last_visit,
                        COUNT(*) AS total_visits,
                        COUNT(DISTINCT page) AS unique_pages,
+                       MAX(ip_address) AS ip,
                        MAX(country) AS country
                 FROM page_visits
                 WHERE visited_at >= NOW() - INTERVAL '24 hours'
-                GROUP BY ip_address
+                GROUP BY {_ID}
                 ORDER BY last_visit DESC
                 LIMIT 50
             """)
             recent = [{
-                "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
+                "username": r[1] or "", "user_id": r[2],
                 "page": r[3] or "/", "visited_at": r[4],
                 "total_visits": r[5] or 0, "unique_pages": r[6] or 0,
-                "country": r[7] or "",
+                "ip": r[7] or "—", "country": r[8] or "",
             } for r in cur.fetchall()]
 
             # Daily visits last 7 days
@@ -2066,53 +2073,62 @@ def admin_analytics():
                 GROUP BY d ORDER BY d""")
             weekly = cur.fetchall()
 
-            # Top visitors by IP
-            cur.execute("""
-                SELECT ip_address,
-                       MAX(username) AS username,
-                       MAX(user_id) AS user_id,
-                       COUNT(*) AS visit_count,
-                       MAX(visited_at) AS last_visit,
-                       MIN(visited_at) AS first_visit,
-                       COUNT(DISTINCT page) AS unique_pages,
-                       MAX(country) AS country
-                FROM page_visits
-                GROUP BY ip_address
-                ORDER BY visit_count DESC
-                LIMIT 20
-            """)
-            top_visitors = [{
-                "ip": r[0] or "—",
-                "username": r[1] or "", "user_id": r[2],
-                "visit_count": r[3] or 0,
-                "last_visit": str(r[4])[:16] if r[4] else "",
-                "first_visit": str(r[5])[:16] if r[5] else "",
-                "unique_pages": r[6] or 0,
-                "country": r[7] or "",
-            } for r in cur.fetchall()]
-
-            # Top visitors grouped by username
-            top_users = []
+            # Top registered visitors — grouped by username (one row per account)
+            registered_visitors = []
             try:
                 cur.execute("""
-                    SELECT username, MAX(user_id) AS user_id,
+                    SELECT LOWER(TRIM(username)) AS identity,
+                           MAX(username) AS username,
+                           MAX(user_id) AS user_id,
                            COUNT(*) AS visit_count,
-                           COUNT(DISTINCT ip_address) AS device_count,
+                           COUNT(DISTINCT ip_address) AS ip_count,
                            COUNT(DISTINCT page) AS unique_pages,
-                           MAX(visited_at) AS last_visit
+                           MIN(visited_at) AS first_visit,
+                           MAX(visited_at) AS last_visit,
+                           MAX(country) AS country,
+                           MAX(ip_address) AS ip
                     FROM page_visits
-                    WHERE username IS NOT NULL AND username <> '' AND username <> 'Anonim'
-                    GROUP BY username
+                    WHERE username IS NOT NULL AND TRIM(username) <> ''
+                          AND username NOT IN ('Mehmon', 'Anonim')
+                    GROUP BY LOWER(TRIM(username))
                     ORDER BY visit_count DESC
                     LIMIT 20
                 """)
-                top_users = [{
-                    "username": r[0] or "", "user_id": r[1], "visit_count": r[2] or 0,
-                    "device_count": r[3] or 0, "unique_pages": r[4] or 0,
-                    "last_visit": str(r[5])[:16] if r[5] else "",
+                registered_visitors = [{
+                    "username": r[1] or "", "user_id": r[2], "visit_count": r[3] or 0,
+                    "ip_count": r[4] or 0, "unique_pages": r[5] or 0,
+                    "first_visit": str(r[6])[:16] if r[6] else "",
+                    "last_visit": str(r[7])[:16] if r[7] else "",
+                    "country": r[8] or "", "ip": r[9] or "—",
                 } for r in cur.fetchall()]
             except Exception:
-                top_users = []
+                registered_visitors = []
+
+            # Top guest visitors — grouped by IP (no real account)
+            guest_visitors = []
+            try:
+                cur.execute("""
+                    SELECT ip_address,
+                           COUNT(*) AS visit_count,
+                           COUNT(DISTINCT page) AS unique_pages,
+                           MIN(visited_at) AS first_visit,
+                           MAX(visited_at) AS last_visit,
+                           MAX(country) AS country
+                    FROM page_visits
+                    WHERE username IS NULL OR TRIM(username) = ''
+                          OR username IN ('Mehmon', 'Anonim')
+                    GROUP BY ip_address
+                    ORDER BY visit_count DESC
+                    LIMIT 20
+                """)
+                guest_visitors = [{
+                    "ip": r[0] or "—", "visit_count": r[1] or 0, "unique_pages": r[2] or 0,
+                    "first_visit": str(r[3])[:16] if r[3] else "",
+                    "last_visit": str(r[4])[:16] if r[4] else "",
+                    "country": r[5] or "",
+                } for r in cur.fetchall()]
+            except Exception:
+                guest_visitors = []
 
             # Registered cabinet users (if any)
             registered_users = []
@@ -2170,21 +2186,23 @@ def admin_analytics():
             # showing the page they are currently on.
             online_users = []
             try:
-                cur.execute("""
-                    SELECT ip_address,
+                cur.execute(f"""
+                    SELECT {_ID} AS identity,
                            MAX(username) AS username,
                            MAX(user_id) AS user_id,
                            (array_agg(page ORDER BY visited_at DESC))[1] AS current_page,
                            MAX(visited_at) AS last_activity,
+                           COUNT(DISTINCT ip_address) AS ip_count,
+                           MAX(ip_address) AS ip,
                            MAX(country) AS country
                     FROM page_visits
                     WHERE visited_at > NOW() - INTERVAL '5 minutes'
-                    GROUP BY ip_address
+                    GROUP BY {_ID}
                     ORDER BY last_activity DESC
                 """)
                 online_users = [{
-                    "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
-                    "page": r[3] or "/", "visited_at": r[4], "country": r[5] or "",
+                    "ip": r[6] or "—", "username": r[1] or "", "user_id": r[2],
+                    "page": r[3] or "/", "visited_at": r[4], "country": r[7] or "",
                 } for r in cur.fetchall()]
             except Exception:
                 online_users = []
@@ -2249,7 +2267,8 @@ def admin_analytics():
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
         recent=recent, weekly=weekly,
-        top_visitors=top_visitors, top_users=top_users, registered_users=registered_users,
+        registered_visitors=registered_visitors, guest_visitors=guest_visitors,
+        registered_users=registered_users,
         registered_count=registered_count, new_today_count=new_today_count,
         guest_count=guest_count, total_dissertations=total_dissertations,
         total_news=total_news, online_users=online_users,
