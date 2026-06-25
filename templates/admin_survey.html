@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}So'rovnoma natijalari — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .survey-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  @media (max-width: 640px) { .survey-summary-grid { grid-template-columns: 1fr; } }
+  .survey-summary-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; text-align: center; }
+  .survey-summary-card .num { font-size: 1.8rem; font-weight: 800; color: #f1f5f9; display: block; }
+  .survey-summary-card .lbl { font-size: 0.8rem; color: #64748b; }
+
+  .survey-group-title { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+
+  .survey-result-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .survey-result-card h4 { color: #e2e8f0; font-size: 1rem; font-weight: 700; margin: 0 0 16px; }
+  .survey-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .survey-bar-label { min-width: 80px; color: #94a3b8; font-size: 0.85rem; }
+  .survey-bar-track { flex: 1; height: 24px; background: #162032; border-radius: 12px; overflow: hidden; }
+  .survey-bar-fill { height: 100%; border-radius: 12px; transition: width 0.5s ease; }
+  .survey-bar-yes { background: #059669; }
+  .survey-bar-no { background: #dc2626; }
+  .survey-bar-custom { background: #3b82f6; }
+  .survey-bar-count { min-width: 80px; text-align: right; color: #e2e8f0; font-size: 0.85rem; font-weight: 600; }
+  .survey-custom-answers { margin-top: 12px; padding-top: 12px; border-top: 1px solid #334155; }
+  .survey-custom-answers h5 { color: #94a3b8; font-size: 0.8rem; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .survey-custom-item { padding: 6px 0; font-size: 0.85rem; color: #e2e8f0; border-bottom: 1px solid #162032; }
+  .survey-empty { color: #64748b; text-align: center; padding: 2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <div>
+    <h1><i class="bi bi-clipboard-check"></i> So'rovnoma natijalari</h1>
+    <p>Foydalanuvchilar fikrlari va javoblari</p>
+  </div>
+</div>
+
+<div class="survey-summary-grid">
+  <div class="survey-summary-card">
+    <span class="num">{{ total_responses }}</span>
+    <span class="lbl">Jami javoblar</span>
+  </div>
+  <div class="survey-summary-card">
+    <span class="num">{{ total_participants }}</span>
+    <span class="lbl">Ishtirokchilar</span>
+  </div>
+  <div class="survey-summary-card">
+    <span class="num">{{ yes_pct }}%</span>
+    <span class="lbl">O'rtacha "Ha" foizi</span>
+  </div>
+</div>
+
+{% if grouped_questions %}
+  {% for group_num, qs in grouped_questions.items() %}
+  <div class="survey-group-title">📦 Guruh {{ group_num }}</div>
+  {% for q in qs %}
+  <div class="survey-result-card">
+    <h4>{{ q.question_text }}</h4>
+    <div class="survey-bars">
+      <div class="survey-bar-row">
+        <span class="survey-bar-label">👍 Ha</span>
+        <div class="survey-bar-track"><div class="survey-bar-fill survey-bar-yes" style="width:{{ q.yes_pct }}%"></div></div>
+        <span class="survey-bar-count">{{ q.yes_count }} ({{ q.yes_pct }}%)</span>
+      </div>
+      <div class="survey-bar-row">
+        <span class="survey-bar-label">👎 Yo'q</span>
+        <div class="survey-bar-track"><div class="survey-bar-fill survey-bar-no" style="width:{{ q.no_pct }}%"></div></div>
+        <span class="survey-bar-count">{{ q.no_count }} ({{ q.no_pct }}%)</span>
+      </div>
+      <div class="survey-bar-row">
+        <span class="survey-bar-label">✏️ Boshqa</span>
+        <div class="survey-bar-track"><div class="survey-bar-fill survey-bar-custom" style="width:{{ q.custom_pct }}%"></div></div>
+        <span class="survey-bar-count">{{ q.custom_count }} ({{ q.custom_pct }}%)</span>
+      </div>
+    </div>
+    {% if q.custom_answers %}
+    <div class="survey-custom-answers">
+      <h5>O'z javoblari ({{ q.custom_answers|length }})</h5>
+      {% for ca in q.custom_answers %}
+      <div class="survey-custom-item">
+        <span>"{{ ca.custom_text }}"</span>
+        <span style="color:#64748b;font-size:0.75rem;"> — {{ ca.username or 'Mehmon' }}, {{ ca.created_at|uztime }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
+{% else %}
+<div class="survey-result-card"><div class="survey-empty">Hali so'rovnoma javoblari yo'q.</div></div>
+{% endif %}
+{% endblock %}

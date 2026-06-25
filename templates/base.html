@@ -638,6 +638,7 @@
         <a href="/admin/yangiliklar" class="nav-link{% if request.path.startswith('/admin/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar (admin)</a>
         <a href="/admin/blog" class="nav-link{% if request.path.startswith('/admin/blog') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Blog (admin)</a>
         <a href="/admin/vacancies" class="nav-link{% if request.path.startswith('/admin/vacancies') %} active{% endif %}"><i class="bi bi-briefcase"></i>Vakansiyalar</a>
+        <a href="/admin/survey" class="nav-link{% if request.path.startswith('/admin/survey') %} active{% endif %}"><i class="bi bi-clipboard-check"></i>So'rovnoma</a>
         {% endif %}
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
           <i class="bi bi-bell-fill"></i>
@@ -1142,6 +1143,187 @@ function dismissAuthPopup() {
 }
 </script>
 {% endif %}
+
+<!-- ════ User feedback survey popup ════ -->
+<style>
+  #surveyOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:99990; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+  .survey-question { background:#162032; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:12px; }
+  .survey-question-text { color:#e2e8f0; font-size:0.95rem; font-weight:600; margin-bottom:12px; }
+  .survey-options { display:flex; gap:8px; flex-wrap:wrap; }
+  .survey-opt-btn { padding:8px 20px; border-radius:50px; border:1px solid #334155; background:#1e293b; color:#94a3b8; cursor:pointer; font-size:0.85rem; transition:all 0.2s; }
+  .survey-opt-btn:hover { border-color:#3b82f6; color:#60a5fa; }
+  .survey-opt-btn.selected { background:#3b82f6; border-color:#3b82f6; color:white; }
+  .survey-opt-btn.selected-yes { background:#059669; border-color:#059669; color:white; }
+  .survey-opt-btn.selected-no { background:#dc2626; border-color:#dc2626; color:white; }
+  .survey-custom-input { width:100%; margin-top:8px; background:#0f172a; border:1px solid #334155; color:#e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.85rem; display:none; }
+  .survey-custom-input:focus { border-color:#3b82f6; outline:none; }
+</style>
+<div id="surveyOverlay">
+  <div id="surveyCard" style="background:#1e293b;border:1px solid #334155;border-radius:20px;max-width:500px;width:92%;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:popupSlideIn 0.4s ease;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="color:#f1f5f9;font-size:1.2rem;margin:0;">📋 Sizning fikringiz muhim</h2>
+      <button onclick="closeSurvey()" style="background:none;border:none;color:#64748b;font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px;">3 ta qisqa savolga javob bering — bu bizga platformani yaxshilashga yordam beradi.</p>
+    <div id="surveyQuestions"></div>
+    <div id="surveyActions" style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="surveyProgress" style="color:#64748b;font-size:0.8rem;"></span>
+      <button id="surveySubmitBtn" onclick="submitSurvey()" style="background:#3b82f6;color:white;border:none;padding:10px 24px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.9rem;">Yuborish →</button>
+    </div>
+    <div id="surveyThanks" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:3rem;margin-bottom:12px;">🙏</div>
+      <h3 style="color:#f1f5f9;margin-bottom:8px;">Rahmat!</h3>
+      <p style="color:#94a3b8;font-size:0.9rem;">Fikringiz biz uchun juda muhim. Keyingi safar yana savollar beramiz.</p>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  // Don't show survey on admin/cabinet/login pages
+  const skipPaths = ['/admin', '/cabinet', '/login', '/register', '/offline'];
+  if (skipPaths.some(p => window.location.pathname.startsWith(p))) return;
+
+  const answeredGroups = JSON.parse(localStorage.getItem('survey_answered_groups') || '[]');
+  const lastSurveyTime = parseInt(localStorage.getItem('survey_last_shown') || '0');
+  const now = Date.now();
+
+  // Don't show if shown/answered less than 24 hours ago
+  if (now - lastSurveyTime < 24 * 60 * 60 * 1000) return;
+
+  // Show after 60 seconds on site
+  setTimeout(function() {
+    loadSurveyQuestions(answeredGroups);
+  }, 60000);
+})();
+
+var currentSurveyQuestions = [];
+
+function loadSurveyQuestions(answeredGroups) {
+  // Never overlap the mandatory auth popup — retry later if it's open
+  var authOverlay = document.getElementById('authOverlay');
+  if (authOverlay && authOverlay.style.display === 'flex') {
+    setTimeout(function() { loadSurveyQuestions(answeredGroups); }, 30000);
+    return;
+  }
+  fetch('/api/survey/questions?answered=' + answeredGroups.join(','))
+    .then(r => r.json())
+    .then(data => {
+      if (!data.questions || data.questions.length === 0) return;
+      currentSurveyQuestions = data.questions;
+      renderSurveyQuestions(data.questions, data.group_number, data.total_groups);
+      document.getElementById('surveyOverlay').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    })
+    .catch(function() {});
+}
+
+function renderSurveyQuestions(questions, groupNum, totalGroups) {
+  const container = document.getElementById('surveyQuestions');
+  container.style.display = 'block';
+  container.innerHTML = '';
+  questions.forEach(function(q, i) {
+    const div = document.createElement('div');
+    div.className = 'survey-question';
+    div.dataset.questionId = q.id;
+
+    const qtext = document.createElement('div');
+    qtext.className = 'survey-question-text';
+    qtext.textContent = (i + 1) + '. ' + q.question_text;
+    div.appendChild(qtext);
+
+    const opts = document.createElement('div');
+    opts.className = 'survey-options';
+    [['ha', '👍 Ha'], ['yoq', "👎 Yo'q"], ['custom', "✏️ O'z javobim"]].forEach(function(pair) {
+      const b = document.createElement('button');
+      b.className = 'survey-opt-btn';
+      b.dataset.answer = pair[0];
+      b.textContent = pair[1];
+      b.addEventListener('click', function() { selectAnswer(b, q.id, pair[0]); });
+      opts.appendChild(b);
+    });
+    div.appendChild(opts);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'survey-custom-input';
+    input.id = 'custom-' + q.id;
+    input.placeholder = 'Javobingizni yozing...';
+    input.maxLength = 500;
+    div.appendChild(input);
+
+    container.appendChild(div);
+  });
+  document.getElementById('surveyProgress').textContent = 'Guruh ' + groupNum + '/' + totalGroups;
+  document.getElementById('surveyActions').style.display = 'flex';
+  document.getElementById('surveyThanks').style.display = 'none';
+}
+
+function selectAnswer(btn, questionId, answer) {
+  btn.parentElement.querySelectorAll('.survey-opt-btn').forEach(b => { b.className = 'survey-opt-btn'; });
+  if (answer === 'ha') btn.className = 'survey-opt-btn selected-yes';
+  else if (answer === 'yoq') btn.className = 'survey-opt-btn selected-no';
+  else btn.className = 'survey-opt-btn selected';
+  btn.dataset.selected = 'true';
+  const customInput = document.getElementById('custom-' + questionId);
+  if (answer === 'custom') { customInput.style.display = 'block'; customInput.focus(); }
+  else { customInput.style.display = 'none'; }
+}
+
+function submitSurvey() {
+  const responses = [];
+  let allAnswered = true;
+  currentSurveyQuestions.forEach(function(q) {
+    const questionDiv = document.querySelector('[data-question-id="' + q.id + '"]');
+    const selectedBtn = questionDiv.querySelector('.survey-opt-btn[data-selected="true"]');
+    if (!selectedBtn) { allAnswered = false; return; }
+    const answer = selectedBtn.dataset.answer;
+    const customText = answer === 'custom' ? document.getElementById('custom-' + q.id).value.trim() : '';
+    responses.push({ question_id: q.id, answer: answer, custom_text: customText });
+  });
+  if (!allAnswered) {
+    currentSurveyQuestions.forEach(function(q) {
+      const questionDiv = document.querySelector('[data-question-id="' + q.id + '"]');
+      const selectedBtn = questionDiv.querySelector('.survey-opt-btn[data-selected="true"]');
+      if (!selectedBtn) {
+        questionDiv.style.borderColor = '#ef4444';
+        setTimeout(() => questionDiv.style.borderColor = '#334155', 2000);
+      }
+    });
+    return;
+  }
+  const btn = document.getElementById('surveySubmitBtn');
+  btn.textContent = '⏳ Yuborilmoqda...';
+  btn.disabled = true;
+  fetch('/api/survey/submit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({responses: responses})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      const answered = JSON.parse(localStorage.getItem('survey_answered_groups') || '[]');
+      answered.push(data.group_number);
+      localStorage.setItem('survey_answered_groups', JSON.stringify(answered));
+      localStorage.setItem('survey_last_shown', Date.now().toString());
+      document.getElementById('surveyQuestions').style.display = 'none';
+      document.getElementById('surveyActions').style.display = 'none';
+      document.getElementById('surveyThanks').style.display = 'block';
+      setTimeout(closeSurvey, 3000);
+    } else {
+      btn.textContent = 'Yuborish →';
+      btn.disabled = false;
+    }
+  })
+  .catch(function() { btn.textContent = 'Yuborish →'; btn.disabled = false; });
+}
+
+function closeSurvey() {
+  document.getElementById('surveyOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+  localStorage.setItem('survey_last_shown', Date.now().toString());
+}
+</script>
 
 <!-- Service Worker Registration -->
 <script>

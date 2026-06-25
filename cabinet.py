@@ -82,6 +82,7 @@ def cabinet():
     profile = None
     maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
     claimed = []
+    survey_answers = []
     try:
         conn = get_connection()
         try:
@@ -107,6 +108,20 @@ def cabinet():
                                        "start_date DESC NULLS LAST, id DESC")
                     rasmlar = _f("SELECT * FROM olim_rasmlar WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))",
                                  "created_at DESC, id DESC")
+                # This user's own survey answers
+                try:
+                    cur.execute("""
+                        SELECT q.question_text, r.answer, r.custom_text, r.created_at
+                        FROM survey_responses r JOIN survey_questions q ON r.question_id = q.id
+                        WHERE r.user_id = %s OR r.ip_address = %s
+                        ORDER BY r.created_at DESC
+                    """, (user['id'], request.remote_addr))
+                    survey_answers = [{
+                        "question_text": sr[0], "answer": sr[1],
+                        "custom_text": sr[2] or "", "created_at": sr[3],
+                    } for sr in cur.fetchall()]
+                except Exception:
+                    survey_answers = []
         finally:
             conn.close()
     except Exception:
@@ -115,6 +130,7 @@ def cabinet():
                            olim_name=olim_name, claimed=claimed,
                            maqolalar=maqolalar, konferensiyalar=konferensiyalar,
                            ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
+                           survey_answers=survey_answers,
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 

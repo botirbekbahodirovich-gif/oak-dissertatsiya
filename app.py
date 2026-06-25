@@ -355,6 +355,54 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS survey_questions (
+                    id SERIAL PRIMARY KEY,
+                    question_text VARCHAR(500) NOT NULL,
+                    question_group INTEGER DEFAULT 1,
+                    question_order INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS survey_responses (
+                    id SERIAL PRIMARY KEY,
+                    question_id INTEGER REFERENCES survey_questions(id),
+                    ip_address VARCHAR(50),
+                    user_id INTEGER,
+                    username VARCHAR(200),
+                    answer VARCHAR(20) NOT NULL,
+                    custom_text TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_survey_responses_question ON survey_responses(question_id)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_survey_responses_ip ON survey_responses(ip_address)")
+            # Seed survey questions (only if the table is empty)
+            cur.execute("SELECT COUNT(*) FROM survey_questions")
+            if (cur.fetchone()[0] or 0) == 0:
+                _survey_seed = [
+                    ('Platforma sizga maqul kelayaptimi?', 1, 1),
+                    ('Aniq izlaganingizni topa oldingizmi?', 1, 2),
+                    ('Sayt interfeysi qulaymi?', 1, 3),
+                    ('Kurslar bo\'limi sizga maqulmi?', 2, 1),
+                    ('Yangiliklar bo\'limini kuzatib borasizmi?', 2, 2),
+                    ('Portfoliyoingizni shakllantirdingizmi?', 2, 3),
+                    ('AI mavzu tahlili foydali bo\'ldimi?', 3, 1),
+                    ('Ilmiy shajara funksiyasini ko\'rdingizmi?', 3, 2),
+                    ('Platformani boshqalarga tavsiya qilarmidingiz?', 3, 3),
+                    ('Qidiruv natijalaridan qoniqasizmi?', 4, 1),
+                    ('Olim profil sahifasi sizga foydali bo\'ldimi?', 4, 2),
+                    ('Saytda yana nima bo\'lishini xohlaysiz?', 4, 3),
+                    ('Statistika sahifasi tushunarli ekanmi?', 5, 1),
+                    ('Blog maqolalari foydali ekanmi?', 5, 2),
+                    ('Telegram login qulaymi yoki boshqa usul ham kerakmi?', 5, 3),
+                ]
+                for _qt, _qg, _qo in _survey_seed:
+                    cur.execute(
+                        "INSERT INTO survey_questions (question_text, question_group, question_order) "
+                        "VALUES (%s, %s, %s)", (_qt, _qg, _qo))
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
                     title VARCHAR(500) NOT NULL,
@@ -3225,6 +3273,167 @@ def preparation():
 @app.route("/courses")
 def courses():
     return render_template("courses.html")
+
+
+# ════════════════════════════════════════════════════════════════════
+#  User feedback survey — rotating question groups, popup, analytics
+# ════════════════════════════════════════════════════════════════════
+@app.route('/api/survey/questions')
+@csrf.exempt
+def survey_questions_api():
+    from data import get_connection
+    answered = request.args.get('answered', '')
+    answered_groups = [int(x) for x in answered.split(',') if x.strip().isdigit()]
+    groups = {}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, question_text, question_group FROM survey_questions "
+                    "WHERE is_active = TRUE ORDER BY question_group, question_order")
+                for r in cur.fetchall():
+                    groups.setdefault(r[2], []).append({"id": r[0], "question_text": r[1]})
+        finally:
+            conn.close()
+    except Exception:
+        groups = {}
+    total_groups = len(groups)
+    for group_num in sorted(groups.keys()):
+        if group_num not in answered_groups:
+            return jsonify({
+                "questions": groups[group_num],
+                "group_number": group_num,
+                "total_groups": total_groups,
+            })
+    return jsonify({"questions": [], "group_number": 0, "total_groups": total_groups})
+
+
+@app.route('/api/survey/submit', methods=['POST'])
+@csrf.exempt
+def survey_submit_api():
+    from flask import session
+    from data import get_connection
+    data = request.get_json(silent=True) or {}
+    responses = data.get('responses', []) or []
+    if not responses:
+        return jsonify({"success": False, "error": "no responses"}), 400
+
+    ip = request.remote_addr
+    user_id = None
+    username = None
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            user_id = current_user.id
+            username = getattr(current_user, 'username', None)
+        elif session.get('cabinet_user_id'):
+            user_id = session['cabinet_user_id']
+            username = session.get('cabinet_olim_name') or None
+    except Exception:
+        pass
+
+    group_number = 1
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                first_qid = responses[0].get('question_id')
+                if first_qid is not None:
+                    cur.execute("SELECT question_group FROM survey_questions WHERE id = %s",
+                                (first_qid,))
+                    row = cur.fetchone()
+                    if row:
+                        group_number = row[0]
+                for resp in responses:
+                    qid = resp.get('question_id')
+                    answer = (resp.get('answer') or '')[:20]
+                    custom = (resp.get('custom_text') or '').strip() or None
+                    if qid is None or not answer:
+                        continue
+                    cur.execute(
+                        "INSERT INTO survey_responses "
+                        "(question_id, ip_address, user_id, username, answer, custom_text) "
+                        "VALUES (%s, %s, %s, %s, %s, %s)",
+                        (qid, ip, user_id, username, answer, custom))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "group_number": group_number})
+
+
+@app.route('/admin/survey')
+@login_required
+def admin_survey():
+    _require_admin()
+    from data import get_connection
+    total_responses = 0
+    total_participants = 0
+    yes_pct = 0
+    questions = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM survey_responses")
+                total_responses = cur.fetchone()[0] or 0
+                cur.execute("SELECT COUNT(DISTINCT ip_address) FROM survey_responses")
+                total_participants = cur.fetchone()[0] or 0
+                cur.execute("SELECT COUNT(*) FROM survey_responses WHERE answer = 'ha'")
+                yes_total = cur.fetchone()[0] or 0
+                yes_pct = round(yes_total / total_responses * 100, 1) if total_responses else 0
+
+                cur.execute("""
+                    SELECT q.id, q.question_text, q.question_group, q.question_order,
+                           COUNT(r.id) AS total_responses,
+                           SUM(CASE WHEN r.answer = 'ha' THEN 1 ELSE 0 END) AS yes_count,
+                           SUM(CASE WHEN r.answer = 'yoq' THEN 1 ELSE 0 END) AS no_count,
+                           SUM(CASE WHEN r.answer = 'custom' THEN 1 ELSE 0 END) AS custom_count
+                    FROM survey_questions q
+                    LEFT JOIN survey_responses r ON q.id = r.question_id
+                    GROUP BY q.id, q.question_text, q.question_group, q.question_order
+                    ORDER BY q.question_group, q.question_order
+                """)
+                rows = cur.fetchall()
+                for r in rows:
+                    qid, qtext, qgroup = r[0], r[1], r[2]
+                    total = r[4] or 0
+                    yc, nc, cc = r[5] or 0, r[6] or 0, r[7] or 0
+                    custom_answers = []
+                    if cc:
+                        cur.execute("""
+                            SELECT custom_text, username, ip_address, created_at
+                            FROM survey_responses
+                            WHERE question_id = %s AND answer = 'custom'
+                            AND custom_text IS NOT NULL AND custom_text <> ''
+                            ORDER BY created_at DESC
+                        """, (qid,))
+                        custom_answers = [{
+                            "custom_text": cr[0], "username": cr[1] or "",
+                            "ip_address": cr[2] or "", "created_at": cr[3],
+                        } for cr in cur.fetchall()]
+                    questions.append({
+                        "id": qid, "question_text": qtext, "question_group": qgroup,
+                        "total_responses": total,
+                        "yes_count": yc, "no_count": nc, "custom_count": cc,
+                        "yes_pct": round(yc / total * 100, 1) if total else 0,
+                        "no_pct": round(nc / total * 100, 1) if total else 0,
+                        "custom_pct": round(cc / total * 100, 1) if total else 0,
+                        "custom_answers": custom_answers,
+                    })
+        finally:
+            conn.close()
+    except Exception:
+        questions = []
+    # Group questions for the template
+    grouped = {}
+    for q in questions:
+        grouped.setdefault(q["question_group"], []).append(q)
+    grouped = dict(sorted(grouped.items()))
+    return render_template('admin_survey.html',
+        total_responses=total_responses, total_participants=total_participants,
+        yes_pct=yes_pct, grouped_questions=grouped)
 
 
 # ════════════════════════════════════════════════════════════════════

@@ -307,6 +307,30 @@
           <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfile()">Saqlash</button></div>
         </div>
       </section>
+
+      <!-- ── SHAXSIY SO'ROVNOMA JAVOBLARI ── -->
+      <section id="panel-survey" style="display:block;margin-top:18px;">
+        <div class="cab-section">
+          <h3>📋 Sizning javoblaringiz</h3>
+          {% if survey_answers %}
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            {% for a in survey_answers %}
+            <div style="background:#162032;border:1px solid #334155;border-radius:10px;padding:12px 14px;">
+              <div style="color:#e2e8f0;font-size:0.9rem;font-weight:600;margin-bottom:4px;">{{ a.question_text }}</div>
+              <div style="font-size:0.85rem;">
+                {% if a.answer == 'ha' %}<span style="color:#34d399;font-weight:700;">👍 Ha</span>
+                {% elif a.answer == 'yoq' %}<span style="color:#f87171;font-weight:700;">👎 Yo'q</span>
+                {% else %}<span style="color:#60a5fa;font-weight:700;">✏️ {{ a.custom_text or 'O\'z javobi' }}</span>{% endif %}
+                <span style="color:#64748b;font-size:0.75rem;"> — {{ a.created_at|uztime }}</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="desc">Hali so'rovnomada ishtirok etmagansiz.</p>
+          {% endif %}
+        </div>
+      </section>
     </main>
   </div>
 </div>
