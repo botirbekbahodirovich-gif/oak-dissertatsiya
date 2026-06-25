@@ -1734,6 +1734,90 @@ def check_blocked():
     return None
 
 
+def get_visitor_info():
+    """Detect the logged-in user from any supported auth method.
+
+    Returns (user_id, username), or (None, None) for true guests. Covers:
+      1. Flask-Login (main site / admin login)
+      2. Session-based admin keys (defensive fallback)
+      3. Cabinet login (cabinet_user_id)
+      4. Telegram data stored in session (defensive fallback)
+    """
+    from flask import session
+
+    # Method 1: Flask-Login (main site — admin login)
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            user_id = getattr(current_user, 'id', None)
+            username = (getattr(current_user, 'username', None)
+                        or getattr(current_user, 'email', None))
+            if username:
+                return user_id, username
+    except Exception:
+        pass
+
+    # Method 2: Session-based admin keys (in case a future flow sets them directly)
+    try:
+        if session.get('user_id'):
+            user_id = session['user_id']
+            username = session.get('username') or None
+            if username:
+                return user_id, username
+            try:
+                from data import get_connection
+                conn = get_connection()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT username, email FROM users WHERE id = %s", (user_id,))
+                        u = cur.fetchone()
+                finally:
+                    conn.close()
+                if u:
+                    return user_id, (u[0] or u[1] or f'user_{user_id}')
+            except Exception:
+                return user_id, f'admin_{user_id}'
+    except Exception:
+        pass
+
+    # Method 3: Cabinet login
+    try:
+        cab_id = session.get('cabinet_user_id')
+        if cab_id:
+            username = session.get('cabinet_olim_name') or None
+            if not username:
+                try:
+                    from data import get_connection
+                    conn = get_connection()
+                    try:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                "SELECT olim_name, telegram_username, telegram_first_name, email "
+                                "FROM cabinet_users WHERE id = %s", (cab_id,))
+                            cab = cur.fetchone()
+                    finally:
+                        conn.close()
+                    if cab:
+                        username = cab[0] or cab[1] or cab[2] or cab[3]
+                except Exception:
+                    username = None
+            return cab_id, (username or f'cabinet_{cab_id}')
+    except Exception:
+        pass
+
+    # Method 4: Telegram data stored in session (defensive fallback)
+    try:
+        tg_user = session.get('telegram_user')
+        if tg_user:
+            username = tg_user.get('first_name', '') or tg_user.get('username', '')
+            user_id = tg_user.get('id')
+            if username:
+                return user_id, username
+    except Exception:
+        pass
+
+    return None, None
+
+
 @app.before_request
 def track_visit():
     if request.endpoint and not request.path.startswith('/static') and not request.path.startswith('/api/'):
@@ -1742,27 +1826,10 @@ def track_visit():
             from flask import session
             conn = get_connection()
             cur = conn.cursor()
-            user_id = None
-            username = None
-            try:
-                if current_user.is_authenticated:
-                    user_id = current_user.id
-                    username = (getattr(current_user, 'username', None)
-                                or getattr(current_user, 'email', None) or str(current_user.id))
-                elif session.get('cabinet_user_id'):
-                    user_id = session['cabinet_user_id']
-                    username = session.get('cabinet_olim_name') or None
-                    if not username:
-                        cur.execute("SELECT olim_name, telegram_username, email "
-                                    "FROM cabinet_users WHERE id = %s", (user_id,))
-                        cab = cur.fetchone()
-                        if cab:
-                            username = cab[0] or cab[1] or cab[2]
-            except Exception:
-                pass
+            user_id, username = get_visitor_info()
             # Guests (no account) are logged as "Mehmon" so analytics can
             # distinguish registered users from anonymous visitors.
-            if not user_id and not username:
+            if not username:
                 username = "Mehmon"
             # Stable per-session id so visits can be grouped into sessions.
             sid = session.get('visit_sid')
