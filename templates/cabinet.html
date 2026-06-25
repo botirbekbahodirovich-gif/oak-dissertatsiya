@@ -105,7 +105,24 @@
         </div>
         <div>
           <h1>{{ olim_name or (user.telegram_first_name or user.email or 'Tadqiqotchi') }}</h1>
-          <div class="sub">{% if olim_name %}Biriktirilgan profil: {{ olim_name }}{% else %}Dissertatsiyangizni biriktiring{% endif %}</div>
+          <div class="sub">
+            {% if olim_name %}
+            <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
+              <span style="color:#94a3b8;font-size:0.9rem;">
+                Biriktirilgan profil: <strong style="color:#60a5fa;">{{ olim_name }}</strong>
+              </span>
+              <button onclick="unclaimProfile()"
+                style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:5px 14px;border-radius:50px;font-size:0.8rem;cursor:pointer;transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(239,68,68,0.3)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.15)'"
+                title="Biriktirilgan olim profilini ajratish">
+                ✕ Ajratish
+              </button>
+            </div>
+            {% else %}
+            <span style="color:#64748b;font-size:0.9rem;">Hali hech qanday profil biriktirilmagan.</span>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -419,6 +436,29 @@ function claimName(name) {
     if (d.ok) { toast('Biriktirildi ✓', true); setTimeout(function () { location.reload(); }, 700); }
     else toast(d.error || 'Xatolik', false);
   });
+}
+function unclaimProfile() {
+  var name = {{ olim_name|default("", true)|tojson }};
+  if (!name) return;
+  if (!confirm("'" + name + "' profilini kabinetingizdan ajratmoqchimisiz?\n\nBu amalni keyinroq qaytarib biriktirish mumkin.")) return;
+  fetch('/cabinet/api/unclaim', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': (document.querySelector('input[name=csrf_token]') || {}).value || ''
+    },
+    body: JSON.stringify({ olim_name: name })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (data.success) {
+      alert('Profil muvaffaqiyatli ajratildi!');
+      location.reload();
+    } else {
+      alert(data.error || 'Xatolik yuz berdi');
+    }
+  })
+  .catch(function () { alert('Server bilan aloqa xatosi'); });
 }
 function unclaimDissertation(btn, olimName) {
   if (!confirm("'" + olimName + "' nomli dissertatsiyani profilingizdan ajratmoqchimisiz?\n\nBu amalni bekor qilib bo'lmaydi.")) return;
