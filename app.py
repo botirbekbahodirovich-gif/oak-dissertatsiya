@@ -343,6 +343,10 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_blocked_ip ON blocked_users(ip_address)")
+            cur.execute("ALTER TABLE blocked_users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+            cur.execute("ALTER TABLE blocked_users ADD COLUMN IF NOT EXISTS duration_text VARCHAR(50)")
+            cur.execute("ALTER TABLE blocked_users ADD COLUMN IF NOT EXISTS unblocked_at TIMESTAMP")
+            cur.execute("ALTER TABLE blocked_users ADD COLUMN IF NOT EXISTS unblocked_by VARCHAR(100)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS admin_broadcasts (
                     id SERIAL PRIMARY KEY,
@@ -1681,19 +1685,27 @@ def check_blocked():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                # Most recent active block row for this IP (if any).
                 cur.execute("""
-                    SELECT reason, blocked_until FROM blocked_users
-                    WHERE ip_address = %s
-                    AND (is_permanent = TRUE OR blocked_until > NOW())
-                    LIMIT 1
+                    SELECT id, reason, blocked_until, is_permanent,
+                           (is_permanent OR blocked_until > NOW()) AS still_active
+                    FROM blocked_users
+                    WHERE ip_address = %s AND is_active = TRUE
+                    ORDER BY created_at DESC LIMIT 1
                 """, (ip,))
                 row = cur.fetchone()
+                if row and not row[4]:
+                    # Block has expired naturally — deactivate for history, then allow.
+                    cur.execute(
+                        "UPDATE blocked_users SET is_active = FALSE WHERE id = %s", (row[0],))
+                    conn.commit()
+                    row = None
         finally:
             conn.close()
     except Exception:
         return None
     if row:
-        return render_template('errors/blocked.html', reason=row[0], until=row[1]), 403
+        return render_template('errors/blocked.html', reason=row[1], until=row[2]), 403
     return None
 
 
@@ -2147,21 +2159,42 @@ def admin_analytics():
             except Exception:
                 online_users = []
 
-            # Blocked users list
-            blocked_users = []
+            # Currently active blocks
+            active_blocks = []
             try:
                 cur.execute("""
                     SELECT id, ip_address, reason, blocked_by, blocked_until,
-                           is_permanent, created_at
-                    FROM blocked_users ORDER BY created_at DESC
+                           is_permanent, created_at, duration_text
+                    FROM blocked_users
+                    WHERE is_active = TRUE AND (is_permanent = TRUE OR blocked_until > NOW())
+                    ORDER BY created_at DESC
                 """)
-                blocked_users = [{
+                active_blocks = [{
                     "id": r[0], "ip_address": r[1] or "—", "reason": r[2] or "",
                     "blocked_by": r[3] or "admin", "blocked_until": r[4],
-                    "is_permanent": r[5], "created_at": r[6],
+                    "is_permanent": r[5], "created_at": r[6], "duration_text": r[7] or "",
                 } for r in cur.fetchall()]
             except Exception:
-                blocked_users = []
+                active_blocks = []
+
+            # Block history (inactive / expired / unblocked)
+            block_history = []
+            try:
+                cur.execute("""
+                    SELECT id, ip_address, reason, blocked_by, blocked_until,
+                           is_permanent, created_at, duration_text, unblocked_at, unblocked_by
+                    FROM blocked_users
+                    WHERE is_active = FALSE
+                    ORDER BY created_at DESC LIMIT 50
+                """)
+                block_history = [{
+                    "id": r[0], "ip_address": r[1] or "—", "reason": r[2] or "",
+                    "blocked_by": r[3] or "admin", "blocked_until": r[4],
+                    "is_permanent": r[5], "created_at": r[6], "duration_text": r[7] or "",
+                    "unblocked_at": r[8], "unblocked_by": r[9] or "",
+                } for r in cur.fetchall()]
+            except Exception:
+                block_history = []
 
             # Active broadcasts list (for admin management)
             broadcasts = []
@@ -2190,11 +2223,15 @@ def admin_analytics():
         registered_count=registered_count, new_today_count=new_today_count,
         guest_count=guest_count, total_dissertations=total_dissertations,
         total_news=total_news, online_users=online_users,
-        blocked_users=blocked_users, broadcasts=broadcasts)
+        active_blocks=active_blocks, block_history=block_history,
+        now=datetime.utcnow(), broadcasts=broadcasts)
 
 
 # Duration string → Postgres interval literal (expiry computed server-side via NOW()).
-_DURATION_INTERVALS = {"1h": "1 hour", "24h": "24 hours", "7d": "7 days", "1d": "1 day"}
+_DURATION_INTERVALS = {
+    "10m": "10 minutes", "30m": "30 minutes",
+    "1h": "1 hour", "24h": "24 hours", "7d": "7 days", "1d": "1 day",
+}
 
 
 @app.route('/admin/api/block-user', methods=['POST'])
@@ -2208,25 +2245,34 @@ def admin_block_user():
     if not ip:
         return jsonify({"success": False, "error": "ip_address required"}), 400
     reason = (data.get('reason') or '').strip()[:500] or None
-    duration = data.get('duration') or '24h'
+    duration = data.get('duration') or '30m'
+    if duration != "permanent" and duration not in _DURATION_INTERVALS:
+        duration = '30m'
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM blocked_users WHERE ip_address = %s", (ip,))
+                # Keep history — supersede any existing active block for this IP
+                # rather than deleting it.
+                cur.execute(
+                    "UPDATE blocked_users SET is_active = FALSE, unblocked_at = NOW(), "
+                    "unblocked_by = 'admin (qayta bloklash)' "
+                    "WHERE ip_address = %s AND is_active = TRUE", (ip,))
                 if duration == "permanent":
                     cur.execute("""
                         INSERT INTO blocked_users
-                            (ip_address, reason, blocked_by, blocked_until, is_permanent)
-                        VALUES (%s, %s, 'admin', NULL, TRUE)
+                            (ip_address, reason, blocked_by, blocked_until,
+                             is_permanent, is_active, duration_text)
+                        VALUES (%s, %s, 'admin', NULL, TRUE, TRUE, 'permanent')
                     """, (ip, reason))
                 else:
-                    interval = _DURATION_INTERVALS.get(duration, "24 hours")
+                    interval = _DURATION_INTERVALS.get(duration, "30 minutes")
                     cur.execute("""
                         INSERT INTO blocked_users
-                            (ip_address, reason, blocked_by, blocked_until, is_permanent)
-                        VALUES (%s, %s, 'admin', NOW() + INTERVAL %s, FALSE)
-                    """, (ip, reason, interval))
+                            (ip_address, reason, blocked_by, blocked_until,
+                             is_permanent, is_active, duration_text)
+                        VALUES (%s, %s, 'admin', NOW() + INTERVAL %s, FALSE, TRUE, %s)
+                    """, (ip, reason, interval, duration))
             conn.commit()
         finally:
             conn.close()
@@ -2249,7 +2295,9 @@ def admin_unblock_user():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM blocked_users WHERE ip_address = %s", (ip,))
+                cur.execute(
+                    "UPDATE blocked_users SET is_active = FALSE, unblocked_at = NOW(), "
+                    "unblocked_by = 'admin' WHERE ip_address = %s AND is_active = TRUE", (ip,))
             conn.commit()
         finally:
             conn.close()
@@ -2445,11 +2493,52 @@ def admin_user_activity(identifier):
         hour_counts[d.hour] += 1
     max_hour_count = max(hour_counts) if any(hour_counts) else 1
 
+    # Block status + history for this IP (block actions are IP-based)
+    block_ip = identifier if is_ip else None
+    current_block = None
+    user_block_history = []
+    if block_ip:
+        try:
+            bconn = get_connection()
+            try:
+                with bconn.cursor() as bcur:
+                    bcur.execute("""
+                        SELECT reason, blocked_until, is_permanent, duration_text
+                        FROM blocked_users
+                        WHERE ip_address = %s AND is_active = TRUE
+                        AND (is_permanent = TRUE OR blocked_until > NOW())
+                        ORDER BY created_at DESC LIMIT 1
+                    """, (block_ip,))
+                    br = bcur.fetchone()
+                    if br:
+                        current_block = {
+                            "reason": br[0] or "", "blocked_until": br[1],
+                            "is_permanent": br[2], "duration_text": br[3] or "",
+                        }
+                    bcur.execute("""
+                        SELECT reason, blocked_until, is_permanent, created_at,
+                               duration_text, is_active, unblocked_at, unblocked_by
+                        FROM blocked_users WHERE ip_address = %s
+                        ORDER BY created_at DESC
+                    """, (block_ip,))
+                    user_block_history = [{
+                        "reason": r[0] or "", "blocked_until": r[1], "is_permanent": r[2],
+                        "created_at": r[3], "duration_text": r[4] or "",
+                        "is_active": r[5], "unblocked_at": r[6], "unblocked_by": r[7] or "",
+                    } for r in bcur.fetchall()]
+            finally:
+                bconn.close()
+        except Exception:
+            current_block = None
+            user_block_history = []
+
     return render_template('admin_user_activity.html',
         user_info=user_info, activities=activities, stats=stats,
         visits_by_date=visits_by_date, top_pages_freq=top_pages_freq,
         max_page_count=max_page_count, hour_counts=hour_counts,
-        max_hour_count=max_hour_count)
+        max_hour_count=max_hour_count,
+        block_ip=block_ip, current_block=current_block,
+        user_block_history=user_block_history)
 
 
 def _require_admin():

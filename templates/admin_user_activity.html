@@ -60,6 +60,52 @@
   · {{ stats.device_info }} · {{ stats.referrer_info }}
 </div>
 
+{% if block_ip %}
+<!-- 🚫 Block controls -->
+<div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px 20px;margin:16px 0;">
+  {% if current_block %}
+  <div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 16px;color:#f87171;">
+    🚫 Bu foydalanuvchi bloklangan.
+    {% if current_block.reason %} Sabab: {{ current_block.reason }}.{% endif %}
+    Tugash:
+    {% if current_block.is_permanent %}<strong>Doimiy</strong>{% else %}<strong>{{ current_block.blocked_until|uztime }}</strong>{% endif %}
+  </div>
+  <div style="margin-top:12px;">
+    <button onclick="unblockUser('{{ block_ip }}')" style="background:rgba(5,150,105,0.15);border:1px solid rgba(5,150,105,0.3);color:#34d399;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;">✅ Blokdan chiqarish</button>
+  </div>
+  {% else %}
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select id="blockDuration" style="background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;">
+      <option value="10m">10 daqiqa</option>
+      <option value="30m" selected>30 daqiqa</option>
+      <option value="1h">1 soat</option>
+      <option value="24h">1 kun</option>
+      <option value="7d">1 hafta</option>
+      <option value="permanent">Doimiy</option>
+    </select>
+    <input type="text" id="blockReason" placeholder="Sabab..." style="background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;flex:1;min-width:160px;">
+    <button onclick="blockThisUser()" style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;">🚫 Bloklash</button>
+  </div>
+  {% endif %}
+
+  {% if user_block_history %}
+  <div style="margin-top:16px;">
+    <div style="color:#94a3b8;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📜 Bloklash tarixi</div>
+    {% for b in user_block_history %}
+    <div style="display:flex;gap:12px;padding:8px;border-left:3px solid {% if b.is_active %}#ef4444{% else %}#334155{% endif %};margin-bottom:8px;padding-left:12px;">
+      <span style="color:#64748b;font-size:0.8rem;min-width:130px;">{{ b.created_at|uztime }}</span>
+      <span style="color:{% if b.is_active %}#f87171{% else %}#94a3b8{% endif %};font-size:0.85rem;">
+        {% if b.is_active %}🔴 Aktiv{% else %}⚪ Tugagan{% endif %}
+        — {{ b.duration_text or 'noma\'lum' }}
+        {% if b.reason %} — "{{ b.reason }}"{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Primary stats -->
 <div class="admin-summary-grid">
   <div class="admin-stat-card"><span class="admin-stat-icon">📊</span><span class="admin-stat-number">{{ stats.total_visits }}</span><span class="admin-stat-label">Jami tashriflar</span></div>
@@ -126,4 +172,41 @@
   <p style="color:#64748b;">Faoliyat topilmadi.</p>
   {% endfor %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if block_ip %}
+var BLOCK_IP = {{ block_ip|tojson }};
+function blockThisUser() {
+  var duration = document.getElementById('blockDuration').value;
+  var reason = (document.getElementById('blockReason').value || '').trim();
+  fetch('/admin/api/block-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip_address: BLOCK_IP, duration: duration, reason: reason })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (data.success) { alert('Bloklandi: ' + BLOCK_IP + ' (' + duration + ')'); location.reload(); }
+    else { alert(data.error || 'Xatolik'); }
+  })
+  .catch(function () { alert('Server bilan aloqa xatosi'); });
+}
+{% endif %}
+function unblockUser(ip) {
+  if (!confirm('Blokdan chiqarilsinmi: ' + ip + '?')) return;
+  fetch('/admin/api/unblock-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip_address: ip })
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (data.success) { location.reload(); }
+    else { alert(data.error || 'Xatolik'); }
+  })
+  .catch(function () { alert('Server bilan aloqa xatosi'); });
+}
+</script>
 {% endblock %}

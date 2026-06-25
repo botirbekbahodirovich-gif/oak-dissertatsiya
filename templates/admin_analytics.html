@@ -354,25 +354,68 @@
   {% endif %}
 </div>
 
-<!-- 🛡️ Blocked users -->
+<!-- 🚫 Currently blocked -->
 <div class="admin-section">
-  <h2>🛡️ Bloklangan foydalanuvchilar ({{ blocked_users|length }})</h2>
+  <h2>🚫 Hozir bloklangan foydalanuvchilar ({{ active_blocks|length }})</h2>
   <div class="admin-table-panel">
     <table class="admin-table table">
       <thead>
-        <tr><th>IP manzil</th><th>Sabab</th><th>Bloklangan vaqt</th><th>Tugash vaqti</th><th>Amal</th></tr>
+        <tr><th>IP</th><th>Sabab</th><th>Muddat</th><th>Bloklangan vaqt</th><th>Tugash vaqti</th><th>Amal</th></tr>
       </thead>
       <tbody>
-        {% for b in blocked_users %}
+        {% for b in active_blocks %}
         <tr>
-          <td class="ip-mono">{{ b.ip_address }}</td>
-          <td>{{ b.reason or '—' }}</td>
+          <td><a href="/admin/user-activity/{{ b.ip_address }}" style="color:#60a5fa;font-family:monospace;">{{ b.ip_address }}</a></td>
+          <td style="color:#f87171;">{{ b.reason or 'Sabab ko\'rsatilmagan' }}</td>
+          <td>{{ b.duration_text or '—' }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ b.created_at|uztime }}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{% if b.is_permanent %}♾️ Doimiy{% elif b.blocked_until %}{{ b.blocked_until|uztime }}{% else %}—{% endif %}</td>
-          <td><button onclick="unblockUser('{{ b.ip_address }}')" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">✅ Blokdan chiqarish</button></td>
+          <td style="white-space:nowrap;">
+            {% if b.is_permanent %}
+              <span style="color:#ef4444;font-weight:600;">Doimiy</span>
+            {% else %}
+              {{ b.blocked_until|uztime }}
+              <br><span style="color:#64748b;font-size:0.7rem;">
+                {% set remaining = (b.blocked_until - now).total_seconds() %}
+                {% if remaining > 3600 %}{{ (remaining/3600)|int }} soat qoldi
+                {% elif remaining > 60 %}{{ (remaining/60)|int }} daqiqa qoldi
+                {% else %}tugayapti{% endif %}
+              </span>
+            {% endif %}
+          </td>
+          <td><button onclick="unblockUser('{{ b.ip_address }}')" style="background:rgba(5,150,105,0.15);border:1px solid rgba(5,150,105,0.3);color:#34d399;padding:4px 10px;border-radius:8px;font-size:0.75rem;cursor:pointer;">✅ Blokdan chiqarish</button></td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="empty-cell">Bloklangan foydalanuvchilar yo'q</td></tr>
+        <tr><td colspan="6" class="empty-cell">Hozir hech kim bloklanmagan ✅</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 📜 Block history -->
+<div class="admin-section">
+  <h2>📜 Bloklash tarixi</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr><th>IP</th><th>Sabab</th><th>Muddat</th><th>Bloklangan</th><th>Blokdan chiqarilgan</th><th>Kim tomonidan</th></tr>
+      </thead>
+      <tbody>
+        {% for b in block_history %}
+        <tr style="opacity:0.7;">
+          <td><a href="/admin/user-activity/{{ b.ip_address }}" style="color:#60a5fa;font-family:monospace;">{{ b.ip_address }}</a></td>
+          <td>{{ b.reason or '—' }}</td>
+          <td>{{ b.duration_text or '—' }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ b.created_at|uztime }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">
+            {% if b.unblocked_at %}{{ b.unblocked_at|uztime }}
+            {% elif b.blocked_until %}{{ b.blocked_until|uztime }} <span style="color:#64748b;">(muddati tugagan)</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ b.unblocked_by or 'avtomatik' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="empty-cell">Bloklash tarixi bo'sh</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -421,7 +464,16 @@
 })();
 
 function blockUser(ip) {
-  var duration = prompt("Bloklash muddati:\n1h — 1 soat\n24h — 1 kun\n7d — 1 hafta\npermanent — doimiy", "24h");
+  var duration = prompt(
+    "Bloklash muddati:\n" +
+    "10m — 10 daqiqa\n" +
+    "30m — 30 daqiqa\n" +
+    "1h — 1 soat\n" +
+    "24h — 1 kun\n" +
+    "7d — 1 hafta\n" +
+    "permanent — doimiy",
+    "30m"
+  );
   if (!duration) return;
   var reason = prompt("Sabab (ixtiyoriy):", "");
   fetch('/admin/api/block-user', {
@@ -431,8 +483,8 @@ function blockUser(ip) {
   })
     .then(function (r) { return r.json(); })
     .then(function (data) {
-      if (data.success) { alert('Foydalanuvchi bloklandi: ' + ip); location.reload(); }
-      else { alert('Xatolik: ' + (data.error || '')); }
+      if (data.success) { alert('Foydalanuvchi bloklandi: ' + ip + ' (' + duration + ')'); location.reload(); }
+      else { alert(data.error || 'Xatolik'); }
     });
 }
 
