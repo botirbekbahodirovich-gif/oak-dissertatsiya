@@ -602,6 +602,12 @@
     }
   </style>
   {% block extra_head %}{% endblock %}
+  <style>
+    .broadcast-banner { width: 100%; font-size: 0.9rem; }
+    .broadcast-info { background: rgba(59,130,246,0.15); color: #60a5fa; border-bottom: 1px solid rgba(59,130,246,0.3); }
+    .broadcast-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border-bottom: 1px solid rgba(245,158,11,0.3); }
+    .broadcast-success { background: rgba(5,150,105,0.15); color: #34d399; border-bottom: 1px solid rgba(5,150,105,0.3); }
+  </style>
 </head>
 <body>
   <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"><i class="bi bi-moon-fill"></i></button>
@@ -649,6 +655,19 @@
       </div>
     </div>
   </header>
+  {% if active_broadcasts %}
+  {% for bc in active_broadcasts %}
+  <div class="broadcast-banner broadcast-{{ bc.message_type }}" data-broadcast-id="{{ bc.id }}">
+    <div style="max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;">
+      <span>
+        {% if bc.message_type == 'warning' %}⚠️{% elif bc.message_type == 'success' %}✅{% else %}ℹ️{% endif %}
+        {{ bc.message }}
+      </span>
+      <button onclick="dismissBroadcast({{ bc.id }}, this)" style="background:none;border:none;color:inherit;font-size:1.2rem;cursor:pointer;opacity:0.7;">✕</button>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
   <main class="container-xl content-main">{% block content %}{% endblock %}</main>
   <footer class="oak-footer">
     <div class="container-xl">
@@ -1199,6 +1218,22 @@ if ('serviceWorker' in navigator) {
     });
   }
 })();
+</script>
+<script>
+// Broadcast banner dismissal (per browser session)
+function dismissBroadcast(id, btn) {
+  var b = btn.closest('.broadcast-banner');
+  if (b) b.style.display = 'none';
+  sessionStorage.setItem('broadcast_dismissed_' + id, 'true');
+}
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.broadcast-banner').forEach(function (el) {
+    var id = el.dataset.broadcastId;
+    if (sessionStorage.getItem('broadcast_dismissed_' + id)) {
+      el.style.display = 'none';
+    }
+  });
+});
 </script>
 </body>
 </html>

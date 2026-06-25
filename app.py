@@ -186,6 +186,43 @@ def inject_auth_status():
     return dict(is_logged_in=is_logged_in, current_username=current_username)
 
 
+@app.context_processor
+def inject_broadcasts():
+    """Expose active admin broadcasts to every template, filtered by audience."""
+    from flask import session
+    try:
+        is_logged_in = False
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            is_logged_in = True
+        elif 'cabinet_user_id' in session:
+            is_logged_in = True
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, message, message_type, show_to
+                    FROM admin_broadcasts
+                    WHERE is_active = TRUE
+                    AND (expires_at IS NULL OR expires_at > NOW())
+                    ORDER BY created_at DESC LIMIT 5
+                """)
+                rows = cur.fetchall()
+        finally:
+            conn.close()
+        filtered = []
+        for r in rows:
+            show_to = r[3] or 'all'
+            if (show_to == 'all'
+                    or (show_to == 'guests' and not is_logged_in)
+                    or (show_to == 'registered' and is_logged_in)):
+                filtered.append({"id": r[0], "message": r[1] or "",
+                                 "message_type": r[2] or "info", "show_to": show_to})
+        return dict(active_broadcasts=filtered)
+    except Exception:
+        return dict(active_broadcasts=[])
+
+
 
 def is_safe_relative_url(target: str) -> bool:
     if not target:
@@ -293,6 +330,30 @@ def _run_startup_migrations():
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS user_agent TEXT")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS referrer VARCHAR(500)")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS blocked_users (
+                    id SERIAL PRIMARY KEY,
+                    ip_address VARCHAR(50),
+                    user_id INTEGER,
+                    reason VARCHAR(500),
+                    blocked_by VARCHAR(100) DEFAULT 'admin',
+                    blocked_until TIMESTAMP,
+                    is_permanent BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_blocked_ip ON blocked_users(ip_address)")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS admin_broadcasts (
+                    id SERIAL PRIMARY KEY,
+                    message TEXT NOT NULL,
+                    message_type VARCHAR(50) DEFAULT 'info',
+                    is_active BOOLEAN DEFAULT TRUE,
+                    show_to VARCHAR(50) DEFAULT 'all',
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    expires_at TIMESTAMP
+                )
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
@@ -1554,6 +1615,41 @@ def profile():
 
 
 @app.before_request
+def check_blocked():
+    # Admin pages and static files are never blocked; admin user always passes.
+    if request.path.startswith('/admin') or request.path.startswith('/static'):
+        return None
+    try:
+        if (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated
+                and getattr(current_user, 'username', None) == 'admin'):
+            return None
+    except Exception:
+        pass
+    ip = request.remote_addr
+    if not ip:
+        return None
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT reason, blocked_until FROM blocked_users
+                    WHERE ip_address = %s
+                    AND (is_permanent = TRUE OR blocked_until > NOW())
+                    LIMIT 1
+                """, (ip,))
+                row = cur.fetchone()
+        finally:
+            conn.close()
+    except Exception:
+        return None
+    if row:
+        return render_template('errors/blocked.html', reason=row[0], until=row[1]), 403
+    return None
+
+
+@app.before_request
 def track_visit():
     if request.endpoint and not request.path.startswith('/static') and not request.path.startswith('/api/'):
         try:
@@ -1856,16 +1952,26 @@ def admin_analytics():
                 FROM page_visits WHERE visited_at > NOW() - INTERVAL '5 minutes'""")
             online_now = cur.fetchone()[0]
 
-            # Most visited pages today
-            cur.execute("""SELECT page, COUNT(*) AS cnt FROM page_visits
-                WHERE visited_at::date = CURRENT_DATE
-                GROUP BY page ORDER BY cnt DESC LIMIT 10""")
-            top_pages = cur.fetchall()
-
-            # Recent visitors (last 50)
-            cur.execute("""SELECT username, page, ip_address, visited_at FROM page_visits
-                ORDER BY visited_at DESC LIMIT 50""")
-            recent = cur.fetchall()
+            # Recent visitors — one row per IP, latest activity first (last 24h)
+            cur.execute("""
+                SELECT ip_address,
+                       MAX(username) AS username,
+                       MAX(user_id) AS user_id,
+                       (array_agg(page ORDER BY visited_at DESC))[1] AS last_page,
+                       MAX(visited_at) AS last_visit,
+                       COUNT(*) AS total_visits,
+                       COUNT(DISTINCT page) AS unique_pages
+                FROM page_visits
+                WHERE visited_at >= NOW() - INTERVAL '24 hours'
+                GROUP BY ip_address
+                ORDER BY last_visit DESC
+                LIMIT 50
+            """)
+            recent = [{
+                "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
+                "page": r[3] or "/", "visited_at": r[4],
+                "total_visits": r[5] or 0, "unique_pages": r[6] or 0,
+            } for r in cur.fetchall()]
 
             # Daily visits last 7 days
             cur.execute("""SELECT visited_at::date AS d, COUNT(*) AS cnt FROM page_visits
@@ -1976,29 +2082,193 @@ def admin_analytics():
             online_users = []
             try:
                 cur.execute("""
-                    SELECT DISTINCT ON (COALESCE(user_id::text, ip_address))
-                           ip_address, username, user_id, page, visited_at
+                    SELECT ip_address,
+                           MAX(username) AS username,
+                           MAX(user_id) AS user_id,
+                           (array_agg(page ORDER BY visited_at DESC))[1] AS current_page,
+                           MAX(visited_at) AS last_activity
                     FROM page_visits
                     WHERE visited_at > NOW() - INTERVAL '5 minutes'
-                    ORDER BY COALESCE(user_id::text, ip_address), visited_at DESC
+                    GROUP BY ip_address
+                    ORDER BY last_activity DESC
                 """)
                 online_users = [{
                     "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
                     "page": r[3] or "/", "visited_at": r[4],
                 } for r in cur.fetchall()]
-                online_users.sort(key=lambda u: u["visited_at"] or 0, reverse=True)
             except Exception:
                 online_users = []
+
+            # Blocked users list
+            blocked_users = []
+            try:
+                cur.execute("""
+                    SELECT id, ip_address, reason, blocked_by, blocked_until,
+                           is_permanent, created_at
+                    FROM blocked_users ORDER BY created_at DESC
+                """)
+                blocked_users = [{
+                    "id": r[0], "ip_address": r[1] or "—", "reason": r[2] or "",
+                    "blocked_by": r[3] or "admin", "blocked_until": r[4],
+                    "is_permanent": r[5], "created_at": r[6],
+                } for r in cur.fetchall()]
+            except Exception:
+                blocked_users = []
+
+            # Active broadcasts list (for admin management)
+            broadcasts = []
+            try:
+                cur.execute("""
+                    SELECT id, message, message_type, is_active, show_to,
+                           created_at, expires_at
+                    FROM admin_broadcasts
+                    WHERE is_active = TRUE
+                    ORDER BY created_at DESC
+                """)
+                broadcasts = [{
+                    "id": r[0], "message": r[1] or "", "message_type": r[2] or "info",
+                    "is_active": r[3], "show_to": r[4] or "all",
+                    "created_at": r[5], "expires_at": r[6],
+                } for r in cur.fetchall()]
+            except Exception:
+                broadcasts = []
     finally:
         conn.close()
 
     return render_template('admin_analytics.html',
         today_visits=today_visits, today_unique=today_unique, online_now=online_now,
-        top_pages=top_pages, recent=recent, weekly=weekly,
+        recent=recent, weekly=weekly,
         top_visitors=top_visitors, top_users=top_users, registered_users=registered_users,
         registered_count=registered_count, new_today_count=new_today_count,
         guest_count=guest_count, total_dissertations=total_dissertations,
-        total_news=total_news, online_users=online_users)
+        total_news=total_news, online_users=online_users,
+        blocked_users=blocked_users, broadcasts=broadcasts)
+
+
+# Duration string → Postgres interval literal (expiry computed server-side via NOW()).
+_DURATION_INTERVALS = {"1h": "1 hour", "24h": "24 hours", "7d": "7 days", "1d": "1 day"}
+
+
+@app.route('/admin/api/block-user', methods=['POST'])
+@csrf.exempt
+@login_required
+def admin_block_user():
+    _require_admin()
+    from data import get_connection
+    data = request.get_json(silent=True) or {}
+    ip = (data.get('ip_address') or '').strip()
+    if not ip:
+        return jsonify({"success": False, "error": "ip_address required"}), 400
+    reason = (data.get('reason') or '').strip()[:500] or None
+    duration = data.get('duration') or '24h'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM blocked_users WHERE ip_address = %s", (ip,))
+                if duration == "permanent":
+                    cur.execute("""
+                        INSERT INTO blocked_users
+                            (ip_address, reason, blocked_by, blocked_until, is_permanent)
+                        VALUES (%s, %s, 'admin', NULL, TRUE)
+                    """, (ip, reason))
+                else:
+                    interval = _DURATION_INTERVALS.get(duration, "24 hours")
+                    cur.execute("""
+                        INSERT INTO blocked_users
+                            (ip_address, reason, blocked_by, blocked_until, is_permanent)
+                        VALUES (%s, %s, 'admin', NOW() + INTERVAL %s, FALSE)
+                    """, (ip, reason, interval))
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/admin/api/unblock-user', methods=['POST'])
+@csrf.exempt
+@login_required
+def admin_unblock_user():
+    _require_admin()
+    from data import get_connection
+    data = request.get_json(silent=True) or {}
+    ip = (data.get('ip_address') or '').strip()
+    if not ip:
+        return jsonify({"success": False, "error": "ip_address required"}), 400
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM blocked_users WHERE ip_address = %s", (ip,))
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/admin/api/broadcast', methods=['POST'])
+@csrf.exempt
+@login_required
+def admin_broadcast():
+    _require_admin()
+    from data import get_connection
+    data = request.get_json(silent=True) or {}
+    message = (data.get('message') or '').strip()
+    if not message:
+        return jsonify({"success": False, "error": "message required"}), 400
+    mtype = data.get('type') or 'info'
+    if mtype not in ('info', 'warning', 'success'):
+        mtype = 'info'
+    show_to = data.get('show_to') or 'all'
+    if show_to not in ('all', 'guests', 'registered'):
+        show_to = 'all'
+    duration = data.get('duration') or '24h'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                if duration == "permanent":
+                    cur.execute("""
+                        INSERT INTO admin_broadcasts
+                            (message, message_type, show_to, expires_at, is_active)
+                        VALUES (%s, %s, %s, NULL, TRUE)
+                    """, (message, mtype, show_to))
+                else:
+                    interval = _DURATION_INTERVALS.get(duration, "24 hours")
+                    cur.execute("""
+                        INSERT INTO admin_broadcasts
+                            (message, message_type, show_to, expires_at, is_active)
+                        VALUES (%s, %s, %s, NOW() + INTERVAL %s, TRUE)
+                    """, (message, mtype, show_to, interval))
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/admin/api/broadcast/delete/<int:id>', methods=['POST'])
+@csrf.exempt
+@login_required
+def admin_broadcast_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE admin_broadcasts SET is_active = FALSE WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/admin/user-activity/<identifier>')

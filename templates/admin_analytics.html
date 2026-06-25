@@ -87,6 +87,12 @@
 {% endblock %}
 
 {% block content %}
+{%- macro vname(username, ip) -%}
+{%- if username and username != 'Mehmon' -%}{{ username }}
+{%- elif ip and '.' in ip -%}Mehmon #{{ '%03d'|format(ip.split('.')[-1]|int) }}
+{%- else -%}Mehmon
+{%- endif -%}
+{%- endmacro -%}
 <div class="page-heading">
   <div>
     <h1><i class="bi bi-speedometer2"></i> Admin tahlili</h1>
@@ -133,14 +139,20 @@
   <h2><span class="dot-online"></span> Hozir onlayn ({{ online_users|length }})</h2>
   <div class="online-grid">
     {% for u in online_users %}
-    <a class="online-card" href="/admin/user-activity/{{ u.user_id or u.ip }}">
-      <div class="oc-top">
-        <span class="dot-online"></span>
-        <span class="oc-name">{{ u.username or 'Mehmon' }}</span>
-      </div>
-      <div class="oc-page">{{ u.page }}</div>
-      <div class="oc-time">{{ u.visited_at|uztime }}</div>
-    </a>
+    <div class="online-card">
+      <a href="/admin/user-activity/{{ u.user_id or u.ip }}" style="display:block;text-decoration:none;">
+        <div class="oc-top">
+          <span class="dot-online"></span>
+          <span class="oc-name">{{ vname(u.username, u.ip) }}</span>
+        </div>
+        <div class="oc-page">{{ u.page }}</div>
+        <div class="oc-time">{{ u.visited_at|uztime }}</div>
+      </a>
+      {% if u.ip and u.ip != '—' %}
+      <button onclick="blockUser('{{ u.ip }}')" title="Foydalanuvchini bloklash"
+        style="margin-top:8px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🚫 Bloklash</button>
+      {% endif %}
+    </div>
     {% endfor %}
   </div>
 </div>
@@ -195,40 +207,28 @@
 </div>
 
 <div class="admin-section">
-  <h2><i class="bi bi-bar-chart-line-fill"></i> Eng ko'p tashrif qilingan sahifalar</h2>
+  <h2><i class="bi bi-clock-history"></i> So'nggi tashrif buyurganlar (24 soat)</h2>
   <div class="admin-table-panel">
     <table class="admin-table table">
       <thead>
-        <tr><th>Sahifa</th><th style="text-align:right;">Tashriflar soni</th></tr>
-      </thead>
-      <tbody>
-        {% for page, cnt in top_pages %}
-        <tr><td>{{ page }}</td><td style="text-align:right;font-weight:700;">{{ cnt }}</td></tr>
-        {% else %}
-        <tr><td colspan="2" class="empty-cell">Bugun tashriflar yo'q</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="admin-section">
-  <h2><i class="bi bi-clock-history"></i> So'nggi tashrif buyurganlar</h2>
-  <div class="admin-table-panel">
-    <table class="admin-table table">
-      <thead>
-        <tr><th>Foydalanuvchi</th><th>Sahifa</th><th>IP</th><th>Vaqt</th></tr>
-      </thead>
-      <tbody>
-        {% for username, page, ip, visited_at in recent %}
         <tr>
-          <td>{% if username and username != 'Mehmon' %}<a href="/admin/user-activity/{{ username }}">{{ username }}</a>{% else %}<span style="color:#64748b;">Mehmon</span>{% endif %}</td>
-          <td>{{ page }}</td>
-          <td style="color:var(--oak-muted);">{% if ip %}<a href="/admin/user-activity/{{ ip }}">{{ ip }}</a>{% else %}—{% endif %}</td>
-          <td style="color:var(--oak-muted);white-space:nowrap;">{{ visited_at|uztime }}</td>
+          <th>Foydalanuvchi</th><th>Oxirgi sahifa</th><th>IP</th>
+          <th>Tashriflar</th><th>Unikal sahifalar</th><th>Oxirgi vaqt</th><th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in recent %}
+        <tr>
+          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}">{{ v.username }}</a>{% else %}<span style="color:#64748b;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
+          <td>{{ v.page }}</td>
+          <td style="color:var(--oak-muted);">{% if v.ip and v.ip != '—' %}<a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a>{% else %}—{% endif %}</td>
+          <td style="font-weight:700;">{{ v.total_visits }}</td>
+          <td style="font-weight:700;">{{ v.unique_pages }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.visited_at|uztime }}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🚫 Bloklash</button>{% endif %}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="empty-cell">Tashriflar yo'q</td></tr>
+        <tr><td colspan="7" class="empty-cell">Tashriflar yo'q</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -250,7 +250,7 @@
         {% for v in top_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">Mehmon</span>{% endif %}</td>
+          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
           <td class="ip-mono"><a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a></td>
           <td>
             <div class="vc-cell">
@@ -304,6 +304,81 @@
 </div>
 {% endif %}
 
+<!-- 📢 Broadcast -->
+<div class="admin-section">
+  <div class="broadcast-section admin-card">
+    <h3 style="margin:0 0 12px;font-size:1.05rem;font-weight:700;">📢 Ommaviy xabar yuborish</h3>
+    <textarea id="broadcastMsg" placeholder="Xabar matni..." rows="3"
+      style="width:100%;background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;"></textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <select id="broadcastType" style="background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;">
+        <option value="info">ℹ️ Ma'lumot</option>
+        <option value="warning">⚠️ Ogohlantirish</option>
+        <option value="success">✅ Muvaffaqiyat</option>
+      </select>
+      <select id="broadcastDuration" style="background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;">
+        <option value="1h">1 soat</option>
+        <option value="24h">1 kun</option>
+        <option value="7d">1 hafta</option>
+        <option value="permanent">Doimiy</option>
+      </select>
+      <select id="broadcastTarget" style="background:#162032;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px;">
+        <option value="all">Hammaga</option>
+        <option value="guests">Faqat mehmonlarga</option>
+        <option value="registered">Faqat ro'yxatdan o'tganlarga</option>
+      </select>
+      <button onclick="sendBroadcast()" style="background:#3b82f6;color:white;border:none;padding:8px 20px;border-radius:8px;font-weight:600;cursor:pointer;">📢 Yuborish</button>
+    </div>
+  </div>
+
+  {% if broadcasts %}
+  <div class="admin-table-panel" style="margin-top:14px;">
+    <table class="admin-table table">
+      <thead>
+        <tr><th>Xabar</th><th>Turi</th><th>Kimga</th><th>Yaratilgan</th><th>Tugash</th><th>Amal</th></tr>
+      </thead>
+      <tbody>
+        {% for bc in broadcasts %}
+        <tr>
+          <td>{{ bc.message[:80] }}{% if bc.message|length > 80 %}…{% endif %}</td>
+          <td>{% if bc.message_type == 'warning' %}⚠️{% elif bc.message_type == 'success' %}✅{% else %}ℹ️{% endif %} {{ bc.message_type }}</td>
+          <td>{{ bc.show_to }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ bc.created_at|uztime }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{% if bc.expires_at %}{{ bc.expires_at|uztime }}{% else %}Doimiy{% endif %}</td>
+          <td><button onclick="deleteBroadcast({{ bc.id }})" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">🗑️ O'chirish</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- 🛡️ Blocked users -->
+<div class="admin-section">
+  <h2>🛡️ Bloklangan foydalanuvchilar ({{ blocked_users|length }})</h2>
+  <div class="admin-table-panel">
+    <table class="admin-table table">
+      <thead>
+        <tr><th>IP manzil</th><th>Sabab</th><th>Bloklangan vaqt</th><th>Tugash vaqti</th><th>Amal</th></tr>
+      </thead>
+      <tbody>
+        {% for b in blocked_users %}
+        <tr>
+          <td class="ip-mono">{{ b.ip_address }}</td>
+          <td>{{ b.reason or '—' }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{{ b.created_at|uztime }}</td>
+          <td style="color:var(--oak-muted);white-space:nowrap;">{% if b.is_permanent %}♾️ Doimiy{% elif b.blocked_until %}{{ b.blocked_until|uztime }}{% else %}—{% endif %}</td>
+          <td><button onclick="unblockUser('{{ b.ip_address }}')" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:#34d399;padding:4px 10px;border-radius:8px;font-size:0.7rem;cursor:pointer;">✅ Blokdan chiqarish</button></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="empty-cell">Bloklangan foydalanuvchilar yo'q</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% if registered_users %}
 <div class="admin-section">
   <h2>📋 Ro'yxatdan o'tgan foydalanuvchilar</h2>
@@ -344,5 +419,71 @@
     .catch(function() {})
     .finally(function() { setTimeout(pollOnline, 30000); });
 })();
+
+function blockUser(ip) {
+  var duration = prompt("Bloklash muddati:\n1h — 1 soat\n24h — 1 kun\n7d — 1 hafta\npermanent — doimiy", "24h");
+  if (!duration) return;
+  var reason = prompt("Sabab (ixtiyoriy):", "");
+  fetch('/admin/api/block-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip_address: ip, duration: duration, reason: reason || '' })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) { alert('Foydalanuvchi bloklandi: ' + ip); location.reload(); }
+      else { alert('Xatolik: ' + (data.error || '')); }
+    });
+}
+
+function unblockUser(ip) {
+  if (!confirm('Blokdan chiqarilsinmi: ' + ip + '?')) return;
+  fetch('/admin/api/unblock-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip_address: ip })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) { location.reload(); }
+      else { alert('Xatolik: ' + (data.error || '')); }
+    });
+}
+
+function sendBroadcast() {
+  var msg = document.getElementById('broadcastMsg').value.trim();
+  if (!msg) return alert('Xabar matni kiriting');
+  fetch('/admin/api/broadcast', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: msg,
+      type: document.getElementById('broadcastType').value,
+      duration: document.getElementById('broadcastDuration').value,
+      show_to: document.getElementById('broadcastTarget').value
+    })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        alert('Xabar yuborildi!');
+        document.getElementById('broadcastMsg').value = '';
+        location.reload();
+      } else { alert('Xatolik: ' + (data.error || '')); }
+    });
+}
+
+function deleteBroadcast(id) {
+  if (!confirm("Xabar o'chirilsinmi?")) return;
+  fetch('/admin/api/broadcast/delete/' + id, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) { location.reload(); }
+      else { alert('Xatolik: ' + (data.error || '')); }
+    });
+}
 </script>
 {% endblock %}
