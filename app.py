@@ -8,6 +8,10 @@ from flask_login import (LoginManager, UserMixin, logout_user,
                          login_required, current_user)
 
 app = Flask(__name__)
+# Trust one level of proxy headers (Cloudflare/Railway) so request.remote_addr
+# and the X-Forwarded-* family resolve to the real client.
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 load_dotenv()
 session_secret = os.environ.get("SESSION_SECRET")
 if not session_secret:
@@ -230,6 +234,26 @@ def is_safe_relative_url(target: str) -> bool:
     parsed = urlparse(target)
     return parsed.scheme == "" and parsed.netloc == "" and target.startswith("/")
 
+
+def get_real_ip():
+    """Get real client IP behind Cloudflare/Railway proxy."""
+    cf_ip = request.headers.get('CF-Connecting-IP')
+    if cf_ip:
+        return cf_ip.strip()
+    real_ip = request.headers.get('X-Real-IP')
+    if real_ip:
+        return real_ip.strip()
+    forwarded = request.headers.get('X-Forwarded-For')
+    if forwarded:
+        # "client, proxy1, proxy2" — the first hop is the real client.
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr
+
+
+def get_country():
+    """Two-letter country code from Cloudflare's CF-IPCountry header."""
+    return request.headers.get('CF-IPCountry', 'XX')
+
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Iltimos, tizimga kiring."
@@ -330,6 +354,7 @@ def _run_startup_migrations():
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS user_agent TEXT")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS referrer VARCHAR(500)")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)")
+            cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS country VARCHAR(10)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS blocked_users (
                     id SERIAL PRIMARY KEY,
@@ -1677,7 +1702,7 @@ def check_blocked():
             return None
     except Exception:
         pass
-    ip = request.remote_addr
+    ip = get_real_ip()
     if not ip:
         return None
     try:
@@ -1747,11 +1772,11 @@ def track_visit():
                 session['visit_sid'] = sid
             cur.execute("""
                 INSERT INTO page_visits
-                    (user_id, username, page, ip_address, user_agent, referrer, session_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (user_id, username, request.path, request.remote_addr,
+                    (user_id, username, page, ip_address, user_agent, referrer, session_id, country)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, username, request.path, get_real_ip(),
                   request.headers.get('User-Agent', '')[:500],
-                  request.headers.get('Referer', '')[:500], sid))
+                  request.headers.get('Referer', '')[:500], sid, get_country()))
             conn.commit()
             cur.close()
             conn.close()
@@ -1766,7 +1791,7 @@ def api_protection():
 
     if any(request.path.startswith(p) for p in protected_paths):
         # Rate limit: max 60 requests per minute per IP
-        ip = request.remote_addr
+        ip = get_real_ip()
         cache_key = f'rate_limit:{ip}'
         current = cache.get(cache_key) or 0
 
@@ -2020,7 +2045,8 @@ def admin_analytics():
                        (array_agg(page ORDER BY visited_at DESC))[1] AS last_page,
                        MAX(visited_at) AS last_visit,
                        COUNT(*) AS total_visits,
-                       COUNT(DISTINCT page) AS unique_pages
+                       COUNT(DISTINCT page) AS unique_pages,
+                       MAX(country) AS country
                 FROM page_visits
                 WHERE visited_at >= NOW() - INTERVAL '24 hours'
                 GROUP BY ip_address
@@ -2031,6 +2057,7 @@ def admin_analytics():
                 "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
                 "page": r[3] or "/", "visited_at": r[4],
                 "total_visits": r[5] or 0, "unique_pages": r[6] or 0,
+                "country": r[7] or "",
             } for r in cur.fetchall()]
 
             # Daily visits last 7 days
@@ -2047,7 +2074,8 @@ def admin_analytics():
                        COUNT(*) AS visit_count,
                        MAX(visited_at) AS last_visit,
                        MIN(visited_at) AS first_visit,
-                       COUNT(DISTINCT page) AS unique_pages
+                       COUNT(DISTINCT page) AS unique_pages,
+                       MAX(country) AS country
                 FROM page_visits
                 GROUP BY ip_address
                 ORDER BY visit_count DESC
@@ -2060,6 +2088,7 @@ def admin_analytics():
                 "last_visit": str(r[4])[:16] if r[4] else "",
                 "first_visit": str(r[5])[:16] if r[5] else "",
                 "unique_pages": r[6] or 0,
+                "country": r[7] or "",
             } for r in cur.fetchall()]
 
             # Top visitors grouped by username
@@ -2146,7 +2175,8 @@ def admin_analytics():
                            MAX(username) AS username,
                            MAX(user_id) AS user_id,
                            (array_agg(page ORDER BY visited_at DESC))[1] AS current_page,
-                           MAX(visited_at) AS last_activity
+                           MAX(visited_at) AS last_activity,
+                           MAX(country) AS country
                     FROM page_visits
                     WHERE visited_at > NOW() - INTERVAL '5 minutes'
                     GROUP BY ip_address
@@ -2154,7 +2184,7 @@ def admin_analytics():
                 """)
                 online_users = [{
                     "ip": r[0] or "—", "username": r[1] or "", "user_id": r[2],
-                    "page": r[3] or "/", "visited_at": r[4],
+                    "page": r[3] or "/", "visited_at": r[4], "country": r[5] or "",
                 } for r in cur.fetchall()]
             except Exception:
                 online_users = []
@@ -3408,7 +3438,7 @@ def survey_submit_api():
     if not responses:
         return jsonify({"success": False, "error": "no responses"}), 400
 
-    ip = request.remote_addr
+    ip = get_real_ip()
     user_id = None
     username = None
     try:

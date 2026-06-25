@@ -93,6 +93,9 @@
 {%- else -%}Mehmon
 {%- endif -%}
 {%- endmacro -%}
+{%- macro flag(country) -%}
+{%- if country == 'UZ' -%}🇺🇿{% elif country == 'RU' -%}🇷🇺{% elif country == 'US' -%}🇺🇸{% elif country == 'KZ' -%}🇰🇿{% elif country == 'TJ' -%}🇹🇯{% elif country == 'KG' -%}🇰🇬{% elif country == 'TR' -%}🇹🇷{% elif country == 'KR' -%}🇰🇷{% elif country == 'DE' -%}🇩🇪{% elif country == 'GB' -%}🇬🇧{% elif country and country != 'XX' -%}🌍{%- endif -%}
+{%- endmacro -%}
 <div class="page-heading">
   <div>
     <h1><i class="bi bi-speedometer2"></i> Admin tahlili</h1>
@@ -143,7 +146,7 @@
       <a href="/admin/user-activity/{{ u.user_id or u.ip }}" style="display:block;text-decoration:none;">
         <div class="oc-top">
           <span class="dot-online"></span>
-          <span class="oc-name">{{ vname(u.username, u.ip) }}</span>
+          <span class="oc-name">{{ flag(u.country) }} {{ vname(u.username, u.ip) }}</span>
         </div>
         <div class="oc-page">{{ u.page }}</div>
         <div class="oc-time">{{ u.visited_at|uztime }}</div>
@@ -219,7 +222,7 @@
       <tbody>
         {% for v in recent %}
         <tr>
-          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}">{{ v.username }}</a>{% else %}<span style="color:#64748b;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
+          <td>{{ flag(v.country) }} {% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}">{{ v.username }}</a>{% else %}<span style="color:#64748b;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
           <td>{{ v.page }}</td>
           <td style="color:var(--oak-muted);">{% if v.ip and v.ip != '—' %}<a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a>{% else %}—{% endif %}</td>
           <td style="font-weight:700;">{{ v.total_visits }}</td>
@@ -250,7 +253,7 @@
         {% for v in top_visitors %}
         <tr>
           <td class="rank-cell">{{ loop.index }}</td>
-          <td>{% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
+          <td>{{ flag(v.country) }} {% if v.username and v.username != 'Mehmon' %}<a href="/admin/user-activity/{{ v.user_id or v.username }}" style="color:#60a5fa;font-weight:600;">{{ v.username }}</a>{% else %}<span style="color:#64748b;font-size:0.8rem;">{{ vname(v.username, v.ip) }}</span>{% endif %}</td>
           <td class="ip-mono"><a href="/admin/user-activity/{{ v.ip }}">{{ v.ip }}</a></td>
           <td>
             <div class="vc-cell">

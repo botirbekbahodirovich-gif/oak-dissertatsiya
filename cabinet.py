@@ -110,12 +110,13 @@ def cabinet():
                                  "created_at DESC, id DESC")
                 # This user's own survey answers
                 try:
+                    from app import get_real_ip  # lazy import avoids circular import
                     cur.execute("""
                         SELECT q.question_text, r.answer, r.custom_text, r.created_at
                         FROM survey_responses r JOIN survey_questions q ON r.question_id = q.id
                         WHERE r.user_id = %s OR r.ip_address = %s
                         ORDER BY r.created_at DESC
-                    """, (user['id'], request.remote_addr))
+                    """, (user['id'], get_real_ip()))
                     survey_answers = [{
                         "question_text": sr[0], "answer": sr[1],
                         "custom_text": sr[2] or "", "created_at": sr[3],
