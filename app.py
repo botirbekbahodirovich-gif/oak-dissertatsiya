@@ -558,6 +558,8 @@ def _run_startup_migrations():
                 ('website_url', 'VARCHAR(500)'), ('cabinet_user_id', 'INTEGER'),
             ):
                 cur.execute(f"ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS {_col} {_typ}")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_profiles_olim_name_lower "
+                        "ON olim_profiles (LOWER(TRIM(olim_name)))")
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),

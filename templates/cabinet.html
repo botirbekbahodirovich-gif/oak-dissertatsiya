@@ -69,6 +69,31 @@
 .cab-hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .cab-hero h1 { font-size: 1.3rem; color: #f1f5f9; margin: 0; }
 .cab-hero .sub { color: #94a3b8; font-size: 0.85rem; }
+/* inline edit fields */
+.profile-field-display { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #334155; }
+.field-label { font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 3px; }
+.field-value { color: #e2e8f0; font-size: 0.95rem; }
+.field-empty { color: #64748b; font-style: italic; }
+.field-edit-btn { background: none; border: 1px solid #334155; color: #60a5fa; padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; cursor: pointer; flex-shrink: 0; }
+.field-edit-btn:hover { border-color: #3b82f6; background: rgba(59,130,246,0.1); }
+.profile-field-edit { padding: 12px 0; border-bottom: 1px solid #334155; }
+.profile-field-edit input, .profile-field-edit select, .profile-field-edit textarea { width: 100%; background: #162032; border: 1px solid #3b82f6; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 0.92rem; font-family: inherit; }
+.profile-field-edit textarea { min-height: 90px; resize: vertical; }
+.field-edit-actions { display: flex; gap: 8px; }
+.field-edit-actions button { padding: 6px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: none; }
+.field-edit-actions .fe-save { background: #3b82f6; color: #fff; font-weight: 600; }
+.field-edit-actions .fe-save:hover { background: #2563eb; }
+.field-edit-actions .fe-cancel { background: #162032; color: #94a3b8; border: 1px solid #334155; }
+/* avatar editor */
+.avatar-edit-section { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #334155; }
+.current-avatar { width: 88px; height: 88px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; flex-shrink: 0; }
+.current-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-placeholder { font-size: 2.4rem; }
+.avatar-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.avatar-upload-btn { background: #3b82f6; color: #fff; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 0.88rem; }
+.avatar-upload-btn:hover { background: #2563eb; }
+.avatar-remove-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 7px 16px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; }
+.avatar-hint { color: #64748b; font-size: 0.74rem; }
 @media (max-width: 880px) {
   .cab-wrap { grid-template-columns: 1fr; }
   .cab-side { position: static; }
@@ -80,6 +105,9 @@
 {% endblock %}
 
 {% block content %}
+{% set _full = olim_name or ((profile.first_name or '') ~ ' ' ~ (profile.last_name or '')) %}
+{% set _gender = detect_gender(_full) %}
+{% set _avatar_emoji = '👩‍🎓' if _gender == 'female' else ('👨‍🎓' if _gender == 'male' else '🎓') %}
 <div id="toast" class="cab-toast"></div>
 <div class="cab">
   <div class="cab-wrap">
@@ -101,7 +129,7 @@
     <main class="cab-main">
       <div class="cab-hero">
         <div class="cab-hero-avatar">
-          {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="avatar">{% else %}🎓{% endif %}
+          {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="avatar">{% else %}{{ _avatar_emoji }}{% endif %}
         </div>
         <div>
           <h1>{{ olim_name or (user.telegram_first_name or user.email or 'Tadqiqotchi') }}</h1>
@@ -130,33 +158,59 @@
       <section class="cab-panel active" id="panel-profil">
         <div class="cab-section">
           <h3>Profil ma'lumotlari</h3>
-          <p class="desc">Shaxsiy ma'lumotlaringizni kiriting. "Saqlash" tugmasi profil va linklarni saqlaydi.</p>
-          <div class="cab-grid">
-            <div class="cab-group full">
-              <label>Avatar rasm URL</label>
-              <input class="cab-input" data-profile="photo_url" type="text" value="{{ profile.photo_url or '' }}" placeholder="https://...">
+          <p class="desc">Har bir maydonni "Tahrirlash" tugmasi orqali alohida yangilang.</p>
+
+          <!-- Avatar -->
+          <div class="avatar-edit-section">
+            <div class="current-avatar" id="avatarPreview">
+              {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="Avatar">{% else %}<div class="avatar-placeholder">{{ _avatar_emoji }}</div>{% endif %}
             </div>
-            <div class="cab-group"><label>Ism</label><input class="cab-input nm" data-profile="first_name" type="text" value="{{ profile.first_name or '' }}"></div>
-            <div class="cab-group"><label>Familya</label><input class="cab-input nm" data-profile="last_name" type="text" value="{{ profile.last_name or '' }}"></div>
-            <div class="cab-group"><label>Otasining ismi</label><input class="cab-input nm" data-profile="patronymic" type="text" value="{{ profile.patronymic or '' }}"></div>
-            <div class="cab-group"><label>To'liq ism (avtomatik)</label><input class="cab-input" id="full-name" type="text" readonly></div>
-            <div class="cab-group">
-              <label>Ilmiy unvon</label>
-              <select class="cab-select" data-profile="title">
-                {% set t = profile.title or '' %}
-                <option value="" {% if not t %}selected{% endif %}>—</option>
-                {% for opt in ['PhD','DSc','Professor','Dotsent','Katta ilmiy xodim','Boshqa'] %}
-                <option value="{{ opt }}" {% if t == opt %}selected{% endif %}>{{ opt }}</option>
-                {% endfor %}
-              </select>
+            <div class="avatar-actions">
+              <label for="avatarFileInput" class="avatar-upload-btn">📷 Rasm yuklash</label>
+              <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="uploadAvatar(this)">
+              {% if profile.photo_url %}<button onclick="removeAvatar()" class="avatar-remove-btn">🗑️ O'chirish</button>{% endif %}
+              <div class="avatar-hint">JPG, PNG yoki WEBP · maks. 5MB</div>
             </div>
-            <div class="cab-group"><label>Lavozim</label><input class="cab-input" data-profile="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
-            <div class="cab-group"><label>Muassasa</label><input class="cab-input" list="muassasa-list" data-profile="institution" type="text" value="{{ profile.institution or '' }}"></div>
-            <datalist id="muassasa-list"></datalist>
-            <div class="cab-group"><label>Tug'ilgan yili</label><input class="cab-input" data-profile="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
-            <div class="cab-group full"><label>Bio / Qisqa ma'lumot</label><textarea class="cab-textarea" data-profile="bio" maxlength="1000">{{ profile.bio or '' }}</textarea></div>
           </div>
-          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfile()">Saqlash</button></div>
+
+          <datalist id="muassasa-list"></datalist>
+          {% set _title_opts = ['PhD','DSc','Professor','Dotsent','Katta ilmiy xodim','Boshqa'] %}
+          {% set profile_fields = [
+            ('first_name','🧑','Ism','Ismingiz','text'),
+            ('last_name','🧑','Familya','Familyangiz','text'),
+            ('patronymic','🧑','Otasining ismi','Otangizning ismi','text'),
+            ('title','🎓','Ilmiy unvon','','select'),
+            ('position','💼','Lavozim','Kafedra mudiri','text'),
+            ('institution','🏛️','Muassasa','Muassasa nomi','text'),
+            ('birth_year','📅',"Tug'ilgan yili",'1985','number'),
+            ('bio','📝',"Bio / Qisqa ma'lumot","Qisqa ma'lumot",'textarea')
+          ] %}
+          {% for key, ic, label, ph, ftype in profile_fields %}
+          <div class="profile-field-display" data-field="{{ key }}">
+            <div style="flex:1;min-width:0;">
+              <div class="field-label">{{ ic }} {{ label }}</div>
+              {% if profile[key] %}<div class="field-value">{{ profile[key] }}</div>
+              {% else %}<div class="field-value field-empty">Ma'lumot kiritilmagan</div>{% endif %}
+            </div>
+            <button class="field-edit-btn" onclick="toggleEdit('{{ key }}')">✏️ Tahrirlash</button>
+          </div>
+          <div class="profile-field-edit" data-field="{{ key }}" style="display:none;">
+            {% if ftype == 'select' %}
+              <select id="edit-{{ key }}">
+                <option value="" {% if not profile[key] %}selected{% endif %}>—</option>
+                {% for opt in _title_opts %}<option value="{{ opt }}" {% if profile[key] == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+              </select>
+            {% elif ftype == 'textarea' %}
+              <textarea id="edit-{{ key }}" maxlength="1000" placeholder="{{ ph }}">{{ profile[key] or '' }}</textarea>
+            {% else %}
+              <input type="{{ 'number' if ftype == 'number' else 'text' }}" id="edit-{{ key }}" value="{{ profile[key] or '' }}" placeholder="{{ ph }}"{% if key == 'institution' %} list="muassasa-list"{% endif %}>
+            {% endif %}
+            <div class="field-edit-actions">
+              <button class="fe-save" onclick="saveField('{{ key }}')">✓ Saqlash</button>
+              <button class="fe-cancel" onclick="cancelEdit('{{ key }}')">✗ Bekor qilish</button>
+            </div>
+          </div>
+          {% endfor %}
         </div>
       </section>
 
@@ -298,7 +352,7 @@
       <section class="cab-panel" id="panel-linklar">
         <div class="cab-section">
           <h3>Tashqi linklar</h3>
-          <p class="desc">Akademik profillar va ijtimoiy tarmoqlar. "Saqlash" profil bilan birga saqlanadi.</p>
+          <p class="desc">Akademik profillar va ijtimoiy tarmoqlar. Har birini alohida tahrirlang.</p>
           {% set links = [
             ('scopus_url','🔬','Scopus','https://www.scopus.com/authid/...'),
             ('wos_url','📚','Web of Science','https://www.webofscience.com/...'),
@@ -313,41 +367,25 @@
             ('pinterest_url','📌','Pinterest','https://pinterest.com/...')
           ] %}
           {% for key, ic, label, ph in links %}
-          <div class="cab-link-row">
-            <div class="cab-link-ic">{{ ic }}</div>
-            <div style="flex:1;">
-              <label style="font-size:0.74rem;color:#94a3b8;">{{ label }}</label>
-              <input class="cab-input" data-profile="{{ key }}" type="text" value="{{ profile[key] or '' }}" placeholder="{{ ph }}">
+          <div class="profile-field-display" data-field="{{ key }}">
+            <div style="flex:1;min-width:0;">
+              <div class="field-label">{{ ic }} {{ label }}</div>
+              {% if profile[key] %}<div class="field-value" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="{{ profile[key] }}" target="_blank" rel="noopener" style="color:#60a5fa;">{{ profile[key] }}</a></div>
+              {% else %}<div class="field-value field-empty">Kiritilmagan</div>{% endif %}
+            </div>
+            <button class="field-edit-btn" onclick="toggleEdit('{{ key }}')">✏️ Tahrirlash</button>
+          </div>
+          <div class="profile-field-edit" data-field="{{ key }}" style="display:none;">
+            <input type="text" id="edit-{{ key }}" value="{{ profile[key] or '' }}" placeholder="{{ ph }}">
+            <div class="field-edit-actions">
+              <button class="fe-save" onclick="saveField('{{ key }}')">✓ Saqlash</button>
+              <button class="fe-cancel" onclick="cancelEdit('{{ key }}')">✗ Bekor qilish</button>
             </div>
           </div>
           {% endfor %}
-          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfile()">Saqlash</button></div>
         </div>
       </section>
 
-      <!-- ── SHAXSIY SO'ROVNOMA JAVOBLARI ── -->
-      <section id="panel-survey" style="display:block;margin-top:18px;">
-        <div class="cab-section">
-          <h3>📋 Sizning javoblaringiz</h3>
-          {% if survey_answers %}
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            {% for a in survey_answers %}
-            <div style="background:#162032;border:1px solid #334155;border-radius:10px;padding:12px 14px;">
-              <div style="color:#e2e8f0;font-size:0.9rem;font-weight:600;margin-bottom:4px;">{{ a.question_text }}</div>
-              <div style="font-size:0.85rem;">
-                {% if a.answer == 'ha' %}<span style="color:#34d399;font-weight:700;">👍 Ha</span>
-                {% elif a.answer == 'yoq' %}<span style="color:#f87171;font-weight:700;">👎 Yo'q</span>
-                {% else %}<span style="color:#60a5fa;font-weight:700;">✏️ {{ a.custom_text or 'O\'z javobi' }}</span>{% endif %}
-                <span style="color:#64748b;font-size:0.75rem;"> — {{ a.created_at|uztime }}</span>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="desc">Hali so'rovnomada ishtirok etmagansiz.</p>
-          {% endif %}
-        </div>
-      </section>
     </main>
   </div>
 </div>
@@ -365,14 +403,6 @@
       document.getElementById('panel-' + b.getAttribute('data-panel')).classList.add('active');
     });
   });
-  // full name auto
-  function updateFull() {
-    var parts = [];
-    document.querySelectorAll('.nm').forEach(function (i) { if (i.value.trim()) parts.push(i.value.trim()); });
-    document.getElementById('full-name').value = parts.join(' ');
-  }
-  document.querySelectorAll('.nm').forEach(function (i) { i.addEventListener('input', updateFull); });
-  updateFull();
   // muassasa autocomplete
   fetch('/filters').then(function (r) { return r.json(); }).then(function (d) {
     var dl = document.getElementById('muassasa-list');
@@ -390,12 +420,48 @@ function post(url, body) {
     .then(function (r) { return r.json(); });
 }
 
-function saveProfile() {
-  var data = {};
-  document.querySelectorAll('[data-profile]').forEach(function (el) { data[el.getAttribute('data-profile')] = el.value; });
-  post('/cabinet/api/profile/save', data).then(function (d) {
-    if (d.ok) toast('Saqlandi ✓', true); else toast(d.error || 'Xatolik', false);
+// ── inline field edit ──
+function toggleEdit(field) {
+  document.querySelector('.profile-field-display[data-field="' + field + '"]').style.display = 'none';
+  document.querySelector('.profile-field-edit[data-field="' + field + '"]').style.display = 'block';
+  var el = document.getElementById('edit-' + field);
+  if (el) el.focus();
+}
+function cancelEdit(field) {
+  document.querySelector('.profile-field-display[data-field="' + field + '"]').style.display = 'flex';
+  document.querySelector('.profile-field-edit[data-field="' + field + '"]').style.display = 'none';
+}
+function saveField(field) {
+  var el = document.getElementById('edit-' + field);
+  var value = (el ? el.value : '').trim();
+  var body = {}; body[field] = value;
+  post('/cabinet/api/profile/save', body).then(function (data) {
+    if (data.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 500); }
+    else { toast(data.error || 'Xatolik yuz berdi', false); }
   }).catch(function () { toast('Tarmoq xatosi', false); });
+}
+
+// ── avatar upload ──
+function uploadAvatar(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('Rasm hajmi 5MB dan oshmasligi kerak', false); input.value = ''; return; }
+  var formData = new FormData();
+  formData.append('photo', file);
+  toast('Yuklanmoqda…', true);
+  fetch('/cabinet/api/avatar/upload', { method: 'POST', body: formData })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) { location.reload(); }
+      else { toast(data.error || 'Yuklashda xatolik', false); }
+    })
+    .catch(function () { toast('Tarmoq xatosi', false); });
+}
+function removeAvatar() {
+  if (!confirm("Rasmni o'chirmoqchimisiz?")) return;
+  fetch('/cabinet/api/avatar/remove', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) { if (data.success) location.reload(); else toast(data.error || 'Xatolik', false); });
 }
 
 // claim search

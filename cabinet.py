@@ -82,7 +82,6 @@ def cabinet():
     profile = None
     maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
     claimed = []
-    survey_answers = []
     try:
         conn = get_connection()
         try:
@@ -108,21 +107,6 @@ def cabinet():
                                        "start_date DESC NULLS LAST, id DESC")
                     rasmlar = _f("SELECT * FROM olim_rasmlar WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))",
                                  "created_at DESC, id DESC")
-                # This user's own survey answers
-                try:
-                    from app import get_real_ip  # lazy import avoids circular import
-                    cur.execute("""
-                        SELECT q.question_text, r.answer, r.custom_text, r.created_at
-                        FROM survey_responses r JOIN survey_questions q ON r.question_id = q.id
-                        WHERE r.user_id = %s OR r.ip_address = %s
-                        ORDER BY r.created_at DESC
-                    """, (user['id'], get_real_ip()))
-                    survey_answers = [{
-                        "question_text": sr[0], "answer": sr[1],
-                        "custom_text": sr[2] or "", "created_at": sr[3],
-                    } for sr in cur.fetchall()]
-                except Exception:
-                    survey_answers = []
         finally:
             conn.close()
     except Exception:
@@ -131,7 +115,6 @@ def cabinet():
                            olim_name=olim_name, claimed=claimed,
                            maqolalar=maqolalar, konferensiyalar=konferensiyalar,
                            ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
-                           survey_answers=survey_answers,
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
@@ -387,10 +370,17 @@ _PROFILE_FIELDS = [
 def profile_save():
     user = current_cabinet_user()
     data = request.get_json(silent=True) or request.form
+    # Only touch fields actually present in the payload so a single-field save
+    # (inline edit) never wipes the rest of the profile.
     vals = {}
     for f in _PROFILE_FIELDS:
-        v = (data.get(f) or '').strip() if isinstance(data.get(f), str) else data.get(f)
+        if f not in data:
+            continue
+        raw = data.get(f)
+        v = raw.strip() if isinstance(raw, str) else raw
         vals[f] = v if v not in ('', None) else None
+    if not vals:
+        return jsonify({"ok": True})
     if vals.get('birth_year'):
         try:
             vals['birth_year'] = int(vals['birth_year'])
@@ -422,6 +412,95 @@ def profile_save():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 200
     return jsonify({"ok": True})
+
+
+_AVATAR_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           'static', 'uploads', 'avatars')
+
+
+def _delete_local_avatar(photo_url):
+    """Remove a previously-uploaded avatar file from disk (ignore external URLs)."""
+    if not photo_url or not photo_url.startswith('/static/uploads/avatars/'):
+        return
+    try:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            photo_url.lstrip('/'))
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+def _set_profile_photo(cur, user_id, photo_url):
+    """Set photo_url on the user's olim_profiles row (create it if missing),
+    and mirror it onto cabinet_users so the avatar is consistent everywhere."""
+    cur.execute("SELECT id FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1", (user_id,))
+    row = cur.fetchone()
+    if row:
+        cur.execute(
+            "UPDATE olim_profiles SET photo_url = %s, updated_at = CURRENT_TIMESTAMP "
+            "WHERE id = %s", (photo_url, row[0]))
+    else:
+        cur.execute(
+            "INSERT INTO olim_profiles (olim_name, cabinet_user_id, photo_url) "
+            "VALUES (%s, %s, %s)", (f"cabinet_{user_id}", user_id, photo_url))
+    cur.execute("UPDATE cabinet_users SET photo_url = %s WHERE id = %s", (photo_url, user_id))
+
+
+@cabinet_bp.route('/cabinet/api/avatar/upload', methods=['POST'])
+@cabinet_login_required
+def avatar_upload():
+    user_id = session.get('cabinet_user_id')
+    file = request.files.get('photo')
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "Fayl tanlanmagan"}), 400
+    from werkzeug.utils import secure_filename
+    ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
+        return jsonify({"success": False, "error": "Faqat JPG, PNG, WEBP qabul qilinadi"}), 400
+    try:
+        os.makedirs(_AVATAR_DIR, exist_ok=True)
+        filename = f"avatar_{user_id}_{int(time.time())}{ext}"
+        file.save(os.path.join(_AVATAR_DIR, filename))
+        photo_url = f"/static/uploads/avatars/{filename}"
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # Drop the previous locally-stored avatar, if any.
+                cur.execute("SELECT photo_url FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1",
+                            (user_id,))
+                old = cur.fetchone()
+                if old and old[0]:
+                    _delete_local_avatar(old[0])
+                _set_profile_photo(cur, user_id, photo_url)
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True, "photo_url": photo_url})
+
+
+@cabinet_bp.route('/cabinet/api/avatar/remove', methods=['POST'])
+@cabinet_login_required
+def avatar_remove():
+    user_id = session.get('cabinet_user_id')
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT photo_url FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1",
+                            (user_id,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    _delete_local_avatar(row[0])
+                _set_profile_photo(cur, user_id, None)
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    return jsonify({"success": True})
 
 
 @cabinet_bp.route('/cabinet/api/search-olim')
