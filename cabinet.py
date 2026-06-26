@@ -261,6 +261,110 @@ def telegram():
     return jsonify({"success": True, "redirect": "/cabinet"})
 
 
+# ── Google OAuth ─────────────────────────────────────────────────────────────
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
+GOOGLE_REDIRECT_URI = os.environ.get(
+    'GOOGLE_REDIRECT_URI', 'https://www.olimlar.uz/auth/google/callback')
+GOOGLE_SCOPES = ['openid',
+                 'https://www.googleapis.com/auth/userinfo.email',
+                 'https://www.googleapis.com/auth/userinfo.profile']
+# Allow HTTP for local dev (Railway/Cloudflare terminates TLS in production).
+os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
+
+@cabinet_bp.route('/auth/google/login')
+def google_login():
+    if not GOOGLE_CLIENT_ID:
+        return redirect('/cabinet/login?error=google')
+    try:
+        from requests_oauthlib import OAuth2Session
+    except Exception:
+        return redirect('/cabinet/login?error=google')
+    google = OAuth2Session(GOOGLE_CLIENT_ID, scope=GOOGLE_SCOPES,
+                           redirect_uri=GOOGLE_REDIRECT_URI)
+    authorization_url, state = google.authorization_url(
+        GOOGLE_AUTH_URL, access_type='offline', prompt='select_account')
+    session['google_oauth_state'] = state
+    nxt = request.args.get('next', '/')
+    # Only allow safe relative redirects to avoid open-redirect.
+    if not (nxt.startswith('/') and not nxt.startswith('//')):
+        nxt = '/'
+    session['google_next'] = nxt
+    return redirect(authorization_url)
+
+
+@cabinet_bp.route('/auth/google/callback')
+def google_callback():
+    try:
+        from requests_oauthlib import OAuth2Session
+        google = OAuth2Session(GOOGLE_CLIENT_ID,
+                               state=session.get('google_oauth_state'),
+                               redirect_uri=GOOGLE_REDIRECT_URI)
+        google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
+                           authorization_response=request.url)
+        user_info = google.get(GOOGLE_USERINFO_URL).json()
+
+        email = (user_info.get('email') or '').strip()
+        name = (user_info.get('name') or '').strip()
+        picture = user_info.get('picture') or ''
+        google_id = user_info.get('sub') or ''
+
+        if not email:
+            return redirect('/cabinet/login?error=google')
+
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, olim_name FROM cabinet_users WHERE email = %s", (email,))
+                row = cur.fetchone()
+                if row:
+                    # Existing account — refresh login, link Google id + photo.
+                    cur.execute(
+                        "UPDATE cabinet_users SET last_login = NOW(), google_id = %s, "
+                        "photo_url = COALESCE(photo_url, %s) WHERE id = %s",
+                        (google_id, picture or None, row[0]))
+                    conn.commit()
+                    _set_session(row[0], row[1])
+                else:
+                    # New account.
+                    cur.execute(
+                        "INSERT INTO cabinet_users "
+                        "(email, google_id, telegram_first_name, photo_url, created_at, last_login) "
+                        "VALUES (%s, %s, %s, %s, NOW(), NOW()) RETURNING id",
+                        (email, google_id, name, picture or None))
+                    new_id = cur.fetchone()[0]
+                    conn.commit()
+                    _set_session(new_id, None)
+                    # Seed an olim_profiles row (olim_name is NOT NULL UNIQUE).
+                    try:
+                        parts = name.split(' ', 1)
+                        first_name = parts[0] if parts else name
+                        last_name = parts[1] if len(parts) > 1 else ''
+                        cur.execute(
+                            "INSERT INTO olim_profiles "
+                            "(olim_name, first_name, last_name, photo_url, cabinet_user_id) "
+                            "VALUES (%s, %s, %s, %s, %s)",
+                            (f"cabinet_{new_id}", first_name, last_name,
+                             picture or None, new_id))
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
+        finally:
+            conn.close()
+
+        next_url = session.pop('google_next', '/')
+        if not (next_url.startswith('/') and not next_url.startswith('//')):
+            next_url = '/'
+        return redirect(next_url)
+    except Exception as e:
+        print(f"Google OAuth error: {e}")
+        return redirect('/cabinet/login?error=google')
+
+
 @cabinet_bp.route('/cabinet/api/logout', methods=['POST', 'GET'])
 def logout():
     session.pop('cabinet_user_id', None)

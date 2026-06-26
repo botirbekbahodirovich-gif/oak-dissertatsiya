@@ -548,6 +548,8 @@ def _run_startup_migrations():
                     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            cur.execute("ALTER TABLE cabinet_users ADD COLUMN IF NOT EXISTS google_id VARCHAR(100)")
+            cur.execute("ALTER TABLE cabinet_users ADD COLUMN IF NOT EXISTS photo_url VARCHAR(500)")
             for _col, _typ in (
                 ('first_name', 'VARCHAR(200)'), ('last_name', 'VARCHAR(200)'),
                 ('patronymic', 'VARCHAR(200)'), ('title', 'VARCHAR(200)'),

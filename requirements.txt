@@ -9,3 +9,4 @@ Flask-WTF==1.2.1
 psycopg2-binary==2.9.6
 groq
 gunicorn
+requests-oauthlib==2.0.0
