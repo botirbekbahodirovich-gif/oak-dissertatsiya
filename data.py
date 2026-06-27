@@ -940,12 +940,8 @@ def supervisor(name):
     return render_template('supervisor.html', name=name, rows=rows, stats=_summary_stats(rows))
 
 
-@data_bp.route('/university/<path:name>')
-def university(name):
-    rows = get_dissertations_by_field('Muassasa', name)
-    if not rows:
-        abort(404)
-    return render_template('university.html', name=name, rows=rows, stats=_summary_stats(rows))
+# NOTE: /university/<path:name> is served by app.py (university_profile) — the
+# rich university portfolio page. Kept out of this blueprint to avoid a duplicate rule.
 
 
 @data_bp.route('/specialization/<path:code>')

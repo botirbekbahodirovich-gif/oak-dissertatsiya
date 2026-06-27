@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ uni.name }} — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ uni.name }} — {{ stats.total }} ta dissertatsiya, {{ stats.olimlar }} ta olim. {{ uni.city }}, {{ uni.region }}. Olimlar.uz{% endblock %}
+{% block og_title %}{{ uni.name }} — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .up-wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+  .up-header { background: linear-gradient(135deg,#1e40af,#3b82f6); border-radius: 0 0 24px 24px; padding: 36px 28px; color: #fff; margin-bottom: 24px; }
+  .up-head-inner { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
+  .up-logo { width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; font-size: 3.4rem; flex-shrink: 0; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); }
+  .up-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .up-htext h1 { font-size: 1.7rem; font-weight: 800; margin: 0 0 10px; line-height: 1.25; }
+  .up-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .up-badge { font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; }
+  .up-badge.davlat { background: #059669; }
+  .up-badge.xususiy { background: #3b82f6; }
+  .up-badge.xalqaro { background: #8b5cf6; }
+  .up-badge.loc { background: rgba(255,255,255,0.2); }
+  .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; }
+  .up-stat b { font-size: 1.4rem; font-weight: 800; display: block; }
+  .up-stat span { font-size: 0.8rem; opacity: 0.9; }
+
+  .up-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 20px; }
+  .up-section h2 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 16px; }
+  .up-info-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+  .up-info-item { color: #cbd5e1; font-size: 0.9rem; }
+  .up-info-item b { color: #94a3b8; font-weight: 600; display: block; font-size: 0.78rem; margin-bottom: 2px; }
+  .up-info-item a { color: #60a5fa; }
+  .up-desc { color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
+
+  .up-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) { .up-charts { grid-template-columns: 1fr; } }
+  .up-ix-bar { margin-bottom: 10px; }
+  .up-ix-bar .lbl { display: flex; justify-content: space-between; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 4px; }
+  .up-ix-track { height: 18px; background: #162032; border-radius: 9px; overflow: hidden; }
+  .up-ix-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#60a5fa); border-radius: 9px; }
+
+  .up-people { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
+  .up-person { display: flex; align-items: center; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 12px; text-decoration: none; transition: transform 0.15s, border-color 0.15s; }
+  .up-person:hover { transform: translateY(-2px); border-color: #3b82f6; }
+  .up-person .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.2rem; flex-shrink: 0; overflow: hidden; }
+  .up-person .av img { width: 100%; height: 100%; object-fit: cover; }
+  .up-person .nm { color: #f1f5f9; font-weight: 600; font-size: 0.88rem; }
+  .up-person .meta { color: #94a3b8; font-size: 0.76rem; }
+  .deg-badge { font-size: 0.66rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: #fff; }
+  .deg-phd { background: #059669; } .deg-dsc { background: #e36403; }
+
+  .up-recent .rc { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+  .up-recent .rc a { color: #60a5fa; font-weight: 600; }
+  .up-recent .rc .mv { color: #cbd5e1; font-size: 0.9rem; margin: 4px 0; }
+  .up-recent .rc .mt { color: #94a3b8; font-size: 0.78rem; }
+  .admin-upload-section { border: 1px dashed #475569; border-radius: 12px; padding: 18px; background: #162032; }
+  .admin-upload-section input[type=file] { color: #cbd5e1; }
+  .admin-upload-section button { background: #3b82f6; color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-left: 8px; }
+  .up-empty { color: #64748b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="up-header">
+  <div class="up-head-inner">
+    <div class="up-logo">{% if uni.logo_url %}<img src="{{ uni.logo_url }}" alt="logo">{% else %}🏛️{% endif %}</div>
+    <div class="up-htext">
+      <h1>{{ uni.name }}</h1>
+      <div class="up-badges">
+        {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
+        {% if uni.city %}<span class="up-badge loc">📍 {{ uni.city }}{% if uni.region and uni.region != uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
+      </div>
+      <div class="up-stats-row">
+        <div class="up-stat"><b>{{ stats.total }}</b><span>dissertatsiya</span></div>
+        <div class="up-stat"><b>{{ stats.olimlar }}</b><span>olim</span></div>
+        <div class="up-stat"><b>{{ stats.ixtisosliklar }}</b><span>ixtisoslik</span></div>
+        <div class="up-stat"><b>{{ stats.rahbarlar }}</b><span>ilmiy rahbar</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="up-wrap">
+  <!-- SECTION 1 — Umumiy ma'lumot -->
+  <div class="up-section">
+    <h2>ℹ️ Umumiy ma'lumot</h2>
+    {% if uni.description %}<p class="up-desc" style="margin-bottom:16px;">{{ uni.description }}</p>{% endif %}
+    <div class="up-info-grid">
+      {% if uni.website %}<div class="up-info-item"><b>Veb-sayt</b><a href="{{ uni.website }}" target="_blank" rel="noopener">{{ uni.website }}</a></div>{% endif %}
+      {% if uni.founded_year %}<div class="up-info-item"><b>Tashkil etilgan</b>{{ uni.founded_year }}</div>{% endif %}
+      {% if uni.rector %}<div class="up-info-item"><b>Rektor</b>{{ uni.rector }}</div>{% endif %}
+      {% if uni.phone %}<div class="up-info-item"><b>Telefon</b>{{ uni.phone }}</div>{% endif %}
+      {% if uni.email %}<div class="up-info-item"><b>Email</b><a href="mailto:{{ uni.email }}">{{ uni.email }}</a></div>{% endif %}
+      {% if uni.telegram %}<div class="up-info-item"><b>Telegram</b><a href="https://t.me/{{ uni.telegram|replace('@','') }}" target="_blank" rel="noopener">{{ uni.telegram }}</a></div>{% endif %}
+      {% if uni.address %}<div class="up-info-item"><b>Manzil</b>{{ uni.address }}</div>{% endif %}
+      <div class="up-info-item"><b>Xaritada</b><a href="https://www.google.com/maps/search/{{ uni.name|urlencode }}" target="_blank" rel="noopener">Google Maps →</a></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 — Statistika -->
+  {% if stats.total > 0 %}
+  <div class="up-section">
+    <h2>📊 Dissertatsiya statistikasi</h2>
+    <div class="up-charts">
+      <div><canvas id="degChart" height="220"></canvas></div>
+      <div><canvas id="yearChart" height="220"></canvas></div>
+    </div>
+    {% if top_ixtisos %}
+    <div style="margin-top:22px;">
+      <h2 style="font-size:1rem;">Top 5 ixtisoslik</h2>
+      {% set ixmax = top_ixtisos[0].count or 1 %}
+      {% for ix in top_ixtisos %}
+      <div class="up-ix-bar">
+        <div class="lbl"><span>{{ ix.name }}</span><span>{{ ix.count }}</span></div>
+        <div class="up-ix-track"><div class="up-ix-fill" style="width:{{ (ix.count / ixmax * 100)|round(0,'ceil') }}%;"></div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- SECTION 3 — Eng faol olimlar -->
+  {% if top_olimlar %}
+  <div class="up-section">
+    <h2>🎓 Eng faol olimlar</h2>
+    <div class="up-people">
+      {% for o in top_olimlar %}
+      <a class="up-person" href="/olim/{{ o.name|urlencode }}">
+        <div class="av">{% if o.photo_url %}<img src="{{ o.photo_url }}" alt="">{% else %}🎓{% endif %}</div>
+        <div style="min-width:0;">
+          <div class="nm">{{ o.display or o.name }}</div>
+          <div class="meta">
+            {% if 'PHD' in (o.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>
+            {% elif 'DSC' in (o.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
+            {{ o.count }} ta dissertatsiya
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SECTION 4 — Top ilmiy rahbarlar -->
+  {% if top_rahbarlar %}
+  <div class="up-section">
+    <h2>👨‍🏫 Top ilmiy rahbarlar</h2>
+    <div class="up-people">
+      {% for o in top_rahbarlar %}
+      <a class="up-person" href="/olim/{{ o.name|urlencode }}">
+        <div class="av">{% if o.photo_url %}<img src="{{ o.photo_url }}" alt="">{% else %}👨‍🏫{% endif %}</div>
+        <div style="min-width:0;">
+          <div class="nm">{{ o.display or o.name }}</div>
+          <div class="meta">{{ o.count }} ta shogird</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SECTION 5 — So'nggi himoyalar -->
+  {% if recent %}
+  <div class="up-section up-recent">
+    <h2>🆕 So'nggi himoyalar</h2>
+    {% for d in recent %}
+    <div class="rc">
+      <a href="/dissertation/{{ d.id }}">{{ d.display or d.olim }}</a>
+      {% if 'PHD' in (d.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>{% elif 'DSC' in (d.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
+      <div class="mv">{{ d.mavzu }}</div>
+      <div class="mt">{{ d.sana }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- SECTION 6 — Admin logo upload -->
+  {% if is_admin and uni.id %}
+  <div class="up-section">
+    <h2>📷 Logo yuklash (admin)</h2>
+    <form class="admin-upload-section" method="POST" action="/admin/university/logo/{{ uni.id }}" enctype="multipart/form-data">
+      <input type="file" name="logo" accept="image/*">
+      <button type="submit">Yuklash</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  if (!window.Chart) return;
+  var phd = {{ stats.phd|int }}, dsc = {{ stats.dsc|int }};
+  var degEl = document.getElementById('degChart');
+  if (degEl && (phd + dsc) > 0) {
+    new Chart(degEl.getContext('2d'), {
+      type: 'doughnut',
+      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['#059669', '#e36403'] }] },
+      options: { plugins: { legend: { labels: { color: '#cbd5e1' } } } }
+    });
+  }
+  var years = {{ by_year|tojson }};
+  var yEl = document.getElementById('yearChart');
+  if (yEl && years.length) {
+    new Chart(yEl.getContext('2d'), {
+      type: 'bar',
+      data: { labels: years.map(function (y) { return y.year; }),
+              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: '#3b82f6' }] },
+      options: { plugins: { legend: { display: false } },
+                 scales: { x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
+                           y: { ticks: { color: '#64748b' }, grid: { color: '#28344a' } } } }
+    });
+  }
+})();
+</script>
+{% endblock %}

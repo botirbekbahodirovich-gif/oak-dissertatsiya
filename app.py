@@ -303,6 +303,122 @@ app.register_blueprint(cabinet_bp)
 csrf.exempt(app.view_functions['auth.telegram_login'])
 
 
+# ── University seed data + detection ────────────────────────────────────────
+# (name, university_type) — city/region are detected from the name.
+_UNIVERSITY_SEED = [
+    # Davlat universitetlari
+    ('Abu Ali Ibn Sino Nomidagi Buxoro Davlat Tibbiyot Instituti', 'davlat'),
+    ('Abu Rayhon Beruniy nomidagi Urganch davlat universiteti', 'davlat'),
+    ('Ajiniyoz nomidagi Nukus davlat pedagogika instituti', 'davlat'),
+    ('Andijon davlat chet tillari instituti', 'davlat'),
+    ('Andijon davlat pedagogika instituti', 'davlat'),
+    ('Andijon davlat texnika instituti', 'davlat'),
+    ('Andijon davlat tibbiyot instituti', 'davlat'),
+    ('Andijon davlat universiteti', 'davlat'),
+    ('Andijon mashinasozlik instituti', 'davlat'),
+    ('Andijon qishloq xojaligi va agrotexnologiyalar instituti', 'davlat'),
+    ('Berdaq nomidagi Qoraqalpoq davlat universiteti', 'davlat'),
+    ('Botir Zokirov nomidagi Milliy estrada sanati instituti', 'davlat'),
+    ('Buxoro davlat pedagogika instituti', 'davlat'),
+    ('Buxoro davlat texnika universiteti', 'davlat'),
+    ('Buxoro davlat universiteti', 'davlat'),
+    ('Buxoro muhandislik-texnologiya instituti', 'davlat'),
+    ('Chirchiq davlat pedagogika universiteti', 'davlat'),
+    ('Fargona davlat texnika universiteti', 'davlat'),
+    ('Fargona davlat universiteti', 'davlat'),
+    ('Fargona jamoat salomatligi tibbiyot instituti', 'davlat'),
+    ('Fargona politexnika instituti', 'davlat'),
+    ('Geologiya fanlari universiteti', 'davlat'),
+    ('Guliston davlat pedagogika instituti', 'davlat'),
+    ('Guliston davlat universiteti', 'davlat'),
+    ('Jahon iqtisodiyoti va diplomatiya universiteti', 'davlat'),
+    ('Jizzax davlat pedagogika universiteti', 'davlat'),
+    ('Jizzax politexnika instituti', 'davlat'),
+    ('Mirzo Ulugbek nomidagi Ozbekiston Milliy universiteti', 'davlat'),
+    ('Muhammad al-Xorazmiy nomidagi Toshkent axborot texnologiyalari universiteti', 'davlat'),
+    ('Namangan davlat chet tillari instituti', 'davlat'),
+    ('Namangan davlat pedagogika instituti', 'davlat'),
+    ('Namangan davlat texnika universiteti', 'davlat'),
+    ('Namangan davlat universiteti', 'davlat'),
+    ('Navoiy davlat konchilik va texnologiyalar universiteti', 'davlat'),
+    ('Navoiy davlat universiteti', 'davlat'),
+    ('Ozbekiston davlat jismoniy tarbiya va sport universiteti', 'davlat'),
+    ('Ozbekiston davlat konservatoriyasi', 'davlat'),
+    ('Ozbekiston davlat jahon tillari universiteti', 'davlat'),
+    ('Ozbekiston milliy pedagogika universiteti', 'davlat'),
+    ('Qarshi davlat universiteti', 'davlat'),
+    ('Qoqon davlat universiteti', 'davlat'),
+    ('Samarqand davlat chet tillar instituti', 'davlat'),
+    ('Samarqand davlat tibbiyot universiteti', 'davlat'),
+    ('Sharof Rashidov nomidagi Samarqand davlat universiteti', 'davlat'),
+    ('Termiz davlat universiteti', 'davlat'),
+    ('Toshkent davlat agrar universiteti', 'davlat'),
+    ('Toshkent davlat iqtisodiyot universiteti', 'davlat'),
+    ('Toshkent davlat texnika universiteti', 'davlat'),
+    ('Toshkent davlat tibbiyot universiteti', 'davlat'),
+    ('Toshkent davlat transport universiteti', 'davlat'),
+    ('Toshkent kimyo-texnologiya instituti', 'davlat'),
+    # Xususiy / xalqaro universitetlar
+    ('Akfa universiteti', 'xususiy'),
+    ('Alfraganus University', 'xususiy'),
+    ('Binary international university', 'xususiy'),
+    ('British Management University', 'xususiy'),
+    ('Cambridge International University', 'xususiy'),
+    ('Digital University', 'xususiy'),
+    ('IT-Park University', 'xususiy'),
+    ('Japan Digital University', 'xususiy'),
+    ('Kokand university', 'xususiy'),
+    ('PDP University', 'xususiy'),
+    ('Perfect University', 'xususiy'),
+    ('Renessans talim universiteti', 'xususiy'),
+    ('Sharda universiteti', 'xususiy'),
+    ('Stars International University', 'xususiy'),
+    ('TEAM University', 'xususiy'),
+    ('Toshkent shahridagi Inha universiteti', 'xalqaro'),
+    ('Toshkent shahridagi Turin politexnika universiteti', 'xalqaro'),
+    ('Toshkent shahrida Vebster universiteti', 'xalqaro'),
+    ('Xalqaro innovatsion universiteti', 'xususiy'),
+    ('Yangi asr universiteti', 'xususiy'),
+]
+
+
+def detect_uni_city_region(name):
+    """Detect (city, region) for a university from keywords in its name."""
+    n = (name or '').lower()
+    rules = [
+        (('buxoro', 'bukhara'),                 ('Buxoro', 'Buxoro')),
+        (('andijon', 'andijan'),                ('Andijon', 'Andijon')),
+        (('farg', 'fargona', 'qoqon', 'kokand'), ('Fargona', 'Fargona')),
+        (('samarqand', 'samarkand'),            ('Samarqand', 'Samarqand')),
+        (('namangan',),                          ('Namangan', 'Namangan')),
+        (('nukus', 'qoraqalpoq', 'ajiniyoz', 'berdaq'), ('Nukus', 'Qoraqalpogiston')),
+        (('termiz', 'surxon'),                  ('Termiz', 'Surxondaryo')),
+        (('qarshi', 'shahrisabz'),              ('Qarshi', 'Qashqadaryo')),
+        (('jizzax',),                            ('Jizzax', 'Jizzax')),
+        (('navoiy',),                            ('Navoiy', 'Navoiy')),
+        (('urganch', 'xorazm'),                 ('Urganch', 'Xorazm')),
+        (('guliston', 'sirdaryo'),              ('Guliston', 'Sirdaryo')),
+        (('chirchiq',),                          ('Chirchiq', 'Toshkent')),
+    ]
+    for keys, (city, region) in rules:
+        if any(k in n for k in keys):
+            return city, region
+    return 'Toshkent', 'Toshkent'
+
+
+def _seed_universities(cur):
+    """Insert the seed universities once (no-op if the table already has rows)."""
+    cur.execute("SELECT COUNT(*) FROM universities")
+    if (cur.fetchone()[0] or 0) > 0:
+        return
+    for name, utype in _UNIVERSITY_SEED:
+        city, region = detect_uni_city_region(name)
+        cur.execute(
+            "INSERT INTO universities (name, university_type, city, region) "
+            "VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO NOTHING",
+            (name, utype, city, region))
+
+
 def _run_startup_migrations():
     try:
         from data import get_connection
@@ -431,6 +547,32 @@ def _run_startup_migrations():
                     cur.execute(
                         "INSERT INTO survey_questions (question_text, question_group, question_order) "
                         "VALUES (%s, %s, %s)", (_qt, _qg, _qo))
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS universities (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(500) NOT NULL UNIQUE,
+                    short_name VARCHAR(200),
+                    logo_url VARCHAR(500),
+                    website VARCHAR(500),
+                    city VARCHAR(200),
+                    region VARCHAR(200),
+                    university_type VARCHAR(100),
+                    description TEXT,
+                    founded_year INTEGER,
+                    rector VARCHAR(300),
+                    address VARCHAR(500),
+                    phone VARCHAR(100),
+                    email VARCHAR(200),
+                    telegram VARCHAR(200),
+                    student_count INTEGER,
+                    teacher_count INTEGER,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_universities_name ON universities (LOWER(name))")
+            _seed_universities(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
@@ -844,12 +986,35 @@ def home():
     except Exception:
         latest_blog = []
 
+    # Top 6 universities by dissertation count for the home section
+    top_universities = []
+    try:
+        uni_stats = get_university_dissertation_stats()
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name, logo_url, university_type, city "
+                            "FROM universities WHERE is_active = TRUE")
+                for r in cur.fetchall():
+                    s = uni_stats.get(r[0], {})
+                    top_universities.append({
+                        "name": r[1] or "", "logo_url": r[2] or "",
+                        "university_type": r[3] or "", "city": r[4] or "",
+                        "diss_count": s.get('total', 0)})
+        finally:
+            conn.close()
+        top_universities = sorted(top_universities, key=lambda x: -x['diss_count'])[:6]
+    except Exception:
+        top_universities = []
+
     return render_template("home.html", recent=recent, news=news,
                            top_supervisors=top_supervisors,
                            top_supervisors_random=top_supervisors_random,
                            top_marquee=top_marquee, total_stats=total_stats,
                            gender_pct=gender_pct, latest_blog=latest_blog,
-                           active_vacancy_count=active_vacancy_count)
+                           active_vacancy_count=active_vacancy_count,
+                           top_universities=top_universities)
 
 
 @app.route("/dashboard")
@@ -3864,6 +4029,387 @@ def heatmap():
     data = _compute_heatmap_data()
     return render_template("heatmap.html", regions=data["regions"],
                            total=data["total"], top_universities=data["top_universities"])
+
+
+# ════════════════════════════════════════════════════════════════════
+#  University portfolio system
+# ════════════════════════════════════════════════════════════════════
+_UNI_TYPE_LABELS = {'davlat': 'Davlat', 'xususiy': 'Xususiy', 'xalqaro': 'Xalqaro'}
+_UNI_STOPWORDS = {'nomidagi', 'davlat', 'universiteti', 'instituti', 'milliy',
+                  'xalqaro', 'xususiy', 'va', 'xojaligi', 'fanlari', 'shahridagi',
+                  'shahrida', 'university', 'international'}
+
+
+def _uni_keywords(name):
+    words = [w.strip(".,'’\"").lower() for w in (name or '').split()]
+    kw = [w for w in words if len(w) > 3 and w not in _UNI_STOPWORDS]
+    if not kw:
+        kw = [w for w in words if len(w) > 3]
+    return kw[:3]
+
+
+def _uni_where(term):
+    """WHERE clause + params matching dissertations to an institution text."""
+    like = f"%{(term or '').strip().lower()}%"
+    return ("(LOWER(muassasa) LIKE %s OR LOWER(COALESCE(ilmiy_kengash,'')) LIKE %s)",
+            [like, like])
+
+
+@cache.cached(timeout=3600, key_prefix='university_stats')
+def get_university_dissertation_stats():
+    """Map university id → {total, olimlar} dissertation counts. Cached 1h."""
+    from data import get_connection
+    stats = {}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name FROM universities WHERE is_active = TRUE")
+                unis = cur.fetchall()
+                for uid, name in unis:
+                    kws = _uni_keywords(name)
+                    if not kws:
+                        stats[uid] = {'total': 0, 'olimlar': 0}
+                        continue
+                    clause = " AND ".join(["LOWER(muassasa) LIKE %s"] * len(kws))
+                    params = [f"%{k}%" for k in kws]
+                    cur.execute(
+                        f"SELECT COUNT(*), COUNT(DISTINCT olim) FROM dissertations WHERE {clause}",
+                        params)
+                    r = cur.fetchone()
+                    stats[uid] = {'total': r[0] or 0, 'olimlar': r[1] or 0}
+        finally:
+            conn.close()
+    except Exception:
+        stats = {}
+    return stats
+
+
+def _uni_row_to_dict(cols, row):
+    d = dict(zip(cols, row))
+    d['type_label'] = _UNI_TYPE_LABELS.get(d.get('university_type'), d.get('university_type') or '')
+    return d
+
+
+def _find_university(cur, term):
+    """Find a universities row matching the institution text (exact, else fuzzy)."""
+    cur.execute("SELECT * FROM universities WHERE LOWER(name) = LOWER(%s) LIMIT 1", (term,))
+    row = cur.fetchone()
+    cols = [c[0] for c in cur.description]
+    if row:
+        return _uni_row_to_dict(cols, row)
+    # Fuzzy: a university whose keywords all appear in the institution text.
+    t = (term or '').lower()
+    cur.execute("SELECT * FROM universities")
+    cols = [c[0] for c in cur.description]
+    best, best_score = None, 0
+    for r in cur.fetchall():
+        d = _uni_row_to_dict(cols, r)
+        kws = _uni_keywords(d['name'])
+        if kws and all(k in t for k in kws) and len(kws) > best_score:
+            best, best_score = d, len(kws)
+    return best
+
+
+@app.route('/universities')
+def universities():
+    from data import get_connection
+    items = []
+    regions = set()
+    try:
+        stats = get_university_dissertation_stats()
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM universities WHERE is_active = TRUE")
+                cols = [c[0] for c in cur.description]
+                for r in cur.fetchall():
+                    d = _uni_row_to_dict(cols, r)
+                    s = stats.get(d['id'], {})
+                    d['diss_count'] = s.get('total', 0)
+                    d['olim_count'] = s.get('olimlar', 0)
+                    if d.get('region'):
+                        regions.add(d['region'])
+                    items.append(d)
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    items.sort(key=lambda x: -x.get('diss_count', 0))
+    return render_template('universities.html', items=items,
+                           regions=sorted(regions), type_labels=_UNI_TYPE_LABELS)
+
+
+@app.route('/university/<path:name>')
+def university_profile(name):
+    from data import get_connection, clean_olim_name
+    term = (name or '').strip()
+    where, params = _uni_where(term)
+    uni = None
+    stats = {'total': 0, 'phd': 0, 'dsc': 0, 'olimlar': 0, 'ixtisosliklar': 0, 'rahbarlar': 0}
+    top_olimlar, top_rahbarlar, recent, by_year, top_ixtisos = [], [], [], [], []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                uni = _find_university(cur, term)
+                cur.execute(f"""
+                    SELECT COUNT(*),
+                           SUM(CASE WHEN daraja ILIKE '%%PhD%%' OR daraja ILIKE '%%фан%%' THEN 1 ELSE 0 END),
+                           SUM(CASE WHEN daraja ILIKE '%%DSc%%' OR daraja ILIKE '%%док%%' THEN 1 ELSE 0 END),
+                           COUNT(DISTINCT olim), COUNT(DISTINCT ixtisoslik), COUNT(DISTINCT ilmiy_rahbar)
+                    FROM dissertations WHERE {where}
+                """, params)
+                r = cur.fetchone()
+                if r:
+                    stats = {'total': r[0] or 0, 'phd': r[1] or 0, 'dsc': r[2] or 0,
+                             'olimlar': r[3] or 0, 'ixtisosliklar': r[4] or 0, 'rahbarlar': r[5] or 0}
+                cur.execute(f"""
+                    SELECT TRIM(olim), COUNT(*) cnt, MAX(daraja), MAX(photo_url)
+                    FROM dissertations WHERE {where} AND olim IS NOT NULL AND TRIM(olim) <> ''
+                    GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 10
+                """, params)
+                top_olimlar = [{'name': x[0], 'display': clean_olim_name(x[0]), 'count': x[1],
+                                'daraja': x[2] or '', 'photo_url': x[3] or ''} for x in cur.fetchall()]
+                cur.execute(f"""
+                    SELECT TRIM(ilmiy_rahbar), COUNT(*) cnt, MAX(ilmiy_rahbar_photo_url)
+                    FROM dissertations WHERE {where} AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+                    GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 10
+                """, params)
+                top_rahbarlar = [{'name': x[0], 'display': clean_olim_name(x[0]), 'count': x[1],
+                                  'photo_url': x[2] or ''} for x in cur.fetchall()]
+                cur.execute(f"""
+                    SELECT id, olim, mavzu, daraja, sana FROM dissertations WHERE {where}
+                    ORDER BY id DESC LIMIT 10
+                """, params)
+                recent = [{'id': x[0], 'olim': x[1] or '', 'display': clean_olim_name(x[1] or ''),
+                           'mavzu': x[2] or '', 'daraja': x[3] or '', 'sana': x[4] or ''}
+                          for x in cur.fetchall()]
+                cur.execute(f"""
+                    SELECT substring(sana from '(19|20)[0-9][0-9]') AS yr, COUNT(*)
+                    FROM dissertations WHERE {where} AND sana ~ '(19|20)[0-9][0-9]'
+                    GROUP BY yr ORDER BY yr
+                """, params)
+                by_year = [{'year': x[0], 'count': x[1]} for x in cur.fetchall() if x[0]]
+                cur.execute(f"""
+                    SELECT TRIM(ixtisoslik), COUNT(*) cnt FROM dissertations
+                    WHERE {where} AND ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> ''
+                    GROUP BY TRIM(ixtisoslik) ORDER BY cnt DESC LIMIT 5
+                """, params)
+                top_ixtisos = [{'name': x[0], 'count': x[1]} for x in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    if not uni and stats['total'] == 0:
+        abort(404)
+    if not uni:
+        city, region = detect_uni_city_region(term)
+        uni = {'id': None, 'name': term, 'short_name': '', 'logo_url': '', 'website': '',
+               'city': city, 'region': region, 'university_type': '', 'type_label': '',
+               'description': '', 'founded_year': None, 'rector': '', 'address': '',
+               'phone': '', 'email': '', 'telegram': ''}
+
+    is_admin = (current_user.is_authenticated and current_user.username == 'admin')
+    return render_template('university_profile.html', uni=uni, stats=stats,
+                           top_olimlar=top_olimlar, top_rahbarlar=top_rahbarlar,
+                           recent=recent, by_year=by_year, top_ixtisos=top_ixtisos,
+                           is_admin=is_admin)
+
+
+def _save_university_logo():
+    """Save an uploaded university logo and return its web path, or None."""
+    f = request.files.get("logo")
+    if not f or not f.filename:
+        return None
+    from werkzeug.utils import secure_filename
+    import time as _time
+    fname = secure_filename(f.filename)
+    ext = os.path.splitext(fname)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
+        return None
+    upload_dir = os.path.join(app.static_folder, "uploads", "university_logos")
+    os.makedirs(upload_dir, exist_ok=True)
+    saved = f"{int(_time.time())}_{fname}"
+    try:
+        f.save(os.path.join(upload_dir, saved))
+    except Exception:
+        return None
+    return f"/static/uploads/university_logos/{saved}"
+
+
+_UNI_EDIT_FIELDS = ['name', 'short_name', 'website', 'city', 'region', 'university_type',
+                    'description', 'founded_year', 'rector', 'address', 'phone', 'email',
+                    'telegram', 'student_count', 'teacher_count']
+
+
+@app.route('/admin/universities')
+@login_required
+def admin_universities():
+    _require_admin()
+    from data import get_connection
+    items = []
+    try:
+        stats = get_university_dissertation_stats()
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name, university_type, city, region, logo_url, is_active "
+                            "FROM universities ORDER BY name")
+                for r in cur.fetchall():
+                    items.append({"id": r[0], "name": r[1] or "", "university_type": r[2] or "",
+                                  "type_label": _UNI_TYPE_LABELS.get(r[2], r[2] or ""),
+                                  "city": r[3] or "", "region": r[4] or "", "logo_url": r[5] or "",
+                                  "is_active": r[6], "diss_count": stats.get(r[0], {}).get('total', 0)})
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template('admin_universities.html', items=items)
+
+
+def _uni_form_values():
+    vals = {}
+    for f in _UNI_EDIT_FIELDS:
+        v = (request.form.get(f) or '').strip()
+        vals[f] = v or None
+    for intf in ('founded_year', 'student_count', 'teacher_count'):
+        if vals.get(intf):
+            try:
+                vals[intf] = int(vals[intf])
+            except (TypeError, ValueError):
+                vals[intf] = None
+    return vals
+
+
+@app.route('/admin/university/add', methods=['GET', 'POST'])
+@login_required
+def admin_university_add():
+    _require_admin()
+    from data import get_connection
+    if request.method == 'POST':
+        vals = _uni_form_values()
+        if not vals.get('name'):
+            flash("Nomi majburiy.", "error")
+            return render_template('admin_university_form.html', item=vals, edit_mode=False)
+        logo = _save_university_logo()
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cols = _UNI_EDIT_FIELDS + (['logo_url'] if logo else [])
+                    placeholders = ", ".join(["%s"] * len(cols))
+                    args = [vals[f] for f in _UNI_EDIT_FIELDS] + ([logo] if logo else [])
+                    cur.execute(
+                        f"INSERT INTO universities ({', '.join(cols)}) VALUES ({placeholders}) "
+                        f"ON CONFLICT (name) DO NOTHING", args)
+                conn.commit()
+            finally:
+                conn.close()
+            cache.delete('university_stats')
+            flash("Universitet qo'shildi!", "success")
+        except Exception:
+            flash("Qo'shishda xatolik yuz berdi.", "error")
+        return redirect(url_for('admin_universities'))
+    return render_template('admin_university_form.html', item=None, edit_mode=False)
+
+
+@app.route('/admin/university/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def admin_university_edit(id):
+    _require_admin()
+    from data import get_connection
+
+    def _load():
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM universities WHERE id = %s", (id,))
+                    row = cur.fetchone()
+                    if row:
+                        return _uni_row_to_dict([c[0] for c in cur.description], row)
+            finally:
+                conn.close()
+        except Exception:
+            return None
+        return None
+
+    current = _load()
+    if not current:
+        abort(404)
+    if request.method == 'POST':
+        vals = _uni_form_values()
+        if not vals.get('name'):
+            flash("Nomi majburiy.", "error")
+            vals['id'] = id
+            return render_template('admin_university_form.html', item=vals, edit_mode=True)
+        logo = _save_university_logo()
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cols = list(_UNI_EDIT_FIELDS)
+                    args = [vals[f] for f in _UNI_EDIT_FIELDS]
+                    if logo:
+                        cols.append('logo_url')
+                        args.append(logo)
+                    set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = NOW()"
+                    cur.execute(f"UPDATE universities SET {set_clause} WHERE id = %s", args + [id])
+                conn.commit()
+            finally:
+                conn.close()
+            cache.delete('university_stats')
+            flash("Universitet yangilandi!", "success")
+        except Exception:
+            flash("Yangilashda xatolik yuz berdi.", "error")
+        return redirect(url_for('admin_universities'))
+    return render_template('admin_university_form.html', item=current, edit_mode=True)
+
+
+@app.route('/admin/university/logo/<int:id>', methods=['POST'])
+@login_required
+def admin_university_logo(id):
+    _require_admin()
+    from data import get_connection
+    logo = _save_university_logo()
+    if not logo:
+        flash("Rasm yuklanmadi (JPG/PNG/WEBP/SVG).", "error")
+        return redirect(request.referrer or url_for('admin_universities'))
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE universities SET logo_url = %s, updated_at = NOW() WHERE id = %s",
+                            (logo, id))
+            conn.commit()
+        finally:
+            conn.close()
+        flash("Logo yuklandi!", "success")
+    except Exception:
+        flash("Logo saqlashda xatolik.", "error")
+    return redirect(request.referrer or url_for('admin_universities'))
+
+
+@app.route('/admin/university/delete/<int:id>', methods=['POST'])
+@login_required
+def admin_university_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM universities WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+        cache.delete('university_stats')
+        flash("Universitet o'chirildi.", "success")
+    except Exception:
+        flash("O'chirishda xatolik.", "error")
+    return redirect(url_for('admin_universities'))
 
 
 if __name__ == "__main__":

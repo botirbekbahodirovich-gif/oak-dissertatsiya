@@ -629,6 +629,7 @@
         <a href="/collaboration" class="nav-link{% if request.path.startswith('/collaboration') %} active{% endif %}"><i class="bi bi-diagram-3"></i>Hamkorlik</a>
         <a href="/clustering" class="nav-link{% if request.path.startswith('/clustering') %} active{% endif %}"><i class="bi bi-grid-1x2"></i>Klasterlar</a>
         <a href="/heatmap" class="nav-link{% if request.path.startswith('/heatmap') %} active{% endif %}"><i class="bi bi-geo-alt-fill"></i>Xarita</a>
+        <a href="/universities" class="nav-link{% if request.path == '/universities' or request.path.startswith('/university/') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar</a>
         <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}
@@ -639,6 +640,7 @@
         <a href="/admin/blog" class="nav-link{% if request.path.startswith('/admin/blog') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Blog (admin)</a>
         <a href="/admin/vacancies" class="nav-link{% if request.path.startswith('/admin/vacancies') %} active{% endif %}"><i class="bi bi-briefcase"></i>Vakansiyalar</a>
         <a href="/admin/survey" class="nav-link{% if request.path.startswith('/admin/survey') %} active{% endif %}"><i class="bi bi-clipboard-check"></i>So'rovnoma</a>
+        <a href="/admin/universities" class="nav-link{% if request.path.startswith('/admin/universit') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar (admin)</a>
         {% endif %}
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
           <i class="bi bi-bell-fill"></i>
