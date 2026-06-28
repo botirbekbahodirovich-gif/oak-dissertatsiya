@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Ilmiy jurnallar — Olimlar.uz{% endblock %}
+{% block meta_description %}Maqolangizni chop etish uchun mos ilmiy jurnalni toping. OAK, Scopus, Web of Science indekslangan jurnallar bazasi.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .jr-wrap { max-width: 1150px; margin: 0 auto; padding: 8px 16px 48px; }
+  .jr-head { text-align: center; margin-bottom: 1.4rem; }
+  .jr-head h1 { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; }
+  .jr-head p { color: #94a3b8; margin: 0; }
+
+  .jr-rec { background: linear-gradient(135deg,#1e293b,#162032); border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 24px; }
+  .jr-rec h2 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 14px; }
+  .jr-rec-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 12px; align-items: end; }
+  .jr-rec label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 5px; font-weight: 600; }
+  .jr-rec input, .jr-rec select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 0.88rem; }
+  .jr-rec-btn { background: #3b82f6; color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+  .jr-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 1.4rem; }
+  .jr-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .jr-pill { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 7px 14px; border-radius: 999px; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+  .jr-pill.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .jr-filters select, .jr-filters input { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; border-radius: 999px; padding: 8px 14px; font-size: 0.84rem; }
+
+  .jr-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; }
+  @media (max-width: 760px) { .jr-grid { grid-template-columns: 1fr; } }
+  .jr-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.15s, border-color 0.15s; }
+  .jr-card:hover { transform: translateY(-3px); border-color: #3b82f6; }
+  .jr-card.predatory { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+  .jr-ctop { display: flex; align-items: flex-start; gap: 12px; }
+  .jr-logo { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg,#1e40af,#3b82f6); display: grid; place-items: center; font-size: 1.4rem; flex-shrink: 0; overflow: hidden; }
+  .jr-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .jr-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .jr-badge { font-size: 0.68rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .jr-badge.oak { background: #059669; } .jr-badge.scopus { background: #f59e0b; } .jr-badge.wos { background: #3b82f6; } .jr-badge.none { background: #475569; }
+  .jr-name { color: #f1f5f9; font-weight: 700; font-size: 1.02rem; line-height: 1.3; }
+  .jr-en { color: #94a3b8; font-style: italic; font-size: 0.84rem; }
+  .jr-cat { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: rgba(124,92,252,0.18); color: #c4b5fd; }
+  .jr-meta { color: #94a3b8; font-size: 0.82rem; }
+  .jr-stats { display: flex; gap: 14px; flex-wrap: wrap; color: #cbd5e1; font-size: 0.8rem; margin-top: 4px; }
+  .jr-foot { display: flex; gap: 14px; align-items: center; margin-top: auto; padding-top: 8px; }
+  .jr-foot a { color: #60a5fa; font-weight: 600; font-size: 0.85rem; text-decoration: none; }
+  .jr-warn { background: rgba(239,68,68,0.16); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: 10px; padding: 8px 12px; font-size: 0.78rem; font-weight: 600; }
+  .jr-empty { text-align: center; color: #64748b; padding: 3rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jr-wrap">
+  <div class="jr-head">
+    <h1>📚 Ilmiy jurnallar</h1>
+    <p>Maqolangizni chop etish uchun mos jurnalni toping</p>
+  </div>
+
+  <!-- Recommendation -->
+  <div class="jr-rec">
+    <h2>🎯 Sizga mos jurnalni toping</h2>
+    <div class="jr-rec-grid">
+      <div><label>Ixtisoslik shifri</label><input type="text" id="rec-specialty" placeholder="Masalan: 14.00" oninput="applyFilters()" list="spec-list"></div>
+      <div><label>Mavzu kalit so'zlari</label><input type="text" id="rec-keyword" placeholder="kalit so'z..." oninput="applyFilters()"></div>
+      <div><label>Til</label>
+        <select id="rec-lang" onchange="applyFilters()">
+          <option value="">Barchasi</option><option value="o'zbek">O'zbek</option><option value="rus">Rus</option><option value="ingliz">Ingliz</option>
+        </select>
+      </div>
+      <div><label>Indekslash</label>
+        <select id="rec-index" onchange="applyFilters()">
+          <option value="">Barchasi</option><option value="oak">OAK</option><option value="scopus">Scopus</option><option value="wos">WoS</option>
+        </select>
+      </div>
+      <div><button class="jr-rec-btn" onclick="document.getElementById('jrGrid').scrollIntoView({behavior:'smooth'})">Tavsiya et →</button></div>
+    </div>
+    <datalist id="spec-list">
+      {% set seen = [] %}
+      {% for j in items %}{% if j.specialty_codes %}{% for c in j.specialty_codes.split(',') %}{% if c.strip() and c.strip() not in seen %}{% set _ = seen.append(c.strip()) %}<option value="{{ c.strip() }}">{% endif %}{% endfor %}{% endif %}{% endfor %}
+    </datalist>
+  </div>
+
+  <!-- Filters -->
+  <div class="jr-filters">
+    <div class="jr-pills">
+      <button class="jr-pill active" data-cat="all" onclick="setCat('all', this)">Barchasi</button>
+      {% for c in categories %}<button class="jr-pill" data-cat="{{ c }}" onclick="setCat('{{ c }}', this)">{{ c }}</button>{% endfor %}
+    </div>
+    <select id="f-index" onchange="applyFilters()">
+      <option value="">Barcha indekslash</option><option value="oak">OAK</option><option value="scopus">Scopus</option><option value="wos">Web of Science</option>
+    </select>
+    <select id="f-country" onchange="applyFilters()">
+      <option value="">Barcha davlatlar</option><option value="uz">O'zbekiston</option><option value="intl">Xalqaro</option>
+    </select>
+    <input type="text" id="f-search" placeholder="Jurnal qidirish..." oninput="applyFilters()">
+    <select id="f-sort" onchange="window.location='/journals?sort='+this.value">
+      <option value="name" {% if sort == 'name' %}selected{% endif %}>Nomi bo'yicha</option>
+      <option value="impact" {% if sort == 'impact' %}selected{% endif %}>Impact Factor</option>
+      <option value="new" {% if sort == 'new' %}selected{% endif %}>Yangi qo'shilgan</option>
+    </select>
+  </div>
+
+  <div class="jr-grid" id="jrGrid">
+    {% for j in items %}
+    <div class="jr-card{% if j.is_predatory %} predatory{% endif %}"
+         data-cat="{{ j.category or '' }}"
+         data-country="{% if 'zbek' in (j.country or '')|lower %}uz{% else %}intl{% endif %}"
+         data-lang="{{ (j.language or '')|lower }}"
+         data-oak="{{ '1' if j.oak_approved else '0' }}"
+         data-scopus="{{ '1' if j.scopus_indexed else '0' }}"
+         data-wos="{{ '1' if j.wos_indexed else '0' }}"
+         data-specialty="{{ j.specialty_codes or '' }}"
+         data-name="{{ (j.name ~ ' ' ~ (j.name_en or ''))|lower }}"
+         data-text="{{ (j.name ~ ' ' ~ (j.name_en or '') ~ ' ' ~ (j.category or ''))|lower }}">
+      <div class="jr-ctop">
+        <div class="jr-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}📚{% endif %}</div>
+        <div class="jr-badges">
+          {% if j.oak_approved %}<span class="jr-badge oak">OAK ✓</span>{% endif %}
+          {% if j.scopus_indexed %}<span class="jr-badge scopus">Scopus</span>{% endif %}
+          {% if j.wos_indexed %}<span class="jr-badge wos">WoS</span>{% endif %}
+          {% if not j.oak_approved and not j.scopus_indexed and not j.wos_indexed %}<span class="jr-badge none">Indekslanmagan</span>{% endif %}
+        </div>
+      </div>
+      {% if j.is_predatory %}<div class="jr-warn">⚠️ Shubhali jurnal (predatory)</div>{% endif %}
+      <div class="jr-name">{{ j.name }}</div>
+      {% if j.name_en %}<div class="jr-en">{{ j.name_en }}</div>{% endif %}
+      <div>{% if j.category %}<span class="jr-cat">{{ j.category }}</span>{% endif %}</div>
+      <div class="jr-meta">🌍 {{ j.country or '—' }}{% if j.language %} · {{ j.language }}{% endif %}</div>
+      <div class="jr-stats">
+        {% if j.impact_factor %}<span>📊 IF: {{ j.impact_factor }}</span>{% endif %}
+        {% if j.publish_fee %}<span>💰 {{ j.publish_fee }}</span>{% endif %}
+        {% if j.review_period %}<span>⏱ {{ j.review_period }}</span>{% endif %}
+        {% if j.frequency %}<span>📅 {{ j.frequency }}</span>{% endif %}
+      </div>
+      <div class="jr-foot">
+        <a href="/journals/{{ j.id }}">Batafsil →</a>
+        {% if j.website %}<a href="{{ j.website }}" target="_blank" rel="noopener">🌐 Sayt</a>{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="jr-empty">Jurnallar topilmadi.</div>
+    {% endfor %}
+  </div>
+  <div class="jr-empty" id="noResults" style="display:none;">Mos jurnal topilmadi.</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var curCat = 'all';
+function setCat(c, btn) {
+  curCat = c;
+  document.querySelectorAll('.jr-pill').forEach(function (p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  applyFilters();
+}
+function applyFilters() {
+  var fIndex = document.getElementById('f-index').value;
+  var fCountry = document.getElementById('f-country').value;
+  var fSearch = (document.getElementById('f-search').value || '').toLowerCase().trim();
+  var rSpec = (document.getElementById('rec-specialty').value || '').trim();
+  var rKw = (document.getElementById('rec-keyword').value || '').toLowerCase().trim();
+  var rLang = document.getElementById('rec-lang').value;
+  var rIndex = document.getElementById('rec-index').value;
+  var shown = 0;
+  document.querySelectorAll('#jrGrid .jr-card').forEach(function (c) {
+    var ok = (curCat === 'all' || c.getAttribute('data-cat') === curCat)
+      && (!fIndex || c.getAttribute('data-' + fIndex) === '1')
+      && (!fCountry || c.getAttribute('data-country') === fCountry)
+      && (!fSearch || (c.getAttribute('data-name') || '').indexOf(fSearch) !== -1)
+      && (!rSpec || (c.getAttribute('data-specialty') || '').indexOf(rSpec) !== -1)
+      && (!rKw || (c.getAttribute('data-text') || '').indexOf(rKw) !== -1)
+      && (!rLang || (c.getAttribute('data-lang') || '').indexOf(rLang) !== -1)
+      && (!rIndex || c.getAttribute('data-' + rIndex) === '1');
+    c.style.display = ok ? '' : 'none';
+    if (ok) shown++;
+  });
+  document.getElementById('noResults').style.display = shown ? 'none' : 'block';
+}
+</script>
+{% endblock %}

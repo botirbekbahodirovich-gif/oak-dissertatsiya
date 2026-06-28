@@ -419,6 +419,54 @@ def _seed_universities(cur):
             (name, utype, city, region))
 
 
+# ── Journal seed data ───────────────────────────────────────────────────────
+# (name, name_en, category, country, language, indexing, specialty_codes, frequency)
+_JOURNAL_SEED = [
+    ("O'zbekiston tibbiyot jurnali", 'Medical Journal of Uzbekistan', 'Tibbiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '14.00', 'Oylik'),
+    ('Fan va texnologiya', 'Science and Technology', 'Texnika', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.00', 'Choraklik'),
+    ("O'zbekistonda xorijiy tillar", 'Foreign Languages in Uzbekistan', 'Filologiya', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK', '13.00', 'Choraklik'),
+    ('Pedagogik mahorat', 'Pedagogical Excellence', 'Pedagogika', "O'zbekiston", "O'zbek", 'OAK', '13.00', 'Choraklik'),
+    ("Iqtisodiyot va ta'lim", 'Economics and Education', 'Iqtisodiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '08.00', 'Choraklik'),
+    ("O'zbek tili va adabiyoti", 'Uzbek Language and Literature', 'Filologiya', "O'zbekiston", "O'zbek", 'OAK', '10.00', 'Choraklik'),
+    ('Kimyo va kimyo texnologiyasi', 'Chemistry and Chemical Technology', 'Kimyo', "O'zbekiston", "O'zbek, Rus", 'OAK, Scopus', '02.00', 'Choraklik'),
+    ("O'zbekiston qishloq xo'jaligi jurnali", 'Journal of Agriculture of Uzbekistan', "Qishloq xo'jaligi", "O'zbekiston", "O'zbek, Rus", 'OAK', '06.00', 'Choraklik'),
+    ('Huquq va burch', 'Law and Duty', 'Huquqshunoslik', "O'zbekiston", "O'zbek, Rus", 'OAK', '12.00', 'Choraklik'),
+    ('Matematika', 'Mathematics', 'Matematika', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK, Scopus', '01.00', 'Choraklik'),
+    ("O'zbekiston biologiya jurnali", 'Uzbek Biological Journal', 'Biologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '03.00', 'Choraklik'),
+    ('Fizika', 'Physics', 'Fizika', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK', '01.00', 'Choraklik'),
+    ("Ta'lim va innovatsion tadqiqotlar", 'Education and Innovative Research', 'Pedagogika', "O'zbekiston", "O'zbek", 'OAK', '13.00', 'Oylik'),
+    ('Falsafa va huquq', 'Philosophy and Law', 'Falsafa', "O'zbekiston", "O'zbek, Rus", 'OAK', '09.00,12.00', 'Choraklik'),
+    ('Geologiya jurnali', 'Journal of Geology', 'Geologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '04.00', 'Choraklik'),
+    ('Stomatologiya', 'Stomatology', 'Tibbiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '14.00', 'Choraklik'),
+    ('Psixologiya', 'Psychology', 'Psixologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '19.00', 'Choraklik'),
+    ('Arxitektura va qurilish muammolari', 'Architecture and Construction Problems', 'Arxitektura', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.09', 'Choraklik'),
+    ('Informatika va energetika muammolari', 'Problems of Informatics and Energy', 'Informatika', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.01', 'Choraklik'),
+    ('Sharqshunoslik', 'Oriental Studies', 'Sharqshunoslik', "O'zbekiston", "O'zbek, Rus", 'OAK', '07.00', 'Choraklik'),
+    ('Nature', 'Nature', 'Multidisciplinary', 'UK', 'English', 'Scopus, WoS', None, None),
+    ('Science', 'Science', 'Multidisciplinary', 'USA', 'English', 'Scopus, WoS', None, None),
+    ('The Lancet', 'The Lancet', 'Tibbiyot', 'UK', 'English', 'Scopus, WoS', None, None),
+    ('IEEE Access', 'IEEE Access', 'Texnika', 'USA', 'English', 'Scopus, WoS', None, None),
+    ('MDPI Education Sciences', 'Education Sciences', 'Pedagogika', 'Switzerland', 'English', 'Scopus, WoS', None, None),
+]
+
+
+def _seed_journals(cur):
+    """Insert the seed journals once (no-op if the table already has rows)."""
+    cur.execute("SELECT COUNT(*) FROM journals")
+    if (cur.fetchone()[0] or 0) > 0:
+        return
+    for name, name_en, category, country, language, indexing, codes, freq in _JOURNAL_SEED:
+        ind = (indexing or '').lower()
+        oak = 'oak' in ind
+        scopus = 'scopus' in ind
+        wos = 'wos' in ind or 'web of science' in ind
+        cur.execute(
+            "INSERT INTO journals (name, name_en, category, country, language, indexing, "
+            "specialty_codes, frequency, oak_approved, scopus_indexed, wos_indexed) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (name) DO NOTHING",
+            (name, name_en, category, country, language, indexing, codes, freq, oak, scopus, wos))
+
+
 def _run_startup_migrations():
     try:
         from data import get_connection
@@ -573,6 +621,41 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_universities_name ON universities (LOWER(name))")
             _seed_universities(cur)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS journals (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(500) NOT NULL,
+                    name_en VARCHAR(500),
+                    issn VARCHAR(20),
+                    eissn VARCHAR(20),
+                    publisher VARCHAR(500),
+                    country VARCHAR(100),
+                    language VARCHAR(100),
+                    category VARCHAR(200),
+                    specialty_codes VARCHAR(500),
+                    indexing VARCHAR(200),
+                    website VARCHAR(500),
+                    description TEXT,
+                    impact_factor DECIMAL(5,3),
+                    publish_fee VARCHAR(200),
+                    review_period VARCHAR(100),
+                    frequency VARCHAR(100),
+                    is_predatory BOOLEAN DEFAULT FALSE,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    logo_url VARCHAR(500),
+                    oak_approved BOOLEAN DEFAULT FALSE,
+                    scopus_indexed BOOLEAN DEFAULT FALSE,
+                    wos_indexed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            # Unique index on name enables ON CONFLICT (name) for seeding/admin add.
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_journals_name ON journals (name)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_name ON journals (LOWER(name))")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_category ON journals (category)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_specialty ON journals (specialty_codes)")
+            _seed_journals(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
                     id SERIAL PRIMARY KEY,
@@ -1008,13 +1091,35 @@ def home():
     except Exception:
         top_universities = []
 
+    # Featured journals (OAK-approved) for the home section
+    featured_journals = []
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, name, name_en, category, logo_url, oak_approved, "
+                    "scopus_indexed, wos_indexed FROM journals "
+                    "WHERE is_active = TRUE AND oak_approved = TRUE "
+                    "ORDER BY impact_factor DESC NULLS LAST, LOWER(name) LIMIT 4")
+                featured_journals = [{
+                    "id": r[0], "name": r[1] or "", "name_en": r[2] or "",
+                    "category": r[3] or "", "logo_url": r[4] or "", "oak_approved": r[5],
+                    "scopus_indexed": r[6], "wos_indexed": r[7]} for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        featured_journals = []
+
     return render_template("home.html", recent=recent, news=news,
                            top_supervisors=top_supervisors,
                            top_supervisors_random=top_supervisors_random,
                            top_marquee=top_marquee, total_stats=total_stats,
                            gender_pct=gender_pct, latest_blog=latest_blog,
                            active_vacancy_count=active_vacancy_count,
-                           top_universities=top_universities)
+                           top_universities=top_universities,
+                           featured_journals=featured_journals)
 
 
 @app.route("/dashboard")
@@ -4410,6 +4515,265 @@ def admin_university_delete(id):
     except Exception:
         flash("O'chirishda xatolik.", "error")
     return redirect(url_for('admin_universities'))
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Scientific journals system
+# ════════════════════════════════════════════════════════════════════
+_JOURNAL_COLS = [
+    'name', 'name_en', 'issn', 'eissn', 'publisher', 'country', 'language',
+    'category', 'specialty_codes', 'indexing', 'website', 'description',
+    'impact_factor', 'publish_fee', 'review_period', 'frequency',
+    'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed',
+]
+
+
+def _journal_row(cols, row):
+    return dict(zip(cols, row))
+
+
+@app.route('/journals')
+def journals():
+    from data import get_connection
+    sort = request.args.get('sort', 'name')
+    items, categories = [], set()
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                order = {'impact': 'impact_factor DESC NULLS LAST, name',
+                         'new': 'created_at DESC, id DESC'}.get(sort, 'LOWER(name)')
+                cur.execute(f"SELECT * FROM journals WHERE is_active = TRUE ORDER BY {order}")
+                cols = [c[0] for c in cur.description]
+                for r in cur.fetchall():
+                    d = _journal_row(cols, r)
+                    if d.get('category'):
+                        categories.add(d['category'])
+                    items.append(d)
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template('journals.html', items=items,
+                           categories=sorted(categories), sort=sort)
+
+
+@app.route('/journals/<int:id>')
+def journal_detail(id):
+    from data import get_connection
+    journal, similar = None, []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM journals WHERE id = %s", (id,))
+                row = cur.fetchone()
+                if row:
+                    cols = [c[0] for c in cur.description]
+                    journal = _journal_row(cols, row)
+                    if journal.get('category'):
+                        cur.execute(
+                            "SELECT id, name, name_en, category, country, oak_approved, "
+                            "scopus_indexed, wos_indexed, is_predatory FROM journals "
+                            "WHERE category = %s AND id <> %s AND is_active = TRUE LIMIT 4",
+                            (journal['category'], id))
+                        similar = [{
+                            "id": x[0], "name": x[1], "name_en": x[2] or "", "category": x[3] or "",
+                            "country": x[4] or "", "oak_approved": x[5], "scopus_indexed": x[6],
+                            "wos_indexed": x[7], "is_predatory": x[8],
+                        } for x in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        journal = None
+    if not journal:
+        abort(404)
+    codes = [c.strip() for c in (journal.get('specialty_codes') or '').split(',') if c.strip()]
+    return render_template('journal_detail.html', j=journal, similar=similar, codes=codes)
+
+
+def _save_journal_logo():
+    f = request.files.get("logo")
+    if not f or not f.filename:
+        return None
+    from werkzeug.utils import secure_filename
+    import time as _time
+    fname = secure_filename(f.filename)
+    ext = os.path.splitext(fname)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
+        return None
+    upload_dir = os.path.join(app.static_folder, "uploads", "journal_logos")
+    os.makedirs(upload_dir, exist_ok=True)
+    saved = f"{int(_time.time())}_{fname}"
+    try:
+        f.save(os.path.join(upload_dir, saved))
+    except Exception:
+        return None
+    return f"/static/uploads/journal_logos/{saved}"
+
+
+def _journal_form_values():
+    vals = {}
+    for f in _JOURNAL_COLS:
+        if f in ('is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed'):
+            vals[f] = bool(request.form.get(f))
+        else:
+            v = (request.form.get(f) or '').strip()
+            vals[f] = v or None
+    if vals.get('impact_factor'):
+        try:
+            vals['impact_factor'] = float(vals['impact_factor'])
+        except (TypeError, ValueError):
+            vals['impact_factor'] = None
+    return vals
+
+
+@app.route('/admin/journals')
+@login_required
+def admin_journals():
+    _require_admin()
+    from data import get_connection
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, name, category, indexing, country, is_active, "
+                            "is_predatory, logo_url FROM journals ORDER BY LOWER(name)")
+                items = [{"id": r[0], "name": r[1] or "", "category": r[2] or "",
+                          "indexing": r[3] or "", "country": r[4] or "", "is_active": r[5],
+                          "is_predatory": r[6], "logo_url": r[7] or ""} for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template('admin_journals.html', items=items)
+
+
+@app.route('/admin/journals/add', methods=['GET', 'POST'])
+@login_required
+def admin_journal_add():
+    _require_admin()
+    from data import get_connection
+    if request.method == 'POST':
+        vals = _journal_form_values()
+        if not vals.get('name'):
+            flash("Nomi majburiy.", "error")
+            return render_template('admin_journal_form.html', item=vals, edit_mode=False)
+        logo = _save_journal_logo()
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cols = list(_JOURNAL_COLS) + (['logo_url'] if logo else [])
+                    placeholders = ", ".join(["%s"] * len(cols))
+                    args = [vals[f] for f in _JOURNAL_COLS] + ([logo] if logo else [])
+                    cur.execute(
+                        f"INSERT INTO journals ({', '.join(cols)}) VALUES ({placeholders}) "
+                        f"ON CONFLICT (name) DO NOTHING", args)
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Jurnal qo'shildi!", "success")
+        except Exception:
+            flash("Qo'shishda xatolik yuz berdi.", "error")
+        return redirect(url_for('admin_journals'))
+    return render_template('admin_journal_form.html', item=None, edit_mode=False)
+
+
+@app.route('/admin/journals/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def admin_journal_edit(id):
+    _require_admin()
+    from data import get_connection
+
+    def _load():
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM journals WHERE id = %s", (id,))
+                    row = cur.fetchone()
+                    if row:
+                        return _journal_row([c[0] for c in cur.description], row)
+            finally:
+                conn.close()
+        except Exception:
+            return None
+        return None
+
+    current = _load()
+    if not current:
+        abort(404)
+    if request.method == 'POST':
+        vals = _journal_form_values()
+        if not vals.get('name'):
+            flash("Nomi majburiy.", "error")
+            vals['id'] = id
+            return render_template('admin_journal_form.html', item=vals, edit_mode=True)
+        logo = _save_journal_logo()
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cols = list(_JOURNAL_COLS)
+                    args = [vals[f] for f in _JOURNAL_COLS]
+                    if logo:
+                        cols.append('logo_url')
+                        args.append(logo)
+                    set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = NOW()"
+                    cur.execute(f"UPDATE journals SET {set_clause} WHERE id = %s", args + [id])
+                conn.commit()
+            finally:
+                conn.close()
+            flash("Jurnal yangilandi!", "success")
+        except Exception:
+            flash("Yangilashda xatolik yuz berdi.", "error")
+        return redirect(url_for('admin_journals'))
+    return render_template('admin_journal_form.html', item=current, edit_mode=True)
+
+
+@app.route('/admin/journals/logo/<int:id>', methods=['POST'])
+@login_required
+def admin_journal_logo(id):
+    _require_admin()
+    from data import get_connection
+    logo = _save_journal_logo()
+    if not logo:
+        flash("Rasm yuklanmadi.", "error")
+        return redirect(request.referrer or url_for('admin_journals'))
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE journals SET logo_url = %s, updated_at = NOW() WHERE id = %s",
+                            (logo, id))
+            conn.commit()
+        finally:
+            conn.close()
+        flash("Logo yuklandi!", "success")
+    except Exception:
+        flash("Logo saqlashda xatolik.", "error")
+    return redirect(request.referrer or url_for('admin_journals'))
+
+
+@app.route('/admin/journals/delete/<int:id>', methods=['POST'])
+@login_required
+def admin_journal_delete(id):
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM journals WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+        flash("Jurnal o'chirildi.", "success")
+    except Exception:
+        flash("O'chirishda xatolik.", "error")
+    return redirect(url_for('admin_journals'))
 
 
 if __name__ == "__main__":

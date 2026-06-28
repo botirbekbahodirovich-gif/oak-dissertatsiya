@@ -872,12 +872,26 @@ def olim_profile(name):
     tree_children = len({d.get('Olim', '').strip()
                          for d in as_supervisor if d.get('Olim', '').strip()})
 
+    # Journal name → id map so articles can link to the journal page when matched.
+    journal_map = {}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, LOWER(TRIM(name)) FROM journals WHERE is_active = TRUE")
+                journal_map = {r[1]: r[0] for r in cur.fetchall() if r[1]}
+        finally:
+            conn.close()
+    except Exception:
+        journal_map = {}
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,
                            stats=stats, profile=profile, maqolalar=maqolalar,
                            konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
-                           tree_parents=tree_parents, tree_children=tree_children)
+                           tree_parents=tree_parents, tree_children=tree_children,
+                           journal_map=journal_map)
 
 
 def _summary_stats(rows):

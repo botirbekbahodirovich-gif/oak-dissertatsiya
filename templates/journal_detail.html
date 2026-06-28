@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ j.name }} — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ j.name }}{% if j.name_en %} ({{ j.name_en }}){% endif %} — {{ j.category }}, {{ j.country }}. Ilmiy jurnal haqida ma'lumot.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .jd-wrap { max-width: 900px; margin: 0 auto; padding: 8px 16px 48px; }
+  .jd-back { display: inline-block; color: #94a3b8; text-decoration: none; font-size: 0.88rem; margin-bottom: 16px; }
+  .jd-header { background: linear-gradient(135deg,#1e40af,#3b82f6); border-radius: 18px; padding: 28px; color: #fff; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+  .jd-logo { width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; font-size: 2.6rem; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); flex-shrink: 0; }
+  .jd-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .jd-htext h1 { font-size: 1.5rem; font-weight: 800; margin: 0 0 4px; }
+  .jd-en { opacity: 0.9; font-style: italic; margin-bottom: 10px; }
+  .jd-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .jd-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; }
+  .jd-badge.oak { background: #059669; } .jd-badge.scopus { background: #f59e0b; } .jd-badge.wos { background: #3b82f6; }
+  .jd-badge.cat { background: rgba(255,255,255,0.2); } .jd-badge.country { background: rgba(255,255,255,0.2); }
+  .jd-warn { background: rgba(239,68,68,0.12); border: 1px solid #ef4444; color: #fca5a5; border-radius: 12px; padding: 14px 18px; margin-bottom: 22px; font-weight: 600; }
+  .jd-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
+  .jd-section h2 { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 14px; }
+  .jd-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 12px; }
+  .jd-item b { display: block; color: #94a3b8; font-size: 0.76rem; font-weight: 600; margin-bottom: 2px; }
+  .jd-item { color: #cbd5e1; font-size: 0.9rem; }
+  .jd-item a { color: #60a5fa; }
+  .jd-desc { color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
+  .jd-codes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .jd-code { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93bbfc; border-radius: 8px; padding: 6px 14px; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+  .jd-oak-ok { display: inline-flex; align-items: center; gap: 6px; background: rgba(5,150,105,0.16); color: #34d399; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 0.82rem; }
+  .jd-similar { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
+  @media (max-width: 600px) { .jd-similar { grid-template-columns: 1fr; } }
+  .jd-sim-card { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px; text-decoration: none; }
+  .jd-sim-card .nm { color: #f1f5f9; font-weight: 600; font-size: 0.9rem; }
+  .jd-sim-card .mt { color: #94a3b8; font-size: 0.78rem; margin-top: 4px; }
+  .jd-placeholder { color: #64748b; font-style: italic; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jd-wrap">
+  <a href="/journals" class="jd-back">← Barcha jurnallar</a>
+
+  <div class="jd-header">
+    <div class="jd-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}📚{% endif %}</div>
+    <div class="jd-htext">
+      <h1>{{ j.name }}</h1>
+      {% if j.name_en %}<div class="jd-en">{{ j.name_en }}</div>{% endif %}
+      <div class="jd-badges">
+        {% if j.oak_approved %}<span class="jd-badge oak">OAK ✓</span>{% endif %}
+        {% if j.scopus_indexed %}<span class="jd-badge scopus">Scopus</span>{% endif %}
+        {% if j.wos_indexed %}<span class="jd-badge wos">WoS</span>{% endif %}
+        {% if j.category %}<span class="jd-badge cat">{{ j.category }}</span>{% endif %}
+        {% if j.country %}<span class="jd-badge country">🌍 {{ j.country }}</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if j.is_predatory %}
+  <div class="jd-warn">⚠️ DIQQAT: Bu jurnal shubhali (predatory) ro'yxatida. Beall's List yoki boshqa manbalarda shubhali deb belgilangan. Maqola yuborishdan oldin diqqat bilan tekshiring.</div>
+  {% endif %}
+
+  <!-- A) Umumiy ma'lumot -->
+  <div class="jd-section">
+    <h2>ℹ️ Umumiy ma'lumot</h2>
+    {% if j.description %}<p class="jd-desc" style="margin-bottom:16px;">{{ j.description }}</p>{% endif %}
+    <div class="jd-grid">
+      {% if j.issn %}<div class="jd-item"><b>ISSN</b>{{ j.issn }}</div>{% endif %}
+      {% if j.eissn %}<div class="jd-item"><b>E-ISSN</b>{{ j.eissn }}</div>{% endif %}
+      {% if j.publisher %}<div class="jd-item"><b>Nashriyot</b>{{ j.publisher }}</div>{% endif %}
+      {% if j.website %}<div class="jd-item"><b>Veb-sayt</b><a href="{{ j.website }}" target="_blank" rel="noopener">{{ j.website }}</a></div>{% endif %}
+      {% if j.language %}<div class="jd-item"><b>Til</b>{{ j.language }}</div>{% endif %}
+      {% if j.frequency %}<div class="jd-item"><b>Chiqish davriyligi</b>{{ j.frequency }}</div>{% endif %}
+      {% if j.impact_factor %}<div class="jd-item"><b>Impact Factor</b>{{ j.impact_factor }}</div>{% endif %}
+      {% if j.indexing %}<div class="jd-item"><b>Indekslash</b>{{ j.indexing }}</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- B) Chop etish ma'lumotlari -->
+  <div class="jd-section">
+    <h2>📝 Chop etish ma'lumotlari</h2>
+    <div class="jd-grid">
+      <div class="jd-item"><b>Chop etish narxi</b>{{ j.publish_fee or "Ma'lumot yo'q" }}</div>
+      <div class="jd-item"><b>Ko'rib chiqish muddati</b>{{ j.review_period or "Ma'lumot yo'q" }}</div>
+    </div>
+    {% if j.oak_approved %}<div style="margin-top:14px;"><span class="jd-oak-ok">✓ OAK tomonidan tasdiqlangan</span></div>{% endif %}
+  </div>
+
+  <!-- C) Mos ixtisosliklar -->
+  {% if codes %}
+  <div class="jd-section">
+    <h2>🎓 Mos ixtisosliklar</h2>
+    <div class="jd-codes">
+      {% for c in codes %}<a class="jd-code" href="/data?ixtisoslik={{ c|urlencode }}">{{ c }}</a>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- D) Olimlar (placeholder) -->
+  <div class="jd-section">
+    <h2>👥 Shu jurnalda chop etgan olimlar</h2>
+    <p class="jd-placeholder">Bu bo'lim tez orada qo'shiladi.</p>
+  </div>
+
+  <!-- E) O'xshash jurnallar -->
+  {% if similar %}
+  <div class="jd-section">
+    <h2>📚 O'xshash jurnallar</h2>
+    <div class="jd-similar">
+      {% for s in similar %}
+      <a class="jd-sim-card" href="/journals/{{ s.id }}">
+        <div class="nm">{{ s.name }}</div>
+        <div class="mt">{{ s.category }}{% if s.country %} · {{ s.country }}{% endif %}
+          {% if s.oak_approved %} · OAK{% endif %}{% if s.scopus_indexed %} · Scopus{% endif %}{% if s.wos_indexed %} · WoS{% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

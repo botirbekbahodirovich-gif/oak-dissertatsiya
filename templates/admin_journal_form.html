@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_mode %}Jurnalni tahrirlash{% else %}Jurnal qo'shish{% endif %} — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .yf-wrap { max-width: 840px; margin: 0 auto; }
+  .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
+  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 28px; }
+  .yf-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .yf-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .yf-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .yf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .yf-row { grid-template-columns: 1fr; } }
+  .yf-group { margin-bottom: 1.05rem; }
+  .yf-group.full { grid-column: 1 / -1; }
+  .yf-group label { display: block; font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-input, .yf-textarea { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 0.92rem; font-family: inherit; }
+  .yf-input:focus, .yf-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+  .yf-textarea { resize: vertical; min-height: 80px; }
+  .yf-checks { display: flex; gap: 18px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .yf-check { display: flex; align-items: center; gap: 7px; color: #e2e8f0; font-size: 0.9rem; }
+  .yf-actions { display: flex; gap: 12px; margin-top: 1.2rem; }
+  .yf-save { background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 26px; border: none; border-radius: 10px; cursor: pointer; }
+  .yf-cancel { display: inline-flex; align-items: center; padding: 11px 22px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="yf-wrap">
+  <h1>{% if edit_mode %}✏️ Jurnalni tahrirlash{% else %}➕ Jurnal qo'shish{% endif %}</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="yf-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="post" class="yf-card" enctype="multipart/form-data"
+        action="{% if edit_mode %}/admin/journals/edit/{{ item.id }}{% else %}/admin/journals/add{% endif %}">
+    {{ csrf_token()|safe }}
+    <div class="yf-group full"><label>Nomi *</label><input class="yf-input" type="text" name="name" required value="{{ item.name if item else '' }}"></div>
+    <div class="yf-group full"><label>Inglizcha nomi</label><input class="yf-input" type="text" name="name_en" value="{{ item.name_en if item and item.name_en else '' }}"></div>
+    <div class="yf-row">
+      <div class="yf-group"><label>ISSN</label><input class="yf-input" type="text" name="issn" value="{{ item.issn if item and item.issn else '' }}"></div>
+      <div class="yf-group"><label>E-ISSN</label><input class="yf-input" type="text" name="eissn" value="{{ item.eissn if item and item.eissn else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Kategoriya</label><input class="yf-input" type="text" name="category" value="{{ item.category if item and item.category else '' }}"></div>
+      <div class="yf-group"><label>Nashriyot</label><input class="yf-input" type="text" name="publisher" value="{{ item.publisher if item and item.publisher else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Davlat</label><input class="yf-input" type="text" name="country" value="{{ item.country if item and item.country else '' }}"></div>
+      <div class="yf-group"><label>Til</label><input class="yf-input" type="text" name="language" placeholder="O'zbek, Rus" value="{{ item.language if item and item.language else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Ixtisoslik shifrlari (vergul bilan)</label><input class="yf-input" type="text" name="specialty_codes" placeholder="14.00,13.00" value="{{ item.specialty_codes if item and item.specialty_codes else '' }}"></div>
+      <div class="yf-group"><label>Indekslash (matn)</label><input class="yf-input" type="text" name="indexing" placeholder="OAK, Scopus" value="{{ item.indexing if item and item.indexing else '' }}"></div>
+    </div>
+    <div class="yf-group full"><label>Veb-sayt</label><input class="yf-input" type="text" name="website" placeholder="https://..." value="{{ item.website if item and item.website else '' }}"></div>
+    <div class="yf-group full"><label>Tavsif</label><textarea class="yf-textarea" name="description">{{ item.description if item and item.description else '' }}</textarea></div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Impact Factor</label><input class="yf-input" type="number" step="0.001" name="impact_factor" value="{{ item.impact_factor if item and item.impact_factor else '' }}"></div>
+      <div class="yf-group"><label>Chop etish narxi</label><input class="yf-input" type="text" name="publish_fee" placeholder="Bepul / 500,000 so'm" value="{{ item.publish_fee if item and item.publish_fee else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Ko'rib chiqish muddati</label><input class="yf-input" type="text" name="review_period" placeholder="2-3 oy" value="{{ item.review_period if item and item.review_period else '' }}"></div>
+      <div class="yf-group"><label>Davriylik</label><input class="yf-input" type="text" name="frequency" placeholder="Choraklik" value="{{ item.frequency if item and item.frequency else '' }}"></div>
+    </div>
+    <div class="yf-checks">
+      <label class="yf-check"><input type="checkbox" name="oak_approved" {% if item and item.oak_approved %}checked{% endif %}> OAK tasdiqlagan</label>
+      <label class="yf-check"><input type="checkbox" name="scopus_indexed" {% if item and item.scopus_indexed %}checked{% endif %}> Scopus</label>
+      <label class="yf-check"><input type="checkbox" name="wos_indexed" {% if item and item.wos_indexed %}checked{% endif %}> Web of Science</label>
+      <label class="yf-check"><input type="checkbox" name="is_predatory" {% if item and item.is_predatory %}checked{% endif %}> ⚠️ Predatory</label>
+      <label class="yf-check"><input type="checkbox" name="is_active" {% if (item and item.is_active) or not item %}checked{% endif %}> Faol</label>
+    </div>
+    <div class="yf-group full" style="margin-top:10px;"><label>Logo (rasm yuklash)</label><input class="yf-input" type="file" name="logo" accept="image/*">
+      {% if edit_mode and item.logo_url %}<div style="margin-top:8px;"><img src="{{ item.logo_url }}" style="width:54px;height:54px;border-radius:10px;object-fit:cover;border:1px solid #334155;"></div>{% endif %}
+    </div>
+    <div class="yf-actions">
+      <button type="submit" class="yf-save">💾 {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
+      <a href="/admin/journals" class="yf-cancel">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -362,7 +362,7 @@
           <div class="lc-meta">
             {% if m.year %}<span>📅 {{ m.year }}</span>{% endif %}
             {% if m.authors %}<span>✍️ {{ m.authors }}</span>{% endif %}
-            {% if m.journal %}<span>📖 {{ m.journal }}</span>{% endif %}
+            {% if m.journal %}<span>📖 {% set _jid = journal_map.get(m.journal|lower|trim) if journal_map else None %}{% if _jid %}<a href="/journals/{{ _jid }}" style="color:#60a5fa;">{{ m.journal }}</a>{% else %}{{ m.journal }}{% endif %}</span>{% endif %}
             {% if m.citations %}<span>📊 {{ m.citations }} sitata</span>{% endif %}
           </div>
         </div>
