@@ -13,11 +13,17 @@ app = Flask(__name__)
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 load_dotenv()
-session_secret = os.environ.get("SESSION_SECRET")
+# Session secret: prefer SESSION_SECRET, then SECRET_KEY (common alias). If
+# neither is configured, fall back to an ephemeral key so the app still boots
+# (e.g. before env vars are wired on a fresh host) — but warn loudly, because an
+# ephemeral key breaks sessions/CSRF across restarts and across Gunicorn workers.
+import secrets as _secrets
+session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
 if not session_secret:
-    raise RuntimeError(
-        "SESSION_SECRET is not set. Add it to a .env file or set the environment variable."
-    )
+    session_secret = _secrets.token_hex(32)
+    print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
+          "Set SESSION_SECRET in the environment for stable sessions/CSRF in production.",
+          flush=True)
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
 
