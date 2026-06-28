@@ -241,6 +241,78 @@ def inject_broadcasts():
         return dict(active_broadcasts=[])
 
 
+@app.context_processor
+def inject_region_status():
+    """True when the current logged-in user has not yet recorded a region, so
+    base.html can fire the mandatory region popup 20s after page load."""
+    from flask import session
+    needs = False
+    try:
+        from data import get_connection
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT region FROM users WHERE id = %s",
+                                (int(current_user.get_id()),))
+                    row = cur.fetchone()
+                    needs = not (row and row[0])
+            finally:
+                conn.close()
+        elif session.get('cabinet_user_id'):
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT region FROM olim_profiles WHERE cabinet_user_id = %s "
+                                "LIMIT 1", (session['cabinet_user_id'],))
+                    row = cur.fetchone()
+                    needs = not (row and row[0])
+            finally:
+                conn.close()
+    except Exception:
+        needs = False
+    return dict(needs_region=needs)
+
+
+@app.route('/api/profile/set-region', methods=['POST'])
+@csrf.exempt
+def set_region():
+    """Persist the region chosen in the mandatory popup, to whichever profile
+    (main user / cabinet user) the visitor is logged into."""
+    from flask import session
+    data = request.get_json(silent=True) or request.form
+    region = (data.get('region') or '').strip()
+    if not region or region not in UZ_REGIONS:
+        return jsonify({"ok": False, "error": "invalid_region"}), 400
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+                    cur.execute("UPDATE users SET region = %s WHERE id = %s",
+                                (region, int(current_user.get_id())))
+                elif session.get('cabinet_user_id'):
+                    uid = session['cabinet_user_id']
+                    cur.execute("SELECT id FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1",
+                                (uid,))
+                    row = cur.fetchone()
+                    if row:
+                        cur.execute("UPDATE olim_profiles SET region = %s WHERE id = %s",
+                                    (region, row[0]))
+                    else:
+                        cur.execute("INSERT INTO olim_profiles (olim_name, cabinet_user_id, region) "
+                                    "VALUES (%s, %s, %s)", (f"cabinet_{uid}", uid, region))
+                else:
+                    return jsonify({"ok": False, "error": "not_authenticated"}), 401
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 200
+    return jsonify({"ok": True})
+
+
 
 def is_safe_relative_url(target: str) -> bool:
     if not target:
@@ -911,6 +983,9 @@ def _run_startup_migrations():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # Region (viloyat) for registered main-site users — collected via the
+            # mandatory post-registration popup for geography analytics.
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
         conn.commit()
         conn.close()
     except Exception:

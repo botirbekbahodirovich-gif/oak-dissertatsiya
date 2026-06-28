@@ -604,6 +604,14 @@
   {% block extra_head %}{% endblock %}
   <style>
     .broadcast-banner { width: 100%; font-size: 0.9rem; }
+    /* Rotating banner host — all slides stacked, one visible at a time */
+    .broadcast-rotator { position: relative; }
+    .broadcast-rotator .broadcast-slide { position: absolute; top: 0; left: 0; right: 0;
+      opacity: 0; visibility: hidden; transition: opacity 0.6s ease; pointer-events: none; }
+    .broadcast-rotator .broadcast-slide.active { position: relative; opacity: 1;
+      visibility: visible; pointer-events: auto; }
+    /* A lone banner needs no absolute stacking */
+    .broadcast-rotator.single .broadcast-slide { position: relative; opacity: 1; visibility: visible; pointer-events: auto; }
     .broadcast-info { background: rgba(59,130,246,0.15); color: #60a5fa; border-bottom: 1px solid rgba(59,130,246,0.3); }
     .broadcast-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border-bottom: 1px solid rgba(245,158,11,0.3); }
     .broadcast-success { background: rgba(5,150,105,0.15); color: #34d399; border-bottom: 1px solid rgba(5,150,105,0.3); }
@@ -661,17 +669,21 @@
     </div>
   </header>
   {% if active_broadcasts %}
-  {% for bc in active_broadcasts %}
-  <div class="broadcast-banner broadcast-{{ bc.message_type }}" data-broadcast-id="{{ bc.id }}">
-    <div style="max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;">
-      <span>
-        {% if bc.message_type == 'warning' %}⚠️{% elif bc.message_type == 'success' %}✅{% else %}ℹ️{% endif %}
-        {{ bc.message }}
-      </span>
-      <button onclick="dismissBroadcast({{ bc.id }}, this)" style="background:none;border:none;color:inherit;font-size:1.2rem;cursor:pointer;opacity:0.7;">✕</button>
+  <!-- Single rotating banner host: 2+ active messages share one slot and fade
+       between each other every 25s instead of stacking. -->
+  <div id="broadcastRotator" class="broadcast-rotator">
+    {% for bc in active_broadcasts %}
+    <div class="broadcast-banner broadcast-slide broadcast-{{ bc.message_type }}{% if loop.first %} active{% endif %}" data-broadcast-id="{{ bc.id }}">
+      <div style="max-width:1200px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;">
+        <span>
+          {% if bc.message_type == 'warning' %}⚠️{% elif bc.message_type == 'success' %}✅{% else %}ℹ️{% endif %}
+          {{ bc.message }}
+        </span>
+        <button onclick="dismissBroadcast({{ bc.id }}, this)" style="background:none;border:none;color:inherit;font-size:1.2rem;cursor:pointer;opacity:0.7;">✕</button>
+      </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endif %}
   <main class="container-xl content-main">{% block content %}{% endblock %}</main>
   <footer class="oak-footer">
@@ -1412,20 +1424,127 @@ if ('serviceWorker' in navigator) {
 })();
 </script>
 <script>
-// Broadcast banner dismissal (per browser session)
+// Broadcast banner: dismissal (per session) + single-slot rotation.
+var _bcRotationTimer = null;
+var _bcIndex = 0;
+
+function _liveSlides() {
+  // Visible (non-dismissed) slides in DOM order.
+  return Array.prototype.filter.call(
+    document.querySelectorAll('#broadcastRotator .broadcast-slide'),
+    function (el) { return el.dataset.dismissed !== '1'; });
+}
+
+function _bcShow(i) {
+  var slides = _liveSlides();
+  if (!slides.length) return;
+  _bcIndex = ((i % slides.length) + slides.length) % slides.length;
+  slides.forEach(function (el, k) { el.classList.toggle('active', k === _bcIndex); });
+}
+
+function _bcStartRotation() {
+  if (_bcRotationTimer) { clearInterval(_bcRotationTimer); _bcRotationTimer = null; }
+  var rotator = document.getElementById('broadcastRotator');
+  if (!rotator) return;
+  var slides = _liveSlides();
+  // Lone (or no) banner: no rotation, just show it inline.
+  rotator.classList.toggle('single', slides.length <= 1);
+  if (slides.length <= 1) { if (slides[0]) slides[0].classList.add('active'); return; }
+  // Each message stays 25s, then fades to the next; loops infinitely.
+  _bcShow(0);
+  _bcRotationTimer = setInterval(function () { _bcShow(_bcIndex + 1); }, 25000);
+}
+
 function dismissBroadcast(id, btn) {
   var b = btn.closest('.broadcast-banner');
-  if (b) b.style.display = 'none';
+  if (b) { b.dataset.dismissed = '1'; b.classList.remove('active'); b.style.display = 'none'; }
   sessionStorage.setItem('broadcast_dismissed_' + id, 'true');
+  _bcStartRotation();  // re-evaluate: maybe only one left now
 }
+
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.broadcast-banner').forEach(function (el) {
+  document.querySelectorAll('.broadcast-slide').forEach(function (el) {
     var id = el.dataset.broadcastId;
     if (sessionStorage.getItem('broadcast_dismissed_' + id)) {
+      el.dataset.dismissed = '1';
       el.style.display = 'none';
     }
   });
+  _bcStartRotation();
 });
 </script>
+
+{% if needs_region %}
+<!-- Mandatory region (viloyat) popup — fires 20s after load, static backdrop. -->
+<style>
+  #regionModal { position: fixed; inset: 0; z-index: 4000; display: none;
+    align-items: center; justify-content: center; background: rgba(2,6,23,0.75);
+    backdrop-filter: blur(3px); padding: 16px; }
+  #regionModal.show { display: flex; }
+  #regionModal .rm-card { background: #0f172a; border: 1px solid #334155;
+    border-radius: 18px; max-width: 460px; width: 100%; padding: 26px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5); color: #e2e8f0; }
+  #regionModal h3 { margin: 0 0 6px; font-size: 1.25rem; color: #f1f5f9; }
+  #regionModal p { margin: 0 0 16px; color: #94a3b8; font-size: 0.9rem; }
+  #regionModal .rm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  #regionModal .rm-opt { background: #162032; border: 1px solid #334155; color: #cbd5e1;
+    border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; cursor: pointer; text-align: left; }
+  #regionModal .rm-opt:hover { border-color: #3b82f6; }
+  #regionModal .rm-opt.sel { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
+  #regionModal .rm-save { width: 100%; background: #3b82f6; color: #fff; border: none;
+    border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+  #regionModal .rm-save:disabled { opacity: 0.5; cursor: not-allowed; }
+  #regionModal .rm-err { color: #f87171; font-size: 0.82rem; margin-top: 10px; min-height: 1em; }
+</style>
+<div id="regionModal" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+  <div class="rm-card">
+    <h3 id="rmTitle">📍 Qaysi viloyatdansiz?</h3>
+    <p>Davom etish uchun viloyatingizni tanlang. Bu ma'lumot faqat geografik tahlil uchun ishlatiladi.</p>
+    <div class="rm-grid">
+      {% for rg in uz_regions %}
+      <button type="button" class="rm-opt" data-region="{{ rg }}" onclick="rmSelect(this)">{{ rg }}</button>
+      {% endfor %}
+    </div>
+    <button id="rmSave" class="rm-save" disabled onclick="rmSubmit()">Saqlash</button>
+    <div class="rm-err" id="rmErr"></div>
+  </div>
+</div>
+<script>
+(function () {
+  var selected = null;
+  var modal = document.getElementById('regionModal');
+  window.rmSelect = function (btn) {
+    selected = btn.getAttribute('data-region');
+    document.querySelectorAll('#regionModal .rm-opt').forEach(function (b) { b.classList.remove('sel'); });
+    btn.classList.add('sel');
+    document.getElementById('rmSave').disabled = false;
+  };
+  window.rmSubmit = function () {
+    if (!selected) return;
+    var save = document.getElementById('rmSave');
+    save.disabled = true; save.textContent = 'Saqlanmoqda…';
+    fetch('/api/profile/set-region', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ region: selected })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) { modal.classList.remove('show'); document.body.style.overflow = ''; }
+      else { document.getElementById('rmErr').textContent = 'Xatolik. Qaytadan urinib ko\'ring.';
+             save.disabled = false; save.textContent = 'Saqlash'; }
+    }).catch(function () {
+      document.getElementById('rmErr').textContent = 'Tarmoq xatosi.';
+      save.disabled = false; save.textContent = 'Saqlash';
+    });
+  };
+  // Static backdrop: ignore outside clicks and the Escape key.
+  modal.addEventListener('click', function (e) { if (e.target === modal) e.stopPropagation(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('show')) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  // Exactly 20 seconds after page load.
+  setTimeout(function () { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }, 20000);
+})();
+</script>
+{% endif %}
 </body>
 </html>
