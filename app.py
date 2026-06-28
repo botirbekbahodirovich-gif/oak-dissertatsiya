@@ -703,6 +703,7 @@ def _run_startup_migrations():
                 ('registered_number', 'VARCHAR(100)'), ('registered_date', 'VARCHAR(100)'),
                 ('article_requirements', 'TEXT'), ('accepts_languages', 'VARCHAR(200)'),
                 ('publish_format', 'VARCHAR(200)'),
+                ('scholar_indexed', 'BOOLEAN DEFAULT FALSE'),
             ):
                 cur.execute(f"ALTER TABLE journals ADD COLUMN IF NOT EXISTS {_jc} {_jt}")
             cur.execute("""
@@ -4590,8 +4591,10 @@ _JOURNAL_COLS = [
     'review_period', 'frequency', 'registered_number', 'registered_date',
     'article_requirements', 'accepts_languages', 'publish_format', 'impact_factor',
     'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed',
+    'scholar_indexed',
 ]
-_JOURNAL_BOOLS = {'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed'}
+_JOURNAL_BOOLS = {'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed',
+                  'wos_indexed', 'scholar_indexed'}
 
 
 def _journal_row(cols, row):
@@ -4610,7 +4613,7 @@ def journals():
                     SELECT j.id, j.name, j.name_en, j.country, j.languages, j.indexing,
                            j.impact_factor, j.publish_fee, j.review_period, j.frequency,
                            j.logo_url, j.oak_approved, j.scopus_indexed, j.wos_indexed,
-                           j.is_predatory,
+                           j.is_predatory, j.scholar_indexed,
                            COALESCE(string_agg(DISTINCT js.specialty_code, ',' ORDER BY js.specialty_code), '') AS codes
                     FROM journals j
                     LEFT JOIN journal_specialties js ON js.journal_id = j.id
@@ -4625,7 +4628,8 @@ def journals():
                         "impact_factor": r[6], "publish_fee": r[7] or "", "review_period": r[8] or "",
                         "frequency": r[9] or "", "logo_url": r[10] or "", "oak_approved": r[11],
                         "scopus_indexed": r[12], "wos_indexed": r[13], "is_predatory": r[14],
-                        "codes": [c for c in (r[15] or '').split(',') if c],
+                        "scholar_indexed": r[15],
+                        "codes": [c for c in (r[16] or '').split(',') if c],
                     })
                 cur.execute("SELECT specialty_code, COUNT(DISTINCT journal_id) "
                             "FROM journal_specialties GROUP BY specialty_code")

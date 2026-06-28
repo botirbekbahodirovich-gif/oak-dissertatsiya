@@ -29,7 +29,11 @@
   .jr-logo img { width: 100%; height: 100%; object-fit: cover; }
   .jr-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
   .jr-badge { font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
-  .jr-badge.oak { background: #059669; } .jr-badge.scopus { background: #f59e0b; } .jr-badge.wos { background: #3b82f6; }
+  .jr-badge.oak { background: #059669; }
+  /* International index colour codes (like the PhD/DSc degree badges) */
+  .jr-badge.scopus  { background: #ff8608; }
+  .jr-badge.wos     { background: #fbbc05; color: #1f2937; }
+  .jr-badge.scholar { background: #4285f4; }
   .jr-name { color: #f1f5f9; font-weight: 700; font-size: 0.98rem; line-height: 1.3; text-decoration: none; }
   .jr-name:hover { color: #60a5fa; }
   .jr-codes { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -76,6 +80,7 @@
       <button class="jr-pill" data-idx="oak" onclick="setIdx('oak', this)">OAK</button>
       <button class="jr-pill" data-idx="scopus" onclick="setIdx('scopus', this)">Scopus</button>
       <button class="jr-pill" data-idx="wos" onclick="setIdx('wos', this)">Web of Science</button>
+      <button class="jr-pill" data-idx="scholar" onclick="setIdx('scholar', this)">Google Scholar</button>
     </div>
   </div>
 
@@ -87,13 +92,15 @@
          data-specialty="{{ j.codes|join(',') }}"
          data-oak="{{ '1' if j.oak_approved else '0' }}"
          data-scopus="{{ '1' if j.scopus_indexed else '0' }}"
-         data-wos="{{ '1' if j.wos_indexed else '0' }}">
+         data-wos="{{ '1' if j.wos_indexed else '0' }}"
+         data-scholar="{{ '1' if j.scholar_indexed else '0' }}">
       <div class="jr-ctop">
         <div class="jr-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}📚{% endif %}</div>
         <div class="jr-badges">
           {% if j.oak_approved %}<span class="jr-badge oak">OAK ✓</span>{% endif %}
           {% if j.scopus_indexed %}<span class="jr-badge scopus">Scopus</span>{% endif %}
           {% if j.wos_indexed %}<span class="jr-badge wos">WoS</span>{% endif %}
+          {% if j.scholar_indexed %}<span class="jr-badge scholar">Google Scholar</span>{% endif %}
         </div>
       </div>
       {% if j.is_predatory %}<div class="jr-warn">⚠️ Shubhali jurnal</div>{% endif %}
