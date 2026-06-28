@@ -11,3 +11,4 @@ venv/
 ENV/
 .idea/
 .vscode/
+flask_cache/

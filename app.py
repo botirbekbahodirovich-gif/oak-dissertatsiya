@@ -28,8 +28,16 @@ except Exception:
     pass
 
 from extensions import cache
+# FileSystemCache keeps cached data on disk (the 'flask_cache' folder) instead of
+# in RAM — important on a small free-tier VPS where memory is scarce.
+_CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flask_cache')
+try:
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+except Exception:
+    pass
 cache.init_app(app, config={
-    'CACHE_TYPE': 'SimpleCache',
+    'CACHE_TYPE': 'FileSystemCache',
+    'CACHE_DIR': _CACHE_DIR,
     'CACHE_DEFAULT_TIMEOUT': 300,
 })
 
