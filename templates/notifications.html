@@ -17,12 +17,10 @@
       <i class="bi bi-file-earmark-plus" style="color:#4a9eff;font-size:1.1rem;"></i>
     </div>
     <div style="flex:1;min-width:0;">
+      <span style="display:inline-block;background:rgba(74,158,255,0.14);color:#4a9eff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;margin-bottom:5px;">📄 Dissertatsiyalar bazasi</span>
       <div style="font-size:0.95rem;color:#e2e8f0;">{{ n.message }}</div>
       <div style="font-size:0.78rem;color:var(--oak-muted);margin-top:3px;">{{ n.created_at }}</div>
     </div>
-    {% if n.count %}
-    <span style="background:rgba(74,158,255,0.14);color:#4a9eff;border-radius:20px;padding:3px 12px;font-size:0.82rem;font-weight:700;white-space:nowrap;">+{{ n.count }}</span>
-    {% endif %}
   </div>
   {% endfor %}
 </div>

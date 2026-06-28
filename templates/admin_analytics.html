@@ -83,6 +83,16 @@
   .online-card .oc-name { font-weight: 700; color: #e2e8f0; font-size: 0.9rem; }
   .online-card .oc-page { color: #60a5fa; font-size: 0.8rem; word-break: break-all; }
   .online-card .oc-time { color: #64748b; font-size: 0.72rem; margin-top: 4px; }
+  /* Collapsible admin sections — kept tidy behind a button instead of always open */
+  .admin-toggle-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--oak-surface);
+    border: 1px solid var(--oak-border); color: #e2e8f0; font-size: 1rem; font-weight: 700;
+    padding: 11px 18px; border-radius: 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .admin-toggle-btn:hover { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+  .admin-toggle-btn .ats-caret { font-size: 0.8rem; color: var(--oak-muted); transition: transform 0.2s; }
+  .admin-toggle-btn.open .ats-caret { transform: rotate(180deg); }
+  .admin-collapsible { overflow: hidden; max-height: 0; opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.25s ease; }
+  .admin-collapsible.open { max-height: 6000px; opacity: 1; }
 </style>
 {% endblock %}
 
@@ -139,8 +149,12 @@
 
 {% if online_users %}
 <div class="admin-section">
-  <h2><span class="dot-online"></span> Hozir onlayn ({{ online_users|length }})</h2>
-  <div class="online-grid">
+  <button type="button" class="admin-toggle-btn" onclick="toggleSection('sec-online', this)">
+    <span class="dot-online"></span> Hozir onlayn ({{ online_users|length }})
+    <span class="ats-caret">▾</span>
+  </button>
+  <div class="admin-collapsible" id="sec-online">
+  <div class="online-grid" style="margin-top:14px;">
     {% for u in online_users %}
     <div class="online-card">
       <a href="/admin/user-activity/{{ u.user_id or u.ip }}" style="display:block;text-decoration:none;">
@@ -157,6 +171,7 @@
       {% endif %}
     </div>
     {% endfor %}
+  </div>
   </div>
 </div>
 {% endif %}
@@ -239,8 +254,12 @@
 </div>
 
 <div class="admin-section">
-  <h2>👤 Ro'yxatdan o'tgan foydalanuvchilar</h2>
-  <div class="admin-table-panel">
+  <button type="button" class="admin-toggle-btn" onclick="toggleSection('sec-reg-visitors', this)">
+    👤 Ro'yxatdan o'tgan foydalanuvchilar (faollik) ({{ registered_visitors|length }})
+    <span class="ats-caret">▾</span>
+  </button>
+  <div class="admin-collapsible" id="sec-reg-visitors">
+  <div class="admin-table-panel" style="margin-top:14px;">
     <table class="admin-table table">
       <thead>
         <tr>
@@ -271,6 +290,7 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
   </div>
 </div>
 
@@ -429,8 +449,12 @@
 
 {% if registered_users %}
 <div class="admin-section">
-  <h2>📋 Ro'yxatdan o'tgan foydalanuvchilar</h2>
-  <div class="admin-table-panel">
+  <button type="button" class="admin-toggle-btn" onclick="toggleSection('sec-reg-users', this)">
+    📋 Jami ro'yxatdan o'tgan foydalanuvchilar ({{ registered_users|length }})
+    <span class="ats-caret">▾</span>
+  </button>
+  <div class="admin-collapsible" id="sec-reg-users">
+  <div class="admin-table-panel" style="margin-top:14px;">
     <table class="admin-table table">
       <thead>
         <tr>
@@ -451,12 +475,20 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 {% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Smoothly toggle a collapsible admin section open/closed.
+function toggleSection(id, btn) {
+  var sec = document.getElementById(id);
+  if (!sec) return;
+  var open = sec.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', open);
+}
 (function pollOnline() {
   fetch('/api/online-count')
     .then(function(r) { return r.json(); })
