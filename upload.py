@@ -22,16 +22,14 @@ upload_bp = Blueprint('upload', __name__)
 
 
 def get_database_url():
-    url = os.environ.get('DATABASE_URL', '')
-    if not url or url.startswith('sqlite'):
-        url = os.environ.get('POSTGRES_URL', '')
-    return url
+    from data import get_normalized_db_url
+    return get_normalized_db_url()
 
 
 def get_connection():
-    if not psycopg2:
-        raise RuntimeError('psycopg2 is required for PostgreSQL support.')
-    return psycopg2.connect(get_database_url())
+    # Use the hardened, pooled connection from data.py (SSL + timeouts).
+    from data import get_connection as _get_connection
+    return _get_connection()
 
 
 @upload_bp.route('/upload', methods=['GET'])

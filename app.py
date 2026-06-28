@@ -376,19 +376,18 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    from dotenv import load_dotenv
-    load_dotenv()
-    database_url = os.environ.get('DATABASE_URL')
-    if not database_url:
-        return None
+    # Use the hardened, pooled connection (SSL enforced + timeouts) so sessions
+    # resolve correctly on managed Postgres after the host migration.
     try:
-        import psycopg2
-        conn = psycopg2.connect(database_url)
-        cur = conn.cursor()
-        cur.execute("SELECT id, username, email FROM users WHERE id = %s", (int(user_id),))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, username, email FROM users WHERE id = %s",
+                            (int(user_id),))
+                row = cur.fetchone()
+        finally:
+            conn.close()
         return User(*row) if row else None
     except Exception:
         return None

@@ -4,6 +4,7 @@ import csv
 import io
 import html as html_module
 import threading
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 load_dotenv()
 import openpyxl
@@ -36,6 +37,37 @@ def get_database_url():
     return url
 
 
+def _is_local_or_socket(url):
+    """True for localhost or Cloud SQL unix-socket DSNs, which must NOT get SSL."""
+    if '/cloudsql/' in url or 'host=/' in url:
+        return True
+    try:
+        host = urlparse(url).hostname or ''
+    except Exception:
+        host = ''
+    return host in ('', 'localhost', '127.0.0.1', '::1')
+
+
+def get_normalized_db_url():
+    """DATABASE_URL with sslmode=require enforced for remote managed Postgres
+    (Neon/Supabase/Cloud SQL public IP) when the DSN omits it — a common cause of
+    'pages not loading' after a host migration."""
+    url = get_database_url()
+    if url and 'sslmode=' not in url and not _is_local_or_socket(url):
+        url += ('&' if '?' in url else '?') + 'sslmode=require'
+    return url
+
+
+# Resilience against idle-connection drops by managed Postgres / Neon pooler.
+_CONNECT_KWARGS = dict(
+    connect_timeout=10,
+    keepalives=1,
+    keepalives_idle=30,
+    keepalives_interval=10,
+    keepalives_count=5,
+)
+
+
 # ── Connection pool ───────────────────────────────────────────────────────────
 
 _db_pool: 'pg_pool.ThreadedConnectionPool | None' = None
@@ -47,9 +79,15 @@ def _get_pool():
     if _db_pool is None:
         with _db_pool_lock:
             if _db_pool is None and pg_pool is not None:
-                url = get_database_url()
+                url = get_normalized_db_url()
                 if url:
-                    _db_pool = pg_pool.ThreadedConnectionPool(2, 10, url)
+                    try:
+                        _db_pool = pg_pool.ThreadedConnectionPool(
+                            2, 10, url, **_CONNECT_KWARGS)
+                    except Exception:
+                        # Fall back to per-request direct connections so a transient
+                        # pool-init failure doesn't permanently break the app.
+                        _db_pool = None
     return _db_pool
 
 
@@ -87,8 +125,16 @@ def get_connection():
         raise RuntimeError('psycopg2 is required for PostgreSQL support.')
     p = _get_pool()
     if p:
-        return _PooledConn(p.getconn(), p)
-    return psycopg2.connect(get_database_url())
+        conn = p.getconn()
+        # Drop a connection the server already closed (idle timeout) and retry once.
+        if getattr(conn, 'closed', 0):
+            try:
+                p.putconn(conn, close=True)
+            except Exception:
+                pass
+            conn = p.getconn()
+        return _PooledConn(conn, p)
+    return psycopg2.connect(get_normalized_db_url(), **_CONNECT_KWARGS)
 
 
 def get_supervisor_counts() -> dict:
