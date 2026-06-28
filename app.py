@@ -544,6 +544,34 @@ def _run_startup_migrations():
             ('yonalish',             'TEXT'),
         ]
         with conn.cursor() as cur:
+            # Base tables — created here so a brand-new (empty) database is
+            # self-sufficient. Without this, the ALTER/seed statements below would
+            # fail on the very first run and roll back the whole transaction,
+            # leaving the universities/journals tables uncreated (blank pages).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS dissertations (
+                    id SERIAL PRIMARY KEY,
+                    sana TEXT,
+                    daraja TEXT,
+                    olim TEXT,
+                    mavzu TEXT,
+                    ixtisoslik TEXT,
+                    muassasa TEXT,
+                    ilmiy_rahbar TEXT,
+                    link TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
             for col, typ in cols:
                 cur.execute(
                     f"ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS {col} {typ}"
