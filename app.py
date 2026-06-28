@@ -419,52 +419,81 @@ def _seed_universities(cur):
             (name, utype, city, region))
 
 
-# ── Journal seed data ───────────────────────────────────────────────────────
-# (name, name_en, category, country, language, indexing, specialty_codes, frequency)
-_JOURNAL_SEED = [
-    ("O'zbekiston tibbiyot jurnali", 'Medical Journal of Uzbekistan', 'Tibbiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '14.00', 'Oylik'),
-    ('Fan va texnologiya', 'Science and Technology', 'Texnika', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.00', 'Choraklik'),
-    ("O'zbekistonda xorijiy tillar", 'Foreign Languages in Uzbekistan', 'Filologiya', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK', '13.00', 'Choraklik'),
-    ('Pedagogik mahorat', 'Pedagogical Excellence', 'Pedagogika', "O'zbekiston", "O'zbek", 'OAK', '13.00', 'Choraklik'),
-    ("Iqtisodiyot va ta'lim", 'Economics and Education', 'Iqtisodiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '08.00', 'Choraklik'),
-    ("O'zbek tili va adabiyoti", 'Uzbek Language and Literature', 'Filologiya', "O'zbekiston", "O'zbek", 'OAK', '10.00', 'Choraklik'),
-    ('Kimyo va kimyo texnologiyasi', 'Chemistry and Chemical Technology', 'Kimyo', "O'zbekiston", "O'zbek, Rus", 'OAK, Scopus', '02.00', 'Choraklik'),
-    ("O'zbekiston qishloq xo'jaligi jurnali", 'Journal of Agriculture of Uzbekistan', "Qishloq xo'jaligi", "O'zbekiston", "O'zbek, Rus", 'OAK', '06.00', 'Choraklik'),
-    ('Huquq va burch', 'Law and Duty', 'Huquqshunoslik', "O'zbekiston", "O'zbek, Rus", 'OAK', '12.00', 'Choraklik'),
-    ('Matematika', 'Mathematics', 'Matematika', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK, Scopus', '01.00', 'Choraklik'),
-    ("O'zbekiston biologiya jurnali", 'Uzbek Biological Journal', 'Biologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '03.00', 'Choraklik'),
-    ('Fizika', 'Physics', 'Fizika', "O'zbekiston", "O'zbek, Rus, Ingliz", 'OAK', '01.00', 'Choraklik'),
-    ("Ta'lim va innovatsion tadqiqotlar", 'Education and Innovative Research', 'Pedagogika', "O'zbekiston", "O'zbek", 'OAK', '13.00', 'Oylik'),
-    ('Falsafa va huquq', 'Philosophy and Law', 'Falsafa', "O'zbekiston", "O'zbek, Rus", 'OAK', '09.00,12.00', 'Choraklik'),
-    ('Geologiya jurnali', 'Journal of Geology', 'Geologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '04.00', 'Choraklik'),
-    ('Stomatologiya', 'Stomatology', 'Tibbiyot', "O'zbekiston", "O'zbek, Rus", 'OAK', '14.00', 'Choraklik'),
-    ('Psixologiya', 'Psychology', 'Psixologiya', "O'zbekiston", "O'zbek, Rus", 'OAK', '19.00', 'Choraklik'),
-    ('Arxitektura va qurilish muammolari', 'Architecture and Construction Problems', 'Arxitektura', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.09', 'Choraklik'),
-    ('Informatika va energetika muammolari', 'Problems of Informatics and Energy', 'Informatika', "O'zbekiston", "O'zbek, Rus", 'OAK', '05.01', 'Choraklik'),
-    ('Sharqshunoslik', 'Oriental Studies', 'Sharqshunoslik', "O'zbekiston", "O'zbek, Rus", 'OAK', '07.00', 'Choraklik'),
-    ('Nature', 'Nature', 'Multidisciplinary', 'UK', 'English', 'Scopus, WoS', None, None),
-    ('Science', 'Science', 'Multidisciplinary', 'USA', 'English', 'Scopus, WoS', None, None),
-    ('The Lancet', 'The Lancet', 'Tibbiyot', 'UK', 'English', 'Scopus, WoS', None, None),
-    ('IEEE Access', 'IEEE Access', 'Texnika', 'USA', 'English', 'Scopus, WoS', None, None),
-    ('MDPI Education Sciences', 'Education Sciences', 'Pedagogika', 'Switzerland', 'English', 'Scopus, WoS', None, None),
-]
+# ── Journal seed data (OAK journals by specialty code) ──────────────────────
+SPECIALTY_NAMES = {
+    '01.00.00': 'Fizika-matematika fanlari',
+    '02.00.00': 'Kimyo fanlari',
+    '03.00.00': 'Biologiya fanlari',
+    '04.00.00': 'Geologiya-mineralogiya fanlari',
+    '05.00.00': 'Texnika fanlari',
+    '06.00.00': "Qishloq xo'jaligi fanlari",
+    '07.00.00': 'Tarix fanlari',
+    '08.00.00': 'Iqtisodiyot fanlari',
+    '09.00.00': 'Falsafa fanlari',
+    '10.00.00': 'Filologiya fanlari',
+    '11.00.00': 'Geografiya fanlari',
+    '12.00.00': 'Yuridik fanlar',
+    '13.00.00': 'Pedagogika fanlari',
+    '14.00.00': 'Tibbiyot fanlari',
+    '15.00.00': 'Farmatsevtika fanlari',
+    '16.00.00': 'Veterinariya fanlari',
+    '17.00.00': "San'atshunoslik fanlari",
+    '18.00.00': 'Arxitektura fanlari',
+    '19.00.00': 'Psixologiya fanlari',
+    '22.00.00': 'Sotsiologiya fanlari',
+    '23.00.00': 'Siyosiy fanlar',
+    '24.00.00': 'Islomshunoslik fanlari',
+}
+
+JOURNALS_BY_SPECIALTY = {
+    '01.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', 'MEXANIKA MUAMMOLARI', "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI', 'FARDU ILMIY XABARLAR', 'ANDIJON DAVLAT UNIVERSITETI ILMIY XABARNOMA', 'ILM SARCHA'],
+    '02.00.00': ["QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", 'FAN VA TEXNOLOFIYALAR TARAQQIYOTI', 'SANOATDA RAQAMLI TEXNOLOGIYALAR', 'GULISTON DAVLAT UNIVERSITETI AXBOROTNOMASI', "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI'],
+    '03.00.00': ["QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", "O'ZBEKISTON ZAMINI", "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI', "XORAZM MA'MUN AKADEMIYASI AXBOROTNOMASI", 'FARDU ILMIY XABARLAR', 'ANDIJON DAVLAT UNIVERSITETI ILMIY XABARNOMA'],
+    '04.00.00': ['SANOATDA RAQAMLI TEXNOLOGIYALAR', "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI', 'FARDU ILMIY XABARLAR', "ZAMONAVIY FAN, TA'LIM VA TARBIYANING DOLZARB MUAMMOLARI", "QORAQALPOG'ISTONDA FAN VA TA'LIM"],
+    '05.00.00': ['MEXANIKA va TEXNOLOGIYA', "QURILISH VA TA'LIM", "O'ZBEKISTON ZAMINI", 'FAN VA TEXNOLOFIYALAR TARAQQIYOTI', 'MEXANIKA MUAMMOLARI', 'SANOATDA RAQAMLI TEXNOLOGIYALAR', "AL-FARG'ONIY AVLODLARI"],
+    '06.00.00': ["O'ZBEKISTON ZAMINI", 'SCIENCE AND EDUCATION IN AGRICULTURE', 'SUSTAINABLE AGRICULTURE', "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI', "XORAZM MA'MUN AKADEMIYASI AXBOROTNOMASI", 'AGRO ILM'],
+    '07.00.00': ["FAN VA TA'LIM INTEGRATSIYASI", "TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", "O'ZMU XABARLARI"],
+    '08.00.00': ["TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'IQTISODIYOT: TAHLILLAR VA PROGNOZLAR', 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZBEKISTON STATISTIKA AXBOROTNOMASI", 'AGROBIZNES'],
+    '09.00.00': ["TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFIY TADQIQOTLAR VA IJTIMOIY FANLAR', 'FALSAFA VA HUQUQ', 'NAMDU ILMIY AXBOROTNOMASI'],
+    '10.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', "TIL, TA'LIM, TARJIMA", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI"],
+    '11.00.00': ["O'ZBEKISTON ZAMINI", "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI'],
+    '12.00.00': ['YURIST AXBOROTNOMASI', 'FALSAFA VA HUQUQ', 'JAMIYAT VA INNOVATSIYALAR'],
+    '13.00.00': ['PEDAGOGIK MAHORAT', "FAN VA TA'LIM INTEGRATSIYASI", 'SAYHUN ILMIY AXBOROTNOMASI', "TA'LIM VA TARAQQIYOT", 'TADBIRKORLIK VA PEDAGOGIKA', "TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR"],
+    '14.00.00': ['O\'ZBEKISTON TIBBIYOT JURNALI', 'INTERNATIONAL JOURNAL OF SCIENTIFIC PEDIATRICS', 'MEDICAL SCIENCE OF UZBEKISTAN'],
+    '15.00.00': ["QORAQALPOG'ISTONDA FAN VA TA'LIM"],
+    '16.00.00': ['EKOLOGIYA XABARNOMASI', 'CHORVACHILIK VA NASLCHILIK ISHI'],
+    '17.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", 'ORIENTAL ART AND CULTURE'],
+    '18.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZBEKISTON ZAMINI", 'ARXITEKTURA, QURILISH VA DIZAYN'],
+    '19.00.00': ['PEDAGOGIK MAHORAT', 'PSIXOLOGIYA', "FAN VA TA'LIM INTEGRATSIYASI"],
+    '22.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFA VA HUQUQ'],
+    '23.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE'],
+    '24.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFA VA HUQUQ'],
+}
 
 
 def _seed_journals(cur):
-    """Insert the seed journals once (no-op if the table already has rows)."""
-    cur.execute("SELECT COUNT(*) FROM journals")
+    """Seed OAK journals + their specialty links once (guarded by junction table)."""
+    cur.execute("SELECT COUNT(*) FROM journal_specialties")
     if (cur.fetchone()[0] or 0) > 0:
         return
-    for name, name_en, category, country, language, indexing, codes, freq in _JOURNAL_SEED:
-        ind = (indexing or '').lower()
-        oak = 'oak' in ind
-        scopus = 'scopus' in ind
-        wos = 'wos' in ind or 'web of science' in ind
+    names = set()
+    for lst in JOURNALS_BY_SPECIALTY.values():
+        names.update(lst)
+    for nm in sorted(names):
         cur.execute(
-            "INSERT INTO journals (name, name_en, category, country, language, indexing, "
-            "specialty_codes, frequency, oak_approved, scopus_indexed, wos_indexed) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT (name) DO NOTHING",
-            (name, name_en, category, country, language, indexing, codes, freq, oak, scopus, wos))
+            "INSERT INTO journals (name, country, indexing, oak_approved) "
+            "VALUES (%s, %s, %s, TRUE) ON CONFLICT (name) DO NOTHING",
+            (nm, "O'zbekiston", 'OAK'))
+    cur.execute("SELECT id, name FROM journals")
+    idmap = {n: i for i, n in cur.fetchall()}
+    for code, lst in JOURNALS_BY_SPECIALTY.items():
+        sname = SPECIALTY_NAMES.get(code, '')
+        for nm in lst:
+            jid = idmap.get(nm)
+            if jid:
+                cur.execute(
+                    "INSERT INTO journal_specialties (journal_id, specialty_code, specialty_name) "
+                    "VALUES (%s, %s, %s)", (jid, code, sname))
 
 
 def _run_startup_migrations():
@@ -655,6 +684,23 @@ def _run_startup_migrations():
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_name ON journals (LOWER(name))")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_category ON journals (category)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_specialty ON journals (specialty_codes)")
+            for _jc, _jt in (
+                ('languages', 'VARCHAR(200)'), ('requirements', 'TEXT'),
+                ('registered_number', 'VARCHAR(100)'), ('registered_date', 'VARCHAR(100)'),
+                ('article_requirements', 'TEXT'), ('accepts_languages', 'VARCHAR(200)'),
+                ('publish_format', 'VARCHAR(200)'),
+            ):
+                cur.execute(f"ALTER TABLE journals ADD COLUMN IF NOT EXISTS {_jc} {_jt}")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS journal_specialties (
+                    id SERIAL PRIMARY KEY,
+                    journal_id INTEGER REFERENCES journals(id) ON DELETE CASCADE,
+                    specialty_code VARCHAR(20) NOT NULL,
+                    specialty_name VARCHAR(200)
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_journal_spec_code ON journal_specialties (specialty_code)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_journal_spec_jid ON journal_specialties (journal_id)")
             _seed_journals(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
@@ -4521,11 +4567,13 @@ def admin_university_delete(id):
 #  Scientific journals system
 # ════════════════════════════════════════════════════════════════════
 _JOURNAL_COLS = [
-    'name', 'name_en', 'issn', 'eissn', 'publisher', 'country', 'language',
-    'category', 'specialty_codes', 'indexing', 'website', 'description',
-    'impact_factor', 'publish_fee', 'review_period', 'frequency',
+    'name', 'name_en', 'issn', 'eissn', 'publisher', 'country', 'languages',
+    'indexing', 'website', 'description', 'requirements', 'publish_fee',
+    'review_period', 'frequency', 'registered_number', 'registered_date',
+    'article_requirements', 'accepts_languages', 'publish_format', 'impact_factor',
     'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed',
 ]
+_JOURNAL_BOOLS = {'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed'}
 
 
 def _journal_row(cols, row):
@@ -4535,33 +4583,51 @@ def _journal_row(cols, row):
 @app.route('/journals')
 def journals():
     from data import get_connection
-    sort = request.args.get('sort', 'name')
-    items, categories = [], set()
+    items, spec_counts = [], {}
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                order = {'impact': 'impact_factor DESC NULLS LAST, name',
-                         'new': 'created_at DESC, id DESC'}.get(sort, 'LOWER(name)')
-                cur.execute(f"SELECT * FROM journals WHERE is_active = TRUE ORDER BY {order}")
-                cols = [c[0] for c in cur.description]
+                cur.execute("""
+                    SELECT j.id, j.name, j.name_en, j.country, j.languages, j.indexing,
+                           j.impact_factor, j.publish_fee, j.review_period, j.frequency,
+                           j.logo_url, j.oak_approved, j.scopus_indexed, j.wos_indexed,
+                           j.is_predatory,
+                           COALESCE(string_agg(DISTINCT js.specialty_code, ',' ORDER BY js.specialty_code), '') AS codes
+                    FROM journals j
+                    LEFT JOIN journal_specialties js ON js.journal_id = j.id
+                    WHERE j.is_active = TRUE
+                    GROUP BY j.id
+                    ORDER BY LOWER(j.name)
+                """)
                 for r in cur.fetchall():
-                    d = _journal_row(cols, r)
-                    if d.get('category'):
-                        categories.add(d['category'])
-                    items.append(d)
+                    items.append({
+                        "id": r[0], "name": r[1] or "", "name_en": r[2] or "",
+                        "country": r[3] or "", "languages": r[4] or "", "indexing": r[5] or "",
+                        "impact_factor": r[6], "publish_fee": r[7] or "", "review_period": r[8] or "",
+                        "frequency": r[9] or "", "logo_url": r[10] or "", "oak_approved": r[11],
+                        "scopus_indexed": r[12], "wos_indexed": r[13], "is_predatory": r[14],
+                        "codes": [c for c in (r[15] or '').split(',') if c],
+                    })
+                cur.execute("SELECT specialty_code, COUNT(DISTINCT journal_id) "
+                            "FROM journal_specialties GROUP BY specialty_code")
+                spec_counts = {r[0]: r[1] for r in cur.fetchall()}
         finally:
             conn.close()
     except Exception:
         items = []
+    oak_count = sum(1 for j in items if j['oak_approved'])
+    scopus_count = sum(1 for j in items if j['scopus_indexed'])
     return render_template('journals.html', items=items,
-                           categories=sorted(categories), sort=sort)
+                           specialty_names=SPECIALTY_NAMES, spec_counts=spec_counts,
+                           total_journals=len(items), oak_count=oak_count,
+                           scopus_count=scopus_count)
 
 
 @app.route('/journals/<int:id>')
 def journal_detail(id):
     from data import get_connection
-    journal, similar = None, []
+    journal, codes, similar = None, [], []
     try:
         conn = get_connection()
         try:
@@ -4569,27 +4635,43 @@ def journal_detail(id):
                 cur.execute("SELECT * FROM journals WHERE id = %s", (id,))
                 row = cur.fetchone()
                 if row:
-                    cols = [c[0] for c in cur.description]
-                    journal = _journal_row(cols, row)
-                    if journal.get('category'):
-                        cur.execute(
-                            "SELECT id, name, name_en, category, country, oak_approved, "
-                            "scopus_indexed, wos_indexed, is_predatory FROM journals "
-                            "WHERE category = %s AND id <> %s AND is_active = TRUE LIMIT 4",
-                            (journal['category'], id))
-                        similar = [{
-                            "id": x[0], "name": x[1], "name_en": x[2] or "", "category": x[3] or "",
-                            "country": x[4] or "", "oak_approved": x[5], "scopus_indexed": x[6],
-                            "wos_indexed": x[7], "is_predatory": x[8],
-                        } for x in cur.fetchall()]
+                    journal = _journal_row([c[0] for c in cur.description], row)
+                    # Specialty codes for this journal + dissertation counts per field.
+                    cur.execute("SELECT specialty_code, specialty_name FROM journal_specialties "
+                                "WHERE journal_id = %s ORDER BY specialty_code", (id,))
+                    for code, sname in cur.fetchall():
+                        prefix = (code.split('.')[0] + '.') if '.' in code else code
+                        try:
+                            cur.execute("SELECT COUNT(*) FROM dissertations WHERE ixtisoslik LIKE %s",
+                                        (prefix + '%',))
+                            cnt = cur.fetchone()[0] or 0
+                        except Exception:
+                            cnt = 0
+                        codes.append({"code": code, "name": sname or SPECIALTY_NAMES.get(code, ''),
+                                      "count": cnt})
+                    if codes:
+                        code_list = [c["code"] for c in codes]
+                        cur.execute("""
+                            SELECT j.id, j.name, j.logo_url,
+                                   COALESCE(string_agg(DISTINCT js2.specialty_code, ',' ORDER BY js2.specialty_code), '')
+                            FROM journals j
+                            JOIN journal_specialties js ON js.journal_id = j.id
+                            LEFT JOIN journal_specialties js2 ON js2.journal_id = j.id
+                            WHERE js.specialty_code = ANY(%s) AND j.id <> %s AND j.is_active = TRUE
+                            GROUP BY j.id ORDER BY LOWER(j.name) LIMIT 4
+                        """, (code_list, id))
+                        similar = [{"id": x[0], "name": x[1], "logo_url": x[2] or "",
+                                    "codes": [c for c in (x[3] or '').split(',') if c]}
+                                   for x in cur.fetchall()]
         finally:
             conn.close()
     except Exception:
         journal = None
     if not journal:
         abort(404)
-    codes = [c.strip() for c in (journal.get('specialty_codes') or '').split(',') if c.strip()]
-    return render_template('journal_detail.html', j=journal, similar=similar, codes=codes)
+    is_admin = (current_user.is_authenticated and current_user.username == 'admin')
+    return render_template('journal_detail.html', j=journal, codes=codes,
+                           similar=similar, is_admin=is_admin)
 
 
 def _save_journal_logo():
@@ -4615,7 +4697,7 @@ def _save_journal_logo():
 def _journal_form_values():
     vals = {}
     for f in _JOURNAL_COLS:
-        if f in ('is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed'):
+        if f in _JOURNAL_BOOLS:
             vals[f] = bool(request.form.get(f))
         else:
             v = (request.form.get(f) or '').strip()
@@ -4628,6 +4710,18 @@ def _journal_form_values():
     return vals
 
 
+def _save_journal_specialties(cur, journal_id):
+    """Replace this journal's specialty links from the submitted checkboxes."""
+    codes = request.form.getlist('specialty_codes')
+    cur.execute("DELETE FROM journal_specialties WHERE journal_id = %s", (journal_id,))
+    for code in codes:
+        code = (code or '').strip()
+        if code in SPECIALTY_NAMES:
+            cur.execute(
+                "INSERT INTO journal_specialties (journal_id, specialty_code, specialty_name) "
+                "VALUES (%s, %s, %s)", (journal_id, code, SPECIALTY_NAMES[code]))
+
+
 @app.route('/admin/journals')
 @login_required
 def admin_journals():
@@ -4638,11 +4732,18 @@ def admin_journals():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, name, category, indexing, country, is_active, "
-                            "is_predatory, logo_url FROM journals ORDER BY LOWER(name)")
-                items = [{"id": r[0], "name": r[1] or "", "category": r[2] or "",
-                          "indexing": r[3] or "", "country": r[4] or "", "is_active": r[5],
-                          "is_predatory": r[6], "logo_url": r[7] or ""} for r in cur.fetchall()]
+                cur.execute("""
+                    SELECT j.id, j.name, j.indexing, j.country, j.is_active, j.is_predatory,
+                           j.logo_url, j.oak_approved, j.scopus_indexed, j.wos_indexed,
+                           COALESCE(string_agg(DISTINCT js.specialty_code, ', ' ORDER BY js.specialty_code), '')
+                    FROM journals j
+                    LEFT JOIN journal_specialties js ON js.journal_id = j.id
+                    GROUP BY j.id ORDER BY LOWER(j.name)
+                """)
+                items = [{"id": r[0], "name": r[1] or "", "indexing": r[2] or "",
+                          "country": r[3] or "", "is_active": r[4], "is_predatory": r[5],
+                          "logo_url": r[6] or "", "oak_approved": r[7], "scopus_indexed": r[8],
+                          "wos_indexed": r[9], "codes": r[10] or ""} for r in cur.fetchall()]
         finally:
             conn.close()
     except Exception:
@@ -4659,7 +4760,9 @@ def admin_journal_add():
         vals = _journal_form_values()
         if not vals.get('name'):
             flash("Nomi majburiy.", "error")
-            return render_template('admin_journal_form.html', item=vals, edit_mode=False)
+            return render_template('admin_journal_form.html', item=vals, edit_mode=False,
+                                   specialty_names=SPECIALTY_NAMES,
+                                   selected_codes=request.form.getlist('specialty_codes'))
         logo = _save_journal_logo()
         try:
             conn = get_connection()
@@ -4670,7 +4773,15 @@ def admin_journal_add():
                     args = [vals[f] for f in _JOURNAL_COLS] + ([logo] if logo else [])
                     cur.execute(
                         f"INSERT INTO journals ({', '.join(cols)}) VALUES ({placeholders}) "
-                        f"ON CONFLICT (name) DO NOTHING", args)
+                        f"ON CONFLICT (name) DO NOTHING RETURNING id", args)
+                    row = cur.fetchone()
+                    if row:
+                        jid = row[0]
+                    else:
+                        cur.execute("SELECT id FROM journals WHERE name = %s", (vals['name'],))
+                        jid = (cur.fetchone() or [None])[0]
+                    if jid:
+                        _save_journal_specialties(cur, jid)
                 conn.commit()
             finally:
                 conn.close()
@@ -4678,7 +4789,8 @@ def admin_journal_add():
         except Exception:
             flash("Qo'shishda xatolik yuz berdi.", "error")
         return redirect(url_for('admin_journals'))
-    return render_template('admin_journal_form.html', item=None, edit_mode=False)
+    return render_template('admin_journal_form.html', item=None, edit_mode=False,
+                           specialty_names=SPECIALTY_NAMES, selected_codes=[])
 
 
 @app.route('/admin/journals/edit/<int:id>', methods=['GET', 'POST'])
@@ -4705,12 +4817,28 @@ def admin_journal_edit(id):
     current = _load()
     if not current:
         abort(404)
+
+    def _codes_for(jid):
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT specialty_code FROM journal_specialties WHERE journal_id = %s",
+                                (jid,))
+                    return [r[0] for r in cur.fetchall()]
+            finally:
+                conn.close()
+        except Exception:
+            return []
+
     if request.method == 'POST':
         vals = _journal_form_values()
         if not vals.get('name'):
             flash("Nomi majburiy.", "error")
             vals['id'] = id
-            return render_template('admin_journal_form.html', item=vals, edit_mode=True)
+            return render_template('admin_journal_form.html', item=vals, edit_mode=True,
+                                   specialty_names=SPECIALTY_NAMES,
+                                   selected_codes=request.form.getlist('specialty_codes'))
         logo = _save_journal_logo()
         try:
             conn = get_connection()
@@ -4723,6 +4851,7 @@ def admin_journal_edit(id):
                         args.append(logo)
                     set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = NOW()"
                     cur.execute(f"UPDATE journals SET {set_clause} WHERE id = %s", args + [id])
+                    _save_journal_specialties(cur, id)
                 conn.commit()
             finally:
                 conn.close()
@@ -4730,7 +4859,8 @@ def admin_journal_edit(id):
         except Exception:
             flash("Yangilashda xatolik yuz berdi.", "error")
         return redirect(url_for('admin_journals'))
-    return render_template('admin_journal_form.html', item=current, edit_mode=True)
+    return render_template('admin_journal_form.html', item=current, edit_mode=True,
+                           specialty_names=SPECIALTY_NAMES, selected_codes=_codes_for(id))
 
 
 @app.route('/admin/journals/logo/<int:id>', methods=['POST'])

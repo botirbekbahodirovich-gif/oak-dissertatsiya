@@ -39,17 +39,18 @@
 <div class="adm-table-wrap">
   <table class="adm-table">
     <thead>
-      <tr><th>#</th><th>Nomi</th><th>Kategoriya</th><th>Indekslash</th><th>Davlat</th><th>Holati</th><th>Amallar</th></tr>
+      <tr><th>#</th><th>Logo</th><th>Nomi</th><th>Ixtisosliklar</th><th>OAK</th><th>Scopus</th><th>WoS</th><th>Amallar</th></tr>
     </thead>
     <tbody>
       {% for j in items %}
       <tr>
         <td>{{ j.id }}</td>
-        <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name }}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️ predatory</span>{% endif %}</td>
-        <td style="color:#c4b5fd;">{{ j.category }}</td>
-        <td style="color:#94a3b8;">{{ j.indexing }}</td>
-        <td style="color:#94a3b8;">{{ j.country }}</td>
-        <td>{% if j.is_active %}<span class="pub-badge pub-on">✅ Faol</span>{% else %}<span class="pub-badge pub-off">⏸️ Nofaol</span>{% endif %}</td>
+        <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;">{% else %}📚{% endif %}</td>
+        <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️</span>{% endif %}</td>
+        <td style="color:#93bbfc;font-size:0.78rem;">{{ j.codes or '—' }}</td>
+        <td>{% if j.oak_approved %}✅{% else %}—{% endif %}</td>
+        <td>{% if j.scopus_indexed %}✅{% else %}—{% endif %}</td>
+        <td>{% if j.wos_indexed %}✅{% else %}—{% endif %}</td>
         <td>
           <div class="adm-actions">
             <a href="/admin/journals/edit/{{ j.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
