@@ -358,10 +358,12 @@ def logout():
 # ── profile + claim ────────────────────────────────────────────────────────
 _PROFILE_FIELDS = [
     'first_name', 'last_name', 'patronymic', 'title', 'position', 'institution',
-    'bio', 'birth_year', 'photo_url',
+    'bio', 'birth_year', 'photo_url', 'region',
+    'academic_degree', 'academic_rank',
+    'magistratura_mavzu', 'magistratura_institution', 'magistratura_year',
+    # Academic links only — Pinterest/Facebook/YouTube/Instagram intentionally dropped.
     'scopus_url', 'wos_url', 'scholar_url', 'orcid_url', 'website_url',
-    'youtube_url', 'facebook_url', 'twitter_url', 'instagram_url',
-    'telegram_url', 'pinterest_url',
+    'telegram_url',
 ]
 
 
@@ -381,11 +383,12 @@ def profile_save():
         vals[f] = v if v not in ('', None) else None
     if not vals:
         return jsonify({"ok": True})
-    if vals.get('birth_year'):
-        try:
-            vals['birth_year'] = int(vals['birth_year'])
-        except (TypeError, ValueError):
-            vals['birth_year'] = None
+    for _yf in ('birth_year', 'magistratura_year'):
+        if vals.get(_yf):
+            try:
+                vals[_yf] = int(vals[_yf])
+            except (TypeError, ValueError):
+                vals[_yf] = None
     olim_name = user.get('olim_name') or (vals.get('last_name') or vals.get('first_name') or '').strip()
     if not olim_name:
         olim_name = f"cabinet_{user['id']}"

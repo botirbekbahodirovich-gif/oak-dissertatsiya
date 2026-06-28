@@ -150,6 +150,20 @@ def inject_gender_detector():
     return dict(detect_gender=detect_gender)
 
 
+# Uzbekistan regions — used by the cabinet profile form and the mandatory
+# region-selection popup (base.html).
+UZ_REGIONS = [
+    "Toshkent shahri", "Toshkent viloyati", "Andijon", "Buxoro", "Farg'ona",
+    "Jizzax", "Xorazm", "Namangan", "Navoiy", "Qashqadaryo", "Qoraqalpog'iston",
+    "Samarqand", "Sirdaryo", "Surxondaryo",
+]
+
+
+@app.context_processor
+def inject_uz_regions():
+    return dict(uz_regions=UZ_REGIONS)
+
+
 @app.context_processor
 def _inject_cabinet():
     """Expose cabinet (portfolio) session state to all templates."""
@@ -827,6 +841,10 @@ def _run_startup_migrations():
                 ('position', 'VARCHAR(300)'), ('institution', 'VARCHAR(500)'),
                 ('birth_year', 'INTEGER'), ('orcid_url', 'VARCHAR(500)'),
                 ('website_url', 'VARCHAR(500)'), ('cabinet_user_id', 'INTEGER'),
+                ('academic_degree', 'VARCHAR(50)'), ('academic_rank', 'VARCHAR(100)'),
+                ('magistratura_mavzu', 'VARCHAR(1000)'),
+                ('magistratura_institution', 'VARCHAR(500)'),
+                ('magistratura_year', 'INTEGER'), ('region', 'VARCHAR(100)'),
             ):
                 cur.execute(f"ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS {_col} {_typ}")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_profiles_olim_name_lower "

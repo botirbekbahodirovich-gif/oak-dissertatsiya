@@ -115,7 +115,8 @@
     <aside class="cab-side">
       <h2>🏠 Kabinet</h2>
       <nav class="cab-nav">
-        <button class="active" data-panel="profil">📝 Profil</button>
+        <button class="active" data-panel="korinish">👁 Mening profilim</button>
+        <button data-panel="profil">📝 Tahrirlash</button>
         <button data-panel="diss">📄 Dissertatsiyalar</button>
         <button data-panel="maqolalar">📚 Maqolalar</button>
         <button data-panel="konf">🎤 Konferensiyalar</button>
@@ -154,11 +155,58 @@
         </div>
       </div>
 
-      <!-- ── PROFIL (A) ── -->
-      <section class="cab-panel active" id="panel-profil">
+      {% set _deg = (profile.academic_degree or '')|upper %}
+      <!-- ── KO'RINISH / OVERVIEW (read-only, default) ── -->
+      <section class="cab-panel active" id="panel-korinish">
+        <div class="cab-section">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+            <div>
+              <h3>{{ olim_name or ((profile.first_name or '') ~ ' ' ~ (profile.last_name or '')) or 'Mening profilim' }}</h3>
+              <p class="desc" style="margin-bottom:0;">{{ profile.position or '' }}{% if profile.institution %} · {{ profile.institution }}{% endif %}</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% if olim_name %}<a class="cab-btn-outline" href="/olim/{{ olim_name|urlencode }}" target="_blank">🔍 Saytdagi sahifam</a>{% endif %}
+              <button class="cab-btn" onclick="gotoPanel('profil')">✏️ Profilni tahrirlash</button>
+            </div>
+          </div>
+
+          <!-- Ilmiy daraja -->
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            {% if _deg == 'PHD' %}<span class="sr-deg phd" style="font-size:0.82rem;padding:4px 14px;">PhD</span>
+            {% elif _deg == 'DSC' %}<span class="sr-deg dsc" style="font-size:0.82rem;padding:4px 14px;">DSc</span>
+            {% elif _deg %}<span class="claimed-chip">{{ profile.academic_degree }}</span>{% endif %}
+            {% if profile.academic_rank %}<span class="claimed-chip">{{ profile.academic_rank }}</span>{% endif %}
+            {% if not _deg and not profile.academic_rank %}
+              <span class="field-empty">Ilmiy daraja hali belgilanmagan — "Tahrirlash" bo'limidan kiriting.</span>
+            {% endif %}
+          </div>
+
+          {% if profile.bio %}<p style="color:#cbd5e1;margin-top:16px;line-height:1.6;">{{ profile.bio }}</p>{% endif %}
+
+          <!-- Magistratura -->
+          <div class="cab-section" style="margin-top:18px;background:#162032;">
+            <h3 style="font-size:1rem;">🎓 Magistratura</h3>
+            {% if profile.magistratura_mavzu %}
+              <div class="field-value">{{ profile.magistratura_mavzu }}</div>
+              <div class="it-meta">{{ profile.magistratura_institution or '' }}{% if profile.magistratura_year %} · {{ profile.magistratura_year }}{% endif %}</div>
+            {% else %}<p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan</p>{% endif %}
+          </div>
+
+          <!-- PhD / DSc dissertatsiyalar (claimed) -->
+          <div class="cab-section" style="margin-top:14px;background:#162032;">
+            <h3 style="font-size:1rem;">📄 Ilmiy darajaviy dissertatsiyalar</h3>
+            {% if claimed %}
+              <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>
+            {% else %}<p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan — "Dissertatsiyalar" bo'limidan biriktiring.</p>{% endif %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── PROFIL TAHRIRLASH (single-save form) ── -->
+      <section class="cab-panel" id="panel-profil">
         <div class="cab-section">
           <h3>Profil ma'lumotlari</h3>
-          <p class="desc">Har bir maydonni "Tahrirlash" tugmasi orqali alohida yangilang.</p>
+          <p class="desc">Barcha maydonlarni to'ldiring va pastdagi yagona "Saqlash" tugmasini bosing.</p>
 
           <!-- Avatar -->
           <div class="avatar-edit-section">
@@ -174,43 +222,54 @@
           </div>
 
           <datalist id="muassasa-list"></datalist>
-          {% set _title_opts = ['PhD','DSc','Professor','Dotsent','Katta ilmiy xodim','Boshqa'] %}
-          {% set profile_fields = [
-            ('first_name','🧑','Ism','Ismingiz','text'),
-            ('last_name','🧑','Familya','Familyangiz','text'),
-            ('patronymic','🧑','Otasining ismi','Otangizning ismi','text'),
-            ('title','🎓','Ilmiy unvon','','select'),
-            ('position','💼','Lavozim','Kafedra mudiri','text'),
-            ('institution','🏛️','Muassasa','Muassasa nomi','text'),
-            ('birth_year','📅',"Tug'ilgan yili",'1985','number'),
-            ('bio','📝',"Bio / Qisqa ma'lumot","Qisqa ma'lumot",'textarea')
-          ] %}
-          {% for key, ic, label, ph, ftype in profile_fields %}
-          <div class="profile-field-display" data-field="{{ key }}">
-            <div style="flex:1;min-width:0;">
-              <div class="field-label">{{ ic }} {{ label }}</div>
-              {% if profile[key] %}<div class="field-value">{{ profile[key] }}</div>
-              {% else %}<div class="field-value field-empty">Ma'lumot kiritilmagan</div>{% endif %}
-            </div>
-            <button class="field-edit-btn" onclick="toggleEdit('{{ key }}')">✏️ Tahrirlash</button>
-          </div>
-          <div class="profile-field-edit" data-field="{{ key }}" style="display:none;">
-            {% if ftype == 'select' %}
-              <select id="edit-{{ key }}">
-                <option value="" {% if not profile[key] %}selected{% endif %}>—</option>
-                {% for opt in _title_opts %}<option value="{{ opt }}" {% if profile[key] == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+          <form id="profileForm" onsubmit="return false;">
+          <div class="cab-grid">
+            <div class="cab-group"><label>🧑 Ism</label><input class="cab-input" data-pf="first_name" type="text" value="{{ profile.first_name or '' }}" placeholder="Ismingiz"></div>
+            <div class="cab-group"><label>🧑 Familya</label><input class="cab-input" data-pf="last_name" type="text" value="{{ profile.last_name or '' }}" placeholder="Familyangiz"></div>
+            <div class="cab-group"><label>🧑 Otasining ismi</label><input class="cab-input" data-pf="patronymic" type="text" value="{{ profile.patronymic or '' }}" placeholder="Otangizning ismi"></div>
+            <div class="cab-group"><label>💼 Lavozim</label><input class="cab-input" data-pf="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
+            <div class="cab-group"><label>🏛️ Muassasa</label><input class="cab-input" data-pf="institution" type="text" value="{{ profile.institution or '' }}" list="muassasa-list" placeholder="Muassasa nomi"></div>
+            <div class="cab-group"><label>📅 Tug'ilgan yili</label><input class="cab-input" data-pf="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
+            <div class="cab-group"><label>📍 Viloyat</label>
+              <select class="cab-select" data-pf="region">
+                <option value="">—</option>
+                {% for rg in uz_regions %}<option value="{{ rg }}" {% if profile.region == rg %}selected{% endif %}>{{ rg }}</option>{% endfor %}
               </select>
-            {% elif ftype == 'textarea' %}
-              <textarea id="edit-{{ key }}" maxlength="1000" placeholder="{{ ph }}">{{ profile[key] or '' }}</textarea>
-            {% else %}
-              <input type="{{ 'number' if ftype == 'number' else 'text' }}" id="edit-{{ key }}" value="{{ profile[key] or '' }}" placeholder="{{ ph }}"{% if key == 'institution' %} list="muassasa-list"{% endif %}>
-            {% endif %}
-            <div class="field-edit-actions">
-              <button class="fe-save" onclick="saveField('{{ key }}')">✓ Saqlash</button>
-              <button class="fe-cancel" onclick="cancelEdit('{{ key }}')">✗ Bekor qilish</button>
+            </div>
+            <div class="cab-group full"><label>📝 Bio / Qisqa ma'lumot</label><textarea class="cab-textarea" data-pf="bio" maxlength="1000" placeholder="Qisqa ma'lumot">{{ profile.bio or '' }}</textarea></div>
+          </div>
+
+          <!-- Ilmiy daraja bloki -->
+          <h3 style="font-size:1rem;margin-top:20px;">🎓 Ilmiy daraja va unvon</h3>
+          <p class="desc">Agar dissertatsiya yoqlagan bo'lsangiz darajangizni belgilang.</p>
+          <div class="cab-grid">
+            <div class="cab-group"><label>Ilmiy daraja</label>
+              <select class="cab-select" data-pf="academic_degree">
+                <option value="">— belgilanmagan —</option>
+                <option value="Magistr" {% if profile.academic_degree == 'Magistr' %}selected{% endif %}>Magistr</option>
+                <option value="PhD" {% if profile.academic_degree == 'PhD' %}selected{% endif %}>PhD (Falsafa doktori)</option>
+                <option value="DSc" {% if profile.academic_degree == 'DSc' %}selected{% endif %}>DSc (Fan doktori)</option>
+              </select>
+            </div>
+            <div class="cab-group"><label>Ilmiy unvon</label>
+              <select class="cab-select" data-pf="academic_rank">
+                <option value="">— yo'q —</option>
+                {% for opt in ['Dotsent','Professor','Katta ilmiy xodim','Akademik'] %}
+                <option value="{{ opt }}" {% if profile.academic_rank == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+              </select>
             </div>
           </div>
-          {% endfor %}
+
+          <!-- Magistratura bloki -->
+          <h3 style="font-size:1rem;margin-top:20px;">📘 Magistratura</h3>
+          <div class="cab-grid">
+            <div class="cab-group full"><label>Magistratura dissertatsiyasi mavzusi</label><input class="cab-input" data-pf="magistratura_mavzu" type="text" value="{{ profile.magistratura_mavzu or '' }}" placeholder="Mavzu nomi"></div>
+            <div class="cab-group"><label>Muassasa</label><input class="cab-input" data-pf="magistratura_institution" type="text" value="{{ profile.magistratura_institution or '' }}" list="muassasa-list" placeholder="OTM nomi"></div>
+            <div class="cab-group"><label>Tugatgan yili</label><input class="cab-input" data-pf="magistratura_year" type="number" value="{{ profile.magistratura_year or '' }}" placeholder="2020"></div>
+          </div>
+
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfileForm()">💾 Saqlash</button></div>
+          </form>
         </div>
       </section>
 
@@ -351,38 +410,28 @@
       <!-- ── LINKLAR (C) ── -->
       <section class="cab-panel" id="panel-linklar">
         <div class="cab-section">
-          <h3>Tashqi linklar</h3>
-          <p class="desc">Akademik profillar va ijtimoiy tarmoqlar. Har birini alohida tahrirlang.</p>
+          <h3>Akademik havolalar</h3>
+          <p class="desc">Akademik profil havolalarini kiriting va yagona "Saqlash" tugmasini bosing.</p>
           {% set links = [
             ('scopus_url','🔬','Scopus','https://www.scopus.com/authid/...'),
             ('wos_url','📚','Web of Science','https://www.webofscience.com/...'),
             ('scholar_url','🎓','Google Scholar','https://scholar.google.com/...'),
             ('orcid_url','🆔','ORCID','https://orcid.org/0000-...'),
             ('website_url','🌐','Shaxsiy veb-sayt','https://...'),
-            ('youtube_url','▶️','YouTube','https://youtube.com/@...'),
-            ('facebook_url','📘','Facebook','https://facebook.com/...'),
-            ('twitter_url','✖️','Twitter/X','https://x.com/...'),
-            ('instagram_url','📷','Instagram','https://instagram.com/...'),
-            ('telegram_url','✈️','Telegram','https://t.me/...'),
-            ('pinterest_url','📌','Pinterest','https://pinterest.com/...')
+            ('telegram_url','✈️','Telegram','https://t.me/...')
           ] %}
+          <form id="linksForm" onsubmit="return false;">
           {% for key, ic, label, ph in links %}
-          <div class="profile-field-display" data-field="{{ key }}">
+          <div class="cab-link-row">
+            <div class="cab-link-ic">{{ ic }}</div>
             <div style="flex:1;min-width:0;">
-              <div class="field-label">{{ ic }} {{ label }}</div>
-              {% if profile[key] %}<div class="field-value" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><a href="{{ profile[key] }}" target="_blank" rel="noopener" style="color:#60a5fa;">{{ profile[key] }}</a></div>
-              {% else %}<div class="field-value field-empty">Kiritilmagan</div>{% endif %}
-            </div>
-            <button class="field-edit-btn" onclick="toggleEdit('{{ key }}')">✏️ Tahrirlash</button>
-          </div>
-          <div class="profile-field-edit" data-field="{{ key }}" style="display:none;">
-            <input type="text" id="edit-{{ key }}" value="{{ profile[key] or '' }}" placeholder="{{ ph }}">
-            <div class="field-edit-actions">
-              <button class="fe-save" onclick="saveField('{{ key }}')">✓ Saqlash</button>
-              <button class="fe-cancel" onclick="cancelEdit('{{ key }}')">✗ Bekor qilish</button>
+              <label class="field-label">{{ label }}</label>
+              <input class="cab-input" data-pf="{{ key }}" type="text" value="{{ profile[key] or '' }}" placeholder="{{ ph }}">
             </div>
           </div>
           {% endfor %}
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveLinksForm()">💾 Saqlash</button></div>
+          </form>
         </div>
       </section>
 
@@ -420,26 +469,25 @@ function post(url, body) {
     .then(function (r) { return r.json(); });
 }
 
-// ── inline field edit ──
-function toggleEdit(field) {
-  document.querySelector('.profile-field-display[data-field="' + field + '"]').style.display = 'none';
-  document.querySelector('.profile-field-edit[data-field="' + field + '"]').style.display = 'block';
-  var el = document.getElementById('edit-' + field);
-  if (el) el.focus();
+// ── activate a panel programmatically ──
+function gotoPanel(name) {
+  var btn = document.querySelector('.cab-nav button[data-panel="' + name + '"]');
+  if (btn) btn.click();
 }
-function cancelEdit(field) {
-  document.querySelector('.profile-field-display[data-field="' + field + '"]').style.display = 'flex';
-  document.querySelector('.profile-field-edit[data-field="' + field + '"]').style.display = 'none';
-}
-function saveField(field) {
-  var el = document.getElementById('edit-' + field);
-  var value = (el ? el.value : '').trim();
-  var body = {}; body[field] = value;
+
+// ── single-form mass save (whole profile / links at once) ──
+function saveForm(formId) {
+  var body = {};
+  document.querySelectorAll('#' + formId + ' [data-pf]').forEach(function (el) {
+    body[el.getAttribute('data-pf')] = (el.value || '').trim();
+  });
   post('/cabinet/api/profile/save', body).then(function (data) {
-    if (data.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 500); }
+    if (data.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 600); }
     else { toast(data.error || 'Xatolik yuz berdi', false); }
   }).catch(function () { toast('Tarmoq xatosi', false); });
 }
+function saveProfileForm() { saveForm('profileForm'); }
+function saveLinksForm() { saveForm('linksForm'); }
 
 // ── avatar upload ──
 function uploadAvatar(input) {
