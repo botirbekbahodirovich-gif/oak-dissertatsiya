@@ -405,81 +405,7 @@ csrf.exempt(app.view_functions['auth.telegram_login'])
 
 # ── University seed data + detection ────────────────────────────────────────
 # (name, university_type) — city/region are detected from the name.
-_UNIVERSITY_SEED = [
-    # Davlat universitetlari
-    ('Abu Ali Ibn Sino Nomidagi Buxoro Davlat Tibbiyot Instituti', 'davlat'),
-    ('Abu Rayhon Beruniy nomidagi Urganch davlat universiteti', 'davlat'),
-    ('Ajiniyoz nomidagi Nukus davlat pedagogika instituti', 'davlat'),
-    ('Andijon davlat chet tillari instituti', 'davlat'),
-    ('Andijon davlat pedagogika instituti', 'davlat'),
-    ('Andijon davlat texnika instituti', 'davlat'),
-    ('Andijon davlat tibbiyot instituti', 'davlat'),
-    ('Andijon davlat universiteti', 'davlat'),
-    ('Andijon mashinasozlik instituti', 'davlat'),
-    ('Andijon qishloq xojaligi va agrotexnologiyalar instituti', 'davlat'),
-    ('Berdaq nomidagi Qoraqalpoq davlat universiteti', 'davlat'),
-    ('Botir Zokirov nomidagi Milliy estrada sanati instituti', 'davlat'),
-    ('Buxoro davlat pedagogika instituti', 'davlat'),
-    ('Buxoro davlat texnika universiteti', 'davlat'),
-    ('Buxoro davlat universiteti', 'davlat'),
-    ('Buxoro muhandislik-texnologiya instituti', 'davlat'),
-    ('Chirchiq davlat pedagogika universiteti', 'davlat'),
-    ('Fargona davlat texnika universiteti', 'davlat'),
-    ('Fargona davlat universiteti', 'davlat'),
-    ('Fargona jamoat salomatligi tibbiyot instituti', 'davlat'),
-    ('Fargona politexnika instituti', 'davlat'),
-    ('Geologiya fanlari universiteti', 'davlat'),
-    ('Guliston davlat pedagogika instituti', 'davlat'),
-    ('Guliston davlat universiteti', 'davlat'),
-    ('Jahon iqtisodiyoti va diplomatiya universiteti', 'davlat'),
-    ('Jizzax davlat pedagogika universiteti', 'davlat'),
-    ('Jizzax politexnika instituti', 'davlat'),
-    ('Mirzo Ulugbek nomidagi Ozbekiston Milliy universiteti', 'davlat'),
-    ('Muhammad al-Xorazmiy nomidagi Toshkent axborot texnologiyalari universiteti', 'davlat'),
-    ('Namangan davlat chet tillari instituti', 'davlat'),
-    ('Namangan davlat pedagogika instituti', 'davlat'),
-    ('Namangan davlat texnika universiteti', 'davlat'),
-    ('Namangan davlat universiteti', 'davlat'),
-    ('Navoiy davlat konchilik va texnologiyalar universiteti', 'davlat'),
-    ('Navoiy davlat universiteti', 'davlat'),
-    ('Ozbekiston davlat jismoniy tarbiya va sport universiteti', 'davlat'),
-    ('Ozbekiston davlat konservatoriyasi', 'davlat'),
-    ('Ozbekiston davlat jahon tillari universiteti', 'davlat'),
-    ('Ozbekiston milliy pedagogika universiteti', 'davlat'),
-    ('Qarshi davlat universiteti', 'davlat'),
-    ('Qoqon davlat universiteti', 'davlat'),
-    ('Samarqand davlat chet tillar instituti', 'davlat'),
-    ('Samarqand davlat tibbiyot universiteti', 'davlat'),
-    ('Sharof Rashidov nomidagi Samarqand davlat universiteti', 'davlat'),
-    ('Termiz davlat universiteti', 'davlat'),
-    ('Toshkent davlat agrar universiteti', 'davlat'),
-    ('Toshkent davlat iqtisodiyot universiteti', 'davlat'),
-    ('Toshkent davlat texnika universiteti', 'davlat'),
-    ('Toshkent davlat tibbiyot universiteti', 'davlat'),
-    ('Toshkent davlat transport universiteti', 'davlat'),
-    ('Toshkent kimyo-texnologiya instituti', 'davlat'),
-    # Xususiy / xalqaro universitetlar
-    ('Akfa universiteti', 'xususiy'),
-    ('Alfraganus University', 'xususiy'),
-    ('Binary international university', 'xususiy'),
-    ('British Management University', 'xususiy'),
-    ('Cambridge International University', 'xususiy'),
-    ('Digital University', 'xususiy'),
-    ('IT-Park University', 'xususiy'),
-    ('Japan Digital University', 'xususiy'),
-    ('Kokand university', 'xususiy'),
-    ('PDP University', 'xususiy'),
-    ('Perfect University', 'xususiy'),
-    ('Renessans talim universiteti', 'xususiy'),
-    ('Sharda universiteti', 'xususiy'),
-    ('Stars International University', 'xususiy'),
-    ('TEAM University', 'xususiy'),
-    ('Toshkent shahridagi Inha universiteti', 'xalqaro'),
-    ('Toshkent shahridagi Turin politexnika universiteti', 'xalqaro'),
-    ('Toshkent shahrida Vebster universiteti', 'xalqaro'),
-    ('Xalqaro innovatsion universiteti', 'xususiy'),
-    ('Yangi asr universiteti', 'xususiy'),
-]
+from seed_data import UNIVERSITY_SEED as _UNIVERSITY_SEED  # full OAK OTM list
 
 
 def detect_uni_city_region(name):
@@ -506,17 +432,30 @@ def detect_uni_city_region(name):
     return 'Toshkent', 'Toshkent'
 
 
+def _seed_norm(name):
+    """Normalized key for de-duplication (case/apostrophe/spacing-insensitive)."""
+    s = (name or '').lower()
+    for ch in ("'", "'", "`", "?", "ʼ", "‘", "’"):
+        s = s.replace(ch, '')
+    return ' '.join(s.split())
+
+
 def _seed_universities(cur):
-    """Insert the seed universities once (no-op if the table already has rows)."""
-    cur.execute("SELECT COUNT(*) FROM universities")
-    if (cur.fetchone()[0] or 0) > 0:
-        return
+    """Additively seed the full OAK university list. De-duplicates against
+    existing rows by a normalized key, so re-runs and apostrophe variants never
+    create duplicates."""
+    cur.execute("SELECT name FROM universities")
+    existing = {_seed_norm(r[0]) for r in cur.fetchall()}
     for name, utype in _UNIVERSITY_SEED:
+        key = _seed_norm(name)
+        if key in existing:
+            continue
         city, region = detect_uni_city_region(name)
         cur.execute(
             "INSERT INTO universities (name, university_type, city, region) "
             "VALUES (%s, %s, %s, %s) ON CONFLICT (name) DO NOTHING",
             (name, utype, city, region))
+        existing.add(key)
 
 
 # ── Journal seed data (OAK journals by specialty code) ──────────────────────
@@ -545,55 +484,38 @@ SPECIALTY_NAMES = {
     '24.00.00': 'Islomshunoslik fanlari',
 }
 
-JOURNALS_BY_SPECIALTY = {
-    '01.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', 'MEXANIKA MUAMMOLARI', "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI', 'FARDU ILMIY XABARLAR', 'ANDIJON DAVLAT UNIVERSITETI ILMIY XABARNOMA', 'ILM SARCHA'],
-    '02.00.00': ["QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", 'FAN VA TEXNOLOFIYALAR TARAQQIYOTI', 'SANOATDA RAQAMLI TEXNOLOGIYALAR', 'GULISTON DAVLAT UNIVERSITETI AXBOROTNOMASI', "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI'],
-    '03.00.00': ["QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", "O'ZBEKISTON ZAMINI", "O'ZMU XABARLARI", 'NAMDU ILMIY AXBOROTNOMASI', "XORAZM MA'MUN AKADEMIYASI AXBOROTNOMASI", 'FARDU ILMIY XABARLAR', 'ANDIJON DAVLAT UNIVERSITETI ILMIY XABARNOMA'],
-    '04.00.00': ['SANOATDA RAQAMLI TEXNOLOGIYALAR', "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI', 'FARDU ILMIY XABARLAR', "ZAMONAVIY FAN, TA'LIM VA TARBIYANING DOLZARB MUAMMOLARI", "QORAQALPOG'ISTONDA FAN VA TA'LIM"],
-    '05.00.00': ['MEXANIKA va TEXNOLOGIYA', "QURILISH VA TA'LIM", "O'ZBEKISTON ZAMINI", 'FAN VA TEXNOLOFIYALAR TARAQQIYOTI', 'MEXANIKA MUAMMOLARI', 'SANOATDA RAQAMLI TEXNOLOGIYALAR', "AL-FARG'ONIY AVLODLARI"],
-    '06.00.00': ["O'ZBEKISTON ZAMINI", 'SCIENCE AND EDUCATION IN AGRICULTURE', 'SUSTAINABLE AGRICULTURE', "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI', "XORAZM MA'MUN AKADEMIYASI AXBOROTNOMASI", 'AGRO ILM'],
-    '07.00.00': ["FAN VA TA'LIM INTEGRATSIYASI", "TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", "O'ZMU XABARLARI"],
-    '08.00.00': ["TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'IQTISODIYOT: TAHLILLAR VA PROGNOZLAR', 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZBEKISTON STATISTIKA AXBOROTNOMASI", 'AGROBIZNES'],
-    '09.00.00': ["TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFIY TADQIQOTLAR VA IJTIMOIY FANLAR', 'FALSAFA VA HUQUQ', 'NAMDU ILMIY AXBOROTNOMASI'],
-    '10.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', "TIL, TA'LIM, TARJIMA", 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI"],
-    '11.00.00': ["O'ZBEKISTON ZAMINI", "O'ZMU XABARLARI", 'EKOLOGIYA XABARNOMASI'],
-    '12.00.00': ['YURIST AXBOROTNOMASI', 'FALSAFA VA HUQUQ', 'JAMIYAT VA INNOVATSIYALAR'],
-    '13.00.00': ['PEDAGOGIK MAHORAT', "FAN VA TA'LIM INTEGRATSIYASI", 'SAYHUN ILMIY AXBOROTNOMASI', "TA'LIM VA TARAQQIYOT", 'TADBIRKORLIK VA PEDAGOGIKA', "TA'LIM TIZIMIDA IJTIMOIY GUMANITAR FANLAR"],
-    '14.00.00': ['O\'ZBEKISTON TIBBIYOT JURNALI', 'INTERNATIONAL JOURNAL OF SCIENTIFIC PEDIATRICS', 'MEDICAL SCIENCE OF UZBEKISTAN'],
-    '15.00.00': ["QORAQALPOG'ISTONDA FAN VA TA'LIM"],
-    '16.00.00': ['EKOLOGIYA XABARNOMASI', 'CHORVACHILIK VA NASLCHILIK ISHI'],
-    '17.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "QO'QON DAVLAT PEDAGOGIKA INSTITUTI ILMIY XABARLARI", 'ORIENTAL ART AND CULTURE'],
-    '18.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZBEKISTON ZAMINI", 'ARXITEKTURA, QURILISH VA DIZAYN'],
-    '19.00.00': ['PEDAGOGIK MAHORAT', 'PSIXOLOGIYA', "FAN VA TA'LIM INTEGRATSIYASI"],
-    '22.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFA VA HUQUQ'],
-    '23.00.00': ['BUXORO DAVLAT UNIVERSITETI ILMIY AXBOROTI', 'INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE'],
-    '24.00.00': ['INTERNATIONAL JOURNAL OF INTELECTUAL AND CULTURAL HERITAGE', "O'ZMU XABARLARI", 'FALSAFA VA HUQUQ'],
-}
+from seed_data import JOURNALS_BY_SPECIALTY  # full OAK journal list
 
 
 def _seed_journals(cur):
-    """Seed OAK journals + their specialty links once (guarded by junction table)."""
-    cur.execute("SELECT COUNT(*) FROM journal_specialties")
-    if (cur.fetchone()[0] or 0) > 0:
-        return
-    names = set()
+    """Additively seed OAK journals and their specialty links. New journals are
+    inserted only if a normalized-name match doesn't already exist; specialty
+    links are upserted idempotently (unique journal_id+specialty_code)."""
+    cur.execute("SELECT id, name FROM journals")
+    rows = cur.fetchall()
+    norm_to_id = {_seed_norm(n): i for i, n in rows}
+    all_names = set()
     for lst in JOURNALS_BY_SPECIALTY.values():
-        names.update(lst)
-    for nm in sorted(names):
+        all_names.update(lst)
+    for nm in sorted(all_names):
+        if _seed_norm(nm) in norm_to_id:
+            continue
         cur.execute(
             "INSERT INTO journals (name, country, indexing, oak_approved) "
-            "VALUES (%s, %s, %s, TRUE) ON CONFLICT (name) DO NOTHING",
+            "VALUES (%s, %s, %s, TRUE) ON CONFLICT (name) DO NOTHING RETURNING id",
             (nm, "O'zbekiston", 'OAK'))
-    cur.execute("SELECT id, name FROM journals")
-    idmap = {n: i for i, n in cur.fetchall()}
+        r = cur.fetchone()
+        if r:
+            norm_to_id[_seed_norm(nm)] = r[0]
     for code, lst in JOURNALS_BY_SPECIALTY.items():
         sname = SPECIALTY_NAMES.get(code, '')
         for nm in lst:
-            jid = idmap.get(nm)
+            jid = norm_to_id.get(_seed_norm(nm))
             if jid:
                 cur.execute(
                     "INSERT INTO journal_specialties (journal_id, specialty_code, specialty_name) "
-                    "VALUES (%s, %s, %s)", (jid, code, sname))
+                    "VALUES (%s, %s, %s) ON CONFLICT (journal_id, specialty_code) DO NOTHING",
+                    (jid, code, sname))
 
 
 def _run_startup_migrations():
@@ -818,6 +740,15 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journal_spec_code ON journal_specialties (specialty_code)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journal_spec_jid ON journal_specialties (journal_id)")
+            # De-duplicate any pre-existing pairs, then enforce uniqueness so the
+            # additive seeder can ON CONFLICT DO NOTHING on (journal_id, specialty_code).
+            cur.execute("""
+                DELETE FROM journal_specialties a USING journal_specialties b
+                WHERE a.id > b.id AND a.journal_id = b.journal_id
+                  AND a.specialty_code = b.specialty_code
+            """)
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_journal_spec "
+                        "ON journal_specialties (journal_id, specialty_code)")
             _seed_journals(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS yangiliklar (
