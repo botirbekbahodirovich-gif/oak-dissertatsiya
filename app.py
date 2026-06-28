@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 import bcrypt
 from flask import Flask, render_template, redirect, url_for, jsonify, request, abort, flash
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 from flask_login import (LoginManager, UserMixin, logout_user,
                          login_required, current_user)
 
@@ -162,6 +162,20 @@ UZ_REGIONS = [
 @app.context_processor
 def inject_uz_regions():
     return dict(uz_regions=UZ_REGIONS)
+
+
+@app.template_filter('uni_link')
+def uni_link(name):
+    """Render a university name as a clickable link to its profile page.
+
+    Used so any occurrence of an institution name across the site (tables, olim
+    profiles, dissertations) navigates to /university/<name>."""
+    from markupsafe import Markup, escape
+    n = (name or '').strip()
+    if not n:
+        return ''
+    return Markup('<a href="/university/{0}" class="uni-link">{1}</a>').format(
+        quote(n, safe=''), escape(n))
 
 
 @app.context_processor
@@ -735,6 +749,22 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_universities_name ON universities (LOWER(name))")
+            for _uc, _ut in (
+                ('instagram', 'VARCHAR(200)'), ('facebook', 'VARCHAR(200)'),
+                ('youtube', 'VARCHAR(200)'), ('rector_photo_url', 'VARCHAR(500)'),
+            ):
+                cur.execute(f"ALTER TABLE universities ADD COLUMN IF NOT EXISTS {_uc} {_ut}")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS university_images (
+                    id SERIAL PRIMARY KEY,
+                    university_id INTEGER REFERENCES universities(id) ON DELETE CASCADE,
+                    image_url VARCHAR(500) NOT NULL,
+                    caption VARCHAR(300),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_university_images_uid "
+                        "ON university_images (university_id)")
             _seed_universities(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS journals (
@@ -4393,6 +4423,7 @@ def university_profile(name):
     uni = None
     stats = {'total': 0, 'phd': 0, 'dsc': 0, 'olimlar': 0, 'ixtisosliklar': 0, 'rahbarlar': 0}
     top_olimlar, top_rahbarlar, recent, by_year, top_ixtisos = [], [], [], [], []
+    gallery, rector_olim = [], None
     try:
         conn = get_connection()
         try:
@@ -4442,6 +4473,20 @@ def university_profile(name):
                     GROUP BY TRIM(ixtisoslik) ORDER BY cnt DESC LIMIT 5
                 """, params)
                 top_ixtisos = [{'name': x[0], 'count': x[1]} for x in cur.fetchall()]
+                # Gallery images for this university.
+                if uni and uni.get('id'):
+                    cur.execute("SELECT id, image_url, caption FROM university_images "
+                                "WHERE university_id = %s ORDER BY id", (uni['id'],))
+                    gallery = [{'id': g[0], 'image_url': g[1], 'caption': g[2] or ''}
+                               for g in cur.fetchall()]
+                # If the rector's name exactly matches a known olim profile, link it.
+                if uni and uni.get('rector'):
+                    cur.execute("SELECT olim_name FROM olim_profiles "
+                                "WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s)) LIMIT 1",
+                                (uni['rector'],))
+                    rr = cur.fetchone()
+                    if rr:
+                        rector_olim = rr[0]
         finally:
             conn.close()
     except Exception:
@@ -4460,6 +4505,7 @@ def university_profile(name):
     return render_template('university_profile.html', uni=uni, stats=stats,
                            top_olimlar=top_olimlar, top_rahbarlar=top_rahbarlar,
                            recent=recent, by_year=by_year, top_ixtisos=top_ixtisos,
+                           gallery=gallery, rector_olim=rector_olim,
                            is_admin=is_admin)
 
 
@@ -4486,7 +4532,8 @@ def _save_university_logo():
 
 _UNI_EDIT_FIELDS = ['name', 'short_name', 'website', 'city', 'region', 'university_type',
                     'description', 'founded_year', 'rector', 'address', 'phone', 'email',
-                    'telegram', 'student_count', 'teacher_count']
+                    'telegram', 'student_count', 'teacher_count',
+                    'instagram', 'facebook', 'youtube', 'rector_photo_url']
 
 
 @app.route('/admin/universities')
@@ -4634,6 +4681,79 @@ def admin_university_logo(id):
         flash("Logo yuklandi!", "success")
     except Exception:
         flash("Logo saqlashda xatolik.", "error")
+    return redirect(request.referrer or url_for('admin_universities'))
+
+
+@app.route('/admin/university/gallery/<int:id>', methods=['POST'])
+@login_required
+def admin_university_gallery_add(id):
+    """Upload one or more gallery images for a university."""
+    _require_admin()
+    from data import get_connection
+    from werkzeug.utils import secure_filename
+    import time as _time
+    files = request.files.getlist('images')
+    caption = (request.form.get('caption') or '').strip() or None
+    upload_dir = os.path.join(app.static_folder, "uploads", "university_gallery")
+    os.makedirs(upload_dir, exist_ok=True)
+    saved_urls = []
+    for f in files:
+        if not f or not f.filename:
+            continue
+        fname = secure_filename(f.filename)
+        ext = os.path.splitext(fname)[1].lower()
+        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+            continue
+        saved = f"{id}_{int(_time.time()*1000)}_{fname}"
+        try:
+            f.save(os.path.join(upload_dir, saved))
+            saved_urls.append(f"/static/uploads/university_gallery/{saved}")
+        except Exception:
+            continue
+    if not saved_urls:
+        flash("Rasm yuklanmadi (JPG/PNG/WEBP).", "error")
+        return redirect(request.referrer or url_for('admin_universities'))
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                for u in saved_urls:
+                    cur.execute("INSERT INTO university_images (university_id, image_url, caption) "
+                                "VALUES (%s, %s, %s)", (id, u, caption))
+            conn.commit()
+        finally:
+            conn.close()
+        flash(f"{len(saved_urls)} ta rasm yuklandi!", "success")
+    except Exception:
+        flash("Galereya saqlashda xatolik.", "error")
+    return redirect(request.referrer or url_for('admin_universities'))
+
+
+@app.route('/admin/university/gallery/delete/<int:id>', methods=['POST'])
+@login_required
+def admin_university_gallery_delete(id):
+    """Delete a single gallery image (and its file)."""
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT image_url FROM university_images WHERE id = %s", (id,))
+                row = cur.fetchone()
+                if row and row[0] and row[0].startswith('/static/uploads/university_gallery/'):
+                    try:
+                        os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                row[0].lstrip('/')))
+                    except Exception:
+                        pass
+                cur.execute("DELETE FROM university_images WHERE id = %s", (id,))
+            conn.commit()
+        finally:
+            conn.close()
+        flash("Rasm o'chirildi.", "success")
+    except Exception:
+        flash("O'chirishda xatolik.", "error")
     return redirect(request.referrer or url_for('admin_universities'))
 
 

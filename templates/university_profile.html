@@ -17,9 +17,30 @@
   .up-badge.xususiy { background: #3b82f6; }
   .up-badge.xalqaro { background: #8b5cf6; }
   .up-badge.loc { background: rgba(255,255,255,0.2); }
-  .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; }
+  .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
   .up-stat b { font-size: 1.4rem; font-weight: 800; display: block; }
   .up-stat span { font-size: 0.8rem; opacity: 0.9; }
+  /* Social icons — same clean style as the olim profile */
+  .up-socials { display: flex; gap: 8px; flex-wrap: wrap; }
+  .up-soc { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff;
+    display: grid; place-items: center; font-size: 1.1rem; text-decoration: none; transition: background 0.2s, transform 0.2s; }
+  .up-soc:hover { background: rgba(255,255,255,0.3); color: #fff; transform: translateY(-2px); }
+  /* Rector card */
+  .up-rector { display: flex; align-items: center; gap: 14px; background: #162032; border: 1px solid #334155;
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
+  .up-rector .rav { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.6rem; }
+  .up-rector .rav img { width: 100%; height: 100%; object-fit: cover; }
+  .up-rector .rlbl { color: #94a3b8; font-size: 0.76rem; }
+  .up-rector .rnm { color: #f1f5f9; font-weight: 700; font-size: 1.02rem; }
+  .up-rector .rnm a { color: #60a5fa; }
+  /* Gallery */
+  .up-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .up-gallery figure { margin: 0; position: relative; }
+  .up-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; border: 1px solid #334155; }
+  .up-gallery figcaption { color: #94a3b8; font-size: 0.76rem; margin-top: 4px; }
+  .up-gallery .gdel { position: absolute; top: 6px; right: 6px; background: rgba(239,68,68,0.85); color: #fff;
+    border: none; border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 0.78rem; }
 
   .up-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 20px; }
   .up-section h2 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 16px; }
@@ -72,6 +93,19 @@
         <div class="up-stat"><b>{{ stats.olimlar }}</b><span>olim</span></div>
         <div class="up-stat"><b>{{ stats.ixtisosliklar }}</b><span>ixtisoslik</span></div>
         <div class="up-stat"><b>{{ stats.rahbarlar }}</b><span>ilmiy rahbar</span></div>
+        {% set uni_socials = [
+          (('https://t.me/' ~ uni.telegram|replace('@','')) if uni.telegram else None, 'bi-telegram', 'Telegram'),
+          (uni.instagram, 'bi-instagram', 'Instagram'),
+          (uni.facebook, 'bi-facebook', 'Facebook'),
+          (uni.youtube, 'bi-youtube', 'YouTube')
+        ] %}
+        {% if uni.telegram or uni.instagram or uni.facebook or uni.youtube %}
+        <div class="up-socials">
+          {% for url, icon, label in uni_socials %}
+            {% if url %}<a class="up-soc" href="{{ url }}" target="_blank" rel="noopener" title="{{ label }}"><i class="bi {{ icon }}"></i></a>{% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -81,11 +115,19 @@
   <!-- SECTION 1 — Umumiy ma'lumot -->
   <div class="up-section">
     <h2>ℹ️ Umumiy ma'lumot</h2>
+    {% if uni.rector %}
+    <div class="up-rector">
+      <div class="rav">{% if uni.rector_photo_url %}<img src="{{ uni.rector_photo_url }}" alt="rektor">{% else %}👤{% endif %}</div>
+      <div>
+        <div class="rlbl">Rektor</div>
+        <div class="rnm">{% if rector_olim %}<a href="/olim/{{ rector_olim|urlencode }}">{{ uni.rector }}</a>{% else %}{{ uni.rector }}{% endif %}</div>
+      </div>
+    </div>
+    {% endif %}
     {% if uni.description %}<p class="up-desc" style="margin-bottom:16px;">{{ uni.description }}</p>{% endif %}
     <div class="up-info-grid">
       {% if uni.website %}<div class="up-info-item"><b>Veb-sayt</b><a href="{{ uni.website }}" target="_blank" rel="noopener">{{ uni.website }}</a></div>{% endif %}
       {% if uni.founded_year %}<div class="up-info-item"><b>Tashkil etilgan</b>{{ uni.founded_year }}</div>{% endif %}
-      {% if uni.rector %}<div class="up-info-item"><b>Rektor</b>{{ uni.rector }}</div>{% endif %}
       {% if uni.phone %}<div class="up-info-item"><b>Telefon</b>{{ uni.phone }}</div>{% endif %}
       {% if uni.email %}<div class="up-info-item"><b>Email</b><a href="mailto:{{ uni.email }}">{{ uni.email }}</a></div>{% endif %}
       {% if uni.telegram %}<div class="up-info-item"><b>Telegram</b><a href="https://t.me/{{ uni.telegram|replace('@','') }}" target="_blank" rel="noopener">{{ uni.telegram }}</a></div>{% endif %}
@@ -93,6 +135,26 @@
       <div class="up-info-item"><b>Xaritada</b><a href="https://www.google.com/maps/search/{{ uni.name|urlencode }}" target="_blank" rel="noopener">Google Maps →</a></div>
     </div>
   </div>
+
+  <!-- SECTION 1b — Galereya -->
+  {% if gallery %}
+  <div class="up-section">
+    <h2>🖼️ Galereya</h2>
+    <div class="up-gallery">
+      {% for g in gallery %}
+      <figure>
+        <img src="{{ g.image_url }}" alt="{{ g.caption }}">
+        {% if g.caption %}<figcaption>{{ g.caption }}</figcaption>{% endif %}
+        {% if is_admin and uni.id %}
+        <form method="POST" action="/admin/university/gallery/delete/{{ g.id }}" style="display:inline;">
+          <button class="gdel" type="submit" title="O'chirish">🗑️</button>
+        </form>
+        {% endif %}
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   <!-- SECTION 2 — Statistika -->
   {% if stats.total > 0 %}
@@ -180,6 +242,15 @@
       <input type="file" name="logo" accept="image/*">
       <button type="submit">Yuklash</button>
     </form>
+  </div>
+  <div class="up-section">
+    <h2>🖼️ Galereyaga rasm qo'shish (admin)</h2>
+    <form class="admin-upload-section" method="POST" action="/admin/university/gallery/{{ uni.id }}" enctype="multipart/form-data">
+      <input type="file" name="images" accept="image/*" multiple>
+      <input type="text" name="caption" placeholder="Izoh (ixtiyoriy)" style="background:#0f172a;border:1px solid #334155;color:#cbd5e1;border-radius:8px;padding:8px 10px;margin-left:8px;">
+      <button type="submit">Yuklash</button>
+    </form>
+    <p style="color:#64748b;font-size:0.8rem;margin-top:8px;">Bir nechta rasmni birdaniga tanlash mumkin. Boshqa ma'lumotlar (rektor, ijtimoiy tarmoqlar) admin tahrirlash bo'limidan kiritiladi.</p>
   </div>
   {% endif %}
 </div>

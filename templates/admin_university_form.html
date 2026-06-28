@@ -72,6 +72,14 @@
     </div>
     <div class="yf-group full"><label>Manzil</label><input class="yf-input" type="text" name="address" value="{{ item.address if item and item.address else '' }}"></div>
     <div class="yf-row">
+      <div class="yf-group"><label>Instagram</label><input class="yf-input" type="text" name="instagram" placeholder="https://instagram.com/..." value="{{ item.instagram if item and item.instagram else '' }}"></div>
+      <div class="yf-group"><label>Facebook</label><input class="yf-input" type="text" name="facebook" placeholder="https://facebook.com/..." value="{{ item.facebook if item and item.facebook else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>YouTube</label><input class="yf-input" type="text" name="youtube" placeholder="https://youtube.com/@..." value="{{ item.youtube if item and item.youtube else '' }}"></div>
+      <div class="yf-group"><label>Rektor rasmi (URL)</label><input class="yf-input" type="text" name="rector_photo_url" placeholder="https://..." value="{{ item.rector_photo_url if item and item.rector_photo_url else '' }}"></div>
+    </div>
+    <div class="yf-row">
       <div class="yf-group"><label>Talabalar soni</label><input class="yf-input" type="number" name="student_count" value="{{ item.student_count if item and item.student_count else '' }}"></div>
       <div class="yf-group"><label>O'qituvchilar soni</label><input class="yf-input" type="number" name="teacher_count" value="{{ item.teacher_count if item and item.teacher_count else '' }}"></div>
     </div>
