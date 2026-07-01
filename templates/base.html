@@ -623,8 +623,25 @@
   <!-- Fix 5.2: freeze the viewport during unauthenticated init (anti-bypass). -->
   <style id="guest-freeze">html, body { overflow: hidden !important; }
     body > *:not(script):not(style) { pointer-events: none !important; }</style>
-  <script>document.documentElement.style.pointerEvents = 'none';
-    document.documentElement.style.overflow = 'hidden';</script>
+  <script>
+    document.documentElement.style.pointerEvents = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    // Fully release the freeze — removes the !important style tag AND the inline
+    // styles on <html>/<body> (resetting body.style alone can't beat !important).
+    window.releaseGuestFreeze = function () {
+      var s = document.getElementById('guest-freeze');
+      if (s) s.remove();
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.overflow = '';
+      if (document.body) {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }
+    };
+    // Safety net: never leave the page permanently frozen — release once the
+    // page has fully loaded so guests can browse public pages freely.
+    window.addEventListener('load', function () { window.releaseGuestFreeze(); });
+  </script>
 {% endif %}
 </head>
 <body>
@@ -1095,13 +1112,13 @@
     </p>
 
     <!-- Telegram login button -->
-    <a href="/cabinet/login" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#0088cc;color:white;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;transition:background 0.2s;">
+    <a href="/cabinet/login" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#0088cc;color:white;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;transition:background 0.2s;">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
       Telegram orqali kirish
     </a>
 
     <!-- Google login button -->
-    <a href="/auth/google/login" style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:#333;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:20px;border:1px solid #ddd;">
+    <a href="/auth/google/login" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();" style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:#333;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:20px;border:1px solid #ddd;">
       <svg width="20" height="20" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -1172,6 +1189,8 @@ function dismissAuthPopup() {
     // Remember dismissal for this browser session
     sessionStorage.setItem('authPopupDismissed', 'true');
   }
+  // "Keyinroq davom etish" — fully unfreeze so the user can keep browsing.
+  if (window.releaseGuestFreeze) window.releaseGuestFreeze();
 }
 </script>
 {% endif %}
