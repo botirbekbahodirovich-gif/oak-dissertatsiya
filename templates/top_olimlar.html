@@ -50,7 +50,7 @@
       <div class="tl-row">
         <div class="tl-rank{% if it.rank <= 3 %} top{% endif %}">{{ it.rank }}</div>
         <div class="tl-avatar">
-          {% if it.photo_url %}<img src="{{ it.photo_url }}" alt="{{ it.display }}">{% else %}<span>🎓</span>{% endif %}
+          <img src="{{ it.photo_url or (it.name | avatar_url) }}" alt="{{ it.display }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
         </div>
         <div class="tl-main">
           <a class="tl-name" href="/olim/{{ it.name|urlencode }}">{{ it.display or it.name }}</a>

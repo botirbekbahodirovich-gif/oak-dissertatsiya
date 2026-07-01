@@ -186,7 +186,7 @@
     <div class="up-people">
       {% for o in top_olimlar %}
       <a class="up-person" href="/olim/{{ o.name|urlencode }}">
-        <div class="av">{% if o.photo_url %}<img src="{{ o.photo_url }}" alt="">{% else %}🎓{% endif %}</div>
+        <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
         <div style="min-width:0;">
           <div class="nm">{{ o.display or o.name }}</div>
           <div class="meta">
@@ -208,7 +208,7 @@
     <div class="up-people">
       {% for o in top_rahbarlar %}
       <a class="up-person" href="/olim/{{ o.name|urlencode }}">
-        <div class="av">{% if o.photo_url %}<img src="{{ o.photo_url }}" alt="">{% else %}👨‍🏫{% endif %}</div>
+        <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
         <div style="min-width:0;">
           <div class="nm">{{ o.display or o.name }}</div>
           <div class="meta">{{ o.count }} ta shogird</div>

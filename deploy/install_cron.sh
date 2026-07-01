@@ -41,11 +41,23 @@ DATABASE_URL=${DB_URL}
 CRON
 chmod 644 "$GRANT_DST"
 
-touch /var/log/oak-scraper.log /var/log/grant-scraper.log
-chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log /var/log/grant-scraper.log || true
+# Avatar photo_url reconcile — daily 02:00 (fills any rows missing photo_url,
+# e.g. imported outside the scraper). Idempotent: only touches empty photo_url.
+PHOTO_DST="/etc/cron.d/photo-urls"
+cat > "$PHOTO_DST" <<CRON
+# Supabase avatar photo_url backfill — daily 02:00 (managed by install_cron.sh).
+SHELL=/bin/bash
+DATABASE_URL=${DB_URL}
+0 2 * * * ${DEPLOY_USER} cd ${APP_DIR} && ${APP_DIR}/venv/bin/python scripts/update_photo_urls.py >> /var/log/photo-urls.log 2>&1
+CRON
+chmod 644 "$PHOTO_DST"
+
+touch /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log
+chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log || true
 
 # Reload cron so the new job is picked up immediately.
 service cron reload 2>/dev/null || systemctl reload cron 2>/dev/null || true
 
 echo "Installed $CRON_DST (daily 00:00). Log: /var/log/oak-scraper.log"
 echo "Installed $GRANT_DST (daily 01:00). Log: /var/log/grant-scraper.log"
+echo "Installed $PHOTO_DST (daily 02:00). Log: /var/log/photo-urls.log"

@@ -388,19 +388,23 @@ import re as _re_util
 
 AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
                  "object/public/avatars/")
-DEFAULT_AVATAR = "/images/default-avatar.png"
+DEFAULT_AVATAR = "/static/images/default-avatar.svg"
 _AVATAR_STRIP = "'\"’‘ʻʼ`´"
 
 
 def avatar_url(full_name):
     """Map a scholar name to its sanitized Supabase avatar URL
-    ({Last_Name}_{First_Name}_{Patronymic}.jpg): spaces→'_', quotes/ticks stripped."""
+    ({Last_Name}_{First_Name}_{Patronymic}.jpg): spaces→'_', quotes/ticks stripped,
+    consecutive underscores collapsed to one."""
     s = (full_name or "").strip()
     if not s:
         return DEFAULT_AVATAR
     for ch in _AVATAR_STRIP:
         s = s.replace(ch, "")
     s = _re_util.sub(r"\s+", "_", s)
+    s = _re_util.sub(r"_+", "_", s).strip("_")
+    if not s:
+        return DEFAULT_AVATAR
     return AVATAR_BUCKET + s + ".jpg"
 
 

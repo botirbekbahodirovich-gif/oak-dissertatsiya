@@ -464,7 +464,7 @@ html { scroll-behavior: smooth; }
       {% for s in top_marquee + top_marquee %}
         <div class="top-card">
           <div class="top-avatar">
-            {% if s.photo_url %}<img src="{{ s.photo_url }}" alt="{{ s.display }}">{% else %}<span>🎓</span>{% endif %}
+            <img src="{{ s.photo_url or (s.name | avatar_url) }}" alt="{{ s.display }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
           </div>
           <a class="top-name" href="/olim/{{ s.name|urlencode }}">{{ s.display or s.name }}</a>
           <span class="top-diss">{{ s.count }} ta shogird</span>
@@ -509,7 +509,7 @@ html { scroll-behavior: smooth; }
             <div class="rd-top">
               <div class="rd-head">
                 <div class="rd-avatar">
-                  {% if r.photo_url %}<img src="{{ r.photo_url }}" alt="{{ r.Olim_display }}">{% else %}<span>🎓</span>{% endif %}
+                  <img src="{{ r.photo_url or (r.Olim | avatar_url) }}" alt="{{ r.Olim_display }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
                 </div>
                 <a class="rd-name" href="/olim/{{ r.Olim|urlencode }}">{{ r.Olim_display or r.Olim or "Noma'lum" }}</a>
               </div>

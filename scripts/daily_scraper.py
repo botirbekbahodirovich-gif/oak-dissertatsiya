@@ -63,6 +63,7 @@ def insert_item(conn, item: dict):
                 ilmiy_kengash_raqami,
                 opponent_1, opponent_2,
                 yetakchi_tashkilot, yonalish,
+                photo_url, ilmiy_rahbar_photo_url,
                 scraped_at
             ) VALUES (
                 %(oak_id)s, %(link)s, %(olim)s, %(daraja)s, %(mavzu)s,
@@ -71,6 +72,7 @@ def insert_item(conn, item: dict):
                 %(ilmiy_kengash_raqami)s,
                 %(opponent_1)s, %(opponent_2)s,
                 %(yetakchi_tashkilot)s, %(yonalish)s,
+                %(photo_url)s, %(ilmiy_rahbar_photo_url)s,
                 NOW()
             )
             ON CONFLICT (oak_id) DO NOTHING
@@ -151,6 +153,25 @@ def detect_degree(text):
     ):
         return "PhD"
     return ""
+
+
+AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
+                 "object/public/avatars/")
+_AVATAR_STRIP = "'\"’‘ʻʼ`´"
+
+
+def generate_avatar_url(olim_name: str):
+    """Fix: yangi olimlar uchun Supabase avatar URL (ismni tozalab)."""
+    s = (olim_name or "").strip()
+    if not s:
+        return None
+    for ch in _AVATAR_STRIP:
+        s = s.replace(ch, "")
+    s = re.sub(r"\s+", "_", s)
+    s = re.sub(r"_+", "_", s).strip("_")
+    if not s:
+        return None
+    return AVATAR_BUCKET + s + ".jpg"
 
 
 def normalize_patronymic(name: str) -> str:
@@ -320,22 +341,26 @@ def main():
                 continue
             parsed = parse_announcement(item["raw_text"], item["title"])
             opp1, opp2 = parsed["opponent_1"], parsed["opponent_2"]
+            olim_name = normalize_patronymic(parsed["olim"])
+            rahbar_name = normalize_patronymic(parsed["ilmiy_rahbar"])
             db_item = {
                 "oak_id":               str(item["id"]),
                 "link":                 item["link"],
-                "olim":                 normalize_patronymic(parsed["olim"]),
+                "olim":                 olim_name,
                 "daraja":               parsed["daraja"],
                 "mavzu":                parsed["mavzu"],
                 "ixtisoslik":           parsed["ixtisoslik_shifrlari"],
                 "fan_tarmogi":          parsed["fan_tarmogi"],
                 "mavzu_raqami":         parsed["ro_yxat_raqami"],
-                "ilmiy_rahbar":         normalize_patronymic(parsed["ilmiy_rahbar"]),
+                "ilmiy_rahbar":         rahbar_name,
                 "muassasa":             parsed["bajarilgan_muassasa"],
                 "ilmiy_kengash_raqami": parsed["ik_raqami"],
                 "opponent_1":           opp1,
                 "opponent_2":           opp2,
                 "yetakchi_tashkilot":   parsed["yetakchi_tashkilot"],
                 "yonalish":             parsed["yo_nalish"],
+                "photo_url":            generate_avatar_url(olim_name),
+                "ilmiy_rahbar_photo_url": generate_avatar_url(rahbar_name),
             }
             try:
                 insert_item(conn, db_item)
