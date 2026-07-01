@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Grantlar (admin){% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1100px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">🏆 Grantlarni boshqarish</h1>
+  <p style="color:#94a3b8;">Jami: {{ grants|length }} ta grant</p>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <h2 style="font-size:1.05rem;margin-top:18px;">
+    {% if edit_g %}✏️ Grantni tahrirlash (#{{ edit_g.id }}){% else %}➕ Yangi grant qo'shish{% endif %}
+  </h2>
+  <form method="POST"
+        action="{% if edit_g %}/admin/grants/edit/{{ edit_g.id }}{% else %}/admin/grants/add{% endif %}"
+        style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+    {{ csrf_token()|safe }}
+    <label style="grid-column:1/-1;">Sarlavha (title)
+      <input name="title" class="form-control" required value="{{ edit_g.title if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">Tavsif (description)
+      <textarea name="description" class="form-control" rows="3">{{ edit_g.description if edit_g else '' }}</textarea></label>
+    <label>Davlat (country)
+      <input name="country" class="form-control" value="{{ edit_g.country if edit_g else '' }}"></label>
+    <label>Provayder (provider)
+      <input name="provider" class="form-control" value="{{ edit_g.provider if edit_g else '' }}"></label>
+    <label>Moliyalashtirish (funding_type)
+      <select name="funding_type" class="form-control">
+        <option value="">—</option>
+        {% for f in funding_types %}<option value="{{ f }}" {{ 'selected' if edit_g and edit_g.funding_type == f }}>{{ f }}</option>{% endfor %}
+      </select></label>
+    <label>Daraja (academic_level)
+      <select name="academic_level" class="form-control">
+        <option value="">—</option>
+        {% for l in academic_levels %}<option value="{{ l }}" {{ 'selected' if edit_g and edit_g.academic_level == l }}>{{ l }}</option>{% endfor %}
+      </select></label>
+    <label>Muddat (application_deadline)
+      <input name="application_deadline" type="date" class="form-control" value="{{ edit_g.application_deadline if edit_g else '' }}"></label>
+    <label>Mutaxassislik shifrlari (scientific_codes)
+      <input name="scientific_codes" class="form-control" placeholder="05.01.01, 05.01.02" value="{{ edit_g.scientific_codes if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">Manba havolasi (source_url)
+      <input name="source_url" class="form-control" value="{{ edit_g.source_url if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">requirements_json (JSON)
+      <textarea name="requirements_json" class="form-control" rows="3" placeholder='{"documents": [...], "strategy": [...]}'>{{ edit_g.requirements_raw if edit_g else '' }}</textarea></label>
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">{% if edit_g %}Saqlash{% else %}Qo'shish{% endif %}</button>
+      {% if edit_g %}<a href="/admin/grants" class="btn btn-action">Bekor qilish</a>{% endif %}
+    </div>
+  </form>
+
+  <table class="table" style="width:100%;">
+    <thead><tr>
+      <th>ID</th><th>Sarlavha</th><th>Davlat</th><th>Muddat</th><th>Daraja</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for g in grants %}
+      <tr>
+        <td>{{ g.id }}</td>
+        <td><a href="/grants/{{ g.id }}" target="_blank">{{ g.title }}</a></td>
+        <td>{{ g.country or '' }}</td>
+        <td>{{ g.application_deadline or '' }}</td>
+        <td>{{ g.academic_level or '' }}</td>
+        <td style="white-space:nowrap;">
+          <a href="/admin/grants?edit={{ g.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
+          <form method="POST" action="/admin/grants/delete/{{ g.id }}" style="display:inline;"
+                onsubmit="return confirm('Grantni o‘chirishni tasdiqlaysizmi?');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#f87171;">O'chirish</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
