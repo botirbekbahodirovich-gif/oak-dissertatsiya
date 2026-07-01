@@ -191,25 +191,39 @@
     return g;
   };
 
-  GenealogyTree.mount = function (selector, scholarId) {
-    var container = (typeof selector === 'string')
-      ? document.querySelector(selector) : selector;
+  function _mount(container, url, onEmpty) {
     if (!container) return;
     container.classList.add('gen-tree-loading');
-    fetch('/api/v1/scholar/' + scholarId + '/tree')
+    fetch(url)
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
       .then(function (data) {
         container.classList.remove('gen-tree-loading');
-        new GenealogyTree(container, data);
+        if (data.error) throw new Error(data.error);
+        var hasKids = data.children && data.children.length > 0;
+        if (!hasKids && typeof onEmpty === 'function') { onEmpty(); return null; }
+        return new GenealogyTree(container, data);
       })
       .catch(function (e) {
         container.classList.remove('gen-tree-loading');
+        if (typeof onEmpty === 'function') { onEmpty(e); return; }
         container.innerHTML =
           '<div class="gen-tree-error">Ma\'lumot yuklanmadi: ' + e.message + '</div>';
       });
+  }
+
+  GenealogyTree.mount = function (selector, scholarId, onEmpty) {
+    var container = (typeof selector === 'string')
+      ? document.querySelector(selector) : selector;
+    _mount(container, '/api/v1/scholar/' + scholarId + '/tree', onEmpty);
+  };
+
+  GenealogyTree.mountByName = function (selector, name, onEmpty) {
+    var container = (typeof selector === 'string')
+      ? document.querySelector(selector) : selector;
+    _mount(container, '/api/v1/scholar/tree/by-name/' + encodeURIComponent(name), onEmpty);
   };
 
   global.GenealogyTree = GenealogyTree;

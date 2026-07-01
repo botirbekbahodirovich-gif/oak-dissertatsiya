@@ -30,6 +30,19 @@
 .gen-node .gn-plus circle { fill: #3b82f6; }
 .gen-node .gn-plus text { fill: #fff; font-size: 15px; font-weight: 800; }
 .gen-node:hover .gn-rect { filter: brightness(1.12); }
+
+/* Recursive collapsible tree (genealogy_tree.js) */
+#gen-canvas { position: absolute; inset: 0; }
+#gen-canvas .gen-tree-svg { width: 100%; height: 100%; }
+.gen-edge { fill: none; stroke: #475569; stroke-width: 1.6px; opacity: 0.6; }
+.gen-node-bg { fill: #1e293b; stroke: #3b82f6; stroke-width: 2px; }
+.gen-node.is-collapsed .gen-node-bg { stroke: #e36403; stroke-dasharray: 4 3; }
+.gen-node-initials { fill: #cbd5e1; font-weight: 800; font-family: inherit; }
+.gen-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
+.gen-badge-text { fill: #fff; font-weight: 800; }
+.gen-node-label { fill: #e2e8f0; font-size: 12px; font-weight: 600; }
+.gen-node { transition: transform 0.2s; }
+.gen-tree-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #f87171; text-align: center; padding: 20px; }
 </style>
 {% endblock %}
 
@@ -58,35 +71,46 @@
         <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
         <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
       </div>
-      <svg id="gen-svg" style="display:none;"></svg>
+      <div id="gen-canvas" style="display:none;"></div>
       <div class="gen-tooltip" id="gen-tooltip"></div>
-      <div class="gen-hint">🖱️ Suring · ⚲ aylantiring · tugmani bosing → profilga o'ting · "+" → kengaytiring</div>
+      <div class="gen-hint">🖱️ Sharni bosing → shogirdlarni oching/yoping · raqam = bevosita shogirdlar soni</div>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="/static/js/genealogy.js"></script>
+<script src="/static/js/genealogy_tree.js"></script>
 <script>
 (function () {
   var OLIM = {{ olim_name|tojson }};
-  var genApi = null;
-  fetch('/api/genealogy/' + encodeURIComponent(OLIM))
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      document.getElementById('gen-loading').style.display = 'none';
-      var hasTree = (data.parents && data.parents.length) || (data.children && data.children.length) || (data.siblings && data.siblings.length);
-      if (!hasTree) { document.getElementById('gen-empty').style.display = 'flex'; return; }
-      document.getElementById('gen-svg').style.display = 'block';
-      genApi = window.renderGenealogy({ svg: '#gen-svg', data: data, tooltip: '#gen-tooltip', centerName: OLIM });
-    })
-    .catch(function () {
-      document.getElementById('gen-loading').style.display = 'none';
-      document.getElementById('gen-empty').style.display = 'flex';
-    });
-  document.getElementById('gen-reset').addEventListener('click', function () { if (genApi) genApi.reset(); });
+  var canvas = document.getElementById('gen-canvas');
+  var loading = document.getElementById('gen-loading');
+  var empty = document.getElementById('gen-empty');
+
+  function showEmpty() {
+    loading.style.display = 'none';
+    canvas.style.display = 'none';
+    empty.style.display = 'flex';
+  }
+
+  loading.style.display = 'flex';
+  canvas.style.display = 'block';
+  window.GenealogyTree.mountByName(canvas, OLIM, showEmpty);
+  // mountByName hides the loader itself once data resolves.
+  var poll = setInterval(function () {
+    if (!canvas.classList.contains('gen-tree-loading')) {
+      loading.style.display = 'none';
+      clearInterval(poll);
+    }
+  }, 120);
+
+  document.getElementById('gen-reset').addEventListener('click', function () {
+    loading.style.display = 'flex';
+    empty.style.display = 'none';
+    canvas.style.display = 'block';
+    window.GenealogyTree.mountByName(canvas, OLIM, showEmpty);
+  });
 })();
 </script>
 {% endblock %}

@@ -1443,17 +1443,16 @@ def import_oak():
 # array guards against cycles so the WITH RECURSIVE walk terminates.
 # ---------------------------------------------------------------------------
 
-@data_bp.route('/api/v1/scholar/<int:scholar_id>/tree', methods=['GET'])
-def scholar_tree(scholar_id):
+def _build_scholar_tree(root_name):
+    """Run the WITH RECURSIVE mentor→mentee walk and return a nested tree dict.
+
+    Shared by the id-based and name-based tree endpoints so both serve the
+    identical collapsible/recursive structure the frontend expects.
+    """
+    root_name = (root_name or '').strip()
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT olim_name FROM olim_profiles WHERE id = %s", (scholar_id,))
-            root = cur.fetchone()
-            if not root:
-                return jsonify({'error': 'scholar not found'}), 404
-            root_name = root[0]
-
             cur.execute(
                 """
                 WITH RECURSIVE tree AS (
@@ -1485,8 +1484,6 @@ def scholar_tree(scholar_id):
                 (root_name, root_name)
             )
             rows = cur.fetchall()
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
 
@@ -1506,9 +1503,35 @@ def scholar_tree(scholar_id):
         else:
             nodes[mentor]['children'].append(node)
 
-    return jsonify(root_node or {
+    return root_node or {
         'name': root_name, 'direct_students': 0, 'depth': 0, 'children': []
-    })
+    }
+
+
+@data_bp.route('/api/v1/scholar/<int:scholar_id>/tree', methods=['GET'])
+def scholar_tree(scholar_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT olim_name FROM olim_profiles WHERE id = %s", (scholar_id,))
+            root = cur.fetchone()
+    finally:
+        conn.close()
+    if not root:
+        return jsonify({'error': 'scholar not found'}), 404
+    try:
+        return jsonify(_build_scholar_tree(root[0]))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@data_bp.route('/api/v1/scholar/tree/by-name/<path:name>', methods=['GET'])
+def scholar_tree_by_name(name):
+    """Name-based recursive genealogy tree (used by the /genealogy/<name> page)."""
+    try:
+        return jsonify(_build_scholar_tree(name))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
@@ -1519,6 +1542,39 @@ def scholar_tree(scholar_id):
 #   red   = research co-authorship  [reserved — no source data yet]
 # Filters: ?spec=05.01.01 (code prefix), ?year_from & ?year_to, ?ego=<scholar_id>.
 # ---------------------------------------------------------------------------
+
+# Approximate city/region centroids for the geographic (map) mode. Institutions
+# are geocoded by keyword match on their name (Latin + Cyrillic forms) so the
+# Leaflet map can drop a marker per institution. Coarse but good enough to
+# cluster institutions by their host city.
+_UZ_CITY_COORDS = {
+    'toshkent': (41.311, 69.240), 'тошкент': (41.311, 69.240), 'ташкент': (41.311, 69.240),
+    'samarqand': (39.654, 66.960), 'самарқанд': (39.654, 66.960), 'самарканд': (39.654, 66.960),
+    'buxoro': (39.767, 64.421), 'бухоро': (39.767, 64.421), 'бухара': (39.767, 64.421),
+    'andijon': (40.783, 72.344), 'андижон': (40.783, 72.344), 'андижан': (40.783, 72.344),
+    "farg'ona": (40.389, 71.783), 'фарғона': (40.389, 71.783), 'фергана': (40.389, 71.783),
+    'fargona': (40.389, 71.783),
+    'namangan': (40.998, 71.672), 'наманган': (40.998, 71.672),
+    'qarshi': (38.860, 65.799), 'қарши': (38.860, 65.799), 'карши': (38.860, 65.799),
+    'nukus': (42.460, 59.617), 'нукус': (42.460, 59.617),
+    'urganch': (41.550, 60.631), 'урганч': (41.550, 60.631), 'ургенч': (41.550, 60.631),
+    'termiz': (37.224, 67.278), 'термиз': (37.224, 67.278), 'термез': (37.224, 67.278),
+    'navoiy': (40.084, 65.379), 'навоий': (40.084, 65.379), 'навои': (40.084, 65.379),
+    'jizzax': (40.116, 67.842), 'жиззах': (40.116, 67.842), 'джизак': (40.116, 67.842),
+    'guliston': (40.489, 68.783), 'гулистон': (40.489, 68.783),
+    'xiva': (41.378, 60.364), 'хива': (41.378, 60.364), 'хорезм': (41.378, 60.364),
+    'nurafshon': (41.028, 69.348), 'нурафшон': (41.028, 69.348),
+}
+
+
+def _geocode_institution(name):
+    """Best-effort (lat, lng) for an institution name via city keyword match."""
+    low = (name or '').lower()
+    for key, coord in _UZ_CITY_COORDS.items():
+        if key in low:
+            return coord
+    return None
+
 
 @data_bp.route('/api/v1/network', methods=['GET'])
 def network_graph():
@@ -1588,6 +1644,9 @@ def network_graph():
         if muassasa:
             i_id = 'i:' + muassasa.lower()
             add_node(i_id, muassasa, 'institution')
+            coord = _geocode_institution(muassasa)
+            if coord and 'lat' not in nodes[i_id]:
+                nodes[i_id]['lat'], nodes[i_id]['lng'] = coord
             inst_members.setdefault(i_id, set()).add(s_id)
 
     # blue: institutional collaboration proxy — connect the institution hub to
