@@ -126,4 +126,5 @@ def telegram_login():
 
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
+    session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     return jsonify({'success': True, 'redirect': '/'})
