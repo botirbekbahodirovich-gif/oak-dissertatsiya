@@ -1,0 +1,6 @@
+# OAK registry daily scraper — midnight (00:00) execution.
+# Install into /etc/cron.d/oak-scraper (run: sudo bash deploy/install_cron.sh).
+# Fields: minute hour day month weekday  user  command
+SHELL=/bin/bash
+DATABASE_URL=""
+0 0 * * * botirbek cd /opt/olimlar-uz && /opt/olimlar-uz/venv/bin/python scripts/daily_scraper.py >> /var/log/oak-scraper.log 2>&1

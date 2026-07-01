@@ -1,12 +1,5 @@
-{% macro ad_banner(position, size='horizontal') %}
-<div class="ad-container ad-{{ position }} ad-{{ size }}" data-ad-position="{{ position }}">
-  <div class="ad-placeholder">
-    <span class="ad-label">Reklama</span>
-    <!-- Replace this div content with actual ad code -->
-    <div class="ad-slot" id="ad-{{ position }}">
-      <p class="ad-cta">Shu joyda sizning reklamangiz bo'lishi mumkin</p>
-      <a href="https://t.me/olimlar_uz" class="ad-contact">Reklama joylashtirish →</a>
-    </div>
-  </div>
-</div>
-{% endmacro %}
+{# Fix 5.4: advertisement / sponsored banners purged platform-wide.
+   The macro is intentionally a no-op so every existing {{ ad_banner(...) }}
+   call renders nothing, maximizing whitespace for academic workflows.
+   Kept as a stub so template imports keep resolving. #}
+{% macro ad_banner(position, size='horizontal') %}{% endmacro %}

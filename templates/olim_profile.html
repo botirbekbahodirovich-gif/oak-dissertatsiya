@@ -178,7 +178,8 @@
   <div class="op-container op-header-inner">
     <div class="op-avatar-wrap">
       <div class="op-avatar">
-        {% if photo %}<img src="{{ photo }}" alt="{{ olim_name }}">{% else %}<span>{{ gender_emoji }}</span>{% endif %}
+        <img src="{{ photo or (olim_name | avatar_url) }}" alt="{{ olim_name }}"
+             onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
       </div>
       <span class="op-cam" title="Rasm yuklash (tez orada)">📷</span>
       <div><span class="op-works-badge">📋 Ilmiy ishlar {{ stats.total }}</span></div>

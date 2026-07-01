@@ -2,7 +2,7 @@ import os
 import hmac
 import hashlib
 import time
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
 import bcrypt
 from dotenv import load_dotenv
@@ -60,6 +60,7 @@ def login():
                 user_row = None
 
             if user_row and bcrypt.checkpw(password.encode(), user_row[3].encode()):
+                session.permanent = True
                 login_user(User(user_row[0], user_row[1], user_row[2]), remember=True)
                 next_url = request.args.get('next')
                 if next_url and is_safe_relative_url(next_url):
@@ -90,16 +91,24 @@ def register():
         else:
             pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
             try:
+                from app import User
                 conn = get_connection()
                 cur = conn.cursor()
                 cur.execute(
                     "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
                     (username, email, pw_hash)
                 )
+                new_id = cur.fetchone()[0]
                 conn.commit()
                 cur.close()
                 conn.close()
-                return redirect(url_for('auth.login', registered=1))
+                # Auto-login on successful registration: issue the secure session
+                # cookie (Flask-Login's persistent "token") immediately, so the
+                # user is authenticated on the very next request — no second login,
+                # no guest/redirect loop. Then send them straight to the dashboard.
+                session.permanent = True
+                login_user(User(new_id, username, email), remember=True)
+                return redirect('/dashboard')
             except psycopg2.IntegrityError as e:
                 message = str(e).lower()
                 if 'username' in message:
@@ -188,5 +197,6 @@ def telegram_login():
     except Exception as e:
         return jsonify({'success': False, 'error': f"Xatolik: {str(e)}"}), 200
 
+    session.permanent = True
     login_user(User(user_id, username, email), remember=True)
     return jsonify({'success': True, 'redirect': '/dashboard'})

@@ -59,6 +59,9 @@ def cabinet_login_required(view):
 
 
 def _set_session(user_id, olim_name=None):
+    # Commit a durable (permanent) session so a page refresh re-mounts the
+    # authenticated cabinet profile instead of dropping into a guest loop.
+    session.permanent = True
     session['cabinet_user_id'] = user_id
     session['cabinet_olim_name'] = olim_name or ''
 

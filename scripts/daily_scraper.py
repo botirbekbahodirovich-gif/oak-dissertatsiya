@@ -153,6 +153,20 @@ def detect_degree(text):
     return ""
 
 
+def normalize_patronymic(name: str) -> str:
+    """Fix 5.5: standardize Uzbek patronymic suffixes on scholar records.
+
+    Unifies mixed apostrophes/typos of "o'g'li" (oʻgʻli, o’g’li, ogli, ...)
+    and "qizi" onto a canonical `o'g'li` / `qizi`.
+    """
+    if not name:
+        return name
+    s = re.sub(r"[’‘ʻʼ`´]", "'", name)
+    s = re.sub(r"\bo'?\s*g'?\s*li\b", "o'g'li", s, flags=re.IGNORECASE)
+    s = re.sub(r"\bqiz[iy]\b", "qizi", s, flags=re.IGNORECASE)
+    return s
+
+
 def extract_olim_name(title: str) -> str:
     """Sarlavhadan olim ismini ajratish."""
     m = re.search(
@@ -309,13 +323,13 @@ def main():
             db_item = {
                 "oak_id":               str(item["id"]),
                 "link":                 item["link"],
-                "olim":                 parsed["olim"],
+                "olim":                 normalize_patronymic(parsed["olim"]),
                 "daraja":               parsed["daraja"],
                 "mavzu":                parsed["mavzu"],
                 "ixtisoslik":           parsed["ixtisoslik_shifrlari"],
                 "fan_tarmogi":          parsed["fan_tarmogi"],
                 "mavzu_raqami":         parsed["ro_yxat_raqami"],
-                "ilmiy_rahbar":         parsed["ilmiy_rahbar"],
+                "ilmiy_rahbar":         normalize_patronymic(parsed["ilmiy_rahbar"]),
                 "muassasa":             parsed["bajarilgan_muassasa"],
                 "ilmiy_kengash_raqami": parsed["ik_raqami"],
                 "opponent_1":           opp1,
