@@ -391,17 +391,39 @@ AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
 DEFAULT_AVATAR = "/static/images/default-avatar.svg"
 _AVATAR_STRIP = "'\"’‘ʻʼ`´"
 
+# Uzbek Cyrillic → Latin map (Supabase avatar filenames are lowercase Latin).
+KIRILL_TO_LATIN = {
+    'А': 'a', 'Б': 'b', 'В': 'v', 'Г': 'g', 'Д': 'd', 'Е': 'e', 'Ё': 'yo',
+    'Ж': 'j', 'З': 'z', 'И': 'i', 'Й': 'y', 'К': 'k', 'Л': 'l', 'М': 'm',
+    'Н': 'n', 'О': 'o', 'П': 'p', 'Р': 'r', 'С': 's', 'Т': 't', 'У': 'u',
+    'Ф': 'f', 'Х': 'x', 'Ц': 'ts', 'Ч': 'ch', 'Ш': 'sh', 'Щ': 'shch',
+    'Ъ': '', 'Ы': 'i', 'Ь': '', 'Э': 'e', 'Ю': 'yu', 'Я': 'ya',
+    'Ў': 'o', 'Қ': 'q', 'Ғ': 'g', 'Ҳ': 'h',
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'j', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'x', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'i', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'ў': 'o', 'қ': 'q', 'ғ': 'g', 'ҳ': 'h',
+}
+
+
+def transliterate(text):
+    """Uzbek Cyrillic → Latin transliteration (unknown chars pass through)."""
+    return "".join(KIRILL_TO_LATIN.get(ch, ch) for ch in (text or ""))
+
 
 def avatar_url(full_name):
     """Map a scholar name to its sanitized Supabase avatar URL
-    ({Last_Name}_{First_Name}_{Patronymic}.jpg): spaces→'_', quotes/ticks stripped,
-    consecutive underscores collapsed to one."""
+    ({last}_{first}_{patronymic}.jpg): Cyrillic→Latin, lowercased, spaces→'_',
+    quotes/ticks stripped, consecutive underscores collapsed to one."""
     s = (full_name or "").strip()
     if not s:
         return DEFAULT_AVATAR
+    s = transliterate(s).lower()
+    s = _re_util.sub(r"\s+", "_", s)
     for ch in _AVATAR_STRIP:
         s = s.replace(ch, "")
-    s = _re_util.sub(r"\s+", "_", s)
     s = _re_util.sub(r"_+", "_", s).strip("_")
     if not s:
         return DEFAULT_AVATAR
