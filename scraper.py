@@ -199,8 +199,29 @@ def main():
 
     new_items = []
     max_id_seen = last_id
+    added_total = 0
+    skipped_total = 0
+    consec_skip = 0      # ketma-ket SKIP bo'lgan (bazada mavjud) elementlar soni
+    stop = False
+
+    # Bazaga ulanish — sahifalar bo'ylab qayta ishlatiladi.
+    try:
+        from data import get_connection
+    except ImportError:
+        print("data.py topilmadi, bazaga yozilmadi.")
+        get_connection = None
+
+    conn = None
+    if get_connection is not None:
+        try:
+            conn = get_connection()
+        except Exception as e:
+            print("Bazaga ulanib bo'lmadi: " + str(e))
+            conn = None
 
     for page_num in range(1, MAX_PAGES + 1):
+        if stop:
+            break
         url = f"{BASE_URL}?page={page_num}" if page_num > 1 else BASE_URL
         print("Sahifa " + str(page_num) + " tekshirilmoqda...")
         html = fetch(url)
@@ -211,32 +232,40 @@ def main():
         if not items:
             break
 
-        page_ids = [it["id"] for it in items]
-        page_max = max(page_ids)
-        page_min = min(page_ids)
-
-        # Eng katta ID ni eslab qolamiz
-        if page_max > max_id_seen:
-            max_id_seen = page_max
-
-        # Agar sahifadagi barcha ID lar last_id dan kichik — to'xtaymiz
-        if page_min <= last_id and last_id > 0:
-            # Faqat yangilarini olamiz
-            for item in items:
-                if item["id"] > last_id:
-                    parsed = parse_announcement(item["raw_text"])
-                    new_items.append(_build_record(item, parsed))
-            print("  Eski e'lonlarga yetildi, to'xtatildi.")
-            break
-
-        # Hammasi yangi
         for item in items:
-            if item["id"] > last_id:
-                parsed = parse_announcement(item["raw_text"])
-                new_items.append(_build_record(item, parsed))
+            if item["id"] > max_id_seen:
+                max_id_seen = item["id"]
+
+            parsed = parse_announcement(item["raw_text"])
+            record = _build_record(item, parsed)
+
+            # Har bir elementni darhol bazaga yozamiz (ON CONFLICT bilan).
+            status = db_save_one(conn, record) if conn is not None else "skip"
+
+            if status == "added":
+                new_items.append(record)
+                added_total += 1
+                consec_skip = 0
+                # Faqat yangi qo'shilgan element log ga chiqadi
                 print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
+            elif status == "skip":
+                skipped_total += 1
+                consec_skip += 1
+                # 4 ta ketma-ket mavjud element = eski ma'lumotlarga yetdik
+                if consec_skip >= 4:
+                    print("  4 ta ketma-ket mavjud element — eski ma'lumotlarga "
+                          "yetildi, to'xtatildi.")
+                    stop = True
+                    break
+            # status == "error" — log db_save_one ichida chiqadi, davom etamiz
 
         time.sleep(DELAY)
+
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
     print("\nTopildi: " + str(len(new_items)) + " ta yangi e'lon")
 
@@ -247,87 +276,108 @@ def main():
         save_state(state)
         print("last_id yangilandi: " + str(max_id_seen))
 
-    # Natijani JSON ga saqlash (log uchun)
+    # Natijani JSON ga saqlash (faqat yangi qo'shilganlar — log uchun)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(new_items, f, ensure_ascii=False, indent=2)
 
-    # JSON dan keyin — bazaga ham to'g'ridan-to'g'ri yozamiz
-    save_to_db(new_items)
+    print("Bazaga yozildi: " + str(added_total) + " ta yangi, "
+          + str(skipped_total) + " ta mavjud (skip).")
 
     return new_items
 
 
-def save_to_db(items):
-    """Yangi e'lonlarni Postgres 'dissertations' jadvaliga yozadi.
+# ── Bazaga yozish yordamchilari ─────────────────────────────────────────────
 
-    oak_id bo'yicha ON CONFLICT DO NOTHING — takroriy yozuvlar o'tkazib
-    yuboriladi. Har bir yozuv alohida try/except ichida qo'shiladi, shuning
-    uchun bitta xato boshqalarini to'xtatmaydi.
+_INSERT_SQL = """
+    INSERT INTO dissertations (
+        oak_id, sana, olim, daraja, mavzu, ixtisoslik, fan_tarmoqi,
+        mavzu_raqami, ilmiy_rahbar, muassasa, ilmiy_kengash,
+        ilmiy_kengash_raqami, opponent_1, yetakchi_tashkilot, link, yonalish
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+    )
+    ON CONFLICT (oak_id) DO NOTHING
+"""
+
+
+def _item_values(item):
+    """_build_record() lug'atini INSERT ustunlari tartibiga moslaydi."""
+    # "Rasmiy opponentlar" — matn; birinchi opponentni ajratamiz.
+    opponents = item.get("Rasmiy opponentlar") or ""
+    opponent_1 = opponents.split(";")[0].strip() if opponents else ""
+    return (
+        str(item.get("ID", "")),                # oak_id
+        item.get("Sana", ""),                   # sana
+        item.get("Olim", ""),                   # olim
+        item.get("Daraja", ""),                 # daraja
+        item.get("Mavzu va ixtisoslik", ""),    # mavzu
+        item.get("Ixtisoslik shifrlari", ""),   # ixtisoslik
+        item.get("Fan tarmogi", ""),            # fan_tarmoqi
+        item.get("Royxat raqami", ""),          # mavzu_raqami
+        item.get("Ilmiy rahbar", ""),           # ilmiy_rahbar
+        item.get("Bajarilgan muassasa", ""),    # muassasa
+        item.get("IK muassasa", ""),            # ilmiy_kengash
+        item.get("IK raqami", ""),              # ilmiy_kengash_raqami
+        opponent_1,                             # opponent_1
+        item.get("Yetakchi tashkilot", ""),     # yetakchi_tashkilot
+        item.get("Havola", ""),                 # link
+        item.get("Yonalish", ""),               # yonalish
+    )
+
+
+def db_save_one(conn, item):
+    """Bitta elementni bazaga yozadi. 'added' / 'skip' / 'error' qaytaradi."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute(_INSERT_SQL, _item_values(item))
+            hit = cur.rowcount
+        conn.commit()
+        return "added" if hit else "skip"
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print("  DB xato (ID=" + str(item.get("ID")) + "): " + str(e))
+        return "error"
+
+
+def save_to_db(items):
+    """Elementlar ro'yxatini bazaga yozadi (har biri alohida ulanish bilan).
+
+    oak_id bo'yicha ON CONFLICT DO NOTHING — takroriy yozuvlar skip qilinadi.
+    Bitta yozuvdagi xato boshqalarini to'xtatmaydi.
     """
     if not items:
-        print("Bazaga yozish uchun yangi e'lon yo'q.")
+        print("Bazaga yozish: element yo'q.")
         return
 
-    from data import get_connection
+    try:
+        from data import get_connection
+    except ImportError:
+        print("data.py topilmadi, bazaga yozilmadi.")
+        return
 
-    inserted = 0
+    added = 0
     skipped = 0
-    try:
-        conn = get_connection()
-    except Exception as e:
-        print("Bazaga ulanib bo'lmadi: " + str(e))
-        return
-
-    sql = """
-        INSERT INTO dissertations (
-            oak_id, sana, olim, daraja, mavzu, ixtisoslik, fan_tarmoqi,
-            mavzu_raqami, ilmiy_rahbar, muassasa, ilmiy_kengash,
-            ilmiy_kengash_raqami, opponent_1, yetakchi_tashkilot, link, yonalish
-        ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-        )
-        ON CONFLICT (oak_id) DO NOTHING
-    """
-    try:
-        for rec in items:
-            # "Rasmiy opponentlar" — matn; birinchi opponentni ajratamiz.
-            opponents = rec.get("Rasmiy opponentlar") or ""
-            opponent_1 = opponents.split(";")[0].strip() if opponents else ""
-            values = (
-                str(rec.get("ID", "")),                 # oak_id
-                rec.get("Sana", ""),                    # sana
-                rec.get("Olim", ""),                    # olim
-                rec.get("Daraja", ""),                  # daraja
-                rec.get("Mavzu va ixtisoslik", ""),     # mavzu
-                rec.get("Ixtisoslik shifrlari", ""),    # ixtisoslik
-                rec.get("Fan tarmogi", ""),             # fan_tarmoqi
-                rec.get("Royxat raqami", ""),           # mavzu_raqami
-                rec.get("Ilmiy rahbar", ""),            # ilmiy_rahbar
-                rec.get("Bajarilgan muassasa", ""),     # muassasa
-                rec.get("IK muassasa", ""),             # ilmiy_kengash
-                rec.get("IK raqami", ""),               # ilmiy_kengash_raqami
-                opponent_1,                             # opponent_1
-                rec.get("Yetakchi tashkilot", ""),      # yetakchi_tashkilot
-                rec.get("Havola", ""),                  # link
-                rec.get("Yonalish", ""),                # yonalish
-            )
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(sql, values)
-                    hit = cur.rowcount
-                conn.commit()
-                if hit:
-                    inserted += 1
-                else:
-                    skipped += 1
-            except Exception as e:
-                conn.rollback()
-                print("  ! Xato (ID=" + str(rec.get("ID", "?")) + "): " + str(e))
-    finally:
-        conn.close()
-
-    print("Bazaga yozildi: " + str(inserted) + " ta yangi, "
+    for item in items:
+        try:
+            conn = get_connection()
+        except Exception as e:
+            print("  DB xato (ID=" + str(item.get("ID")) + "): " + str(e))
+            continue
+        status = db_save_one(conn, item)
+        try:
+            conn.close()
+        except Exception:
+            pass
+        if status == "added":
+            added += 1
+        elif status == "skip":
+            skipped += 1
+    print("Bazaga yozildi: " + str(added) + " ta yangi, "
           + str(skipped) + " ta mavjud (skip).")
+    return added, skipped
 
 
 def _build_record(item, parsed):
