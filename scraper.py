@@ -12,7 +12,11 @@ import os
 from datetime import datetime
 
 # ----------------- SOZLAMALAR -----------------
-BASE_URL = "https://oak.uz/page/8"
+# Bir nechta manba — har biri bir xil strukturada, alohida scraping qilinadi.
+SOURCES = [
+    {"url": "https://oak.uz/page/8",  "yonalish": "Oddiy"},
+    {"url": "https://oak.uz/page/31", "yonalish": "Mustaqil ilmiy kengash"},
+]
 MAX_PAGES = 10        # Kuniga max 10 sahifa tekshiriladi (~100 ta e'lon)
 DELAY = 1.0
 TIMEOUT = 20
@@ -179,7 +183,14 @@ def load_state():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"last_id": 0, "last_run": None}
+    # Har bir manba uchun alohida last_id.
+    return {"last_id_page8": 0, "last_id_page31": 0, "last_run": None}
+
+
+def _state_key(url):
+    """Manba URL idan state kalitini hosil qiladi: .../page/8 -> last_id_page8."""
+    m = re.search(r"/page/(\d+)", url)
+    return "last_id_page" + (m.group(1) if m else "0")
 
 
 def save_state(state):
@@ -190,21 +201,16 @@ def save_state(state):
 # ----------------- ASOSIY -----------------
 def main():
     state = load_state()
-    last_id = state.get("last_id", 0)
     print("=" * 50)
-    print("OAK.UZ kunlik scraper")
-    print("Oxirgi ID: " + str(last_id))
+    print("OAK.UZ kunlik scraper (" + str(len(SOURCES)) + " manba)")
     print("Sana: " + datetime.now().isoformat())
     print("=" * 50)
 
     new_items = []
-    max_id_seen = last_id
     added_total = 0
     skipped_total = 0
-    consec_skip = 0      # ketma-ket SKIP bo'lgan (bazada mavjud) elementlar soni
-    stop = False
 
-    # Bazaga ulanish — sahifalar bo'ylab qayta ishlatiladi.
+    # Bazaga ulanish — barcha manbalar bo'ylab bir marta ochiladi.
     try:
         from data import get_connection
     except ImportError:
@@ -219,47 +225,67 @@ def main():
             print("Bazaga ulanib bo'lmadi: " + str(e))
             conn = None
 
-    for page_num in range(1, MAX_PAGES + 1):
-        if stop:
-            break
-        url = f"{BASE_URL}?page={page_num}" if page_num > 1 else BASE_URL
-        print("Sahifa " + str(page_num) + " tekshirilmoqda...")
-        html = fetch(url)
-        if html is None:
-            continue
+    # Har bir manbani alohida sahifalab, alohida smart-stop bilan scraping qilamiz.
+    for source in SOURCES:
+        src_url = source["url"]
+        yonalish = source["yonalish"]
+        key = _state_key(src_url)
+        last_id = state.get(key, 0)
+        max_id_seen = last_id
+        consec_skip = 0
+        stop = False
 
-        items = parse_list_page(html)
-        if not items:
-            break
+        print("-" * 50)
+        print("Manba: " + yonalish + " (" + src_url + ")")
+        print("Oxirgi ID (" + key + "): " + str(last_id))
+        print("-" * 50)
 
-        for item in items:
-            if item["id"] > max_id_seen:
-                max_id_seen = item["id"]
+        for page_num in range(1, MAX_PAGES + 1):
+            if stop:
+                break
+            url = f"{src_url}?page={page_num}" if page_num > 1 else src_url
+            print("Sahifa " + str(page_num) + " tekshirilmoqda...")
+            html = fetch(url)
+            if html is None:
+                continue
 
-            parsed = parse_announcement(item["raw_text"])
-            record = _build_record(item, parsed)
+            items = parse_list_page(html)
+            if not items:
+                break
 
-            # Har bir elementni darhol bazaga yozamiz (ON CONFLICT bilan).
-            status = db_save_one(conn, record) if conn is not None else "skip"
+            for item in items:
+                if item["id"] > max_id_seen:
+                    max_id_seen = item["id"]
 
-            if status == "added":
-                new_items.append(record)
-                added_total += 1
-                consec_skip = 0
-                # Faqat yangi qo'shilgan element log ga chiqadi
-                print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
-            elif status == "skip":
-                skipped_total += 1
-                consec_skip += 1
-                # 4 ta ketma-ket mavjud element = eski ma'lumotlarga yetdik
-                if consec_skip >= 4:
-                    print("  4 ta ketma-ket mavjud element — eski ma'lumotlarga "
-                          "yetildi, to'xtatildi.")
-                    stop = True
-                    break
-            # status == "error" — log db_save_one ichida chiqadi, davom etamiz
+                parsed = parse_announcement(item["raw_text"])
+                record = _build_record(item, parsed, yonalish)
 
-        time.sleep(DELAY)
+                # Har bir elementni darhol bazaga yozamiz (ON CONFLICT bilan).
+                status = db_save_one(conn, record) if conn is not None else "skip"
+
+                if status == "added":
+                    new_items.append(record)
+                    added_total += 1
+                    consec_skip = 0
+                    # Faqat yangi qo'shilgan element log ga chiqadi
+                    print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
+                elif status == "skip":
+                    skipped_total += 1
+                    consec_skip += 1
+                    # 4 ta ketma-ket mavjud element = eski ma'lumotlarga yetdik
+                    if consec_skip >= 4:
+                        print("  4 ta ketma-ket mavjud element — eski ma'lumotlarga "
+                              "yetildi, to'xtatildi.")
+                        stop = True
+                        break
+                # status == "error" — log db_save_one ichida chiqadi, davom etamiz
+
+            time.sleep(DELAY)
+
+        # Ushbu manba uchun alohida last_id yangilash
+        if max_id_seen > last_id:
+            state[key] = max_id_seen
+            print(key + " yangilandi: " + str(max_id_seen))
 
     if conn is not None:
         try:
@@ -267,14 +293,11 @@ def main():
         except Exception:
             pass
 
-    print("\nTopildi: " + str(len(new_items)) + " ta yangi e'lon")
+    # State faylini bir marta saqlaymiz
+    state["last_run"] = datetime.now().isoformat()
+    save_state(state)
 
-    # State yangilash
-    if max_id_seen > last_id:
-        state["last_id"] = max_id_seen
-        state["last_run"] = datetime.now().isoformat()
-        save_state(state)
-        print("last_id yangilandi: " + str(max_id_seen))
+    print("\nTopildi: " + str(len(new_items)) + " ta yangi e'lon")
 
     # Natijani JSON ga saqlash (faqat yangi qo'shilganlar — log uchun)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
@@ -380,9 +403,9 @@ def save_to_db(items):
     return added, skipped
 
 
-def _build_record(item, parsed):
+def _build_record(item, parsed, yonalish=None):
     import re
-    
+
     # Olim ismini sarlavhadan tozalab ajratish
     title = item.get("title", "")
     olim = ""
@@ -434,7 +457,8 @@ def _build_record(item, parsed):
         "IK raqami": parsed["ik_raqami"],
         "Rasmiy opponentlar": parsed["opponentlar"],
         "Yetakchi tashkilot": parsed["yetakchi_tashkilot"],
-        "Yonalish": parsed["yo_nalish"],
+        # Manba "yonalish" i berilgan bo'lsa — o'shani yozamiz, aks holda parsed.
+        "Yonalish": yonalish if yonalish else parsed["yo_nalish"],
     }
 
 
