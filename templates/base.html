@@ -1546,5 +1546,80 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 {% endif %}
+
+{% if current_user.is_authenticated %}
+<!-- Real-time admin notification modal — mandatory, anti-refresh (server-tracked dismissal). -->
+<style>
+  #notifModal { position: fixed; inset: 0; z-index: 4200; display: none;
+    align-items: center; justify-content: center; background: rgba(2,6,23,0.78);
+    backdrop-filter: blur(3px); padding: 16px; }
+  #notifModal.show { display: flex; }
+  #notifModal .nm-card { background: #0f172a; border: 1px solid #334155;
+    border-radius: 18px; max-width: 480px; width: 100%; padding: 26px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5); color: #e2e8f0; }
+  #notifModal .nm-badge { display: inline-block; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
+    margin-bottom: 12px; background: #1e293b; color: #93c5fd; }
+  #notifModal.lvl-warning .nm-badge { background: #422006; color: #fbbf24; }
+  #notifModal.lvl-danger  .nm-badge { background: #450a0a; color: #f87171; }
+  #notifModal.lvl-success .nm-badge { background: #052e16; color: #4ade80; }
+  #notifModal h3 { margin: 0 0 8px; font-size: 1.25rem; color: #f1f5f9; }
+  #notifModal p { margin: 0 0 20px; color: #cbd5e1; font-size: 0.94rem; line-height: 1.55; white-space: pre-wrap; }
+  #notifModal .nm-ok { width: 100%; background: #3b82f6; color: #fff; border: none;
+    border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
+  #notifModal .nm-ok:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+<div id="notifModal" role="dialog" aria-modal="true" aria-labelledby="nmTitle">
+  <div class="nm-card">
+    <span class="nm-badge" id="nmBadge">Bildirishnoma</span>
+    <h3 id="nmTitle"></h3>
+    <p id="nmBody"></p>
+    <button class="nm-ok" id="nmOk" onclick="nmAck()">Tushunarli</button>
+  </div>
+</div>
+<script>
+(function () {
+  var queue = [], current = null;
+  var modal = document.getElementById('notifModal');
+  function render(n) {
+    current = n;
+    modal.className = 'lvl-' + (n.level || 'info');
+    document.getElementById('nmBadge').textContent =
+      n.kind === 'personal' ? 'Shaxsiy ogohlantirish' : 'E\'lon';
+    document.getElementById('nmTitle').textContent = n.title || 'Bildirishnoma';
+    document.getElementById('nmBody').textContent = n.message || '';
+    var ok = document.getElementById('nmOk');
+    ok.disabled = false; ok.textContent = 'Tushunarli';
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function next() {
+    if (queue.length) { render(queue.shift()); }
+    else { modal.classList.remove('show'); document.body.style.overflow = ''; current = null; }
+  }
+  window.nmAck = function () {
+    if (!current) { next(); return; }
+    var ok = document.getElementById('nmOk');
+    ok.disabled = true; ok.textContent = '…';
+    // Persist dismissal server-side FIRST, so an F5 refresh never re-renders it.
+    fetch('/api/v1/notifications/dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: current.kind, id: current.id })
+    }).then(function () { next(); }).catch(function () {
+      ok.disabled = false; ok.textContent = 'Tushunarli';
+    });
+  };
+  // On every session launch / reload, pull only unread notices from the server.
+  fetch('/api/v1/notifications/active', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.ok && d.notifications && d.notifications.length) {
+        queue = d.notifications; next();
+      }
+    }).catch(function () {});
+})();
+</script>
+{% endif %}
 </body>
 </html>

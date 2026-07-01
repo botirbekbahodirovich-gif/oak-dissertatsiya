@@ -407,6 +407,7 @@ from cabinet import cabinet_bp
 csrf.exempt(cabinet_bp)
 from blueprints.admin import admin_bp
 from blueprints.content import content_bp
+from blueprints.notifications import notifications_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -415,6 +416,7 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(cabinet_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(content_bp)
+app.register_blueprint(notifications_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
