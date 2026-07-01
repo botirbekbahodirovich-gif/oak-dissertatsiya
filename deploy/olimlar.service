@@ -1,0 +1,19 @@
+# Gunicorn systemd unit for Olimlar.uz (Flask app, entry point: app:app).
+# Installed by deploy.sh as /etc/systemd/system/olimlar.service.
+# The __PLACEHOLDERS__ are substituted by deploy.sh at install time.
+[Unit]
+Description=Olimlar.uz Gunicorn (Flask)
+After=network.target
+
+[Service]
+User=__USER__
+Group=__USER__
+WorkingDirectory=__APP_DIR__
+EnvironmentFile=__APP_DIR__/.env
+ExecStart=__APP_DIR__/venv/bin/gunicorn app:app --bind __BIND__ --workers 2 --threads 2 --timeout 120
+Restart=always
+RestartSec=3
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

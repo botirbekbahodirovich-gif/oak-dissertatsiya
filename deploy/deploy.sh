@@ -1,51 +1,84 @@
 #!/usr/bin/env bash
 #
-# One-shot, idempotent production deploy for Olimlar.uz on a Google Compute
-# Engine VM (Ubuntu). Installs system packages, sets up a venv, writes the
-# systemd + nginx config, and (if DNS already points here) obtains a Let's
-# Encrypt certificate. Safe to re-run.
+# One-shot, SELF-CONTAINED production deploy for Olimlar.uz on a Google Compute
+# Engine VM (Ubuntu). Copy-paste this whole file into the VM, or save it as
+# deploy.sh — it needs no other files.
 #
-# Usage (run ON the VM, as a sudo-capable user):
-#   DATABASE_URL='postgresql://USER:PASS@host/db?sslmode=require' \
-#   SESSION_SECRET='<64-hex or leave unset to auto-generate>' \
-#   DOMAIN='olimlar.uz' CERTBOT_EMAIL='admin@olimlar.uz' \
-#   sudo -E bash deploy/deploy.sh
+# HOW TO USE:
+#   1. Edit the CONFIG block below (REPO_URL, DATABASE_URL, SESSION_SECRET, DOMAIN, EMAIL).
+#   2. Run it:   sudo bash deploy.sh
+#
+# Safe to re-run (idempotent): re-running pulls the latest code and restarts the app.
 #
 set -euo pipefail
 
-# ── Config (override via env) ───────────────────────────────────────────────
-REPO_URL="${REPO_URL:-https://github.com/botirbekbahodirovich-gif/oak-dissertatsiya.git}"
-APP_DIR="${APP_DIR:-/opt/olimlar-uz}"
-DOMAIN="${DOMAIN:-olimlar.uz}"
-SERVER_IP="${SERVER_IP:-34.141.70.133}"
-CERTBOT_EMAIL="${CERTBOT_EMAIL:-admin@${DOMAIN}}"
+# ════════════════════════════════════════════════════════════════════════════
+#  CONFIG — EDIT THESE BEFORE RUNNING
+# ════════════════════════════════════════════════════════════════════════════
+
+# Your GitHub repo (HTTPS). For a private repo use a token URL, e.g.
+#   https://USERNAME:TOKEN@github.com/USERNAME/oak-dissertatsiya.git
+REPO_URL="https://github.com/botirbekbahodirovich-gif/oak-dissertatsiya.git"
+
+# Neon / Postgres connection string. KEEP THE QUOTES (it contains & and ?).
+DATABASE_URL="postgresql://neondb_owner:npg_AckqeSMnK3w2@ep-silent-tooth-algm2fks-pooler.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+
+# Flask session/CSRF secret. Generate one with:
+#   python3 -c "import secrets; print(secrets.token_hex(32))"
+# Leave as the placeholder to have this script auto-generate a strong value.
+SESSION_SECRET="CHANGE_ME_OR_LEAVE_TO_AUTOGENERATE"
+
+# Domain + email for the TLS certificate.
+DOMAIN="olimlar.uz"
+CERTBOT_EMAIL="you@example.com"
+
+# Where the app lives on the VM and how Gunicorn binds. Usually no need to change.
+APP_DIR="/opt/olimlar-uz"
 BIND="127.0.0.1:8000"
 SERVICE="olimlar"
-DEPLOY_USER="${SUDO_USER:-$(id -un)}"
 
+# ════════════════════════════════════════════════════════════════════════════
+#  END CONFIG — you shouldn't need to edit below this line
+# ════════════════════════════════════════════════════════════════════════════
+
+DEPLOY_USER="${SUDO_USER:-$(id -un)}"
 log() { echo -e "\n\033[1;36m== $* ==\033[0m"; }
 
 if [ "$(id -u)" -ne 0 ]; then
-  echo "Run with sudo: sudo -E bash deploy/deploy.sh" >&2; exit 1
+  echo "Please run with sudo:  sudo bash deploy.sh" >&2; exit 1
 fi
-if [ -z "${DATABASE_URL:-}" ]; then
-  echo "ERROR: DATABASE_URL env var is required (passed via sudo -E)." >&2; exit 1
+if [[ "$REPO_URL" == *"YOUR_USERNAME"* ]]; then
+  echo "ERROR: edit REPO_URL in the CONFIG block first." >&2; exit 1
+fi
+if [[ "$DATABASE_URL" == *"USER:PASSWORD"* ]]; then
+  echo "ERROR: edit DATABASE_URL in the CONFIG block first." >&2; exit 1
 fi
 
 # ── 1. System packages ──────────────────────────────────────────────────────
 log "Installing system packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y --no-install-recommends \
-  python3 python3-venv python3-dev python3-pip \
-  git nginx certbot python3-certbot-nginx \
-  libpq-dev build-essential curl ca-certificates
+apt-get install -y --no-install-recommends software-properties-common ca-certificates curl
 
-# Prefer a 3.11+ interpreter; fall back to system python3 (>=3.10 works fine).
-PYBIN="$(command -v python3.12 || command -v python3.11 || command -v python3)"
+# Python 3.11 (Ubuntu 24.04 ships 3.12). Try the distro first, then deadsnakes.
+if ! command -v python3.11 >/dev/null 2>&1; then
+  add-apt-repository -y ppa:deadsnakes/ppa || true
+  apt-get update -y
+fi
+apt-get install -y --no-install-recommends \
+  python3.11 python3.11-venv python3.11-dev \
+  python3-pip git nginx certbot python3-certbot-nginx \
+  libpq-dev build-essential || \
+apt-get install -y --no-install-recommends \
+  python3 python3-venv python3-dev \
+  python3-pip git nginx certbot python3-certbot-nginx \
+  libpq-dev build-essential
+
+# Pick the best available interpreter (prefer 3.11, fall back gracefully).
+PYBIN="$(command -v python3.11 || command -v python3.12 || command -v python3)"
 echo "Using interpreter: $PYBIN ($($PYBIN --version))"
 
-# ── 2. Code ─────────────────────────────────────────────────────────────────
+# ── 2. Clone / update the code ──────────────────────────────────────────────
 log "Fetching code into $APP_DIR"
 mkdir -p "$APP_DIR"
 if [ -d "$APP_DIR/.git" ]; then
@@ -56,31 +89,29 @@ else
 fi
 chown -R "$DEPLOY_USER":"$DEPLOY_USER" "$APP_DIR"
 
-# ── 3. venv + dependencies ──────────────────────────────────────────────────
-log "Creating venv and installing requirements"
+# ── 3. Virtual environment + dependencies ───────────────────────────────────
+log "Creating virtualenv and installing requirements"
 sudo -u "$DEPLOY_USER" "$PYBIN" -m venv "$APP_DIR/venv"
 sudo -u "$DEPLOY_USER" "$APP_DIR/venv/bin/pip" install --upgrade pip
 sudo -u "$DEPLOY_USER" "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 sudo -u "$DEPLOY_USER" "$APP_DIR/venv/bin/pip" install gunicorn
 
-# ── 4. .env (secrets stay on the VM, never in git) ──────────────────────────
+# ── 4. .env (secrets live only on the VM, never in git) ─────────────────────
 log "Writing $APP_DIR/.env"
-SESSION_SECRET="${SESSION_SECRET:-$(python3 -c 'import secrets;print(secrets.token_hex(32))')}"
+if [[ "$SESSION_SECRET" == "CHANGE_ME_OR_LEAVE_TO_AUTOGENERATE" || -z "$SESSION_SECRET" ]]; then
+  SESSION_SECRET="$("$PYBIN" -c 'import secrets; print(secrets.token_hex(32))')"
+  echo "SESSION_SECRET auto-generated."
+fi
 umask 077
 cat > "$APP_DIR/.env" <<ENV
-# Generated by deploy.sh — do not commit
+# Generated by deploy.sh — DO NOT COMMIT
 SESSION_SECRET=${SESSION_SECRET}
 DATABASE_URL=${DATABASE_URL}
 ENV
-# Carry over optional keys if provided in the environment.
-for k in GROQ_API_KEY GEMINI_API_KEY OAK_API_KEY GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
-         GOOGLE_REDIRECT_URI TELEGRAM_BOT_TOKEN TELEGRAM_BOT_USERNAME SITE_API_URL SITE_API_KEY; do
-  v="${!k:-}"; [ -n "$v" ] && echo "$k=$v" >> "$APP_DIR/.env"
-done
 chown "$DEPLOY_USER":"$DEPLOY_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 
-# ── 5a. systemd service (Gunicorn) ──────────────────────────────────────────
+# ── 5. Gunicorn systemd service (inlined) ───────────────────────────────────
 log "Installing systemd service: $SERVICE"
 cat > "/etc/systemd/system/${SERVICE}.service" <<UNIT
 [Unit]
@@ -91,6 +122,7 @@ After=network.target
 User=${DEPLOY_USER}
 Group=${DEPLOY_USER}
 WorkingDirectory=${APP_DIR}
+EnvironmentFile=${APP_DIR}/.env
 ExecStart=${APP_DIR}/venv/bin/gunicorn app:app --bind ${BIND} --workers 2 --threads 2 --timeout 120
 Restart=always
 RestartSec=3
@@ -103,7 +135,7 @@ systemctl daemon-reload
 systemctl enable "$SERVICE"
 systemctl restart "$SERVICE"
 
-# ── 5b. Nginx reverse proxy ────────────────────────────────────────────────
+# ── 6. Nginx reverse proxy (inlined) ────────────────────────────────────────
 log "Configuring nginx for $DOMAIN"
 cat > "/etc/nginx/sites-available/${DOMAIN}" <<NGINX
 server {
@@ -111,8 +143,10 @@ server {
     listen [::]:80;
     server_name ${DOMAIN} www.${DOMAIN};
 
+    # Allow large uploads (CSV/Excel data imports).
     client_max_body_size 250M;
 
+    # Serve static assets directly for speed.
     location /static/ {
         alias ${APP_DIR}/static/;
         expires 7d;
@@ -137,30 +171,28 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
-# ── 5c. SSL via certbot (only if DNS already resolves to this VM) ───────────
-log "Checking DNS for TLS"
-RESOLVED="$(getent hosts "$DOMAIN" | awk '{print $1}' | head -1 || true)"
-if [ "$RESOLVED" = "$SERVER_IP" ]; then
-  echo "DNS OK ($DOMAIN -> $SERVER_IP). Requesting certificate..."
-  certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" \
-    --non-interactive --agree-tos -m "$CERTBOT_EMAIL" --redirect || \
-    echo "certbot failed — re-run after DNS fully propagates: certbot --nginx -d $DOMAIN -d www.$DOMAIN"
+# ── 7. SSL via certbot ──────────────────────────────────────────────────────
+log "Requesting TLS certificate (certbot)"
+# This only succeeds once $DOMAIN's A record points at this VM. If it fails,
+# fix DNS and re-run the single command printed below.
+if certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" \
+     --non-interactive --agree-tos -m "$CERTBOT_EMAIL" --redirect; then
+  echo "TLS certificate installed."
 else
-  echo "SKIP TLS: $DOMAIN currently resolves to '${RESOLVED:-nothing}', not $SERVER_IP."
-  echo "Point the A record to $SERVER_IP, then run:"
+  echo "certbot failed (DNS not pointing here yet?). After DNS propagates run:"
   echo "  sudo certbot --nginx -d $DOMAIN -d www.$DOMAIN --agree-tos -m $CERTBOT_EMAIL --redirect"
 fi
 
-# ── 6. Smoke test ───────────────────────────────────────────────────────────
+# ── 8. Smoke test ───────────────────────────────────────────────────────────
 log "Smoke test"
 sleep 2
 systemctl --no-pager --full status "$SERVICE" | head -8 || true
-for p in /login /journals /universities /; do
+for p in / /login /journals /universities; do
   code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "http://${BIND}${p}" || echo 000)
   echo "  $code  http://${BIND}${p}"
 done
 
 log "DONE"
 echo "App dir : $APP_DIR  (user: $DEPLOY_USER)"
-echo "Service : systemctl status $SERVICE   |   logs: journalctl -u $SERVICE -f"
-echo "Site    : http://$DOMAIN  (https after certbot)"
+echo "Service : systemctl status $SERVICE    logs: journalctl -u $SERVICE -f"
+echo "Site    : http://$DOMAIN  (https after certbot succeeds)"
