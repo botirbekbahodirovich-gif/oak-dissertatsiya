@@ -616,10 +616,7 @@
     .broadcast-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border-bottom: 1px solid rgba(245,158,11,0.3); }
     .broadcast-success { background: rgba(5,150,105,0.15); color: #34d399; border-bottom: 1px solid rgba(5,150,105,0.3); }
   </style>
-{% if not current_user.is_authenticated and not session.get('cabinet_user_id')
-      and request.path not in ['/register', '/login']
-      and not request.path.startswith('/cabinet/login')
-      and not request.path.startswith('/auth/') %}
+{% if request.path == '/register' %}
   <!-- Fix 5.2: freeze the viewport during unauthenticated init (anti-bypass). -->
   <style id="guest-freeze">html, body { overflow: hidden !important; }
     body > *:not(script):not(style) { pointer-events: none !important; }</style>

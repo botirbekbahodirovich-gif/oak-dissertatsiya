@@ -342,13 +342,37 @@ def google_callback():
         finally:
             conn.close()
 
-        next_url = session.pop('google_next', '/')
-        if not (next_url.startswith('/') and not next_url.startswith('//')):
-            next_url = '/'
-        return redirect(next_url)
+        # Asosiy sayt (Flask-Login / users jadvali) ga ham kiritamiz — Google
+        # bilan kirgan foydalanuvchi bosh sahifada avtorizatsiyalangan bo'ladi.
+        _login_main_user(email, name)
+
+        session.pop('google_next', None)
+        return redirect('/')
     except Exception as e:
         print(f"Google OAuth error: {e}")
         return redirect('/cabinet/login?error=google')
+
+
+def _login_main_user(email, name=None):
+    """users jadvalida email bo'yicha topadi/yaratadi va Flask-Login qiladi."""
+    from flask_login import login_user
+    from app import User
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+            row = cur.fetchone()
+            if not row:
+                cur.execute(
+                    "INSERT INTO users (username, email, password_hash) "
+                    "VALUES (%s, %s, %s) RETURNING id, username, email",
+                    (email, email, 'google_auth'))
+                row = cur.fetchone()
+                conn.commit()
+    finally:
+        conn.close()
+    session.permanent = True
+    login_user(User(row[0], row[1], row[2]), remember=True)
 
 
 @cabinet_bp.route('/cabinet/api/logout', methods=['POST', 'GET'])

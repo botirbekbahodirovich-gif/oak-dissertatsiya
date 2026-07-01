@@ -32,94 +32,21 @@ def get_connection():
     return _get_connection()
 
 
-@auth_bp.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login')
 def login():
+    # Parol/username formasi olib tashlandi — faqat Telegram va Google orqali kirish.
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    error = None
     registered = request.args.get('registered')
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        if not username or not password:
-            error = "Foydalanuvchi nomi va parol kiritilishi shart."
-        else:
-            from app import User, is_safe_relative_url
-            user_row = None
-            try:
-                conn = get_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT id, username, email, password_hash FROM users WHERE username = %s",
-                    (username,)
-                )
-                user_row = cur.fetchone()
-                cur.close()
-                conn.close()
-            except Exception:
-                user_row = None
-
-            if user_row and bcrypt.checkpw(password.encode(), user_row[3].encode()):
-                session.permanent = True
-                login_user(User(user_row[0], user_row[1], user_row[2]), remember=True)
-                next_url = request.args.get('next')
-                if next_url and is_safe_relative_url(next_url):
-                    return redirect(next_url)
-                return redirect(url_for('index'))
-            error = "Foydalanuvchi nomi yoki parol noto'g'ri."
-    return render_template('login.html', error=error, registered=registered)
+    return render_template('login.html', error=None, registered=registered)
 
 
-@auth_bp.route('/register', methods=['GET', 'POST'])
+@auth_bp.route('/register')
 def register():
+    # Ro'yxatdan o'tish formasi olib tashlandi — faqat Telegram / Google tugmalari.
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    error = None
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip()
-        password = request.form.get('password', '')
-        confirm = request.form.get('confirm', '')
-        if not username or not email or not password:
-            error = "Barcha maydonlarni to'ldiring."
-        elif len(username) < 3:
-            error = "Foydalanuvchi nomi kamida 3 ta belgi bo'lishi kerak."
-        elif len(password) < 6:
-            error = "Parol kamida 6 ta belgi bo'lishi kerak."
-        elif password != confirm:
-            error = "Parollar mos kelmadi."
-        else:
-            pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-            try:
-                from app import User
-                conn = get_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s) RETURNING id",
-                    (username, email, pw_hash)
-                )
-                new_id = cur.fetchone()[0]
-                conn.commit()
-                cur.close()
-                conn.close()
-                # Auto-login on successful registration: issue the secure session
-                # cookie (Flask-Login's persistent "token") immediately, so the
-                # user is authenticated on the very next request — no second login,
-                # no guest/redirect loop. Then send them straight to the dashboard.
-                session.permanent = True
-                login_user(User(new_id, username, email), remember=True)
-                return redirect('/dashboard')
-            except psycopg2.IntegrityError as e:
-                message = str(e).lower()
-                if 'username' in message:
-                    error = "Bu foydalanuvchi nomi band."
-                elif 'email' in message:
-                    error = "Bu email allaqachon ro'yxatdan o'tgan."
-                else:
-                    error = "Ro'yxatdan o'tishda xatolik yuz berdi."
-            except Exception:
-                error = "Ro'yxatdan o'tishda xatolik yuz berdi."
-    return render_template('register.html', error=error)
+    return render_template('register.html', error=None)
 
 
 @auth_bp.route('/logout')
@@ -199,4 +126,4 @@ def telegram_login():
 
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
-    return jsonify({'success': True, 'redirect': '/dashboard'})
+    return jsonify({'success': True, 'redirect': '/'})
