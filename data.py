@@ -1512,6 +1512,100 @@ def scholar_tree(scholar_id):
 
 
 # ---------------------------------------------------------------------------
+# Network visualization graph API — dual-mode (map / force-graph).
+# Nodes: institutions + scholars. Edges are semantically typed:
+#   green = advisor→student mentorship (ilmiy_rahbar → olim)  [real data]
+#   blue  = institutional collaboration proxy (scholars sharing muassasa)
+#   red   = research co-authorship  [reserved — no source data yet]
+# Filters: ?spec=05.01.01 (code prefix), ?year_from & ?year_to, ?ego=<scholar_id>.
+# ---------------------------------------------------------------------------
+
+@data_bp.route('/api/v1/network', methods=['GET'])
+def network_graph():
+    spec = (request.args.get('spec') or '').strip()
+    try:
+        year_from = int(request.args.get('year_from') or 2022)
+        year_to = int(request.args.get('year_to') or 2026)
+    except (TypeError, ValueError):
+        year_from, year_to = 2022, 2026
+    ego_id = request.args.get('ego', type=int)
+    limit = min(int(request.args.get('limit') or 2000), 5000)
+
+    where = ["olim IS NOT NULL AND TRIM(olim) <> ''",
+             "ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''",
+             "substring(sana from '(19|20)[0-9][0-9]') IS NOT NULL",
+             "substring(sana from '(19|20)[0-9][0-9]')::int BETWEEN %s AND %s"]
+    params = [year_from, year_to]
+    if spec:
+        where.append("ixtisoslik LIKE %s")
+        params.append(spec + '%')
+
+    ego_name = None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if ego_id:
+                cur.execute("SELECT olim_name FROM olim_profiles WHERE id = %s", (ego_id,))
+                row = cur.fetchone()
+                if row:
+                    ego_name = row[0]
+                    where.append(
+                        "(LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
+                        "OR LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)))")
+                    params.extend([ego_name, ego_name])
+
+            cur.execute(
+                "SELECT TRIM(olim), TRIM(ilmiy_rahbar), TRIM(COALESCE(muassasa,'')), "
+                "substring(sana from '(19|20)[0-9][0-9]')::int AS yr "
+                "FROM dissertations WHERE " + " AND ".join(where) +
+                " LIMIT %s", tuple(params) + (limit,))
+            rows = cur.fetchall()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    nodes = {}
+    edges = []
+
+    def add_node(nid, label, ntype, region=''):
+        n = nodes.get(nid)
+        if not n:
+            nodes[nid] = {'id': nid, 'label': label, 'type': ntype,
+                          'region': region, 'weight': 1}
+        else:
+            n['weight'] += 1
+
+    inst_members = {}
+    for olim, rahbar, muassasa, yr in rows:
+        s_id = 'p:' + olim.lower()
+        m_id = 'p:' + rahbar.lower()
+        add_node(s_id, olim, 'scholar')
+        add_node(m_id, rahbar, 'scholar')
+        # green: mentorship lineage
+        edges.append({'source': m_id, 'target': s_id, 'type': 'green',
+                      'rel': 'mentorship', 'weight': 1, 'year': yr})
+        if muassasa:
+            i_id = 'i:' + muassasa.lower()
+            add_node(i_id, muassasa, 'institution')
+            inst_members.setdefault(i_id, set()).add(s_id)
+
+    # blue: institutional collaboration proxy — connect the institution hub to
+    # its scholars (drill-down edges), capped to keep the graph readable.
+    for i_id, members in inst_members.items():
+        for s_id in list(members)[:80]:
+            edges.append({'source': i_id, 'target': s_id, 'type': 'blue',
+                          'rel': 'institutional', 'weight': 1, 'year': year_to})
+
+    return jsonify({
+        'nodes': list(nodes.values()),
+        'edges': edges,
+        'meta': {'spec': spec, 'year_from': year_from, 'year_to': year_to,
+                 'ego': ego_name, 'node_count': len(nodes), 'edge_count': len(edges)},
+    })
+
+
+# ---------------------------------------------------------------------------
 # Admin: fix existing data quality
 # ---------------------------------------------------------------------------
 
