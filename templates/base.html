@@ -663,6 +663,7 @@
         <a href="/heatmap" class="nav-link{% if request.path.startswith('/heatmap') %} active{% endif %}"><i class="bi bi-geo-alt-fill"></i>Xarita</a>
         <a href="/universities" class="nav-link{% if request.path == '/universities' or request.path.startswith('/university/') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar</a>
         <a href="/journals" class="nav-link{% if request.path.startswith('/journals') %} active{% endif %}"><i class="bi bi-journal-bookmark-fill"></i>Jurnallar</a>
+        <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}"><i class="bi bi-trophy"></i>Grantlar</a>
         <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}
@@ -675,6 +676,7 @@
         <a href="/admin/survey" class="nav-link{% if request.path.startswith('/admin/survey') %} active{% endif %}"><i class="bi bi-clipboard-check"></i>So'rovnoma</a>
         <a href="/admin/universities" class="nav-link{% if request.path.startswith('/admin/universit') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar (admin)</a>
         <a href="/admin/journals" class="nav-link{% if request.path.startswith('/admin/journals') %} active{% endif %}"><i class="bi bi-journal-bookmark"></i>Jurnallar (admin)</a>
+        <a href="/admin/grants" class="nav-link{% if request.path.startswith('/admin/grants') %} active{% endif %}"><i class="bi bi-trophy-fill"></i>Grantlar (admin)</a>
         {% endif %}
         <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
           <i class="bi bi-bell-fill"></i>

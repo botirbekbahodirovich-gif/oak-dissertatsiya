@@ -14,7 +14,8 @@ Shared helpers are lazy-imported inside views to avoid circular imports.
 """
 import json
 
-from flask import Blueprint, jsonify, request, render_template, abort
+from flask import (Blueprint, jsonify, request, render_template,
+                   render_template_string, redirect, abort, flash)
 from flask_login import login_required, current_user
 
 from app import csrf
@@ -263,3 +264,228 @@ def grant_reminders():
     except Exception:
         items = []
     return jsonify({"ok": True, "reminders": items})
+
+
+# ── Admin: grant management (username == 'admin' only) ──────────────────────
+
+_ADMIN_GRANTS_TEMPLATE = """{% extends "base.html" %}
+{% block title %}Grantlar (admin){% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1100px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">🏆 Grantlarni boshqarish</h1>
+  <p style="color:#94a3b8;">Jami: {{ grants|length }} ta grant</p>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <h2 style="font-size:1.05rem;margin-top:18px;">
+    {% if edit_g %}✏️ Grantni tahrirlash (#{{ edit_g.id }}){% else %}➕ Yangi grant qo'shish{% endif %}
+  </h2>
+  <form method="POST"
+        action="{% if edit_g %}/admin/grants/edit/{{ edit_g.id }}{% else %}/admin/grants{% endif %}"
+        style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+    {{ csrf_token()|safe }}
+    <label style="grid-column:1/-1;">Sarlavha (title)
+      <input name="title" class="form-control" required value="{{ edit_g.title if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">Tavsif (description)
+      <textarea name="description" class="form-control" rows="3">{{ edit_g.description if edit_g else '' }}</textarea></label>
+    <label>Davlat (country)
+      <input name="country" class="form-control" value="{{ edit_g.country if edit_g else '' }}"></label>
+    <label>Provayder (provider)
+      <input name="provider" class="form-control" value="{{ edit_g.provider if edit_g else '' }}"></label>
+    <label>Moliyalashtirish (funding_type)
+      <select name="funding_type" class="form-control">
+        <option value="">—</option>
+        {% for f in funding_types %}<option value="{{ f }}" {{ 'selected' if edit_g and edit_g.funding_type == f }}>{{ f }}</option>{% endfor %}
+      </select></label>
+    <label>Daraja (academic_level)
+      <select name="academic_level" class="form-control">
+        <option value="">—</option>
+        {% for l in academic_levels %}<option value="{{ l }}" {{ 'selected' if edit_g and edit_g.academic_level == l }}>{{ l }}</option>{% endfor %}
+      </select></label>
+    <label>Muddat (application_deadline)
+      <input name="application_deadline" type="date" class="form-control" value="{{ edit_g.application_deadline if edit_g else '' }}"></label>
+    <label>Mutaxassislik shifrlari (scientific_codes)
+      <input name="scientific_codes" class="form-control" placeholder="05.01.01, 05.01.02" value="{{ edit_g.scientific_codes if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">Manba havolasi (source_url)
+      <input name="source_url" class="form-control" value="{{ edit_g.source_url if edit_g else '' }}"></label>
+    <label style="grid-column:1/-1;">requirements_json (JSON)
+      <textarea name="requirements_json" class="form-control" rows="3" placeholder='{"documents": [...], "strategy": [...]}'>{{ edit_g.requirements_raw if edit_g else '' }}</textarea></label>
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">{% if edit_g %}Saqlash{% else %}Qo'shish{% endif %}</button>
+      {% if edit_g %}<a href="/admin/grants" class="btn btn-action">Bekor qilish</a>{% endif %}
+    </div>
+  </form>
+
+  <table class="table" style="width:100%;">
+    <thead><tr>
+      <th>ID</th><th>Sarlavha</th><th>Davlat</th><th>Moliya</th><th>Daraja</th><th>Muddat</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for g in grants %}
+      <tr>
+        <td>{{ g.id }}</td>
+        <td><a href="/grants/{{ g.id }}" target="_blank">{{ g.title }}</a></td>
+        <td>{{ g.country or '' }}</td>
+        <td>{{ g.funding_type or '' }}</td>
+        <td>{{ g.academic_level or '' }}</td>
+        <td>{{ g.application_deadline or '' }}</td>
+        <td style="white-space:nowrap;">
+          <a href="/admin/grants?edit={{ g.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
+          <form method="POST" action="/admin/grants/delete/{{ g.id }}" style="display:inline;"
+                onsubmit="return confirm('Grantni o‘chirishni tasdiqlaysizmi?');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#f87171;">O'chirish</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+"""
+
+
+def _grant_form_values():
+    """Reads grant fields from the submitted admin form; returns a values dict."""
+    def g(name):
+        return (request.form.get(name) or '').strip()
+    raw_json = g('requirements_json')
+    req = None
+    if raw_json:
+        try:
+            req = json.dumps(json.loads(raw_json))
+        except Exception:
+            req = None  # invalid JSON — store NULL rather than crash
+    return {
+        'title': g('title'),
+        'description': g('description'),
+        'country': g('country') or None,
+        'provider': g('provider') or None,
+        'funding_type': g('funding_type') or None,
+        'academic_level': g('academic_level') or None,
+        'application_deadline': g('application_deadline') or None,
+        'scientific_codes': g('scientific_codes') or None,
+        'source_url': g('source_url') or None,
+        'requirements_json': req,
+    }
+
+
+@grants_bp.route('/admin/grants', methods=['GET', 'POST'])
+@login_required
+def admin_grants():
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+
+    if request.method == 'POST':
+        v = _grant_form_values()
+        if not v['title']:
+            flash("Sarlavha kiritilishi shart.")
+            return redirect('/admin/grants')
+        try:
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    _ensure_schema(cur)
+                    cur.execute("""
+                        INSERT INTO grants (title, description, country, provider,
+                            funding_type, academic_level, application_deadline,
+                            scientific_codes, source_url, requirements_json)
+                        VALUES (%(title)s, %(description)s, %(country)s, %(provider)s,
+                            %(funding_type)s, %(academic_level)s, %(application_deadline)s,
+                            %(scientific_codes)s, %(source_url)s, %(requirements_json)s)
+                    """, v)
+                conn.commit()
+                flash("Yangi grant qo'shildi.")
+            finally:
+                conn.close()
+        except Exception as e:
+            flash("Xatolik: " + str(e))
+        return redirect('/admin/grants')
+
+    # GET — list + (optional) edit form
+    edit_id = request.args.get('edit', type=int)
+    grants, edit_g = [], None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                cur.execute("""
+                    SELECT id, title, description, scientific_codes, country, funding_type,
+                           academic_level, application_deadline, source_url, requirements_json,
+                           provider
+                    FROM grants ORDER BY id DESC
+                """)
+                cols = [c[0] for c in cur.description]
+                for r in cur.fetchall():
+                    d = _grant_row(cols, r)
+                    grants.append(d)
+                    if edit_id and d['id'] == edit_id:
+                        d['requirements_raw'] = (json.dumps(d['requirements_json'],
+                                                 ensure_ascii=False, indent=2)
+                                                 if d['requirements_json'] else '')
+                        edit_g = d
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        grants = []
+    return render_template_string(_ADMIN_GRANTS_TEMPLATE, grants=grants, edit_g=edit_g,
+                                  funding_types=FUNDING_TYPES, academic_levels=ACADEMIC_LEVELS)
+
+
+@grants_bp.route('/admin/grants/edit/<int:id>', methods=['POST'])
+@login_required
+def admin_grants_edit(id):
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    v = _grant_form_values()
+    v['id'] = id
+    if not v['title']:
+        flash("Sarlavha kiritilishi shart.")
+        return redirect('/admin/grants?edit=%d' % id)
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE grants SET title=%(title)s, description=%(description)s,
+                        country=%(country)s, provider=%(provider)s,
+                        funding_type=%(funding_type)s, academic_level=%(academic_level)s,
+                        application_deadline=%(application_deadline)s,
+                        scientific_codes=%(scientific_codes)s, source_url=%(source_url)s,
+                        requirements_json=%(requirements_json)s
+                    WHERE id=%(id)s
+                """, v)
+            conn.commit()
+            flash("Grant yangilandi.")
+        finally:
+            conn.close()
+    except Exception as e:
+        flash("Xatolik: " + str(e))
+    return redirect('/admin/grants')
+
+
+@grants_bp.route('/admin/grants/delete/<int:id>', methods=['POST'])
+@login_required
+def admin_grants_delete(id):
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM grants WHERE id = %s", (id,))
+            conn.commit()
+            flash("Grant o'chirildi.")
+        finally:
+            conn.close()
+    except Exception as e:
+        flash("Xatolik: " + str(e))
+    return redirect('/admin/grants')
