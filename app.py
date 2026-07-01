@@ -2629,6 +2629,60 @@ def _require_admin():
         abort(403)
 
 
+@app.route('/admin/fix-names', methods=['GET', 'POST'])
+@login_required
+def admin_fix_names():
+    """dissertations.olim ustunidagi 'o'g'li'/'qizi' variantlarini standartlaydi.
+
+    Faqat admin uchun. DISTINCT olim ismlarini olib, har xil yozilishlarni
+    (oʻgʻli, o`g`li, ogli, o'gli, ... / қизи, qizy) yagona formatga keltiradi.
+    """
+    _require_admin()
+    import re
+    from data import get_connection
+
+    def _norm(name):
+        if not name:
+            return name
+        # Barcha apostrof/tik variantlarini oddiy ' ga keltiramiz.
+        s = re.sub(r"[ʻʼ’‘`´]", "'", name)
+        # Kirill variantlari
+        s = re.sub(r"қизи", "qizi", s, flags=re.IGNORECASE)
+        s = re.sub(r"ў\s*ғ\s*ли", "o'g'li", s, flags=re.IGNORECASE)
+        # Lotin variantlari: oʻgʻli / o'g'li / ogli / o'gli / o`g`li ...
+        s = re.sub(r"\bo'?\s*g'?\s*li\b", "o'g'li", s, flags=re.IGNORECASE)
+        s = re.sub(r"\bqiz[iy]\b", "qizi", s, flags=re.IGNORECASE)
+        # Ortiqcha bo'shliqlarni tozalaymiz.
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
+
+    fixed_rows = 0
+    fixed_names = 0
+    samples = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT DISTINCT olim FROM dissertations "
+                            "WHERE olim IS NOT NULL AND TRIM(olim) <> ''")
+                names = [r[0] for r in cur.fetchall()]
+                for old in names:
+                    new = _norm(old)
+                    if new and new != old:
+                        cur.execute("UPDATE dissertations SET olim = %s WHERE olim = %s",
+                                    (new, old))
+                        fixed_rows += cur.rowcount
+                        fixed_names += 1
+                        if len(samples) < 30:
+                            samples.append({"old": old, "new": new})
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    return jsonify({"ok": True, "distinct_names_fixed": fixed_names,
+                    "rows_updated": fixed_rows, "samples": samples})
 
 
 def _save_news_image():
