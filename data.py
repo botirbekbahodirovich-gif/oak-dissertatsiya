@@ -10,6 +10,8 @@ load_dotenv()
 import openpyxl
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
+# Shared secret for the scraper → VPS import endpoint (/api/v1/import-oak).
+SITE_API_KEY = os.environ.get('SITE_API_KEY', '')
 from flask import Blueprint, jsonify, request, send_file, render_template, abort
 from flask_login import login_required
 from extensions import cache
@@ -1326,6 +1328,112 @@ def oak_ingest():
 
     return jsonify({'added': added, 'skipped': skipped,
                     'total': len(items), 'skip_reasons': skip_reasons})
+
+
+# ---------------------------------------------------------------------------
+# Secure import endpoint for the daily scraper (VPS-direct, X-API-KEY auth).
+# Unlike /api/oak/ingest this UPSERTs: existing records (matched on oak_id) are
+# updated in place instead of skipped, so re-runs refresh changed data.
+# ---------------------------------------------------------------------------
+
+@data_bp.route('/api/v1/import-oak', methods=['POST'])
+def import_oak():
+    api_key = request.headers.get('X-API-KEY', '')
+    if not SITE_API_KEY or api_key != SITE_API_KEY:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    payload = request.get_json(silent=True) or {}
+    # Accept either a bare JSON array or {"items": [...]}.
+    items = payload.get('items', payload) if isinstance(payload, dict) else payload
+    if not isinstance(items, list):
+        return jsonify({'error': 'items must be a list'}), 400
+
+    inserted = 0
+    updated = 0
+    skipped = 0
+    skip_reasons: dict = {}
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            for item in items:
+                oak_id     = str(item.get('ID', '') or '').strip()
+                title      = str(item.get('Sarlavha', '') or '').strip()
+                mavzu_full = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
+                muassasa   = str(item.get('Bajarilgan muassasa', '') or '').strip()[:300]
+
+                olim     = str(item.get('Olim', '') or '').strip() or _extract_olim(title)
+                mavzu    = _extract_mavzu(mavzu_full)
+                daraja   = _extract_daraja(title, mavzu_full) or str(item.get('Daraja', '') or '').strip()
+                ixtisoslik = _extract_ixtisoslik(
+                    str(item.get('Ixtisoslik shifrlari', '') or ''),
+                    mavzu_full
+                )
+
+                reason = _validate_ingest_record(oak_id, olim, daraja, mavzu, muassasa)
+                if reason:
+                    skipped += 1
+                    skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
+                    continue
+
+                cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
+                exists = cur.fetchone() is not None
+
+                cur.execute(
+                    """
+                    INSERT INTO dissertations
+                        (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
+                         mavzu_raqami, ilmiy_rahbar, muassasa,
+                         ilmiy_kengash_raqami, opponent_1, opponent_2,
+                         yetakchi_tashkilot, link)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ON CONFLICT (oak_id) DO UPDATE SET
+                        sana = EXCLUDED.sana,
+                        daraja = EXCLUDED.daraja,
+                        olim = EXCLUDED.olim,
+                        mavzu = EXCLUDED.mavzu,
+                        ixtisoslik = EXCLUDED.ixtisoslik,
+                        mavzu_raqami = EXCLUDED.mavzu_raqami,
+                        ilmiy_rahbar = EXCLUDED.ilmiy_rahbar,
+                        muassasa = EXCLUDED.muassasa,
+                        ilmiy_kengash_raqami = EXCLUDED.ilmiy_kengash_raqami,
+                        opponent_1 = EXCLUDED.opponent_1,
+                        opponent_2 = EXCLUDED.opponent_2,
+                        yetakchi_tashkilot = EXCLUDED.yetakchi_tashkilot,
+                        link = EXCLUDED.link
+                    """,
+                    (
+                        oak_id,
+                        str(item.get('Sana', '') or '')[:50],
+                        daraja,
+                        olim[:200],
+                        mavzu[:500],
+                        ixtisoslik[:50],
+                        str(item.get('Royxat raqami', '') or ''),
+                        str(item.get('Ilmiy rahbar', '') or '')[:200],
+                        muassasa,
+                        str(item.get('IK raqami', '') or ''),
+                        str(item.get('Opponent 1', '') or '')[:200],
+                        str(item.get('Opponent 2', '') or '')[:200],
+                        str(item.get('Yetakchi tashkilot', '') or '')[:200],
+                        str(item.get('Havola', '') or ''),
+                    )
+                )
+                if exists:
+                    updated += 1
+                else:
+                    inserted += 1
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'success': True, 'inserted': inserted, 'updated': updated,
+                    'skipped': skipped, 'total': len(items),
+                    'skip_reasons': skip_reasons})
 
 
 # ---------------------------------------------------------------------------

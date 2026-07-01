@@ -1,5 +1,5 @@
 # ============================================================
-# Yangi e'lonlarni saytga yuborish
+# Yangi e'lonlarni saytga (Google Cloud VPS) to'g'ridan-to'g'ri yuborish
 # ============================================================
 
 import json
@@ -7,8 +7,9 @@ import os
 import sys
 import requests
 
-API_URL = os.environ.get("SITE_API_URL")   # GitHub Secret dan
+API_URL = os.environ.get("SITE_API_URL")   # GitHub Secret dan (masalan .../api/v1/import-oak)
 API_KEY = os.environ.get("SITE_API_KEY")   # GitHub Secret dan
+
 
 def main():
     # new_items.json ni o'qiymiz
@@ -16,8 +17,12 @@ def main():
         print("new_items.json topilmadi")
         sys.exit(0)
 
-    with open("new_items.json", "r", encoding="utf-8") as f:
-        items = json.load(f)
+    try:
+        with open("new_items.json", "r", encoding="utf-8") as f:
+            items = json.load(f)
+    except (OSError, ValueError) as e:
+        print("new_items.json o'qishda xatolik: " + str(e))
+        sys.exit(1)
 
     if not items:
         print("Yangi e'lon yo'q, yuborish shart emas.")
@@ -30,16 +35,21 @@ def main():
     print("Yuborilmoqda: " + str(len(items)) + " ta e'lon...")
 
     headers = {
-        "Authorization": "Bearer " + API_KEY,
-        "Content-Type": "application/json"
+        "X-API-KEY": API_KEY,
+        "Content-Type": "application/json",
     }
 
-    response = requests.post(
-        API_URL,
-        json={"items": items},
-        headers=headers,
-        timeout=60
-    )
+    try:
+        response = requests.post(
+            API_URL,
+            json={"items": items},
+            headers=headers,
+            timeout=60,
+        )
+    except requests.exceptions.RequestException as e:
+        # Ulanish/timeout xatoliklari — crash qilmasdan log qilamiz
+        print("Ulanishda xatolik: " + str(e))
+        sys.exit(1)
 
     print("Status: " + str(response.status_code))
     print("Javob: " + response.text[:300])
