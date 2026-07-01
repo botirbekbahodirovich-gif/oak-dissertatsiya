@@ -372,6 +372,85 @@ login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Iltimos, tizimga kiring."
 
+# ── Fix 5.2: durable session/token lifecycle ────────────────────────────────
+app.config.update(
+    SESSION_PERMANENT=True,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    REMEMBER_COOKIE_DURATION=timedelta(days=30),
+    REMEMBER_COOKIE_HTTPONLY=True,
+    REMEMBER_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
+# ── Fix 5.3: sanitized Supabase avatar path + patronymic normalization ──────
+import re as _re_util
+
+AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
+                 "object/public/avatars/")
+DEFAULT_AVATAR = "/images/default-avatar.png"
+_AVATAR_STRIP = "'\"’‘ʻʼ`´"
+
+
+def avatar_url(full_name):
+    """Map a scholar name to its sanitized Supabase avatar URL
+    ({Last_Name}_{First_Name}_{Patronymic}.jpg): spaces→'_', quotes/ticks stripped."""
+    s = (full_name or "").strip()
+    if not s:
+        return DEFAULT_AVATAR
+    for ch in _AVATAR_STRIP:
+        s = s.replace(ch, "")
+    s = _re_util.sub(r"\s+", "_", s)
+    return AVATAR_BUCKET + s + ".jpg"
+
+
+def normalize_patronymic(name):
+    """Standardize Uzbek patronymic suffixes (o'g'li / qizi variants) to a uniform form."""
+    if not name:
+        return name
+    s = _re_util.sub(r"[’‘ʻʼ`´]", "'", name)
+    s = _re_util.sub(r"\bo'?\s*g'?\s*li\b", "o'g'li", s, flags=_re_util.IGNORECASE)
+    s = _re_util.sub(r"\bqiz[iy]\b", "qizi", s, flags=_re_util.IGNORECASE)
+    return s
+
+
+app.jinja_env.globals["avatar_url"] = avatar_url
+app.jinja_env.filters["avatar_url"] = avatar_url
+app.jinja_env.globals["DEFAULT_AVATAR"] = DEFAULT_AVATAR
+app.jinja_env.filters["normalize_patronymic"] = normalize_patronymic
+
+
+# ── Fix 5.1 (soft / public-friendly): protected-route gate ──────────────────
+# Guests browse freely — home, universities list, journals list, scholar profiles
+# and the genealogy tree stay public (SEO-critical). Only private, user-specific
+# areas require login and redirect guests to /register.
+_PROTECTED_PREFIXES = (
+    "/dashboard",                 # personal dashboard
+    "/cabinet/profile",           # personal profile editor
+    "/cabinet/edit",              # profile editor
+    "/my-network",                # "My Network"
+    "/ego",                       # ego / personal network
+    "/api/v1/notifications",      # internal notification triggers
+    "/api/v1/grants/track",       # personal grant tracking
+    "/api/v1/grants/reminders",   # personal deadline reminders
+)
+
+
+@app.before_request
+def require_registration():
+    from flask import session as _sess
+    if request.method == "OPTIONS":
+        return None
+    p = request.path
+    if not any(p == pre or p.startswith(pre) for pre in _PROTECTED_PREFIXES):
+        return None  # public route — guests allowed
+    try:
+        if current_user.is_authenticated or _sess.get("cabinet_user_id"):
+            return None
+    except Exception:
+        pass
+    return redirect("/register")
+
 
 class User(UserMixin):
     def __init__(self, id, username, email):
