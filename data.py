@@ -1437,6 +1437,81 @@ def import_oak():
 
 
 # ---------------------------------------------------------------------------
+# Academic genealogy tree — recursive mentor→mentee traversal (DocUzBase).
+# Scholars are identified by olim_profiles.id; generations are linked by name
+# (dissertations.ilmiy_rahbar = mentor, dissertations.olim = student). A path
+# array guards against cycles so the WITH RECURSIVE walk terminates.
+# ---------------------------------------------------------------------------
+
+@data_bp.route('/api/v1/scholar/<int:scholar_id>/tree', methods=['GET'])
+def scholar_tree(scholar_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT olim_name FROM olim_profiles WHERE id = %s", (scholar_id,))
+            root = cur.fetchone()
+            if not root:
+                return jsonify({'error': 'scholar not found'}), 404
+            root_name = root[0]
+
+            cur.execute(
+                """
+                WITH RECURSIVE tree AS (
+                    SELECT TRIM(%s)::text AS name,
+                           NULL::text     AS mentor,
+                           0              AS depth,
+                           ARRAY[LOWER(TRIM(%s))] AS path
+                    UNION ALL
+                    SELECT DISTINCT TRIM(d.olim)::text AS name,
+                           t.name                       AS mentor,
+                           t.depth + 1                  AS depth,
+                           t.path || LOWER(TRIM(d.olim))
+                    FROM tree t
+                    JOIN dissertations d
+                      ON LOWER(TRIM(d.ilmiy_rahbar)) = LOWER(TRIM(t.name))
+                    WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+                      AND NOT (LOWER(TRIM(d.olim)) = ANY(t.path))
+                      AND t.depth < 20
+                )
+                SELECT t.name, t.mentor, t.depth,
+                       (SELECT COUNT(DISTINCT TRIM(d2.olim))
+                          FROM dissertations d2
+                         WHERE LOWER(TRIM(d2.ilmiy_rahbar)) = LOWER(TRIM(t.name))
+                           AND d2.olim IS NOT NULL AND TRIM(d2.olim) <> ''
+                       )::int AS direct_students
+                FROM tree t
+                ORDER BY t.depth, t.name
+                """,
+                (root_name, root_name)
+            )
+            rows = cur.fetchall()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    # Build a nested tree from the flat (name, mentor, depth, count) rows.
+    nodes = {}
+    for name, mentor, depth, direct_students in rows:
+        nodes.setdefault(name, {
+            'name': name, 'direct_students': int(direct_students or 0),
+            'depth': int(depth), 'children': [],
+        })
+    root_node = None
+    for name, mentor, depth, _ in rows:
+        node = nodes[name]
+        if mentor is None or mentor not in nodes or mentor == name:
+            if root_node is None:
+                root_node = node
+        else:
+            nodes[mentor]['children'].append(node)
+
+    return jsonify(root_node or {
+        'name': root_name, 'direct_students': 0, 'depth': 0, 'children': []
+    })
+
+
+# ---------------------------------------------------------------------------
 # Admin: fix existing data quality
 # ---------------------------------------------------------------------------
 
