@@ -1609,6 +1609,9 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   window.nmAck = function () {
     if (!current) { next(); return; }
+    // Grant deadline reminders are transient (re-evaluated each launch) and not
+    // server-dismissable — just advance the queue.
+    if (current.kind === 'grant') { next(); return; }
     var ok = document.getElementById('nmOk');
     ok.disabled = true; ok.textContent = '…';
     // Persist dismissal server-side FIRST, so an F5 refresh never re-renders it.
@@ -1620,14 +1623,24 @@ document.addEventListener('DOMContentLoaded', function () {
       ok.disabled = false; ok.textContent = 'Tushunarli';
     });
   };
-  // On every session launch / reload, pull only unread notices from the server.
-  fetch('/api/v1/notifications/active', { headers: { 'Accept': 'application/json' } })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      if (d && d.ok && d.notifications && d.notifications.length) {
-        queue = d.notifications; next();
-      }
-    }).catch(function () {});
+  // On every session launch / reload, pull unread notices AND tracked-grant
+  // deadline reminders (within the critical 7-day window), then show them.
+  Promise.all([
+    fetch('/api/v1/notifications/active', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); }).catch(function () { return {}; }),
+    fetch('/api/v1/grants/reminders', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); }).catch(function () { return {}; })
+  ]).then(function (res) {
+    var notes = (res[0] && res[0].notifications) || [];
+    var reminders = ((res[1] && res[1].reminders) || []).map(function (g) {
+      return { id: g.id, kind: 'grant', level: 'warning',
+               title: '⏳ Grant muddati yaqinlashmoqda',
+               message: g.message, url: '/grants/' + g.id };
+    });
+    // Deadline reminders are time-critical — surface them first.
+    queue = reminders.concat(notes);
+    if (queue.length) next();
+  });
 })();
 </script>
 {% endif %}

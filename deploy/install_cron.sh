@@ -31,10 +31,21 @@ DATABASE_URL=${DB_URL}
 CRON
 chmod 644 "$CRON_DST"
 
-touch /var/log/oak-scraper.log
-chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log || true
+# Grant scraper — daily at 01:00 (offset from the OAK scraper).
+GRANT_DST="/etc/cron.d/grant-scraper"
+cat > "$GRANT_DST" <<CRON
+# Scientific grant scraper — daily 01:00 (managed by install_cron.sh).
+SHELL=/bin/bash
+DATABASE_URL=${DB_URL}
+0 1 * * * ${DEPLOY_USER} cd ${APP_DIR} && ${APP_DIR}/venv/bin/python scripts/grant_scraper.py >> /var/log/grant-scraper.log 2>&1
+CRON
+chmod 644 "$GRANT_DST"
+
+touch /var/log/oak-scraper.log /var/log/grant-scraper.log
+chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log /var/log/grant-scraper.log || true
 
 # Reload cron so the new job is picked up immediately.
 service cron reload 2>/dev/null || systemctl reload cron 2>/dev/null || true
 
 echo "Installed $CRON_DST (daily 00:00). Log: /var/log/oak-scraper.log"
+echo "Installed $GRANT_DST (daily 01:00). Log: /var/log/grant-scraper.log"

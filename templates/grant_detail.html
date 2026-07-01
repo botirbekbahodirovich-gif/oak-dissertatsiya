@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ g.title }} — Grant — Olimlar.uz{% endblock %}
+
+{% block content %}
+<style>
+  .gd-wrap { max-width: 880px; margin: 0 auto; padding: 20px 0; }
+  .gd-head { background: var(--card-bg, #0f172a); border: 1px solid #334155;
+    border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+  .gd-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .g-tag { font-size: 0.78rem; padding: 3px 11px; border-radius: 999px;
+    background: #1e293b; color: #93c5fd; }
+  .g-tag.full { background: #052e16; color: #4ade80; }
+  .g-tag.partial { background: #422006; color: #fbbf24; }
+  .gd-countdown { font-size: 1.3rem; font-weight: 800; color: #f87171; margin: 8px 0; }
+  .gd-countdown.safe { color: #4ade80; }
+  .gd-section { background: var(--card-bg, #0f172a); border: 1px solid #334155;
+    border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+  .gd-section h2 { font-size: 1.05rem; margin: 0 0 12px; color: #f1f5f9; }
+  .gd-checklist { list-style: none; padding: 0; margin: 0; }
+  .gd-checklist li { padding: 7px 0 7px 28px; position: relative; color: #cbd5e1; }
+  .gd-checklist li::before { content: '📄'; position: absolute; left: 0; }
+  .gd-track { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .gd-track button { border: 1px solid #334155; background: #162032; color: #e2e8f0;
+    border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 600; }
+  .gd-track button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .gd-track button.remove { color: #f87171; }
+</style>
+
+<div class="gd-wrap">
+  <div class="gd-head">
+    <a href="/grants" style="color:#60a5fa;font-size:0.85rem;">← Barcha grantlar</a>
+    <h1 style="margin:8px 0 0;">{{ g.title }}</h1>
+    {% if g.provider %}<div style="color:#94a3b8;">{{ g.provider }}</div>{% endif %}
+    <div class="gd-meta">
+      {% if g.country %}<span class="g-tag">{{ g.country }}</span>{% endif %}
+      {% if g.academic_level %}<span class="g-tag">{{ g.academic_level }}</span>{% endif %}
+      {% if g.funding_type %}<span class="g-tag {{ g.funding_type|lower }}">{{ g.funding_type }}</span>{% endif %}
+      {% for c in g.codes %}<span class="g-tag">{{ c }}</span>{% endfor %}
+    </div>
+    <div class="gd-countdown" id="gdCountdown" data-deadline="{{ g.application_deadline }}"></div>
+    {% if g.application_deadline %}<div style="color:#94a3b8;font-size:0.85rem;">Muddat: {{ g.application_deadline }}</div>{% endif %}
+
+    <div class="gd-track" data-grant="{{ g.id }}">
+      <button data-status="interested" class="{{ 'active' if tracked_status == 'interested' }}">⭐ Qiziqarli</button>
+      <button data-status="in_progress" class="{{ 'active' if tracked_status == 'in_progress' }}">🚀 Jarayonda</button>
+      <button data-status="remove" class="remove">✕ Kuzatuvni olib tashlash</button>
+    </div>
+  </div>
+
+  {% if g.description %}
+  <div class="gd-section"><h2>Dastur tavsifi</h2><p style="color:#cbd5e1;white-space:pre-wrap;">{{ g.description }}</p></div>
+  {% endif %}
+
+  <div class="gd-section">
+    <h2>Talab qilinadigan hujjatlar</h2>
+    <ul class="gd-checklist">
+      {% set docs = g.requirements_json.get('documents') if g.requirements_json else None %}
+      {% if docs %}
+        {% for doc in docs %}<li>{{ doc }}</li>{% endfor %}
+      {% else %}
+        <li>Motivatsiya xati (Motivation Letter)</li>
+        <li>Tadqiqot rejasi (Research Proposal)</li>
+        <li>Tavsiya xatlari (Letters of Recommendation)</li>
+        <li>CV / akademik ma'lumotnoma</li>
+        <li>Til sertifikati (IELTS/TOEFL)</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="gd-section">
+    <h2>Muvaffaqiyat strategiyasi va formatlash</h2>
+    {% set tips = g.requirements_json.get('strategy') if g.requirements_json else None %}
+    <ul class="gd-checklist" style="list-style:none;">
+      {% if tips %}
+        {% for t in tips %}<li style="padding-left:28px;">✅ {{ t }}</li>{% endfor %}
+      {% else %}
+        <li style="padding-left:28px;">✅ Tadqiqot rejasini provayder ustuvorliklariga moslang.</li>
+        <li style="padding-left:28px;">✅ Motivatsiya xatini aniq va o'lchanadigan maqsadlar bilan tuzing.</li>
+        <li style="padding-left:28px;">✅ Tavsiya xatlarini muddatdan oldin so'rang.</li>
+        <li style="padding-left:28px;">✅ Formatlash talablariga (shrift, hajm, struktura) qat'iy amal qiling.</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  {% if g.source_url %}
+  <a href="{{ g.source_url }}" target="_blank" rel="noopener"
+     style="display:inline-block;background:#3b82f6;color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;text-decoration:none;">Rasmiy sahifaga o'tish →</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var el = document.getElementById('gdCountdown');
+  function render() {
+    var dl = el.getAttribute('data-deadline');
+    if (!dl) { el.textContent = 'Muddat belgilanmagan'; el.classList.add('safe'); return; }
+    var diff = new Date(dl + 'T23:59:59').getTime() - Date.now();
+    if (diff <= 0) { el.textContent = '⏰ Muddat yakunlangan'; return; }
+    var d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000),
+        m = Math.floor((diff % 3600000) / 60000);
+    el.textContent = '⏳ ' + d + ' kun ' + h + ' soat ' + m + ' daqiqa qoldi';
+    el.classList.toggle('safe', d > 7);
+  }
+  render(); setInterval(render, 60000);
+
+  var track = document.querySelector('.gd-track');
+  track.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-status]');
+    if (!btn) return;
+    fetch('/api/v1/grants/track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ grant_id: parseInt(track.getAttribute('data-grant')),
+                             status: btn.getAttribute('data-status') })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) return;
+      track.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+      if (d.status !== 'remove') btn.classList.add('active');
+    });
+  });
+})();
+</script>
+{% endblock %}

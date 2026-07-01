@@ -1,0 +1,5 @@
+# Scientific grant scraper — daily 01:00 execution (offset from OAK scraper).
+# Install into /etc/cron.d/grant-scraper (run: sudo bash deploy/install_cron.sh).
+SHELL=/bin/bash
+DATABASE_URL=""
+0 1 * * * botirbek cd /opt/olimlar-uz && /opt/olimlar-uz/venv/bin/python scripts/grant_scraper.py >> /var/log/grant-scraper.log 2>&1

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Ilmiy grantlar va stipendiyalar — Olimlar.uz{% endblock %}
+
+{% block content %}
+<style>
+  .grants-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 22px; align-items: start; }
+  .grants-filters { background: var(--card-bg, #0f172a); border: 1px solid #334155;
+    border-radius: 14px; padding: 18px; position: sticky; top: 80px; }
+  .grants-filters h4 { margin: 0 0 6px; font-size: 0.82rem; text-transform: uppercase;
+    letter-spacing: .04em; color: #94a3b8; }
+  .gf-group { margin-bottom: 16px; }
+  .gf-opt { display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
+    color: #cbd5e1; padding: 3px 0; cursor: pointer; }
+  .grants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .grant-card { background: var(--card-bg, #0f172a); border: 1px solid #334155;
+    border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .grant-card h3 { margin: 0; font-size: 1.05rem; }
+  .grant-card h3 a { color: #f1f5f9; text-decoration: none; }
+  .grant-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .g-tag { font-size: 0.72rem; padding: 2px 9px; border-radius: 999px;
+    background: #1e293b; color: #93c5fd; }
+  .g-tag.full { background: #052e16; color: #4ade80; }
+  .g-tag.partial { background: #422006; color: #fbbf24; }
+  .g-countdown { font-weight: 700; font-size: 0.85rem; color: #f87171; }
+  .g-countdown.safe { color: #4ade80; }
+  .grants-empty { padding: 40px; text-align: center; color: #94a3b8; }
+  @media (max-width: 820px) { .grants-wrap { grid-template-columns: 1fr; }
+    .grants-filters { position: static; } }
+</style>
+
+<div class="container-xl" style="padding-top:18px;">
+  <h1 style="margin:0 0 4px;">🎓 Ilmiy grantlar va stipendiyalar</h1>
+  <p style="color:#94a3b8;margin:0 0 18px;">Erasmus+, Fulbright, DAAD, El-yurt umidi va boshqalar.</p>
+
+  <div class="grants-wrap">
+    <aside class="grants-filters" id="grantFilters">
+      <div class="gf-group">
+        <h4>Moliyalashtirish</h4>
+        {% for f in funding_types %}
+        <label class="gf-opt"><input type="checkbox" name="funding_type" value="{{ f }}"> {{ f }}</label>
+        {% endfor %}
+      </div>
+      <div class="gf-group">
+        <h4>Daraja</h4>
+        {% for l in academic_levels %}
+        <label class="gf-opt"><input type="checkbox" name="academic_level" value="{{ l }}"> {{ l }}</label>
+        {% endfor %}
+      </div>
+      <div class="gf-group">
+        <h4>Davlat</h4>
+        {% for c in countries %}
+        <label class="gf-opt"><input type="checkbox" name="country" value="{{ c }}"> {{ c }}</label>
+        {% endfor %}
+      </div>
+      <div class="gf-group">
+        <h4>Mutaxassislik shifri</h4>
+        <input type="text" id="codeFilter" placeholder="05.01.01" class="form-control form-control-sm"
+               style="background:#162032;border:1px solid #334155;color:#e2e8f0;">
+      </div>
+    </aside>
+
+    <div>
+      <div id="grantsCount" style="color:#94a3b8;font-size:0.85rem;margin-bottom:10px;"></div>
+      <div class="grants-grid" id="grantsGrid"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var grid = document.getElementById('grantsGrid');
+  var countEl = document.getElementById('grantsCount');
+  var filters = document.getElementById('grantFilters');
+  var codeInput = document.getElementById('codeFilter');
+  var timer = null;
+
+  function fmtCountdown(deadline) {
+    if (!deadline) return { text: 'Muddat belgilanmagan', safe: true };
+    var end = new Date(deadline + 'T23:59:59').getTime();
+    var diff = end - Date.now();
+    if (diff <= 0) return { text: 'Yakunlangan', safe: false };
+    var days = Math.floor(diff / 86400000);
+    var hrs = Math.floor((diff % 86400000) / 3600000);
+    return { text: days + ' kun ' + hrs + ' soat qoldi', safe: days > 7 };
+  }
+
+  function card(g) {
+    var cd = fmtCountdown(g.application_deadline);
+    var ft = (g.funding_type || '').toLowerCase();
+    return '<div class="grant-card">' +
+      '<h3><a href="/grants/' + g.id + '">' + (g.title || '') + '</a></h3>' +
+      '<div class="grant-meta">' +
+        (g.country ? '<span class="g-tag">' + g.country + '</span>' : '') +
+        (g.academic_level ? '<span class="g-tag">' + g.academic_level + '</span>' : '') +
+        (g.funding_type ? '<span class="g-tag ' + ft + '">' + g.funding_type + '</span>' : '') +
+      '</div>' +
+      '<div class="g-countdown' + (cd.safe ? ' safe' : '') + '" data-deadline="' +
+        (g.application_deadline || '') + '">' + cd.text + '</div>' +
+    '</div>';
+  }
+
+  function selected(name) {
+    return Array.prototype.map.call(
+      filters.querySelectorAll('input[name="' + name + '"]:checked'),
+      function (i) { return i.value; });
+  }
+
+  function load() {
+    var params = new URLSearchParams();
+    ['funding_type', 'academic_level', 'country'].forEach(function (n) {
+      selected(n).forEach(function (v) { params.append(n, v); });
+    });
+    if (codeInput.value.trim()) params.append('scientific_codes', codeInput.value.trim());
+    fetch('/api/v1/grants?' + params.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var list = (d && d.grants) || [];
+        countEl.textContent = list.length + ' ta grant topildi';
+        grid.innerHTML = list.length
+          ? list.map(card).join('')
+          : '<div class="grants-empty">Filtrga mos grant topilmadi.</div>';
+        tick();
+      }).catch(function () { grid.innerHTML = '<div class="grants-empty">Xatolik.</div>'; });
+  }
+
+  // Real-time countdown refresh (no page reload).
+  function tick() {
+    document.querySelectorAll('.g-countdown[data-deadline]').forEach(function (el) {
+      var cd = fmtCountdown(el.getAttribute('data-deadline'));
+      el.textContent = cd.text;
+      el.classList.toggle('safe', cd.safe);
+    });
+  }
+
+  filters.addEventListener('change', load);
+  var debounce;
+  codeInput.addEventListener('input', function () {
+    clearTimeout(debounce); debounce = setTimeout(load, 350);
+  });
+  if (timer) clearInterval(timer);
+  timer = setInterval(tick, 60000);
+  load();
+})();
+</script>
+{% endblock %}
