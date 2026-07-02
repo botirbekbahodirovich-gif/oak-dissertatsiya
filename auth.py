@@ -41,6 +41,29 @@ def login():
     return render_template('login.html', error=None, registered=registered)
 
 
+@auth_bp.route('/login/password', methods=['POST'])
+def password_login():
+    from app import User
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '').encode()
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, email, password_hash FROM users WHERE username = %s",
+                (username,))
+            row = cur.fetchone()
+        conn.close()
+        if row and row[3] and bcrypt.checkpw(password, row[3].encode()):
+            session.permanent = True
+            login_user(User(row[0], row[1], row[2]), remember=True)
+            session.modified = True
+            return redirect(url_for('index'))
+        return render_template('login.html', error='Login yoki parol xato')
+    except Exception:
+        return render_template('login.html', error='Xatolik yuz berdi')
+
+
 @auth_bp.route('/register')
 def register():
     # Ro'yxatdan o'tish formasi olib tashlandi — faqat Telegram / Google tugmalari.

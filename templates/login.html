@@ -14,6 +14,17 @@
     {% if error %}
       <div class="alert-inline error"><i class="bi bi-exclamation-triangle-fill"></i>&nbsp;{{ error }}</div>
     {% endif %}
+    <form method="POST" action="/login/password" autocomplete="on" style="margin-bottom:20px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <input type="text" name="username" class="form-control" placeholder="Foydalanuvchi nomi" autocomplete="username" required>
+      </div>
+      <div class="mb-3">
+        <input type="password" name="password" class="form-control" placeholder="Parol" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-right me-1"></i>Kirish</button>
+    </form>
+
     <div class="text-center my-4">
       <a href="/auth/google/login" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();" style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:#333;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin:0 0 16px;border:1px solid #ddd;">
         <svg width="20" height="20" viewBox="0 0 24 24">
