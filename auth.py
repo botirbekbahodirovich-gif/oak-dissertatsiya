@@ -84,6 +84,136 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
+# ── Google OAuth — asosiy sayt (users jadvali + Flask-Login) ─────────────────
+# Cabinet uchun alohida Google oqimi cabinet.py da (cabinet_users jadvali). Bu
+# oqim esa foydalanuvchini asosiy saytga — users jadvaliga — kiritadi.
+#
+# MUHIM: callback foydalanuvchi boshlagan HOST da bo'lishi shart. Sessiya cookie
+# host ga bog'langan (host-scoped), shuning uchun agar oqim olimlar.uz da
+# boshlanib, callback www.olimlar.uz ga tushsa — google_oauth_state cookie
+# callback ga yuborilmaydi va state tekshiruvi buziladi ("xatolik yuz berdi").
+# redirect_uri ni so'rovdan dinamik quramiz => olimlar.uz ham, www.olimlar.uz
+# ham to'g'ri ishlaydi. Google Cloud Console da IKKALA callback URL ham
+# ro'yxatdan o'tkazilishi kerak (pastdagi izohga qarang).
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
+GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
+GOOGLE_SCOPES = ['openid',
+                 'https://www.googleapis.com/auth/userinfo.email',
+                 'https://www.googleapis.com/auth/userinfo.profile']
+# Local dev (http) uchun ruxsat — production da nginx/TLS terminatsiya qiladi.
+os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
+
+def _google_redirect_uri():
+    # ProxyFix (x_proto/x_host) tufayli request.url_root to'g'ri sxema+host
+    # (https://olimlar.uz/ yoki https://www.olimlar.uz/) beradi.
+    return request.url_root.rstrip('/') + '/login/google/callback'
+
+
+@auth_bp.route('/login/google')
+def google_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
+        return render_template('login.html', error="Google login sozlanmagan.", registered=None)
+    try:
+        from requests_oauthlib import OAuth2Session
+    except Exception:
+        return render_template('login.html', error="Google login mavjud emas.", registered=None)
+
+    google = OAuth2Session(GOOGLE_CLIENT_ID, scope=GOOGLE_SCOPES,
+                           redirect_uri=_google_redirect_uri())
+    authorization_url, state = google.authorization_url(
+        GOOGLE_AUTH_URL, access_type='offline', prompt='select_account')
+    session['main_google_state'] = state
+    nxt = request.args.get('next', '/')
+    # Ochiq-redirectni oldini olish uchun faqat xavfsiz nisbiy yo'l.
+    if not (nxt.startswith('/') and not nxt.startswith('//')):
+        nxt = '/'
+    session['main_google_next'] = nxt
+    return redirect(authorization_url)
+
+
+@auth_bp.route('/login/google/callback')
+def google_callback():
+    try:
+        from requests_oauthlib import OAuth2Session
+        google = OAuth2Session(GOOGLE_CLIENT_ID,
+                               state=session.get('main_google_state'),
+                               redirect_uri=_google_redirect_uri())
+        google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
+                           authorization_response=request.url)
+        info = google.get(GOOGLE_USERINFO_URL).json()
+    except Exception as e:
+        print("Main Google OAuth error: " + str(e))
+        return render_template('login.html',
+                               error="Google bilan kirishda xatolik yuz berdi.", registered=None)
+
+    email = (info.get('email') or '').strip().lower()
+    name = (info.get('name') or '').strip()
+    if not email:
+        return render_template('login.html',
+                               error="Google hisobidan email olinmadi.", registered=None)
+
+    try:
+        user = _find_or_create_google_user(email, name)
+    except Exception as e:
+        print("Main Google user upsert error: " + str(e))
+        return render_template('login.html',
+                               error="Google bilan kirishda xatolik yuz berdi.", registered=None)
+
+    session.permanent = True
+    login_user(user, remember=True)
+    session.modified = True
+    nxt = session.pop('main_google_next', '/') or '/'
+    session.pop('main_google_state', None)
+    return redirect(nxt)
+
+
+def _unique_username(cur, base):
+    """users.username UNIQUE — Google ismi band bo'lsa oxiriga raqam qo'shamiz."""
+    base = (base or '').strip()[:60] or 'user'
+    cur.execute("SELECT 1 FROM users WHERE username = %s", (base,))
+    if not cur.fetchone():
+        return base
+    i = 1
+    while True:
+        cand = base[:55] + str(i)
+        cur.execute("SELECT 1 FROM users WHERE username = %s", (cand,))
+        if not cur.fetchone():
+            return cand
+        i += 1
+
+
+def _find_or_create_google_user(email, name):
+    """users jadvalida email bo'yicha topadi yoki yaratadi, User obyekt qaytaradi."""
+    from app import User
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, email, COALESCE(is_admin, FALSE) "
+                "FROM users WHERE LOWER(email) = LOWER(%s)", (email,))
+            row = cur.fetchone()
+            if not row:
+                username = _unique_username(cur, name or email.split('@')[0])
+                # password_hash NOT NULL — Google foydalanuvchisi uchun placeholder
+                # (parol bilan kira olmaydi, faqat Google orqali).
+                cur.execute(
+                    "INSERT INTO users (username, email, password_hash) "
+                    "VALUES (%s, %s, %s) "
+                    "RETURNING id, username, email, COALESCE(is_admin, FALSE)",
+                    (username, email, 'google_oauth'))
+                row = cur.fetchone()
+                conn.commit()
+            return User(row[0], row[1], row[2], row[3])
+    finally:
+        conn.close()
+
+
 @auth_bp.route('/login/telegram', methods=['POST'])
 def telegram_login():
     from app import User
