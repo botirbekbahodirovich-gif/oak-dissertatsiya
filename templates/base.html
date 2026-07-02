@@ -15,6 +15,10 @@
 
   <title>{% block title %}Olimlar.uz{% endblock %}</title>
 
+  <!-- Favicon / brand -->
+  <link rel="icon" type="image/svg+xml" href="/static/images/logo.svg">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/icons/icon-square.svg">
+
   <!-- PWA -->
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#1e40af">
@@ -642,11 +646,39 @@
 {% endif %}
 </head>
 <body>
+  <!-- Preloader: pulsing brand logo shown until the page finishes loading. -->
+  <style>
+    #oak-preloader { position: fixed; inset: 0; z-index: 9999; display: flex;
+      align-items: center; justify-content: center;
+      background: var(--oak-bg, #0f172a); transition: opacity .4s ease; }
+    #oak-preloader.hide { opacity: 0; pointer-events: none; }
+    #oak-preloader img { width: 84px; height: auto; animation: oakPulse 1.2s ease-in-out infinite; }
+    @keyframes oakPulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.55; }
+      50%      { transform: scale(1.08); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) { #oak-preloader img { animation: none; } }
+  </style>
+  <div id="oak-preloader"><img src="/static/images/logo.svg" alt="Yuklanmoqda…"></div>
+  <script>
+    (function () {
+      function hide() {
+        var p = document.getElementById('oak-preloader');
+        if (!p) return;
+        p.classList.add('hide');
+        setTimeout(function () { p.remove(); }, 450);
+      }
+      if (document.readyState === 'complete') hide();
+      else window.addEventListener('load', hide);
+      // Safety net so the overlay never gets stuck.
+      setTimeout(hide, 6000);
+    })();
+  </script>
   <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"><i class="bi bi-moon-fill"></i></button>
   <header class="site-header">
     <div class="container-xl header-inner">
       <a class="brand-logo" href="/">
-        <span class="brand-icon"><i class="bi bi-mortarboard-fill"></i></span>
+        <span class="brand-icon"><img src="/static/images/logo.svg" alt="Olimlar.uz" style="height:1.7rem;width:auto;display:block;"></span>
         <span>
           <span class="brand-title" style="background:linear-gradient(135deg,#4a9eff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Olimlar.uz</span>
           <span class="brand-subtitle">Olimlar uchun barcha qulayliklar</span>
@@ -716,7 +748,10 @@
     <div class="container-xl">
       <div class="oak-footer-grid">
         <div class="oak-foot-brand">
-          <div class="oak-foot-logo">📊 Olimlar.uz</div>
+          <div class="oak-foot-logo" style="display:flex;align-items:center;gap:8px;">
+            <img src="/static/images/logo-mono.svg" alt="" aria-hidden="true" style="height:1.5rem;width:auto;opacity:.85;filter:grayscale(1);">
+            <span>Olimlar.uz</span>
+          </div>
           <p class="oak-foot-mission">Olimlar og'irini yengil qilish uchun yaratilgan. Biz ilmiy-tadqiqot jarayonini soddalashtirish va har bir tadqiqotchiga qulay vositalar taqdim etishni maqsad qilganmiz.</p>
           <a class="oak-foot-tg" href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer"><i class="bi bi-telegram"></i> @olimlar_uz</a>
         </div>
@@ -1194,7 +1229,39 @@ function dismissAuthPopup() {
 </script>
 {% endif %}
 
-<!-- ════ User feedback survey popup ════ -->
+<!-- ════ Popup priority manager — faqat BITTA popup bir vaqtda ════
+     Priority: 1=Notification, 2=Region, 3=Survey, 4=PWA (kichik raqam = muhimroq).
+     Har bir popup PopupManager.request(priority, showFn) chaqiradi; yopilganda
+     PopupManager.done() bilan navbatdagi eng muhim popup ko'rsatiladi. -->
+<script>
+window.PopupManager = (function () {
+  var reqs = [];        // {priority, show}
+  var active = false;
+  var timer = null;
+  var COLLECT_MS = 1200; // yaqin vaqtda kelgan so'rovlarni priority bo'yicha tartiblash oynasi
+  function _run() {
+    timer = null;
+    if (active || !reqs.length) return;
+    reqs.sort(function (a, b) { return a.priority - b.priority; });
+    var next = reqs.shift();
+    active = true;
+    try { next.show(); } catch (e) { active = false; }
+  }
+  function request(priority, show) {
+    reqs.push({ priority: priority, show: show });
+    if (active || timer) return;
+    timer = setTimeout(_run, COLLECT_MS);
+  }
+  function done() {
+    active = false;
+    if (reqs.length && !timer) timer = setTimeout(_run, 400);
+  }
+  return { request: request, done: done, isActive: function () { return active; } };
+})();
+</script>
+
+<!-- ════ User feedback survey popup — faqat 10+ tashrifli ro'yxatdan o'tgan foydalanuvchilarga ════ -->
+{% if current_user.is_authenticated and (visit_count or 0) >= 10 %}
 <style>
   #surveyOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:99990; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
   .survey-question { background:#162032; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:12px; }
@@ -1240,31 +1307,28 @@ function dismissAuthPopup() {
   // Don't show if shown/answered less than 24 hours ago
   if (now - lastSurveyTime < 24 * 60 * 60 * 1000) return;
 
-  // Show after 60 seconds on site
+  // Show after 60 seconds on site — through the priority manager (3rd priority).
   setTimeout(function() {
-    loadSurveyQuestions(answeredGroups);
+    window.PopupManager.request(3, function () { loadSurveyQuestions(answeredGroups); });
   }, 60000);
 })();
 
 var currentSurveyQuestions = [];
 
 function loadSurveyQuestions(answeredGroups) {
-  // Never overlap the mandatory auth popup — retry later if it's open
-  var authOverlay = document.getElementById('authOverlay');
-  if (authOverlay && authOverlay.style.display === 'flex') {
-    setTimeout(function() { loadSurveyQuestions(answeredGroups); }, 30000);
-    return;
-  }
   fetch('/api/survey/questions?answered=' + answeredGroups.join(','))
     .then(r => r.json())
     .then(data => {
-      if (!data.questions || data.questions.length === 0) return;
+      if (!data.questions || data.questions.length === 0) {
+        window.PopupManager.done();  // ko'rsatiladigan savol yo'q — navbatni bo'shatamiz
+        return;
+      }
       currentSurveyQuestions = data.questions;
       renderSurveyQuestions(data.questions, data.group_number, data.total_groups);
       document.getElementById('surveyOverlay').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     })
-    .catch(function() {});
+    .catch(function() { window.PopupManager.done(); });
 }
 
 function renderSurveyQuestions(questions, groupNum, totalGroups) {
@@ -1372,8 +1436,10 @@ function closeSurvey() {
   document.getElementById('surveyOverlay').style.display = 'none';
   document.body.style.overflow = '';
   localStorage.setItem('survey_last_shown', Date.now().toString());
+  window.PopupManager.done();
 }
 </script>
+{% endif %}
 
 <!-- Service Worker Registration -->
 <script>
@@ -1414,18 +1480,43 @@ if ('serviceWorker' in navigator) {
   const installBtn = document.getElementById('pwaInstallBtn');
   const dismissBtn = document.getElementById('pwaInstallDismiss');
 
-  // Check if already dismissed
-  if (localStorage.getItem('pwaInstallDismissed')) return;
-  // Check if already installed
-  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  // Ilova o'rnatilgan bo'lsa — hech qachon ko'rsatma.
+  if (window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true) return;
+
+  // Kuniga maksimum 3 marta. localStorage da {date, count} saqlaymiz.
+  function todayKey() { return new Date().toISOString().slice(0, 10); }
+  function canShowToday() {
+    try {
+      var st = JSON.parse(localStorage.getItem('pwaBanner') || '{}');
+      if (st.date !== todayKey()) return true;      // yangi kun — hisob 0
+      return (st.count || 0) < 3;
+    } catch (e) { return true; }
+  }
+  function bumpCount() {
+    var st = {};
+    try { st = JSON.parse(localStorage.getItem('pwaBanner') || '{}'); } catch (e) {}
+    if (st.date !== todayKey()) { st.date = todayKey(); st.count = 0; }
+    st.count = (st.count || 0) + 1;
+    localStorage.setItem('pwaBanner', JSON.stringify(st));
+  }
+  function hideBanner() {
+    if (banner) banner.style.display = 'none';
+    window.PopupManager.done();
+  }
 
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
-    // Show banner after 10 seconds
+    if (!canShowToday()) return;
+    // 60 soniyadan keyin — priority manager orqali (4-chi, eng past).
     setTimeout(function() {
-      if (banner) banner.style.display = 'block';
-    }, 10000);
+      if (!canShowToday()) return;
+      window.PopupManager.request(4, function () {
+        if (banner) banner.style.display = 'block';
+        bumpCount();
+      });
+    }, 60000);
   });
 
   if (installBtn) {
@@ -1433,21 +1524,15 @@ if ('serviceWorker' in navigator) {
       if (deferredPrompt) {
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then(function(result) {
-          if (result.outcome === 'accepted') {
-            console.log('PWA installed');
-          }
           deferredPrompt = null;
-          banner.style.display = 'none';
+          hideBanner();
         });
-      }
+      } else { hideBanner(); }
     });
   }
 
   if (dismissBtn) {
-    dismissBtn.addEventListener('click', function() {
-      banner.style.display = 'none';
-      localStorage.setItem('pwaInstallDismissed', 'true');
-    });
+    dismissBtn.addEventListener('click', hideBanner);
   }
 })();
 </script>
@@ -1556,7 +1641,8 @@ document.addEventListener('DOMContentLoaded', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ region: selected })
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.ok) { modal.classList.remove('show'); document.body.style.overflow = ''; }
+      if (d.ok) { modal.classList.remove('show'); document.body.style.overflow = '';
+                  window.PopupManager.done(); }
       else { document.getElementById('rmErr').textContent = 'Xatolik. Qaytadan urinib ko\'ring.';
              save.disabled = false; save.textContent = 'Saqlash'; }
     }).catch(function () {
@@ -1569,8 +1655,12 @@ document.addEventListener('DOMContentLoaded', function () {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && modal.classList.contains('show')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
-  // Exactly 20 seconds after page load.
-  setTimeout(function () { modal.classList.add('show'); document.body.style.overflow = 'hidden'; }, 20000);
+  // 20 soniyadan keyin — priority manager orqali (2-chi priority).
+  setTimeout(function () {
+    window.PopupManager.request(2, function () {
+      modal.classList.add('show'); document.body.style.overflow = 'hidden';
+    });
+  }, 20000);
 })();
 </script>
 {% endif %}
@@ -1623,7 +1713,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function next() {
     if (queue.length) { render(queue.shift()); }
-    else { modal.classList.remove('show'); document.body.style.overflow = ''; current = null; }
+    else { modal.classList.remove('show'); document.body.style.overflow = ''; current = null;
+           window.PopupManager.done(); }
   }
   window.nmAck = function () {
     if (!current) { next(); return; }
@@ -1657,7 +1748,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     // Deadline reminders are time-critical — surface them first.
     queue = reminders.concat(notes);
-    if (queue.length) next();
+    // Eng yuqori priority (1) — admin xabari boshqa popuplardan oldin ko'rsatiladi.
+    if (queue.length) window.PopupManager.request(1, next);
   });
 })();
 </script>

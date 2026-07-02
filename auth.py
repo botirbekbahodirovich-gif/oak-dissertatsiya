@@ -117,6 +117,11 @@ def telegram_login():
                 username = user_row[1]
                 email    = user_row[2] or email
 
+            # Har login bo'lganda tashriflar sonini oshiramiz (so'rovnoma gate'i uchun).
+            cur.execute(
+                "UPDATE users SET visit_count = COALESCE(visit_count, 0) + 1 WHERE id = %s",
+                (user_id,))
+            conn.commit()
             cur.close()
         finally:
             conn.close()

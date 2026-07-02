@@ -302,6 +302,27 @@ def inject_region_status():
     return dict(needs_region=needs)
 
 
+@app.context_processor
+def inject_visit_count():
+    """Logged-in foydalanuvchining tashriflar soni — so'rovnoma faqat 10+ tashrifda."""
+    vc = 0
+    try:
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
+            from data import get_connection
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COALESCE(visit_count, 0) FROM users WHERE id = %s",
+                                (int(current_user.get_id()),))
+                    row = cur.fetchone()
+                    vc = row[0] if row else 0
+            finally:
+                conn.close()
+    except Exception:
+        vc = 0
+    return dict(visit_count=vc)
+
+
 @app.route('/api/profile/set-region', methods=['POST'])
 @csrf.exempt
 def set_region():
@@ -375,8 +396,8 @@ login_manager.login_message = "Iltimos, tizimga kiring."
 # ── Fix 5.2: durable session/token lifecycle ────────────────────────────────
 app.config.update(
     SESSION_PERMANENT=True,
-    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
-    REMEMBER_COOKIE_DURATION=timedelta(days=30),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),   # login 7 kun saqlanadi
+    REMEMBER_COOKIE_DURATION=timedelta(days=7),
     REMEMBER_COOKIE_HTTPONLY=True,
     REMEMBER_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_HTTPONLY=True,
@@ -1101,6 +1122,7 @@ def _run_startup_migrations():
             # Region (viloyat) for registered main-site users — collected via the
             # mandatory post-registration popup for geography analytics.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS visit_count INTEGER DEFAULT 0")
         conn.commit()
         conn.close()
     except Exception:
