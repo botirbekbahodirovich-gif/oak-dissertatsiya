@@ -15,7 +15,7 @@
       <div class="alert-inline error"><i class="bi bi-exclamation-triangle-fill"></i>&nbsp;{{ error }}</div>
     {% endif %}
     <form method="POST" action="/login/password" autocomplete="on" style="margin-bottom:20px;">
-      {{ csrf_token() }}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
         <input type="text" name="username" class="form-control" placeholder="Foydalanuvchi nomi" autocomplete="username" required>
       </div>
