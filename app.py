@@ -436,19 +436,20 @@ def transliterate(text):
 
 def avatar_url(full_name):
     """Map a scholar name to its sanitized Supabase avatar URL
-    ({last}_{first}_{patronymic}.jpg): Cyrillic→Latin, lowercased, spaces→'_',
+    ({Last}_{First}_{Patronymic}.png): Cyrillic→Latin, Title_Case, spaces→'_',
     quotes/ticks stripped, consecutive underscores collapsed to one."""
     s = (full_name or "").strip()
     if not s:
         return DEFAULT_AVATAR
-    s = transliterate(s).lower()
+    s = transliterate(s)
     s = _re_util.sub(r"\s+", "_", s)
     for ch in _AVATAR_STRIP:
         s = s.replace(ch, "")
     s = _re_util.sub(r"_+", "_", s).strip("_")
     if not s:
         return DEFAULT_AVATAR
-    return AVATAR_BUCKET + s + ".jpg"
+    s = "_".join(part[:1].upper() + part[1:] for part in s.split("_"))
+    return AVATAR_BUCKET + s + ".png"
 
 
 def normalize_patronymic(name):
