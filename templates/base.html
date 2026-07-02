@@ -1199,6 +1199,10 @@
   const freePaths = ['/cabinet/login', '/cabinet/register', '/about', '/contact'];
   if (freePaths.includes(window.location.pathname)) return;
 
+  // Minimal UI: the mandatory registration wall is OFF by default — login/
+  // register links stay in the nav. Re-enable via window.OAK_POPUPS_ENABLED.
+  if (!window.OAK_POPUPS_ENABLED) return;
+
   // Check if already dismissed in this browser session
   if (sessionStorage.getItem('authPopupDismissed')) return;
 
@@ -1234,6 +1238,9 @@ function dismissAuthPopup() {
      Har bir popup PopupManager.request(priority, showFn) chaqiradi; yopilganda
      PopupManager.done() bilan navbatdagi eng muhim popup ko'rsatiladi. -->
 <script>
+// Popup master switch — admin-controllable, default OFF for a minimal,
+// distraction-free academic interface. (Server hook: `popups_enabled`.)
+window.OAK_POPUPS_ENABLED = {{ 'true' if popups_enabled else 'false' }};
 window.PopupManager = (function () {
   var reqs = [];        // {priority, show}
   var active = false;
@@ -1248,6 +1255,10 @@ window.PopupManager = (function () {
     try { next.show(); } catch (e) { active = false; }
   }
   function request(priority, show) {
+    // Minimal UI: non-essential popups (region=2, survey=3, PWA=4) are OFF by
+    // default. Priority-1 admin notifications always pass through. Admins can
+    // re-enable the rest by setting window.OAK_POPUPS_ENABLED = true.
+    if (priority >= 2 && !window.OAK_POPUPS_ENABLED) return;
     reqs.push({ priority: priority, show: show });
     if (active || timer) return;
     timer = setTimeout(_run, COLLECT_MS);
