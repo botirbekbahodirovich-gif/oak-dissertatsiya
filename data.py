@@ -1672,7 +1672,7 @@ def network_graph():
 @login_required
 def fix_existing_data():
     from flask_login import current_user
-    if not getattr(current_user, 'username', None) or current_user.username != 'admin':
+    if not getattr(current_user, 'is_admin', False):
         return jsonify({'error': 'Admin only'}), 403
 
     fixed = {'daraja_phd': 0, 'daraja_dsc': 0, 'olim_cleaned': 0}

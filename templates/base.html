@@ -700,7 +700,7 @@
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}
         <a href="/cabinet" class="nav-link{% if request.path.startswith('/cabinet') %} active{% endif %}"><i class="bi bi-person-badge"></i>Kabinet</a>
-        {% if current_user.username == 'admin' %}
+        {% if current_user.is_admin %}
         <a href="/admin/analytics" class="nav-link{% if request.path == '/admin/analytics' %} active{% endif %}"><i class="bi bi-speedometer2"></i>Admin</a>
         <a href="/admin/yangiliklar" class="nav-link{% if request.path.startswith('/admin/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar (admin)</a>
         <a href="/admin/blog" class="nav-link{% if request.path.startswith('/admin/blog') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Blog (admin)</a>

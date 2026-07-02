@@ -32,7 +32,7 @@ _DURATION_INTERVALS = {
 @admin_bp.route('/admin/analytics')
 @login_required
 def admin_analytics():
-    if current_user.username != 'admin':
+    if not getattr(current_user, 'is_admin', False):
         abort(403)
     from data import get_connection
     conn = get_connection()
@@ -431,7 +431,7 @@ def admin_broadcast_delete(id):
 @admin_bp.route('/admin/user-activity/<identifier>')
 @login_required
 def admin_user_activity(identifier):
-    if current_user.username != 'admin':
+    if not getattr(current_user, 'is_admin', False):
         abort(403)
     from collections import OrderedDict, Counter
     from data import get_connection

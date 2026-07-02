@@ -50,15 +50,20 @@ def password_login():
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, email, password_hash FROM users WHERE username = %s",
+                "SELECT id, username, email, password_hash, COALESCE(is_admin, FALSE) "
+                "FROM users WHERE username = %s",
                 (username,))
             row = cur.fetchone()
         conn.close()
-        if row and row[3] and bcrypt.checkpw(password, row[3].encode()):
-            session.permanent = True
-            login_user(User(row[0], row[1], row[2]), remember=True)
-            session.modified = True
-            return redirect(url_for('index'))
+        if row and row[3]:
+            # password_hash may come back as str (text) or bytes/memoryview (bytea).
+            stored = row[3]
+            hash_bytes = bytes(stored) if isinstance(stored, (bytes, bytearray, memoryview)) else stored.encode()
+            if bcrypt.checkpw(password, hash_bytes):
+                session.permanent = True
+                login_user(User(row[0], row[1], row[2], row[4]), remember=True)
+                session.modified = True
+                return redirect(url_for('index'))
         return render_template('login.html', error='Login yoki parol xato')
     except Exception:
         return render_template('login.html', error='Xatolik yuz berdi')

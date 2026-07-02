@@ -144,7 +144,7 @@ def _read_file(file) -> pd.DataFrame:
 @upload_bp.route('/admin/clear-and-upload', methods=['POST'])
 @login_required
 def clear_and_upload():
-    if not getattr(current_user, 'username', None) or current_user.username != 'admin':
+    if not getattr(current_user, 'is_admin', False):
         return jsonify({'success': False, 'error': 'Admin only'}), 403
 
     if 'file' not in request.files:

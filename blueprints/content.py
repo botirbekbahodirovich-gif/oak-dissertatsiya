@@ -331,7 +331,7 @@ def university_profile(name):
                'description': '', 'founded_year': None, 'rector': '', 'address': '',
                'phone': '', 'email': '', 'telegram': ''}
 
-    is_admin = (current_user.is_authenticated and current_user.username == 'admin')
+    is_admin = (current_user.is_authenticated and getattr(current_user, 'is_admin', False))
     return render_template('university_profile.html', uni=uni, stats=stats,
                            top_olimlar=top_olimlar, top_rahbarlar=top_rahbarlar,
                            recent=recent, by_year=by_year, top_ixtisos=top_ixtisos,
@@ -431,6 +431,6 @@ def journal_detail(id):
         journal = None
     if not journal:
         abort(404)
-    is_admin = (current_user.is_authenticated and current_user.username == 'admin')
+    is_admin = (current_user.is_authenticated and getattr(current_user, 'is_admin', False))
     return render_template('journal_detail.html', j=journal, codes=codes,
                            similar=similar, is_admin=is_admin)

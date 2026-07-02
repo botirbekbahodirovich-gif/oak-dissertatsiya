@@ -500,23 +500,28 @@ def require_registration():
 
 
 class User(UserMixin):
-    def __init__(self, id, username, email):
+    def __init__(self, id, username, email, is_admin=False):
         self.id = id
         self.username = username
         self.email = email
+        self.is_admin = bool(is_admin)
 
 
 @login_manager.user_loader
 def load_user(user_id):
     # Use the hardened, pooled connection (SSL enforced + timeouts) so sessions
     # resolve correctly on managed Postgres after the host migration.
+    # is_admin is loaded here so admin authorization works for every login flow
+    # (Flask-Login rebuilds current_user via this loader on each request).
     try:
         from data import get_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, username, email FROM users WHERE id = %s",
-                            (int(user_id),))
+                cur.execute(
+                    "SELECT id, username, email, COALESCE(is_admin, FALSE) "
+                    "FROM users WHERE id = %s",
+                    (int(user_id),))
                 row = cur.fetchone()
         finally:
             conn.close()
@@ -2647,7 +2652,9 @@ def genealogy_page(name):
 
 
 def _require_admin():
-    if not current_user.is_authenticated or current_user.username != 'admin':
+    # Authorize by the is_admin flag (not a hardcoded username) so every admin
+    # account — admin, botir365, Botir_Bakhodirovich — has dashboard access.
+    if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
         abort(403)
 
 

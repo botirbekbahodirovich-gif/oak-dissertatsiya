@@ -266,7 +266,7 @@ def grant_reminders():
     return jsonify({"ok": True, "reminders": items})
 
 
-# ── Admin: grant management (username == 'admin' only) ──────────────────────
+# ── Admin: grant management (is_admin accounts only) ────────────────────────
 
 def _grant_form_values():
     """Reads grant fields from the submitted admin form; returns a values dict."""
