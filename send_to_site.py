@@ -7,8 +7,8 @@ import os
 import sys
 import requests
 
-API_URL = os.environ.get("SITE_API_URL")   # GitHub Secret dan (masalan .../api/v1/import-oak)
-API_KEY = os.environ.get("SITE_API_KEY")   # GitHub Secret dan
+API_URL = os.environ.get("SITE_API_URL")   # GitHub Secret: https://olimlar.uz/api/oak/import
+API_KEY = os.environ.get("SITE_API_KEY")   # GitHub Secret dan (app .env dagi SITE_API_KEY bilan bir xil)
 
 
 def main():

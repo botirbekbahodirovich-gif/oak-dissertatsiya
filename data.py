@@ -1334,8 +1334,16 @@ def oak_ingest():
 # Secure import endpoint for the daily scraper (VPS-direct, X-API-KEY auth).
 # Unlike /api/oak/ingest this UPSERTs: existing records (matched on oak_id) are
 # updated in place instead of skipped, so re-runs refresh changed data.
+#
+# Exposed at BOTH paths, same handler:
+#   /api/oak/import   — preferred; under the /api/oak/ prefix that api_protection
+#                       whitelists, so the scraper's python-requests User-Agent
+#                       is not blocked (403) by the anti-scraping middleware.
+#   /api/v1/import-oak — legacy alias kept for backwards compatibility.
+# Point the SITE_API_URL secret at https://olimlar.uz/api/oak/import.
 # ---------------------------------------------------------------------------
 
+@data_bp.route('/api/oak/import', methods=['POST'])
 @data_bp.route('/api/v1/import-oak', methods=['POST'])
 def import_oak():
     api_key = request.headers.get('X-API-KEY', '')
