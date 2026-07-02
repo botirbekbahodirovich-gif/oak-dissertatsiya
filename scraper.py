@@ -182,7 +182,14 @@ def parse_list_page(html):
 def load_state():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            state = json.load(f)
+        # Eski bir manbali format ({"last_id": N}) ni page/8 kalitiga ko'chiramiz,
+        # aks holda watermark yo'qolib, hamma e'lon "eski" deb hisoblanardi.
+        if "last_id" in state and "last_id_page8" not in state:
+            state["last_id_page8"] = state.pop("last_id")
+        state.setdefault("last_id_page8", 0)
+        state.setdefault("last_id_page31", 0)
+        return state
     # Har bir manba uchun alohida last_id.
     return {"last_id_page8": 0, "last_id_page31": 0, "last_run": None}
 
@@ -257,28 +264,36 @@ def main():
                 if item["id"] > max_id_seen:
                     max_id_seen = item["id"]
 
+                # "Yangi" ni state fayldagi watermark (last_id) bo'yicha aniqlaymiz.
+                # Bu bazaga ulanishga bog'liq EMAS — GitHub Actions da psycopg2
+                # o'rnatilmagani uchun conn=None bo'lib, avval hamma element "skip"
+                # bo'lib qolar edi va yangi e'lonlar hech qachon aniqlanmasdi.
+                is_new = item["id"] > last_id
+
                 parsed = parse_announcement(item["raw_text"])
                 record = _build_record(item, parsed, yonalish)
 
-                # Har bir elementni darhol bazaga yozamiz (ON CONFLICT bilan).
-                status = db_save_one(conn, record) if conn is not None else "skip"
+                # Bazaga yozish — faqat imkon bo'lsa (mahalliy ishga tushirishda).
+                # Saytga yuborish esa new_items.json orqali send_to_site.py bilan
+                # amalga oshadi, shuning uchun DB bu yerda majburiy emas.
+                if conn is not None:
+                    db_save_one(conn, record)
 
-                if status == "added":
+                if is_new:
                     new_items.append(record)
                     added_total += 1
                     consec_skip = 0
-                    # Faqat yangi qo'shilgan element log ga chiqadi
                     print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
-                elif status == "skip":
+                else:
                     skipped_total += 1
                     consec_skip += 1
-                    # 4 ta ketma-ket mavjud element = eski ma'lumotlarga yetdik
+                    # 4 ta ketma-ket eski (watermark dan pastroq) element = eski
+                    # ma'lumotlarga yetdik, to'xtatamiz.
                     if consec_skip >= 4:
-                        print("  4 ta ketma-ket mavjud element — eski ma'lumotlarga "
+                        print("  4 ta ketma-ket eski element — eski ma'lumotlarga "
                               "yetildi, to'xtatildi.")
                         stop = True
                         break
-                # status == "error" — log db_save_one ichida chiqadi, davom etamiz
 
             time.sleep(DELAY)
 
@@ -303,8 +318,9 @@ def main():
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(new_items, f, ensure_ascii=False, indent=2)
 
-    print("Bazaga yozildi: " + str(added_total) + " ta yangi, "
-          + str(skipped_total) + " ta mavjud (skip).")
+    print("Aniqlandi: " + str(added_total) + " ta yangi, "
+          + str(skipped_total) + " ta eski (skip)."
+          + ("" if conn is not None else " (DB ulanmagan — faqat saytga yuboriladi)"))
 
     return new_items
 

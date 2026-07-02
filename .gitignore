@@ -1,5 +1,7 @@
 .env
 *.env
+# Scraper run output (regenerated every run; not source of truth)
+new_items.json
 wsl_venv/
 __pycache__/
 *.pyc
