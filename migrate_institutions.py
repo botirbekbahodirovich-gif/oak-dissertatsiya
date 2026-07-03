@@ -90,6 +90,12 @@ def main():
     try:
         with conn.cursor() as cur:
             cur.execute(CREATE_SQL)
+            # Table may pre-exist with a narrower schema — add missing columns.
+            for col, typ in (('canonical_name', 'TEXT'), ('latin_name', 'TEXT'),
+                             ('category', "VARCHAR(50) DEFAULT 'universitet'"),
+                             ('region', 'VARCHAR(100)'),
+                             ('is_active', 'BOOLEAN DEFAULT TRUE')):
+                cur.execute(f"ALTER TABLE institution_map ADD COLUMN IF NOT EXISTS {col} {typ}")
             cur.execute(INDEX_SQL)
 
             cur.execute(

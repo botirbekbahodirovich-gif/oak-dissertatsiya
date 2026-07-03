@@ -741,18 +741,27 @@ def search_institution():
     if len(q) < 2:
         return jsonify({"results": []})
     like = f"%{q.lower()}%"
+    # Apostrophe-insensitive Latin match: users type o'zbekiston / o`zbekiston,
+    # stored latin_name may have none (transliteration) or a different mark.
+    _apos = "'`’‘ʼ"
+    q_lat = q.lower()
+    for ch in _apos:
+        q_lat = q_lat.replace(ch, '')
+    like_lat = f"%{q_lat}%"
     results = []
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT canonical_name, COUNT(*) AS variants "
+                    "SELECT COALESCE(canonical_name, cyrillic_name) AS canon, "
+                    "       COUNT(*) AS variants "
                     "FROM institution_map "
-                    "WHERE is_active = TRUE AND canonical_name IS NOT NULL "
-                    "AND (LOWER(cyrillic_name) LIKE %s OR LOWER(latin_name) LIKE %s) "
-                    "GROUP BY canonical_name ORDER BY variants DESC, canonical_name "
-                    "LIMIT 15", (like, like))
+                    "WHERE is_active = TRUE "
+                    "AND (LOWER(cyrillic_name) LIKE %s "
+                    "     OR TRANSLATE(LOWER(COALESCE(latin_name, '')), %s, '') LIKE %s) "
+                    "GROUP BY canon ORDER BY variants DESC, canon "
+                    "LIMIT 15", (like, _apos, like_lat))
                 from institutions import transliterate_display
                 results = [{"name": transliterate_display(r[0]), "cyrillic": r[0],
                             "count": r[1]} for r in cur.fetchall()]

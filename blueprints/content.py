@@ -330,15 +330,17 @@ def university_profile(name):
                 try:
                     cur.execute(
                         "SELECT cyrillic_name FROM institution_map "
-                        "WHERE canonical_name = %s OR cyrillic_name = %s", (term, term))
+                        "WHERE COALESCE(canonical_name, cyrillic_name) = %s "
+                        "OR cyrillic_name = %s", (term, term))
                     variants = [r[0] for r in cur.fetchall()]
                     if variants:
                         where = "TRIM(muassasa) IN (" + ",".join(["%s"] * len(variants)) + ")"
                         params = list(variants)
                     cur.execute(
-                        "SELECT MAX(canonical_name), MAX(category), MAX(region) "
-                        "FROM institution_map "
-                        "WHERE canonical_name = %s OR cyrillic_name = %s", (term, term))
+                        "SELECT MAX(COALESCE(canonical_name, cyrillic_name)), "
+                        "MAX(category), MAX(region) FROM institution_map "
+                        "WHERE COALESCE(canonical_name, cyrillic_name) = %s "
+                        "OR cyrillic_name = %s", (term, term))
                     imr = cur.fetchone()
                     if imr and imr[0]:
                         from institutions import transliterate_display

@@ -882,6 +882,15 @@ def _run_startup_migrations():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            # The table may pre-exist with a narrower schema (populated on the
+            # server before canonical_name was introduced) — CREATE IF NOT
+            # EXISTS won't touch it, so add missing columns and backfill.
+            cur.execute("ALTER TABLE institution_map "
+                        "ADD COLUMN IF NOT EXISTS canonical_name TEXT")
+            cur.execute("ALTER TABLE institution_map "
+                        "ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE")
+            cur.execute("UPDATE institution_map SET canonical_name = cyrillic_name "
+                        "WHERE canonical_name IS NULL")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_institution_map_canonical "
                         "ON institution_map (canonical_name)")
             _seed_universities(cur)
@@ -3502,7 +3511,7 @@ def get_institution_directory():
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT im.canonical_name,
+                    SELECT COALESCE(im.canonical_name, im.cyrillic_name) AS canon,
                            MAX(im.latin_name)           AS latin_name,
                            MAX(im.category)             AS category,
                            MAX(im.region)               AS region,
@@ -3511,9 +3520,9 @@ def get_institution_directory():
                            COUNT(DISTINCT d.ixtisoslik) AS ixt_count
                     FROM institution_map im
                     LEFT JOIN dissertations d ON TRIM(d.muassasa) = im.cyrillic_name
-                    WHERE im.is_active = TRUE AND im.canonical_name IS NOT NULL
-                    GROUP BY im.canonical_name
-                    ORDER BY diss_count DESC, im.canonical_name
+                    WHERE im.is_active = TRUE
+                    GROUP BY canon
+                    ORDER BY diss_count DESC, canon
                 """)
                 for r in cur.fetchall():
                     out.append({
