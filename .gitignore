@@ -17,3 +17,7 @@ ENV/
 .idea/
 .vscode/
 flask_cache/
+
+# Legacy SQLite user DB — shaxsiy malumotlar, hech qachon commit qilinmasin
+users.db
+*.db
