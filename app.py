@@ -1606,8 +1606,12 @@ def trends():
 
 # ── Collaboration graph (advisor / student / opponent network) ─────────────
 def _collab_index():
-    """Build the collaboration adjacency index once. Cached 30 min (in-memory)."""
-    cached = cache.get("collab_index_v1")
+    """Build the collaboration adjacency index once. Cached 30 min (in-memory).
+
+    Tracks advisor→student and opponent edges (with defence years) plus each
+    scholar's dominant specialization / institution so the force-graph front-end
+    can colour edges, size nodes and drive the year / ixtisoslik filters."""
+    cached = cache.get("collab_index_v2")
     if cached is not None:
         return cached
     from data import get_connection
@@ -1615,17 +1619,30 @@ def _collab_index():
     adj = defaultdict(set)            # name -> set of connected names (advisor + opponent)
     adv_w = Counter()                 # (advisor, student) -> count
     opp_w = Counter()                 # (opponent, defender) -> count
+    adv_year = {}                     # (advisor, student) -> latest defence year
+    opp_year = {}                     # (opponent, defender) -> latest defence year
     students_by_advisor = defaultdict(set)
     advisor_of = defaultdict(set)     # student -> set advisors
     opp_count = Counter()             # name -> times they were an opponent
     deg_map = {}                      # name -> 'PhD'/'DSc'
+    spec_ctr = defaultdict(Counter)   # name -> Counter of ixtisoslik codes
+    inst_ctr = defaultdict(Counter)   # name -> Counter of muassasa
+
+    def _year(sana):
+        m = _re_util.findall(r'(?:19|20)\d{2}', sana or '')
+        return int(m[-1]) if m else None
+
+    def _spec(s):
+        codes = _re_util.findall(r'\d{2}\.\d{2}\.\d{2}', s or '')
+        return codes[0] if codes else ''
+
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT olim, daraja, ilmiy_rahbar, opponent_1, opponent_2, opponent_3 "
-                    "FROM dissertations")
+                    "SELECT olim, daraja, ilmiy_rahbar, opponent_1, opponent_2, "
+                    "opponent_3, ixtisoslik, muassasa, sana FROM dissertations")
                 def _ok(n):
                     n = (n or '').strip()
                     if len(n) < 4:
@@ -1634,39 +1651,61 @@ def _collab_index():
                     if 'ф.и.ш' in low or 'f.i.sh' in low or low in ('номаълум', "noma'lum"):
                         return ''
                     return n
-                for olim, daraja, rahbar, o1, o2, o3 in cur.fetchall():
+                for olim, daraja, rahbar, o1, o2, o3, ixt, muas, sana in cur.fetchall():
                     o = _ok(olim)
-                    if o and daraja:
-                        up = daraja.upper()
-                        cur_d = deg_map.get(o)
-                        if 'DSC' in up or 'док' in (daraja or '').lower():
-                            deg_map[o] = 'DSc'
-                        elif ('PHD' in up or 'фан' in (daraja or '').lower()) and cur_d != 'DSc':
-                            deg_map[o] = 'PhD'
+                    yr = _year(sana)
+                    code = _spec(ixt)
+                    inst = (muas or '').strip()
+                    if o:
+                        if code:
+                            spec_ctr[o][code] += 1
+                        if inst:
+                            inst_ctr[o][inst] += 1
+                        if daraja:
+                            up = daraja.upper()
+                            cur_d = deg_map.get(o)
+                            if 'DSC' in up or 'док' in (daraja or '').lower():
+                                deg_map[o] = 'DSc'
+                            elif ('PHD' in up or 'фан' in (daraja or '').lower()) and cur_d != 'DSc':
+                                deg_map[o] = 'PhD'
                     r = _ok(rahbar)
                     if r and o:
                         adv_w[(r, o)] += 1
+                        if yr:
+                            adv_year[(r, o)] = max(yr, adv_year.get((r, o), yr))
                         students_by_advisor[r].add(o)
                         advisor_of[o].add(r)
                         adj[r].add(o); adj[o].add(r)
+                        # advisor inherits the student's spec/inst so filters still
+                        # surface supervisors who never defended in this dataset
+                        if code:
+                            spec_ctr[r][code] += 1
+                        if inst:
+                            inst_ctr[r][inst] += 1
                     for opp in (o1, o2, o3):
                         opp = _ok(opp)
                         if opp and o and opp != o:
                             opp_w[(opp, o)] += 1
+                            if yr:
+                                opp_year[(opp, o)] = max(yr, opp_year.get((opp, o), yr))
                             opp_count[opp] += 1
                             adj[opp].add(o); adj[o].add(opp)
         finally:
             conn.close()
     except Exception:
         pass
+    spec_map = {n: c.most_common(1)[0][0] for n, c in spec_ctr.items() if c}
+    inst_map = {n: c.most_common(1)[0][0] for n, c in inst_ctr.items() if c}
     idx = {
         "adj": adj, "adv_w": adv_w, "opp_w": opp_w,
+        "adv_year": adv_year, "opp_year": opp_year,
         "students_by_advisor": students_by_advisor, "advisor_of": advisor_of,
         "opp_count": opp_count, "deg_map": deg_map,
+        "spec_map": spec_map, "inst_map": inst_map,
         "lower_map": {n.lower(): n for n in adj.keys()},
         "by_conn": sorted(adj.keys(), key=lambda n: -len(adj[n])),
     }
-    cache.set("collab_index_v1", idx, 1800)
+    cache.set("collab_index_v2", idx, 1800)
     return idx
 
 
@@ -1685,8 +1724,9 @@ def _collab_role(idx, name):
     return role, students, opponents, advisors
 
 
-def _collab_nodes_edges(idx, node_set, center=None, with_siblings=False, sibling_for=None):
+def _collab_nodes_edges(idx, node_set, center=None):
     adj = idx["adj"]
+    spec_map, inst_map = idx["spec_map"], idx["inst_map"]
     group_map = {"advisor": 1, "mixed": 2, "student": 3, "opponent": 4}
     nodes = []
     for n in node_set:
@@ -1694,52 +1734,66 @@ def _collab_nodes_edges(idx, node_set, center=None, with_siblings=False, sibling
         nodes.append({
             "id": n, "connections": len(adj.get(n, ())),
             "degree": idx["deg_map"].get(n), "role": role, "group": group_map[role],
-            "students": students, "opponents": opponents, "advisors": advisors,
+            "students": students, "students_count": students,
+            "opponents": opponents, "advisors": advisors,
+            "specialization": spec_map.get(n, ""),
+            "institution": inst_map.get(n, ""),
+            "avatar": avatar_url(n),
             "center": (n == center),
         })
     edges = []
     seen = set()
     for (a, b), w in idx["adv_w"].items():
         if a in node_set and b in node_set:
-            edges.append({"source": a, "target": b, "type": "advisor", "weight": int(w)})
+            edges.append({"source": a, "target": b, "type": "advisor",
+                          "weight": int(w), "year": idx["adv_year"].get((a, b))})
             seen.add((a, b))
     for (a, b), w in idx["opp_w"].items():
         if a in node_set and b in node_set and (a, b) not in seen:
-            edges.append({"source": a, "target": b, "type": "opponent", "weight": int(w)})
-    if with_siblings and sibling_for:
-        sibs = sibling_for & node_set
-        for s in sibs:
-            edges.append({"source": center, "target": s, "type": "sibling", "weight": 1})
+            edges.append({"source": a, "target": b, "type": "opponent",
+                          "weight": int(w), "year": idx["opp_year"].get((a, b))})
+    # Institution (muassasa) edges — link same-institution scholars to the
+    # best-connected member of that institution (star, not a dense clique).
+    by_inst = {}
+    for n in node_set:
+        inst = inst_map.get(n)
+        if inst:
+            by_inst.setdefault(inst, []).append(n)
+    for inst, members in by_inst.items():
+        if len(members) < 2:
+            continue
+        hub = max(members, key=lambda x: len(adj.get(x, ())))
+        for m in members:
+            if m != hub:
+                edges.append({"source": hub, "target": m, "type": "institution",
+                              "weight": 1, "year": None})
     return nodes, edges
 
 
-def _collab_search(name, max_nodes=120):
+def _collab_search(name, max_nodes=500):
+    """Ego network of one scholar: breadth-first walk out along advisor / student
+    / opponent links (infinite depth), bounded to ``max_nodes``. Strongly
+    connected neighbours are expanded first so the cap keeps the densest core."""
     idx = _collab_index()
     center = idx["lower_map"].get((name or "").strip().lower())
     if not center:
         return {"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}}
     adj = idx["adj"]
     S = {center}
-    neigh = sorted(adj.get(center, ()), key=lambda n: -len(adj[n]))[:60]
-    S.update(neigh)
-    # academic siblings (other students of the center's advisors)
-    sibs = set()
-    for a in idx["advisor_of"].get(center, ()):
-        sibs |= idx["students_by_advisor"].get(a, set())
-    sibs.discard(center)
-    for s in list(sibs)[:30]:
-        if len(S) >= max_nodes:
-            break
-        S.add(s)
-    # level 2
-    for n in neigh[:20]:
-        if len(S) >= max_nodes:
-            break
-        for m in sorted(adj.get(n, ()), key=lambda x: -len(adj[x]))[:6]:
+    frontier = [center]
+    while frontier and len(S) < max_nodes:
+        nxt = []
+        for cur in frontier:
+            for m in sorted(adj.get(cur, ()), key=lambda x: -len(adj[x])):
+                if m not in S:
+                    S.add(m)
+                    nxt.append(m)
+                    if len(S) >= max_nodes:
+                        break
             if len(S) >= max_nodes:
                 break
-            S.add(m)
-    nodes, edges = _collab_nodes_edges(idx, S, center=center, with_siblings=True, sibling_for=sibs)
+        frontier = nxt
+    nodes, edges = _collab_nodes_edges(idx, S, center=center)
     most = max(nodes, key=lambda x: x["connections"])["id"] if nodes else ""
     return {"nodes": nodes, "edges": edges, "center": center,
             "stats": {"total_nodes": len(nodes), "total_edges": len(edges), "most_connected": most}}
