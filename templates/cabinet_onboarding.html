@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Profilni to'ldirish — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
+.ob { background: #0f172a; color: #e2e8f0; min-height: 92vh; padding: 0 0 60px; }
+.ob-hero { background: linear-gradient(135deg,#1e3a8a 0%,#6366f1 100%); padding: 34px 20px 28px; text-align: center; }
+.ob-hero h1 { font-size: 1.7rem; font-weight: 800; color: #fff; margin: 0 0 6px; }
+.ob-hero p { color: rgba(255,255,255,0.9); margin: 0; font-size: 0.98rem; }
+.ob-wrap { max-width: 720px; margin: -18px auto 0; padding: 0 18px; }
+
+.ob-progress { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; }
+.ob-progress .lab { display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px; font-weight: 600; }
+.ob-progress .lab b { color: #60a5fa; }
+.ob-bar { height: 8px; background: #0b1220; border-radius: 6px; overflow: hidden; }
+.ob-bar > div { height: 100%; width: 0; background: linear-gradient(90deg,#3b82f6,#22c55e); transition: width 0.35s; }
+
+.ob-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+.ob-card h3 { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
+.ob-card .desc { color: #94a3b8; font-size: 0.86rem; margin: 0 0 16px; }
+.ob-step { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 0.8rem; font-weight: 700; margin-right: 8px; }
+
+.ob-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.ob-group { margin-bottom: 4px; }
+.ob-group.full { grid-column: 1 / -1; }
+.ob-group label { display: block; font-size: 0.76rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+.ob-input, .ob-select { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 13px; font-size: 0.92rem; font-family: inherit; }
+.ob-input:focus, .ob-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+
+/* match panel */
+.ob-matches { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ob-match { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; }
+.ob-match .mn { font-weight: 700; color: #e2e8f0; }
+.ob-match .mm { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+.ob-deg { font-size: 0.68rem; font-weight: 700; color: #fff; padding: 1px 8px; border-radius: 999px; margin-right: 6px; }
+.ob-deg.phd { background: #059669; } .ob-deg.dsc { background: #e36403; }
+.ob-match button { background: #22c55e; color: #06281a; font-weight: 700; border: none; border-radius: 9px; padding: 9px 16px; cursor: pointer; font-size: 0.86rem; white-space: nowrap; }
+.ob-match button:hover { background: #16a34a; }
+.ob-hint { color: #64748b; font-size: 0.82rem; margin-top: 10px; }
+
+.ob-linked { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.35); border-radius: 12px; padding: 14px 16px; margin-top: 12px; display: none; }
+.ob-linked.show { display: block; }
+.ob-linked h4 { margin: 0 0 8px; color: #4ade80; font-size: 0.95rem; }
+.ob-linked .row { font-size: 0.86rem; color: #cbd5e1; margin: 3px 0; }
+.ob-linked .row b { color: #e2e8f0; }
+.ob-linked .unlink { background: none; border: none; color: #fca5a5; font-size: 0.8rem; cursor: pointer; margin-top: 8px; padding: 0; }
+
+/* degree radios */
+.ob-degrees { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ob-degree { position: relative; }
+.ob-degree input { position: absolute; opacity: 0; }
+.ob-degree label { display: block; background: #162032; border: 1.5px solid #334155; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; }
+.ob-degree label .t { font-weight: 700; color: #e2e8f0; font-size: 0.92rem; }
+.ob-degree label .s { display: block; color: #94a3b8; font-size: 0.76rem; margin-top: 2px; }
+.ob-degree input:checked + label { border-color: #3b82f6; background: rgba(59,130,246,0.14); }
+.ob-degree input:focus + label { box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+
+.ob-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.ob-skip { color: #94a3b8; font-size: 0.9rem; text-decoration: none; }
+.ob-skip:hover { color: #cbd5e1; }
+.ob-btn { background: #3b82f6; color: #fff; font-weight: 700; padding: 12px 26px; border: none; border-radius: 11px; cursor: pointer; font-size: 0.95rem; }
+.ob-btn:hover { background: #2563eb; }
+.ob-btn:disabled { opacity: 0.6; cursor: default; }
+.ob-toast { position: fixed; top: 18px; right: 18px; z-index: 3000; padding: 12px 18px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; opacity: 0; transform: translateY(-10px); transition: 0.25s; }
+.ob-toast.show { opacity: 1; transform: translateY(0); }
+.ob-toast.ok { background: #059669; color: #fff; } .ob-toast.err { background: #ef4444; color: #fff; }
+
+@media (max-width: 620px) {
+  .ob-grid, .ob-degrees { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="ob-toast" class="ob-toast"></div>
+<div class="ob">
+  <div class="ob-hero">
+    <h1>👋 Xush kelibsiz! Profilingizni to'ldiring</h1>
+    <p>Bu ma'lumotlar ilmiy portfoliongizni to'ldiradi va sizni bazadagi dissertatsiyangiz bilan bog'laydi</p>
+  </div>
+
+  <div class="ob-wrap">
+    <div class="ob-progress">
+      <div class="lab"><span>Profil to'ldirilishi</span><b id="ob-pct">0%</b></div>
+      <div class="ob-bar"><div id="ob-fill"></div></div>
+    </div>
+
+    <!-- STEP 1 — Ism va bazadan qidirish -->
+    <div class="ob-card">
+      <h3><span class="ob-step">1</span>To'liq ismingiz</h3>
+      <p class="desc">Ism-familiyangizni kiriting — bazadan dissertatsiyangizni avtomatik topamiz.</p>
+      <div class="ob-grid">
+        <div class="ob-group"><label>Familiya</label><input class="ob-input" id="ob-last" type="text" value="{{ profile.last_name or '' }}" placeholder="Karimov"></div>
+        <div class="ob-group"><label>Ism</label><input class="ob-input" id="ob-first" type="text" value="{{ profile.first_name or '' }}" placeholder="Aziz"></div>
+        <div class="ob-group"><label>Otasining ismi</label><input class="ob-input" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
+      </div>
+
+      <div class="ob-matches" id="ob-matches"></div>
+      <div class="ob-hint" id="ob-hint" style="display:none;">Ismni to'liqroq kiriting — mos olimlarni ko'rsatamiz.</div>
+
+      <div class="ob-linked" id="ob-linked">
+        <h4>✓ Dissertatsiyangiz topildi va biriktirildi</h4>
+        <div id="ob-linked-body"></div>
+        <button class="unlink" id="ob-unlink" type="button">✕ Bu men emasman — ajratish</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 — Ilmiy daraja -->
+    <div class="ob-card">
+      <h3><span class="ob-step">2</span>Ilmiy darajangiz</h3>
+      <p class="desc">Hozirgi holatingizga mos variantni tanlang.</p>
+      {% set _cur = profile.academic_degree or '' %}
+      <div class="ob-degrees">
+        {% set degs = [
+          ('Magistrant','Magistrant','hozir o\'qiyapman'),
+          ('Magistr','Magistr','tugatganman'),
+          ('Izlanuvchi PhD','Izlanuvchi PhD','hozir o\'qiyapman'),
+          ('PhD','Falsafa doktori (PhD)','himoya qilganman'),
+          ('Izlanuvchi DSc','Izlanuvchi DSc','hozir o\'qiyapman'),
+          ('DSc','Fan doktori (DSc)','himoya qilganman')
+        ] %}
+        {% for val, title, sub in degs %}
+        <div class="ob-degree">
+          <input type="radio" name="degree" id="deg-{{ loop.index }}" value="{{ val }}" {% if _cur == val %}checked{% endif %}>
+          <label for="deg-{{ loop.index }}"><span class="t">{{ title }}</span><span class="s">{{ sub }}</span></label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- STEP 3 — Hudud va muassasa -->
+    <div class="ob-card">
+      <h3><span class="ob-step">3</span>Hudud va muassasa</h3>
+      <p class="desc">Qayerdan va qaysi ta'lim muassasasidansiz.</p>
+      <datalist id="ob-muassasa-list"></datalist>
+      <div class="ob-grid">
+        <div class="ob-group full"><label>Viloyat / shahar</label>
+          <select class="ob-select" id="ob-region">
+            <option value="">— tanlang —</option>
+            {% for rg in uz_regions %}<option value="{{ rg }}" {% if profile.region == rg %}selected{% endif %}>{{ rg }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="ob-group full"><label>Ta'lim / ish muassasasi</label>
+          <input class="ob-input" id="ob-inst" type="text" list="ob-muassasa-list" value="{{ profile.institution or '' }}" placeholder="Masalan: Toshkent davlat texnika universiteti">
+        </div>
+      </div>
+    </div>
+
+    <div class="ob-actions">
+      <a class="ob-skip" href="/cabinet">Hozircha o'tkazib yuborish →</a>
+      <button class="ob-btn" id="ob-finish">Saqlash va davom etish ✓</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var linkedName = {{ olim_name|default("", true)|tojson }};
+
+  function toast(msg, ok) {
+    var t = document.getElementById('ob-toast');
+    t.textContent = msg; t.className = 'ob-toast show ' + (ok ? 'ok' : 'err');
+    setTimeout(function () { t.className = 'ob-toast ' + (ok ? 'ok' : 'err'); }, 2600);
+  }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); });
+  }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+
+  var last = document.getElementById('ob-last'), first = document.getElementById('ob-first'), patr = document.getElementById('ob-patr');
+  var region = document.getElementById('ob-region'), inst = document.getElementById('ob-inst');
+
+  // ── progress ──
+  function updateProgress() {
+    var pts = 0, total = 5;
+    if ((last.value.trim() && first.value.trim())) pts++;
+    if (document.querySelector('input[name=degree]:checked')) pts++;
+    if (region.value) pts++;
+    if (inst.value.trim()) pts++;
+    if (linkedName) pts++;
+    var pct = Math.round(pts / total * 100);
+    document.getElementById('ob-fill').style.width = pct + '%';
+    document.getElementById('ob-pct').textContent = pct + '%';
+  }
+
+  // ── institution autocomplete (reuse /filters muassasa list) ──
+  fetch('/filters').then(function (r) { return r.json(); }).then(function (d) {
+    var dl = document.getElementById('ob-muassasa-list');
+    (d.muassasa || []).forEach(function (m) { var o = document.createElement('option'); o.value = m; dl.appendChild(o); });
+  }).catch(function () {});
+
+  // ── live name match ──
+  var timer = null;
+  function queryName() {
+    var q = [last.value.trim(), first.value.trim(), patr.value.trim()].filter(Boolean).join(' ');
+    var box = document.getElementById('ob-matches'), hint = document.getElementById('ob-hint');
+    if (linkedName) { box.innerHTML = ''; hint.style.display = 'none'; return; }
+    if (q.length < 3) { box.innerHTML = ''; hint.style.display = 'none'; return; }
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      fetch('/cabinet/api/search-olim?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
+        var rows = (d.results || []).slice(0, 6);
+        if (!rows.length) { box.innerHTML = ''; hint.textContent = 'Bazadan topilmadi — qo\'lda to\'ldirasiz, muammo yo\'q.'; hint.style.display = 'block'; return; }
+        hint.style.display = 'none';
+        box.innerHTML = rows.map(function (it, i) {
+          var deg = it.daraja === 'PHD' ? '<span class="ob-deg phd">PhD</span>' : (it.daraja === 'DSC' ? '<span class="ob-deg dsc">DSc</span>' : '');
+          return '<div class="ob-match"><div style="min-width:0;"><div class="mn">' + esc(it.name) + '</div>' +
+                 '<div class="mm">' + deg + esc((it.mavzu || '').slice(0, 70)) + '</div></div>' +
+                 '<button data-i="' + i + '">Ha, bu menman ✓</button></div>';
+        }).join('');
+        var btns = box.querySelectorAll('.ob-match button');
+        rows.forEach(function (it, i) { btns[i].addEventListener('click', function () { claim(it.name); }); });
+      }).catch(function () {});
+    }, 300);
+  }
+  [last, first, patr].forEach(function (el) { el.addEventListener('input', function () { queryName(); updateProgress(); }); });
+
+  // ── claim + auto-fill ──
+  function claim(name) {
+    post('/cabinet/api/claim', { olim_name: name }).then(function (d) {
+      if (!d.ok) { toast(d.error || 'Xatolik', false); return; }
+      linkedName = name;
+      var p = d.profile || {};
+      if (p.academic_degree) {
+        var r = document.querySelector('input[name=degree][value="' + p.academic_degree + '"]');
+        if (r) r.checked = true;
+      }
+      if (p.institution && !inst.value.trim()) inst.value = p.institution;
+      var body = '';
+      function row(lbl, v) { return v ? '<div class="row"><b>' + esc(lbl) + ':</b> ' + esc(v) + '</div>' : ''; }
+      body += row('Ilmiy daraja', p.academic_degree);
+      body += row('Muassasa', p.institution);
+      body += row("Ilmiy rahbar", p.advisor_name || p.consultant_name);
+      body += row('Mavzu', p.dissertatsiya_mavzu);
+      body += row('Ixtisoslik', p.ixtisoslik);
+      body += row("Himoya yili", p.defense_year);
+      document.getElementById('ob-linked-body').innerHTML = body || '<div class="row">Profil biriktirildi.</div>';
+      document.getElementById('ob-linked').classList.add('show');
+      document.getElementById('ob-matches').innerHTML = '';
+      toast('Dissertatsiyangiz biriktirildi ✓', true);
+      updateProgress();
+    }).catch(function () { toast('Tarmoq xatosi', false); });
+  }
+
+  document.getElementById('ob-unlink').addEventListener('click', function () {
+    if (!linkedName) return;
+    post('/cabinet/api/unclaim', { olim_name: linkedName }).then(function () {
+      linkedName = '';
+      document.getElementById('ob-linked').classList.remove('show');
+      updateProgress(); queryName();
+    });
+  });
+
+  document.querySelectorAll('input[name=degree]').forEach(function (r) { r.addEventListener('change', updateProgress); });
+  region.addEventListener('change', updateProgress);
+  inst.addEventListener('input', updateProgress);
+
+  // ── finish ──
+  document.getElementById('ob-finish').addEventListener('click', function () {
+    var btn = this; btn.disabled = true;
+    var deg = document.querySelector('input[name=degree]:checked');
+    var body = {
+      last_name: last.value.trim(), first_name: first.value.trim(), patronymic: patr.value.trim(),
+      academic_degree: deg ? deg.value : '', region: region.value, institution: inst.value.trim(),
+      profile_completed: '1'
+    };
+    post('/cabinet/api/profile/save', body).then(function (d) {
+      if (d.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.href = '/cabinet'; }, 700); }
+      else { toast(d.error || 'Xatolik', false); btn.disabled = false; }
+    }).catch(function () { toast('Tarmoq xatosi', false); btn.disabled = false; });
+  });
+
+  // preload linked state if user already claimed
+  if (linkedName) {
+    document.getElementById('ob-linked-body').innerHTML = '<div class="row"><b>Biriktirilgan:</b> ' + esc(linkedName) + '</div>';
+    document.getElementById('ob-linked').classList.add('show');
+  }
+  updateProgress();
+})();
+</script>
+{% endblock %}

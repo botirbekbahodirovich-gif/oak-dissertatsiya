@@ -159,7 +159,7 @@ def google_callback():
                                error="Google hisobidan email olinmadi.", registered=None)
 
     try:
-        user = _find_or_create_google_user(email, name)
+        user, created = _find_or_create_google_user(email, name)
     except Exception as e:
         print("Main Google user upsert error: " + str(e))
         return render_template('login.html',
@@ -170,7 +170,9 @@ def google_callback():
     session.modified = True
     nxt = session.pop('main_google_next', '/') or '/'
     session.pop('main_google_state', None)
-    return redirect(nxt)
+    # New accounts complete their scholar profile first (cabinet onboarding
+    # bridges the main-site session in via _bridge_from_main).
+    return redirect('/cabinet/onboarding' if created else nxt)
 
 
 def _unique_username(cur, base):
@@ -189,9 +191,10 @@ def _unique_username(cur, base):
 
 
 def _find_or_create_google_user(email, name):
-    """users jadvalida email bo'yicha topadi yoki yaratadi, User obyekt qaytaradi."""
+    """users jadvalida email bo'yicha topadi yoki yaratadi. (User, created) qaytaradi."""
     from app import User
     conn = get_connection()
+    created = False
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -209,7 +212,8 @@ def _find_or_create_google_user(email, name):
                     (username, email, 'google_oauth'))
                 row = cur.fetchone()
                 conn.commit()
-            return User(row[0], row[1], row[2], row[3])
+                created = True
+            return User(row[0], row[1], row[2], row[3]), created
     finally:
         conn.close()
 
@@ -250,6 +254,7 @@ def telegram_login():
         if not tg_id:
             return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 200
 
+        is_new = False
         conn = get_connection()
         try:
             cur = conn.cursor()
@@ -270,6 +275,7 @@ def telegram_login():
                 )
                 user_id = cur.fetchone()[0]
                 conn.commit()
+                is_new = True
             else:
                 user_id = user_row[0]
                 username = user_row[1]
@@ -290,4 +296,4 @@ def telegram_login():
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
-    return jsonify({'success': True, 'redirect': '/'})
+    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else '/'})

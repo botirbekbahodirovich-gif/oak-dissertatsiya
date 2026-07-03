@@ -120,6 +120,7 @@
         <button data-panel="diss">📄 Dissertatsiyalar</button>
         <button data-panel="maqolalar">📚 Maqolalar</button>
         <button data-panel="konf">🎤 Konferensiyalar</button>
+        <button data-panel="shogird">👥 Shogirdlar</button>
         <button data-panel="ish">💼 Ish faoliyati</button>
         <button data-panel="rasmlar">📸 Rasmlar</button>
         <button data-panel="linklar">🔗 Linklar</button>
@@ -158,6 +159,18 @@
       {% set _deg = (profile.academic_degree or '')|upper %}
       <!-- ── KO'RINISH / OVERVIEW (read-only, default) ── -->
       <section class="cab-panel active" id="panel-korinish">
+        {% set _checks = [olim_name, (profile.first_name and profile.last_name), profile.academic_degree, profile.region, profile.institution, profile.bio] %}
+        {% set _done = _checks|select|list|length %}
+        {% set _pct = (_done * 100) // (_checks|length) %}
+        <div class="cab-section" style="padding:16px 20px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#cbd5e1;margin-bottom:8px;font-weight:600;">
+            <span>📊 Profil to'ldirilishi</span><b style="color:#60a5fa;">{{ _pct }}%</b>
+          </div>
+          <div style="height:8px;background:#0b1220;border-radius:6px;overflow:hidden;">
+            <div style="height:100%;width:{{ _pct }}%;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width 0.35s;"></div>
+          </div>
+          {% if _pct < 100 %}<p class="desc" style="margin:10px 0 0;">Profilingiz to'liq emas — <a href="/cabinet/onboarding" style="color:#60a5fa;">tezkor to'ldirish sahifasi</a>ga o'ting.</p>{% endif %}
+        </div>
         <div class="cab-section">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
             <div>
@@ -192,13 +205,31 @@
             {% else %}<p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan</p>{% endif %}
           </div>
 
-          <!-- PhD / DSc dissertatsiyalar (claimed) -->
+          <!-- PhD / DSc dissertatsiyalar (claimed + details) -->
           <div class="cab-section" style="margin-top:14px;background:#162032;">
-            <h3 style="font-size:1rem;">📄 Ilmiy darajaviy dissertatsiyalar</h3>
-            {% if claimed %}
-              <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>
-            {% else %}<p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan — "Dissertatsiyalar" bo'limidan biriktiring.</p>{% endif %}
+            <h3 style="font-size:1rem;">📄 Ilmiy darajaviy dissertatsiya</h3>
+            {% if profile.dissertatsiya_mavzu or profile.ixtisoslik or profile.advisor_name or profile.consultant_name or profile.defense_year %}
+              {% if profile.dissertatsiya_mavzu %}<div class="field-value" style="margin-bottom:6px;">{{ profile.dissertatsiya_mavzu }}</div>{% endif %}
+              <div class="it-meta">
+                {% if profile.ixtisoslik %}🔢 {{ profile.ixtisoslik }}{% endif %}
+                {% if profile.defense_year %} · 📅 {{ profile.defense_year }}{% endif %}
+                {% if profile.advisor_name %} · 🧑‍🏫 rahbar: {{ profile.advisor_name }}{% endif %}
+                {% if profile.consultant_name %} · 🧑‍🏫 maslahatchi: {{ profile.consultant_name }}{% endif %}
+              </div>
+              {% if profile.opponents %}<div class="it-meta">⚖️ Opponentlar: {{ profile.opponents }}</div>{% endif %}
+            {% elif not claimed %}
+              <p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan — "Dissertatsiyalar" bo'limidan biriktiring yoki "Tahrirlash"da kiriting.</p>
+            {% endif %}
+            {% if claimed %}<div class="claimed-list" style="margin-top:10px;">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>{% endif %}
           </div>
+
+          <!-- Shogirdlar (overview) -->
+          {% if shogirdlar %}
+          <div class="cab-section" style="margin-top:14px;background:#162032;">
+            <h3 style="font-size:1rem;">👥 Shogirdlar <span style="color:#64748b;font-weight:500;">({{ shogirdlar|length }})</span></h3>
+            <div class="claimed-list">{% for s in shogirdlar %}<span class="claimed-chip" style="background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.3);color:#93bbfc;">{{ s.student_name }}{% if s.degree %} · {{ s.degree }}{% endif %}</span>{% endfor %}</div>
+          </div>
+          {% endif %}
         </div>
       </section>
 
@@ -244,11 +275,18 @@
           <p class="desc">Agar dissertatsiya yoqlagan bo'lsangiz darajangizni belgilang.</p>
           <div class="cab-grid">
             <div class="cab-group"><label>Ilmiy daraja</label>
-              <select class="cab-select" data-pf="academic_degree">
+              <select class="cab-select" id="degree-select" data-pf="academic_degree" onchange="toggleDegreeFields()">
                 <option value="">— belgilanmagan —</option>
-                <option value="Magistr" {% if profile.academic_degree == 'Magistr' %}selected{% endif %}>Magistr</option>
-                <option value="PhD" {% if profile.academic_degree == 'PhD' %}selected{% endif %}>PhD (Falsafa doktori)</option>
-                <option value="DSc" {% if profile.academic_degree == 'DSc' %}selected{% endif %}>DSc (Fan doktori)</option>
+                {% for _v, _l in [
+                  ('Magistrant','Magistrant (hozir o\'qiyapman)'),
+                  ('Magistr','Magistr (tugatganman)'),
+                  ('Izlanuvchi PhD','Izlanuvchi PhD (hozir o\'qiyapman)'),
+                  ('PhD','Falsafa doktori PhD (himoya qilganman)'),
+                  ('Izlanuvchi DSc','Izlanuvchi DSc (hozir o\'qiyapman)'),
+                  ('DSc','Fan doktori DSc (himoya qilganman)')
+                ] %}
+                <option value="{{ _v }}" {% if profile.academic_degree == _v %}selected{% endif %}>{{ _l }}</option>
+                {% endfor %}
               </select>
             </div>
             <div class="cab-group"><label>Ilmiy unvon</label>
@@ -260,13 +298,34 @@
             </div>
           </div>
 
-          <!-- Magistratura bloki -->
-          <h3 style="font-size:1rem;margin-top:20px;">📘 Magistratura</h3>
-          <div class="cab-grid">
-            <div class="cab-group full"><label>Magistratura dissertatsiyasi mavzusi</label><input class="cab-input" data-pf="magistratura_mavzu" type="text" value="{{ profile.magistratura_mavzu or '' }}" placeholder="Mavzu nomi"></div>
-            <div class="cab-group"><label>Muassasa</label><input class="cab-input" data-pf="magistratura_institution" type="text" value="{{ profile.magistratura_institution or '' }}" list="muassasa-list" placeholder="OTM nomi"></div>
-            <div class="cab-group"><label>Tugatgan yili</label><input class="cab-input" data-pf="magistratura_year" type="number" value="{{ profile.magistratura_year or '' }}" placeholder="2020"></div>
+          <!-- Magistratura / yo'nalish bloki (Magistrant/Magistr) -->
+          <div class="deg-field" data-degs="Magistrant,Magistr">
+            <h3 style="font-size:1rem;margin-top:20px;">📘 Magistratura</h3>
+            <div class="cab-grid">
+              <div class="cab-group full"><label>🧭 Yo'nalish nomi</label><input class="cab-input" data-pf="yonalish" type="text" value="{{ profile.yonalish or '' }}" placeholder="Masalan: Informatika va axborot texnologiyalari"></div>
+              <div class="cab-group full"><label>Magistratura dissertatsiyasi mavzusi</label><input class="cab-input" data-pf="magistratura_mavzu" type="text" value="{{ profile.magistratura_mavzu or '' }}" placeholder="Mavzu nomi"></div>
+              <div class="cab-group"><label>Muassasa</label><input class="cab-input" data-pf="magistratura_institution" type="text" value="{{ profile.magistratura_institution or '' }}" list="muassasa-list" placeholder="OTM nomi"></div>
+              <div class="cab-group"><label>Tugatgan yili</label><input class="cab-input" data-pf="magistratura_year" type="number" value="{{ profile.magistratura_year or '' }}" placeholder="2020"></div>
+            </div>
           </div>
+
+          <!-- Dissertatsiya bloki (PhD / DSc) — darajaga qarab dinamik ko'rinadi -->
+          <div class="deg-field" data-degs="Izlanuvchi PhD,PhD,Izlanuvchi DSc,DSc">
+            <h3 style="font-size:1rem;margin-top:20px;">📄 Dissertatsiya ma'lumotlari</h3>
+            <p class="desc">Bazada dissertatsiyangiz bo'lsa, biriktirganingizda bu maydonlar avtomatik to'ldiriladi.</p>
+            <datalist id="rahbar-list"></datalist>
+            <div class="cab-grid">
+              <div class="cab-group"><label>🔢 Ixtisoslik shifri</label><input class="cab-input" data-pf="ixtisoslik" type="text" value="{{ profile.ixtisoslik or '' }}" placeholder="05.01.01"></div>
+              <div class="cab-group"><label>📅 Himoya yili</label><input class="cab-input" data-pf="defense_year" type="number" value="{{ profile.defense_year or '' }}" placeholder="2021"></div>
+              <div class="cab-group full"><label>📄 Dissertatsiya mavzusi</label><input class="cab-input" data-pf="dissertatsiya_mavzu" type="text" value="{{ profile.dissertatsiya_mavzu or '' }}" placeholder="Dissertatsiya mavzusi"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi PhD,PhD"><label>🧑‍🏫 Ilmiy rahbar</label><input class="cab-input" data-pf="advisor_name" list="rahbar-list" type="text" value="{{ profile.advisor_name or '' }}" placeholder="Ilmiy rahbar F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🏫 Ilmiy maslahatchi</label><input class="cab-input" data-pf="consultant_name" list="rahbar-list" type="text" value="{{ profile.consultant_name or '' }}" placeholder="Ilmiy maslahatchi F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🎓 O'z PhD ilmiy rahbaringiz</label><input class="cab-input" data-pf="phd_advisor_name" list="rahbar-list" type="text" value="{{ profile.phd_advisor_name or '' }}" placeholder="PhD ilmiy rahbaringiz"></div>
+              <div class="cab-group full"><label>⚖️ Opponentlar</label><input class="cab-input" data-pf="opponents" type="text" value="{{ profile.opponents or '' }}" placeholder="Opponentlar — ; bilan ajrating"></div>
+            </div>
+          </div>
+
+          <p class="field-empty deg-none" style="display:none;margin-top:16px;">Yuqorida ilmiy darajangizni tanlang — tegishli maydonlar shu yerda paydo bo'ladi.</p>
 
           <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfileForm()">💾 Saqlash</button></div>
           </form>
@@ -349,6 +408,44 @@
               </div>
             </div>
             {% else %}<p class="desc">Hali konferensiya qo'shilmagan.</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SHOGIRDLAR ── -->
+      <section class="cab-panel" id="panel-shogird">
+        <div class="cab-section">
+          <h3>Shogirdlar</h3>
+          <p class="desc">Ilmiy rahbarlik qilgan shogirdlaringizni qo'shing (PhD yoki magistr).</p>
+          <button class="cab-btn-outline" onclick="openForm('shogird')">Shogird qo'shish +</button>
+          <div class="item-form" id="form-shogird" style="margin-top:14px;">
+            <input type="hidden" id="shogird-id">
+            <datalist id="shogird-list"></datalist>
+            <div class="cab-grid">
+              <div class="cab-group full"><label>Shogird F.I.Sh *</label><input class="cab-input" id="shogird-student_name" list="shogird-list" type="text" placeholder="Ism Familiya"></div>
+              <div class="cab-group"><label>Ilmiy daraja</label>
+                <select class="cab-select" id="shogird-degree">
+                  <option value="">—</option>
+                  <option value="Magistr">Magistr</option>
+                  <option value="PhD">PhD</option>
+                  <option value="DSc">DSc</option>
+                </select>
+              </div>
+              <div class="cab-group"><label>Himoya yili</label><input class="cab-input" id="shogird-year" type="number" placeholder="2022"></div>
+            </div>
+            <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('shogird')">Bekor</button><button class="cab-btn" onclick="saveItem('shogird')">Saqlash</button></div>
+          </div>
+          <div style="margin-top:14px;">
+            {% for s in shogirdlar %}
+            <div class="item-card">
+              <div class="it-title">{{ s.student_name }}</div>
+              <div class="it-meta">{% if s.degree %}{{ s.degree }}{% endif %}{% if s.year %} · {{ s.year }}{% endif %}</div>
+              <div class="it-actions">
+                <button class="it-btn it-edit" onclick='editShogird({{ s|tojson }})'>Tahrirlash ✏️</button>
+                <button class="it-btn it-del" onclick="delItem('shogird', {{ s.id }})">O'chirish 🗑️</button>
+              </div>
+            </div>
+            {% else %}<p class="desc">Hali shogird qo'shilmagan.</p>{% endfor %}
           </div>
         </div>
       </section>
@@ -457,6 +554,33 @@
     var dl = document.getElementById('muassasa-list');
     (d.muassasa || []).forEach(function (m) { var o = document.createElement('option'); o.value = m; dl.appendChild(o); });
   }).catch(function () {});
+
+  // advisor / student autocomplete (query-driven datalist)
+  function bindAC(inputSel, listId, url) {
+    var input = document.querySelector(inputSel);
+    if (!input) return;
+    var t = null;
+    input.addEventListener('input', function () {
+      var q = input.value.trim();
+      if (q.length < 2) return;
+      clearTimeout(t);
+      t = setTimeout(function () {
+        fetch(url + '?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
+          var dl = document.getElementById(listId);
+          if (!dl) return;
+          dl.innerHTML = '';
+          (d.results || []).forEach(function (it) { var o = document.createElement('option'); o.value = it.name; dl.appendChild(o); });
+        }).catch(function () {});
+      }, 250);
+    });
+  }
+  ['advisor_name', 'consultant_name', 'phd_advisor_name'].forEach(function (f) {
+    bindAC('[data-pf="' + f + '"]', 'rahbar-list', '/cabinet/api/search-advisor');
+  });
+  bindAC('#shogird-student_name', 'shogird-list', '/cabinet/api/search-olim');
+
+  // set initial degree-field visibility
+  if (typeof toggleDegreeFields === 'function') toggleDegreeFields();
 })();
 
 function toast(msg, ok) {
@@ -616,9 +740,10 @@ var FIELDS = {
   maqola: ['title', 'authors', 'journal', 'year', 'citations', 'url'],
   konf: ['title', 'conference_name', 'location', 'date', 'url'],
   ish: ['position', 'organization', 'start_date', 'end_date', 'is_current'],
-  rasm: ['image_url', 'caption']
+  rasm: ['image_url', 'caption'],
+  shogird: ['student_name', 'degree', 'year']
 };
-var APIPATH = { maqola: 'maqola', konf: 'konferensiya', ish: 'ish', rasm: 'rasm' };
+var APIPATH = { maqola: 'maqola', konf: 'konferensiya', ish: 'ish', rasm: 'rasm', shogird: 'shogird' };
 function saveItem(t) {
   var body = {};
   FIELDS[t].forEach(function (f) {
@@ -657,5 +782,18 @@ function fill(t, obj) {
 function editMaqola(o) { fill('maqola', o); }
 function editKonf(o) { fill('konf', o); }
 function editIsh(o) { fill('ish', o); toggleCurrent(); }
+function editShogird(o) { fill('shogird', o); }
+
+// ── degree-specific field visibility (Magistr vs PhD vs DSc) ──
+function toggleDegreeFields() {
+  var sel = document.getElementById('degree-select');
+  var deg = sel ? sel.value : '';
+  document.querySelectorAll('#panel-profil .deg-field').forEach(function (el) {
+    var degs = (el.getAttribute('data-degs') || '').split(',');
+    el.style.display = (deg && degs.indexOf(deg) > -1) ? '' : 'none';
+  });
+  var none = document.querySelector('#panel-profil .deg-none');
+  if (none) none.style.display = deg ? 'none' : 'block';
+}
 </script>
 {% endblock %}

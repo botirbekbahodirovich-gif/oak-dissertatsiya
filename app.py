@@ -1060,10 +1060,36 @@ def _run_startup_migrations():
                 ('magistratura_mavzu', 'VARCHAR(1000)'),
                 ('magistratura_institution', 'VARCHAR(500)'),
                 ('magistratura_year', 'INTEGER'), ('region', 'VARCHAR(100)'),
+                # Degree-specific dissertation fields (PhD / DSc / magistr) — used
+                # by the cabinet onboarding + dynamic profile sections. Auto-filled
+                # from `dissertations` on claim when the scholar is in our base.
+                ('ixtisoslik', 'VARCHAR(100)'),          # specialization code, e.g. 05.01.01
+                ('dissertatsiya_mavzu', 'TEXT'),         # PhD/DSc dissertation topic
+                ('advisor_name', 'VARCHAR(500)'),        # ilmiy rahbar (PhD supervisor)
+                ('consultant_name', 'VARCHAR(500)'),     # ilmiy maslahatchi (DSc)
+                ('phd_advisor_name', 'VARCHAR(500)'),    # a DSc holder's own PhD advisor
+                ('opponents', 'TEXT'),                   # opponents (free text, ; separated)
+                ('defense_year', 'INTEGER'),             # himoya yili
+                ('yonalish', 'VARCHAR(300)'),            # magistratura direction name
+                ('profile_completed', 'BOOLEAN DEFAULT FALSE'),
             ):
                 cur.execute(f"ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS {_col} {_typ}")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_profiles_olim_name_lower "
                         "ON olim_profiles (LOWER(TRIM(olim_name)))")
+            # Shogirdlar (students) — per-scholar list, keyed by olim_name like the
+            # other olim_* portfolio tables. CRUD lives in cabinet.py.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS olim_shogirdlar (
+                    id SERIAL PRIMARY KEY,
+                    olim_name VARCHAR(500) NOT NULL,
+                    student_name VARCHAR(500) NOT NULL,
+                    degree VARCHAR(50),
+                    year INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_shogirdlar_name "
+                        "ON olim_shogirdlar(olim_name)")
             indexes = [
                 ("idx_dissertations_olim",         "olim"),
                 ("idx_dissertations_ixtisoslik",    "ixtisoslik"),

@@ -4,6 +4,7 @@ Self-contained auth via Flask `session` (separate from the main-site Flask-Login
 session), so it never interferes with the existing Telegram login on the main site.
 """
 import os
+import re
 import hmac
 import hashlib
 import time
@@ -49,13 +50,53 @@ def current_cabinet_user():
 def cabinet_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get('cabinet_user_id'):
+        if not session.get('cabinet_user_id') and not _bridge_from_main():
             if request.path.startswith('/cabinet/api/'):
                 return jsonify({"ok": False, "error": "auth"}), 401
             return redirect(url_for('cabinet.login', next=request.full_path
                                     if request.query_string else request.path))
         return view(*args, **kwargs)
     return wrapped
+
+
+def _bridge_from_main():
+    """Bridge the main-site Flask-Login session into the cabinet session.
+
+    If the visitor is authenticated on the main site (users table) but has no
+    cabinet session, find-or-create a cabinet_users row by email and attach the
+    cabinet session. This lets main-site OAuth/registration flow straight into
+    the cabinet + onboarding without a separate cabinet login."""
+    if session.get('cabinet_user_id'):
+        return True
+    try:
+        from flask_login import current_user
+        if not getattr(current_user, 'is_authenticated', False):
+            return False
+        email = (getattr(current_user, 'email', '') or '').strip().lower()
+    except Exception:
+        return False
+    if not email:
+        return False
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, olim_name FROM cabinet_users WHERE LOWER(email) = LOWER(%s)", (email,))
+                r = cur.fetchone()
+                if r:
+                    _set_session(r[0], r[1])
+                else:
+                    name = (getattr(current_user, 'username', '') or '').strip()
+                    cur.execute(
+                        "INSERT INTO cabinet_users (email, telegram_first_name, created_at, last_login) "
+                        "VALUES (%s, %s, NOW(), NOW()) RETURNING id", (email, name or None))
+                    _set_session(cur.fetchone()[0], None)
+            conn.commit()
+        finally:
+            conn.close()
+        return True
+    except Exception:
+        return False
 
 
 def _set_session(user_id, olim_name=None):
@@ -83,7 +124,7 @@ def cabinet():
     user = current_cabinet_user()
     olim_name = (user or {}).get('olim_name') or ''
     profile = None
-    maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
+    maqolalar = konferensiyalar = ish_faoliyati = rasmlar = shogirdlar = []
     claimed = []
     try:
         conn = get_connection()
@@ -110,6 +151,8 @@ def cabinet():
                                        "start_date DESC NULLS LAST, id DESC")
                     rasmlar = _f("SELECT * FROM olim_rasmlar WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))",
                                  "created_at DESC, id DESC")
+                    shogirdlar = _f("SELECT * FROM olim_shogirdlar WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))",
+                                    "year DESC NULLS LAST, id DESC")
         finally:
             conn.close()
     except Exception:
@@ -118,6 +161,33 @@ def cabinet():
                            olim_name=olim_name, claimed=claimed,
                            maqolalar=maqolalar, konferensiyalar=konferensiyalar,
                            ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
+                           shogirdlar=shogirdlar,
+                           telegram_bot_username=TELEGRAM_BOT_USERNAME)
+
+
+@cabinet_bp.route('/cabinet/onboarding')
+@cabinet_login_required
+def onboarding():
+    """Post-registration 'complete your profile' flow. Uses the existing
+    search-olim / claim / profile-save endpoints; on finish sets
+    profile_completed and lands the user in the full cabinet."""
+    user = current_cabinet_user()
+    olim_name = (user or {}).get('olim_name') or ''
+    profile = {}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1", (user['id'],))
+                row = cur.fetchone()
+                if row:
+                    profile = dict(zip([c[0] for c in cur.description], row))
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return render_template('cabinet_onboarding.html', user=user, profile=profile,
+                           olim_name=olim_name, degree_choices=_DEGREE_CHOICES,
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
@@ -193,7 +263,7 @@ def register():
                             new_id = cur.fetchone()[0]
                             conn.commit()
                             _set_session(new_id, None)
-                            return redirect(url_for('cabinet.cabinet'))
+                            return redirect(url_for('cabinet.onboarding'))
                 finally:
                     conn.close()
             except Exception:
@@ -224,6 +294,7 @@ def telegram():
             return jsonify({"success": False, "error": "Telegram ID topilmadi"}), 200
         username = (data.get('username') or '').strip()
         first_name = (data.get('first_name') or '').strip()
+        is_new = False
         conn = get_connection()
         try:
             with conn.cursor() as cur:
@@ -240,11 +311,12 @@ def telegram():
                     new_id = cur.fetchone()[0]
                     conn.commit()
                     _set_session(new_id, None)
+                    is_new = True
         finally:
             conn.close()
     except Exception as e:
         return jsonify({"success": False, "error": f"Xatolik: {e}"}), 200
-    return jsonify({"success": True, "redirect": "/cabinet"})
+    return jsonify({"success": True, "redirect": "/cabinet/onboarding" if is_new else "/cabinet"})
 
 
 # ── Google OAuth ─────────────────────────────────────────────────────────────
@@ -302,6 +374,7 @@ def google_callback():
         if not email:
             return redirect('/cabinet/login?error=google')
 
+        dest = '/'
         conn = get_connection()
         try:
             with conn.cursor() as cur:
@@ -325,6 +398,7 @@ def google_callback():
                     new_id = cur.fetchone()[0]
                     conn.commit()
                     _set_session(new_id, None)
+                    dest = '/cabinet/onboarding'
                     # Seed an olim_profiles row (olim_name is NOT NULL UNIQUE).
                     try:
                         parts = name.split(' ', 1)
@@ -347,7 +421,7 @@ def google_callback():
         _login_main_user(email, name)
 
         session.pop('google_next', None)
-        return redirect('/')
+        return redirect(dest)
     except Exception as e:
         print(f"Google OAuth error: {e}")
         return redirect('/cabinet/login?error=google')
@@ -388,9 +462,22 @@ _PROFILE_FIELDS = [
     'bio', 'birth_year', 'photo_url', 'region',
     'academic_degree', 'academic_rank',
     'magistratura_mavzu', 'magistratura_institution', 'magistratura_year',
+    # Degree-specific dissertation fields (PhD / DSc / magistr).
+    'ixtisoslik', 'dissertatsiya_mavzu', 'advisor_name', 'consultant_name',
+    'phd_advisor_name', 'opponents', 'defense_year', 'yonalish',
+    'profile_completed',
     # Academic links only — Pinterest/Facebook/YouTube/Instagram intentionally dropped.
     'scopus_url', 'wos_url', 'scholar_url', 'orcid_url', 'website_url',
     'telegram_url',
+]
+
+# Canonical academic-degree values stored in olim_profiles.academic_degree.
+# The onboarding form offers 6 human labels; these map onto the 3 base degrees
+# plus an "in progress" flag captured separately via academic_rank-free logic.
+_DEGREE_CHOICES = [
+    'Magistrant', 'Magistr',
+    'Izlanuvchi PhD', 'PhD',
+    'Izlanuvchi DSc', 'DSc',
 ]
 
 
@@ -410,12 +497,14 @@ def profile_save():
         vals[f] = v if v not in ('', None) else None
     if not vals:
         return jsonify({"ok": True})
-    for _yf in ('birth_year', 'magistratura_year'):
+    for _yf in ('birth_year', 'magistratura_year', 'defense_year'):
         if vals.get(_yf):
             try:
                 vals[_yf] = int(vals[_yf])
             except (TypeError, ValueError):
                 vals[_yf] = None
+    if 'profile_completed' in vals:
+        vals['profile_completed'] = str(data.get('profile_completed')).lower() in ('1', 'true', 'yes', 'on')
     olim_name = user.get('olim_name') or (vals.get('last_name') or vals.get('first_name') or '').strip()
     if not olim_name:
         olim_name = f"cabinet_{user['id']}"
@@ -560,6 +649,114 @@ def search_olim():
     return jsonify({"results": results})
 
 
+def _autofill_from_dissertations(cur, name):
+    """Populate empty degree fields on the claimed scholar's olim_profiles row
+    from the dissertations base (DSc row preferred). Never overwrites data the
+    user already entered — only fills columns that are currently empty."""
+    cur.execute(
+        "SELECT daraja, muassasa, ilmiy_rahbar, mavzu, ixtisoslik, "
+        "opponent_1, opponent_2, opponent_3, sana FROM dissertations "
+        "WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
+        "ORDER BY (CASE WHEN UPPER(COALESCE(daraja,'')) LIKE '%%DSC%%' "
+        "OR LOWER(COALESCE(daraja,'')) LIKE '%%док%%' THEN 0 ELSE 1 END), id DESC",
+        (name,))
+    rows = cur.fetchall()
+    if not rows:
+        return
+    daraja, muassasa, rahbar, mavzu, ixt, o1, o2, o3, sana = rows[0]
+    up, low = (daraja or '').upper(), (daraja or '').lower()
+    if 'DSC' in up or 'док' in low:
+        degree = 'DSc'
+    elif 'PHD' in up or 'phd' in low or 'фан' in low:
+        degree = 'PhD'
+    else:
+        degree = None
+    yrs = re.findall(r'(?:19|20)\d{2}', sana or '')
+    year = int(yrs[-1]) if yrs else None
+    codes = re.findall(r'\d{2}\.\d{2}\.\d{2}', ixt or '')
+    ixt_code = codes[0] if codes else ((ixt or '').strip() or None)
+    opps = '; '.join(o.strip() for o in (o1, o2, o3) if o and o.strip()) or None
+    fills = {
+        'academic_degree': degree,
+        'institution': (muassasa or '').strip() or None,
+        'dissertatsiya_mavzu': (mavzu or '').strip() or None,
+        'ixtisoslik': ixt_code,
+        'opponents': opps,
+        'defense_year': year,
+    }
+    # For a DSc defence the supervisor slot is the scientific consultant.
+    if degree == 'DSc':
+        fills['consultant_name'] = (rahbar or '').strip() or None
+    else:
+        fills['advisor_name'] = (rahbar or '').strip() or None
+    sets, params = [], []
+    for col, val in fills.items():
+        if val is None:
+            continue
+        if col == 'defense_year':
+            sets.append(f"{col} = COALESCE({col}, %s)")
+        else:
+            sets.append(f"{col} = COALESCE(NULLIF(TRIM({col}), ''), %s)")
+        params.append(val)
+    if not sets:
+        return
+    params.append(name)
+    cur.execute("UPDATE olim_profiles SET " + ", ".join(sets) +
+                " WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))", params)
+
+
+@cabinet_bp.route('/cabinet/api/search-advisor')
+@cabinet_login_required
+def search_advisor():
+    """Autocomplete over dissertations.ilmiy_rahbar (supervisor / consultant)."""
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify({"results": []})
+    like = f"%{q.lower()}%"
+    results = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT TRIM(ilmiy_rahbar), COUNT(*) AS cnt FROM dissertations "
+                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> '' "
+                    "AND LOWER(TRIM(ilmiy_rahbar)) LIKE %s "
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 15", (like,))
+                results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        results = []
+    return jsonify({"results": results})
+
+
+@cabinet_bp.route('/cabinet/api/search-institution')
+@cabinet_login_required
+def search_institution():
+    """Autocomplete over dissertations.muassasa (institution)."""
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify({"results": []})
+    like = f"%{q.lower()}%"
+    results = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT TRIM(muassasa), COUNT(*) AS cnt FROM dissertations "
+                    "WHERE muassasa IS NOT NULL AND TRIM(muassasa) <> '' "
+                    "AND LOWER(TRIM(muassasa)) LIKE %s "
+                    "GROUP BY TRIM(muassasa) ORDER BY cnt DESC LIMIT 15", (like,))
+                results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        results = []
+    return jsonify({"results": results})
+
+
 @cabinet_bp.route('/cabinet/api/claim', methods=['POST'])
 @cabinet_login_required
 def claim():
@@ -568,6 +765,7 @@ def claim():
     name = (data.get('olim_name') or '').strip()
     if not name:
         return jsonify({"ok": False, "error": "Ism kiritilmagan"}), 200
+    pr = None
     try:
         conn = get_connection()
         try:
@@ -582,13 +780,25 @@ def claim():
                 else:
                     cur.execute("INSERT INTO olim_profiles (olim_name, cabinet_user_id) VALUES (%s, %s)", (name, user['id']))
                 cur.execute("UPDATE cabinet_users SET olim_name = %s WHERE id = %s", (name, user['id']))
+                # Auto-fill degree/institution/advisor/topic/opponents from the base.
+                _autofill_from_dissertations(cur, name)
+                cur.execute(
+                    "SELECT academic_degree, institution, advisor_name, consultant_name, "
+                    "dissertatsiya_mavzu, ixtisoslik, opponents, defense_year "
+                    "FROM olim_profiles WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))", (name,))
+                pr = cur.fetchone()
             conn.commit()
             session['cabinet_olim_name'] = name
         finally:
             conn.close()
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 200
-    return jsonify({"ok": True, "olim_name": name})
+    profile = {}
+    if pr:
+        profile = dict(zip(
+            ('academic_degree', 'institution', 'advisor_name', 'consultant_name',
+             'dissertatsiya_mavzu', 'ixtisoslik', 'opponents', 'defense_year'), pr))
+    return jsonify({"ok": True, "olim_name": name, "profile": profile})
 
 
 @cabinet_bp.route('/cabinet/api/unclaim', methods=['POST'])
@@ -820,3 +1030,25 @@ def rasm_add():
 @cabinet_login_required
 def rasm_delete(id):
     return _delete_item('olim_rasmlar', id)
+
+
+# shogirdlar (students) — PhD/DSc supervise students; magistr advisors too.
+_SHOGIRD = ['student_name', 'degree', 'year']
+
+
+@cabinet_bp.route('/cabinet/api/shogird/add', methods=['POST'])
+@cabinet_login_required
+def shogird_add():
+    return _insert_item('olim_shogirdlar', _SHOGIRD, _form())
+
+
+@cabinet_bp.route('/cabinet/api/shogird/edit/<int:id>', methods=['POST'])
+@cabinet_login_required
+def shogird_edit(id):
+    return _edit_item('olim_shogirdlar', _SHOGIRD, id, _form())
+
+
+@cabinet_bp.route('/cabinet/api/shogird/delete/<int:id>', methods=['POST'])
+@cabinet_login_required
+def shogird_delete(id):
+    return _delete_item('olim_shogirdlar', id)
