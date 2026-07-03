@@ -3312,8 +3312,13 @@ def robots_txt():
 
 @app.route("/static/og-default.png")
 def og_default_image():
-    """Branded placeholder OG image (SVG). Replace with a real PNG later."""
-    from flask import Response
+    """Branded OG card — serves the generated PNG (new logo mark); falls back
+    to the legacy SVG placeholder if the file is missing."""
+    from flask import Response, send_from_directory
+    png_path = os.path.join(app.static_folder, "og-default.png")
+    if os.path.exists(png_path):
+        return send_from_directory(app.static_folder, "og-default.png",
+                                   mimetype="image/png")
     svg = (
         '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">'
         '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">'

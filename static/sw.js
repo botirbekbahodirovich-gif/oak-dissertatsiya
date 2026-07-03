@@ -1,11 +1,12 @@
-const CACHE_NAME = 'olimlar-v1';
+const CACHE_NAME = 'olimlar-v2';
 const OFFLINE_URL = '/offline';
 
 // Files to cache on install
 const PRECACHE_URLS = [
   '/',
   '/offline',
-  '/static/icons/icon.svg'
+  '/static/images/logo-mark.png',
+  '/static/images/favicon.png'
 ];
 
 // Install — cache essential files
