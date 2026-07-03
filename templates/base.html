@@ -708,6 +708,7 @@
         <a href="/universities" class="nav-link{% if request.path == '/universities' or request.path.startswith('/university/') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar</a>
         <a href="/journals" class="nav-link{% if request.path.startswith('/journals') %} active{% endif %}"><i class="bi bi-journal-bookmark-fill"></i>Jurnallar</a>
         <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}"><i class="bi bi-trophy"></i>Grantlar</a>
+        <a href="/reminders" class="nav-link{% if request.path.startswith('/reminders') %} active{% endif %}"><i class="bi bi-alarm"></i>Muddatlar</a>
         <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
         <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
         {% if current_user.is_authenticated %}

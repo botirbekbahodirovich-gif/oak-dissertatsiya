@@ -3243,6 +3243,8 @@ def _build_sitemap_xml():
         ("/blog", "weekly", "0.6"), ("/courses", "monthly", "0.5"),
         ("/vacancies", "weekly", "0.5"), ("/yangiliklar", "daily", "0.6"),
         ("/about", "monthly", "0.4"), ("/heatmap", "weekly", "0.6"),
+        ("/universities", "weekly", "0.7"), ("/journals", "weekly", "0.7"),
+        ("/grants", "daily", "0.7"), ("/reminders", "daily", "0.6"),
     ]
     top_olimlar, blog_posts = [], []
     try:

@@ -727,15 +727,20 @@ def notify_himoya_matches(new_records):
                     site_uid = {r[0]: r[1] for r in cur.fetchall()}
                 for u in users:
                     main_uid = site_uid.get(u['email'].lower()) if u['email'] else None
-                    if not main_uid:
+                    can_telegram = bool(u['telegram_id']
+                                        and u['prefs'].get('telegram_notify', True))
+                    if not main_uid and not can_telegram:
                         continue
-                    # Daily anti-spam cap, counted against today's himoya alerts.
-                    cur.execute("""
-                        SELECT COUNT(*) FROM user_alerts
-                        WHERE user_id = %s AND created_at >= CURRENT_DATE
-                          AND title LIKE %s
-                    """, (main_uid, _HIMOYA_TITLE + '%'))
-                    budget = _HIMOYA_DAILY_CAP - (cur.fetchone()[0] or 0)
+                    # Daily anti-spam cap, counted against today's himoya alerts
+                    # (site alerts as the ledger; telegram follows the same budget).
+                    budget = _HIMOYA_DAILY_CAP
+                    if main_uid:
+                        cur.execute("""
+                            SELECT COUNT(*) FROM user_alerts
+                            WHERE user_id = %s AND created_at >= CURRENT_DATE
+                              AND title LIKE %s
+                        """, (main_uid, _HIMOYA_TITLE + '%'))
+                        budget -= (cur.fetchone()[0] or 0)
                     if budget <= 0:
                         continue
                     mine = [r for r in records
@@ -746,11 +751,19 @@ def notify_himoya_matches(new_records):
                                f"{rec.get('mavzu') or ''}")
                         if rec.get('link'):
                             msg += f"\n🔗 {rec['link']}"
-                        cur.execute("""
-                            INSERT INTO user_alerts (user_id, title, message, level)
-                            VALUES (%s, %s, %s, 'info')
-                        """, (main_uid, _HIMOYA_TITLE, msg))
-                        sent += 1
+                        if main_uid:
+                            cur.execute("""
+                                INSERT INTO user_alerts (user_id, title, message, level)
+                                VALUES (%s, %s, %s, 'info')
+                            """, (main_uid, _HIMOYA_TITLE, msg))
+                            sent += 1
+                        if can_telegram:
+                            if _send_telegram(u['telegram_id'], {
+                                    'title': f"Yangi himoya e'loni ({rec['ixtisoslik']})",
+                                    'description': (f"{rec.get('olim') or ''} — "
+                                                    f"{rec.get('mavzu') or ''}"),
+                                    'url': rec.get('link') or ''}):
+                                sent += 1
             conn.commit()
         finally:
             conn.close()

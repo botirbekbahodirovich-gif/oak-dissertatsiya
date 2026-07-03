@@ -20,6 +20,17 @@ Current features (v0.2+):
 - Academic Lineage Trees — supervisor/student genealogy graph (`static/js/genealogy.js`)
 - Collaboration graph
 - Content: blog, news (yangiliklar), vacancies, courses, journals, university profiles, top scholars
+- Grants module: filterable listing, tracking, admin CRUD (`blueprints/grants.py`)
+- Smart Reminders (Smart Eslatmalar): deadline-aware alerts over site + Telegram,
+  targeted by degree/region/ixtisoslik, daily cron via GitHub Actions
+  (`blueprints/reminders.py`, `.github/workflows/reminders.yml` — needs the
+  REMINDERS_API_KEY secret in server .env + GitHub)
+- Notification preferences: per-user ON/OFF toggles (notification_prefs table,
+  key-value; API in `blueprints/notifications.py`, UI in cabinet)
+- Himoya auto-match: new OAK imports notify scholars with matching ixtisoslik
+  (site + Telegram, 3/day cap) — hook in `data.py` import_oak
+- Public /reminders page (filter tabs) + upcoming-deadlines widget
+  (`templates/_reminders_widget.html` on home, dashboard, cabinet)
 - Admin Dashboard: user blocking, broadcasts, surveys, full content management
 - PWA support: manifest.json, service worker (sw.js), offline mode
 - SEO: sitemap.xml, robots.txt, OG images
@@ -28,15 +39,20 @@ Current features (v0.2+):
 File structure:
 - `app.py` — Bootstrap, shared utilities, blueprint registration, and main routes
 - `auth.py` — Authentication (login, register, logout, OAuth)
-- `cabinet.py` — User cabinet / researcher profiles
-- `data.py` — CSV loading, caching, filtering, data endpoints
+- `cabinet.py` — User cabinet / researcher profiles (olim_profiles is the home
+  of scholar attributes: degree, region, ixtisoslik — never duplicate onto users)
+- `data.py` — CSV loading, caching, filtering, data endpoints, OAK import API
 - `analytics.py` — Analytics API endpoints
 - `upload.py` — Upload endpoints and validation
+- `blueprints/` — admin.py, content.py, notifications.py (alerts + prefs),
+  grants.py, reminders.py (smart reminders + dispatch)
 - `templates/` — Jinja2 templates (50+: home, dashboard, stats, genealogy,
-  clustering, heatmap, blog, admin_*, cabinet, etc.)
-- `static/` — js (genealogy, heatmap, collaboration), PWA assets, uploads
+  clustering, heatmap, blog, admin_*, cabinet, reminders, etc.)
+- `static/` — js (genealogy, heatmap, collaboration), PWA assets, uploads;
+  brand mark: `static/images/logo-mark.png` (white, for dark/gradient bg),
+  `logo.png` (2480px white master), gradient-tiled favicon/icon-192/512
 - `data/dissertatsiyalar.csv` — Source data CSV
-- `users.db` — legacy SQLite user database
+- `users.db` — legacy SQLite user DB (untracked from git; PII — never commit)
 - `deploy/` — GCE native deploy (Gunicorn + systemd + nginx + certbot)
 - `Dockerfile`, `nginx.conf` — containerized deploy
 - `requirements.txt` — Python dependencies
@@ -47,7 +63,10 @@ Rules / Conventions
   the modular blueprints (auth, cabinet, data, analytics, upload).
 - UI text stays in Uzbek.
 - All secrets must be stored in `.env` and never committed.
-- Never commit virtual environments (venv/, .venv/, wsl_venv/) or get-pip.py.
+- Never commit virtual environments (venv/, .venv/, wsl_venv/), get-pip.py,
+  or any *.db file (users.db holds PII).
+- Line endings: the repo is normalized to LF via .gitattributes — editors on
+  Windows (\\wsl$ paths) must not reintroduce CRLF.
 - Commit after each task.
 
 Contact: repo maintainer
