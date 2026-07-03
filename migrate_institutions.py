@@ -89,13 +89,11 @@ def main():
     conn = psycopg2.connect(url)
     try:
         with conn.cursor() as cur:
+            # Fresh rebuild: dedup logic defines the whole table content, so
+            # recreate it from scratch (stale rows from earlier logic would
+            # otherwise linger). Safe in dry-run — the transaction rolls back.
+            cur.execute("DROP TABLE IF EXISTS institution_map")
             cur.execute(CREATE_SQL)
-            # Table may pre-exist with a narrower schema — add missing columns.
-            for col, typ in (('canonical_name', 'TEXT'), ('latin_name', 'TEXT'),
-                             ('category', "VARCHAR(50) DEFAULT 'universitet'"),
-                             ('region', 'VARCHAR(100)'),
-                             ('is_active', 'BOOLEAN DEFAULT TRUE')):
-                cur.execute(f"ALTER TABLE institution_map ADD COLUMN IF NOT EXISTS {col} {typ}")
             cur.execute(INDEX_SQL)
 
             cur.execute(
@@ -128,16 +126,19 @@ def main():
             for cat, label in INSTITUTION_CATEGORIES.items():
                 print(f'    {label:<14} {cat_counter.get(cat, 0)}')
 
-            # a few example groupings where >1 variant merged
-            shown = 0
+            # largest merge groups — eyeball check that dedup worked
             by_canon = {}
             for raw, canonical in mapping.items():
                 by_canon.setdefault(canonical, []).append(raw)
-            print('  sample merges (canonical ← variants):')
-            for canonical, variants in by_canon.items():
-                if len(variants) > 1 and shown < 5:
-                    print(f'    "{canonical}"  ←  {len(variants)} variants')
-                    shown += 1
+            biggest = sorted(((c, v) for c, v in by_canon.items() if len(v) > 1),
+                             key=lambda cv: -len(cv[1]))[:8]
+            print('  largest merges (canonical ← N variants):')
+            for canonical, variants in biggest:
+                total = sum(variant_counts.get(v, 0) for v in variants)
+                print(f'    "{canonical}"  ←  {len(variants)} variants, {total} diss.')
+                for v in variants[:4]:
+                    if v != canonical:
+                        print(f'        · {v}')
 
         if args.apply:
             conn.commit()
