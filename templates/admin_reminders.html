@@ -55,6 +55,15 @@
              value="{{ edit_r.target_specializations|join(', ') if edit_r else '' }}"></label>
     <label style="grid-column:1/-1;">Havola (URL)
       <input name="url" class="form-control" maxlength="500" placeholder="https://..." value="{{ edit_r.url or '' if edit_r else '' }}"></label>
+    <fieldset style="border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:10px 14px;">
+      <legend style="font-size:0.85rem;padding:0 6px;">Yuborish kanali</legend>
+      {% set _ch = edit_r.send_channel if edit_r else 'both' %}
+      {% for val, lbl in [('both','Sayt + Telegram'), ('site','Faqat sayt'), ('telegram','Faqat Telegram')] %}
+      <label style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;">
+        <input type="radio" name="send_channel" value="{{ val }}" {{ 'checked' if _ch == val }}> {{ lbl }}
+      </label>
+      {% endfor %}
+    </fieldset>
     <label style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" name="is_active" {{ 'checked' if not edit_r or edit_r.is_active }}> Faol
     </label>
@@ -89,6 +98,13 @@
             {{ csrf_token()|safe }}
             <button type="submit" class="btn btn-sm" style="color:#34d399;">📤 Hozir yuborish</button>
           </form>
+          {% if r.sent_count %}
+          <form method="POST" action="/admin/reminders/resend/{{ r.id }}" style="display:inline;"
+                onsubmit="return confirm('Oldin olganlarga HAM qayta yuboriladi. Davom etilsinmi?');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#fbbf24;">🔁 Qayta yuborish</button>
+          </form>
+          {% endif %}
           <form method="POST" action="/admin/reminders/delete/{{ r.id }}" style="display:inline;"
                 onsubmit="return confirm('Eslatmani o‘chirishni tasdiqlaysizmi?');">
             {{ csrf_token()|safe }}

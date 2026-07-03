@@ -1,41 +1,116 @@
 {% extends "base.html" %}
 {% block title %}Yaqinlashayotgan muddatlar — Olimlar.uz{% endblock %}
-{% block content %}
-<div class="content-card" style="max-width:860px;margin:0 auto;">
-  <h1 style="margin-bottom:4px;">⏳ Yaqinlashayotgan muddatlar</h1>
-  <p style="color:#94a3b8;">Sizga tegishli konferensiya, grant va jurnal muddatlari.</p>
+{% block meta_description %}Ilmiy konferensiyalar, grantlar, himoya e'lonlari va jurnal muddatlari — barcha akademik voqealar bir joyda.{% endblock %}
 
-  {% if items %}
-  <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;">
-    {% for it in items %}
-    <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid #e2e8f0;
-                border-radius:12px;background:#fff;">
-      <span style="font-size:1.5rem;">{{ it.icon }}</span>
-      <div style="flex:1;min-width:0;">
-        {% if it.url %}
-        <a href="{{ it.url }}" target="_blank" rel="noopener"
-           style="font-weight:600;color:#0f172a;text-decoration:none;">{{ it.title }}</a>
-        {% else %}
-        <span style="font-weight:600;color:#0f172a;">{{ it.title }}</span>
-        {% endif %}
-        <div style="font-size:0.82rem;color:#64748b;">{{ it.type_label }} · 📅 {{ it.deadline }}</div>
-      </div>
-      <span style="white-space:nowrap;font-size:0.85rem;font-weight:600;padding:4px 14px;border-radius:50px;
-                   {% if it.days_left <= 3 %}background:rgba(239,68,68,0.1);color:#dc2626;
-                   {% else %}background:rgba(59,130,246,0.1);color:#2563eb;{% endif %}">
-        {{ it.days_text }}
-      </span>
-    </div>
+{% block extra_head %}
+<style>
+.rem-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 20px; }
+.rem-tab { border: 1px solid #e2e8f0; background: #fff; color: #475569; padding: 7px 16px;
+           border-radius: 50px; font-size: 0.87rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.rem-tab:hover { border-color: #93c5fd; color: #2563eb; }
+.rem-tab.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+.rem-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border: 1px solid #e2e8f0;
+            border-radius: 12px; background: #fff; margin-bottom: 10px; }
+.rem-card.expired { opacity: 0.55; background: #f8fafc; }
+.rem-ic { font-size: 1.5rem; flex-shrink: 0; }
+.rem-body { flex: 1; min-width: 0; }
+.rem-title { font-weight: 700; color: #0f172a; font-size: 1rem; }
+.rem-desc { color: #475569; font-size: 0.87rem; margin: 4px 0 6px; line-height: 1.5; }
+.rem-meta { color: #64748b; font-size: 0.8rem; }
+.rem-badge { white-space: nowrap; font-size: 0.82rem; font-weight: 700; padding: 4px 14px; border-radius: 50px; flex-shrink: 0; }
+.rem-badge.soon { background: rgba(239,68,68,0.1); color: #dc2626; }
+.rem-badge.ok { background: rgba(59,130,246,0.1); color: #2563eb; }
+.rem-badge.past { background: rgba(100,116,139,0.12); color: #64748b; }
+.rem-link { display: inline-block; margin-top: 4px; color: #2563eb; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+.rem-link:hover { text-decoration: underline; }
+.rem-expired-head { color: #94a3b8; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: 0.4px; margin: 28px 0 10px; }
+[data-bs-theme="dark"] .rem-card { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .rem-title { color: #e2e8f0; }
+[data-bs-theme="dark"] .rem-desc { color: #94a3b8; }
+[data-bs-theme="dark"] .rem-tab { background: #1e293b; border-color: rgba(148,163,184,0.2); color: #cbd5e1; }
+@media (max-width: 520px) { .rem-card { flex-wrap: wrap; } .rem-badge { order: -1; margin-left: auto; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card" style="max-width:880px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">⏰ Yaqinlashayotgan muddatlar</h1>
+  <p style="color:#94a3b8;">Konferensiyalar, grantlar, himoya e'lonlari va jurnal muddatlari — bir joyda.</p>
+
+  {% set _tabs = [('all','Hammasi'), ('conference','Konferensiyalar'), ('grant','Grantlar'),
+                  ('himoya_elon','Himoyalar'), ('journal','Jurnallar'), ('deadline','Muddatlar')] %}
+  <div class="rem-tabs">
+    {% for key, label in _tabs %}
+    <button class="rem-tab{% if key == 'all' %} active{% endif %}" data-filter="{{ key }}">{{ label }}</button>
     {% endfor %}
   </div>
-  {% else %}
-  <div style="text-align:center;padding:48px 0;color:#94a3b8;">
-    <div style="font-size:2.4rem;">📭</div>
-    <p style="margin-top:10px;">Hozircha yaqinlashayotgan muddatlar yo'q.</p>
-    {% if not current_user.is_authenticated %}
-    <p style="font-size:0.9rem;"><a href="/login" style="color:#3b82f6;">Kirish</a> orqali sizga moslashtirilgan eslatmalarni ko'ring.</p>
+
+  <div id="rem-list">
+    {% for it in upcoming %}
+    <div class="rem-card" data-type="{{ it.type }}">
+      <span class="rem-ic">{{ it.icon }}</span>
+      <div class="rem-body">
+        <div class="rem-title">{{ it.title }}</div>
+        {% if it.description %}<div class="rem-desc">{{ it.description }}</div>{% endif %}
+        <div class="rem-meta">{{ it.type_label }}{% if it.deadline_uz %} · 📅 {{ it.deadline_uz }}{% endif %}</div>
+        {% if it.url %}<a class="rem-link" href="{{ it.url }}" target="_blank" rel="noopener">Batafsil →</a>{% endif %}
+      </div>
+      {% if it.days_left is not none %}
+      <span class="rem-badge {{ 'soon' if it.days_left <= 3 else 'ok' }}">{{ it.days_text }}</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <div id="rem-empty" style="display:none;text-align:center;padding:36px 0;color:#94a3b8;">
+      <div style="font-size:2rem;">📭</div><p>Bu turdagi voqealar hozircha yo'q.</p>
+    </div>
+    {% if not upcoming and not expired %}
+    <div style="text-align:center;padding:48px 0;color:#94a3b8;">
+      <div style="font-size:2.4rem;">📭</div>
+      <p style="margin-top:10px;">Hozircha e'lon qilingan muddatlar yo'q.</p>
+    </div>
+    {% endif %}
+
+    {% if expired %}
+    <div class="rem-expired-head" data-expired-head>Muddati o'tgan</div>
+    {% for it in expired %}
+    <div class="rem-card expired" data-type="{{ it.type }}">
+      <span class="rem-ic">{{ it.icon }}</span>
+      <div class="rem-body">
+        <div class="rem-title">{{ it.title }}</div>
+        <div class="rem-meta">{{ it.type_label }}{% if it.deadline_uz %} · 📅 {{ it.deadline_uz }}{% endif %}</div>
+        {% if it.url %}<a class="rem-link" href="{{ it.url }}" target="_blank" rel="noopener">Batafsil →</a>{% endif %}
+      </div>
+      <span class="rem-badge past">Tugagan</span>
+    </div>
+    {% endfor %}
     {% endif %}
   </div>
-  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var tabs = document.querySelectorAll('.rem-tab');
+  var cards = document.querySelectorAll('#rem-list .rem-card');
+  var empty = document.getElementById('rem-empty');
+  var expiredHead = document.querySelector('[data-expired-head]');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabs.forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      var f = tab.getAttribute('data-filter');
+      var visible = 0, visibleExpired = 0;
+      cards.forEach(function (c) {
+        var show = f === 'all' || c.getAttribute('data-type') === f;
+        c.style.display = show ? '' : 'none';
+        if (show) { visible++; if (c.classList.contains('expired')) visibleExpired++; }
+      });
+      if (expiredHead) expiredHead.style.display = visibleExpired ? '' : 'none';
+      if (empty) empty.style.display = visible ? 'none' : '';
+    });
+  });
+})();
+</script>
 {% endblock %}

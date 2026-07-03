@@ -41,7 +41,7 @@
           (dark ? '#e2e8f0' : '#0f172a') + ';';
         var meta = document.createElement('div');
         meta.style.cssText = 'font-size:0.78rem;color:' + (dark ? '#94a3b8' : '#64748b') + ';';
-        meta.textContent = it.type_label + ' · ' + it.deadline;
+        meta.textContent = it.type_label + ' · ' + (it.deadline_uz || it.deadline);
         mid.appendChild(title); mid.appendChild(meta);
 
         var badge = document.createElement('span');

@@ -44,17 +44,34 @@ _schema_ready = False
 
 # type key → (Uzbek label, widget icon)
 REMINDER_TYPES = {
-    'conference': ('Konferensiya', '🎤'),
-    'grant':      ('Grant', '🏆'),
-    'journal':    ('Jurnal', '📰'),
-    'deadline':   ('Deadline', '⏰'),
-    'custom':     ('Boshqa', '📅'),
+    'conference':  ('Konferensiya', '🎤'),
+    'grant':       ('Grant', '🏆'),
+    'himoya_elon': ("Himoya e'loni", '🎓'),
+    'journal':     ('Jurnal', '📰'),
+    'yangilik':    ('Yangilik', '📢'),
+    'deadline':    ('Deadline', '⏰'),
+    'custom':      ('Boshqa', '📅'),
 }
 DAYS_CHOICES = [30, 14, 7, 3, 1]
-# reminder type → user_notification_prefs column; deadline/custom are always on.
-_PREF_COL = {'conference': 'conference_reminders', 'grant': 'grant_reminders',
-             'journal': 'journal_reminders'}
+# reminder type → notification_prefs key (blueprints/notifications.py PREF_KEYS);
+# 'custom' has no key and is always delivered.
+_PREF_KEY = {'conference': 'konferensiya', 'grant': 'grant',
+             'himoya_elon': 'himoya_elon', 'journal': 'jurnal',
+             'yangilik': 'yangilik', 'deadline': 'deadline'}
+SEND_CHANNELS = ('both', 'site', 'telegram')
 _MANUAL_SEND = -1  # days_before marker for admin "Hozir yuborish"
+_UZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul',
+              'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr']
+
+
+def _uz_date(d):
+    """date/ISO-string → '15 mart 2026'."""
+    if isinstance(d, str):
+        try:
+            d = date.fromisoformat(d)
+        except ValueError:
+            return d
+    return f"{d.day} {_UZ_MONTHS[d.month - 1]} {d.year}" if d else ''
 
 
 def _ensure_schema(cur):
@@ -96,16 +113,13 @@ def _ensure_schema(cur):
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_reminder_sends_reminder "
                 "ON reminder_sends(reminder_id)")
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS user_notification_prefs (
-            user_id INTEGER PRIMARY KEY,
-            conference_reminders BOOLEAN DEFAULT TRUE,
-            grant_reminders BOOLEAN DEFAULT TRUE,
-            journal_reminders BOOLEAN DEFAULT TRUE,
-            telegram_enabled BOOLEAN DEFAULT TRUE,
-            updated_at TIMESTAMP DEFAULT NOW()
-        )
-    """)
+    # Which channels this reminder goes out on: 'both' | 'site' | 'telegram'.
+    cur.execute("ALTER TABLE smart_reminders ADD COLUMN IF NOT EXISTS "
+                "send_channel VARCHAR(20) DEFAULT 'both'")
+    # Preferences live in notification_prefs (blueprints/notifications.py owns
+    # that schema + the migration off the old user_notification_prefs table).
+    from blueprints.notifications import _ensure_prefs_schema
+    _ensure_prefs_schema(cur)
     _schema_ready = True
 
 
@@ -120,19 +134,18 @@ def _fetch_audience(cur):
 
     One row per cabinet user (olim_profiles joined on cabinet_user_id, falling
     back to the claimed olim_name — same linkage the cabinet itself uses).
+    `prefs` is the full {pref_key: bool} dict with defaults (True) filled in.
     """
+    from blueprints.notifications import PREF_KEYS
     cur.execute("""
         SELECT DISTINCT ON (cu.id)
                cu.id, cu.email, cu.telegram_id,
-               p.academic_degree, p.region, p.ixtisoslik,
-               pr.conference_reminders, pr.grant_reminders,
-               pr.journal_reminders, pr.telegram_enabled
+               p.academic_degree, p.region, p.ixtisoslik
         FROM cabinet_users cu
         LEFT JOIN olim_profiles p
                ON p.cabinet_user_id = cu.id
               OR (cu.olim_name IS NOT NULL AND TRIM(cu.olim_name) <> ''
                   AND LOWER(TRIM(p.olim_name)) = LOWER(TRIM(cu.olim_name)))
-        LEFT JOIN user_notification_prefs pr ON pr.user_id = cu.id
         ORDER BY cu.id, p.id DESC NULLS LAST
     """)
     users = []
@@ -140,13 +153,14 @@ def _fetch_audience(cur):
         users.append({
             'id': r[0], 'email': r[1] or '', 'telegram_id': r[2],
             'degree': r[3] or '', 'region': r[4] or '', 'ixtisoslik': r[5] or '',
-            'prefs': {
-                'conference_reminders': r[6] if r[6] is not None else True,
-                'grant_reminders': r[7] if r[7] is not None else True,
-                'journal_reminders': r[8] if r[8] is not None else True,
-                'telegram_enabled': r[9] if r[9] is not None else True,
-            },
+            'prefs': {k: True for k in PREF_KEYS},
         })
+    by_id = {u['id']: u for u in users}
+    cur.execute("SELECT user_id, pref_key, is_enabled FROM notification_prefs")
+    for uid, key, enabled in cur.fetchall():
+        u = by_id.get(uid)
+        if u and key in u['prefs']:
+            u['prefs'][key] = bool(enabled)
     return users
 
 
@@ -161,8 +175,8 @@ def _matches(reminder, u):
     regs = reminder.get('target_regions') or []
     if regs and _norm(u['region']) not in {_norm(r) for r in regs}:
         return False
-    pref_col = _PREF_COL.get(reminder.get('reminder_type'))
-    if pref_col and not u['prefs'].get(pref_col, True):
+    pref_key = _PREF_KEY.get(reminder.get('reminder_type'))
+    if pref_key and not u['prefs'].get(pref_key, True):
         return False
     return True
 
@@ -225,11 +239,13 @@ def _dispatch(cur, reminder, days_before):
     sent = 0
     title = f"🔔 {reminder.get('title') or ''}"
     message = _site_message(reminder)
+    channel = reminder.get('send_channel') or 'both'
     for u in users:
         # Site channel — needs a linked main-site account (the modal is
         # Flask-Login gated); goes into user_alerts like any personal alert.
         main_uid = site_uid.get(u['email'].lower()) if u['email'] else None
-        if main_uid and (u['id'], 'site') not in already:
+        if (channel in ('both', 'site') and main_uid
+                and (u['id'], 'site') not in already):
             cur.execute("""
                 INSERT INTO user_alerts (user_id, title, message, level)
                 VALUES (%s, %s, %s, 'info')
@@ -240,8 +256,9 @@ def _dispatch(cur, reminder, days_before):
                 ON CONFLICT (reminder_id, user_id, channel, days_before) DO NOTHING
             """, (reminder['id'], u['id'], days_before))
             sent += 1
-        # Telegram channel — opt-out via prefs, requires a linked telegram_id.
-        if (u['telegram_id'] and u['prefs'].get('telegram_enabled', True)
+        # Telegram channel — opt-out via telegram_notify pref, needs a linked id.
+        if (channel in ('both', 'telegram') and u['telegram_id']
+                and u['prefs'].get('telegram_notify', True)
                 and (u['id'], 'telegram') not in already):
             if _send_telegram(u['telegram_id'], reminder):
                 cur.execute("""
@@ -267,7 +284,8 @@ def _reminder_row(cols, row):
 
 _REMINDER_COLS = ("id, title, description, reminder_type, deadline_date, "
                   "reminder_days_before, target_degrees, target_specializations, "
-                  "target_regions, url, is_active, created_by, created_at")
+                  "target_regions, url, is_active, created_by, created_at, "
+                  "send_channel")
 
 
 def _fetch_reminder(cur, id):
@@ -369,8 +387,8 @@ def _relevant_upcoming(cur, limit=None):
         items.append({
             "id": r['id'], "title": r['title'], "type": r['reminder_type'],
             "icon": r['icon'], "type_label": r['type_label'],
-            "deadline": r['deadline_date'], "days_left": days_left,
-            "url": r['url'] or '',
+            "deadline": r['deadline_date'], "deadline_uz": _uz_date(raw['deadline_date']),
+            "days_left": days_left, "url": r['url'] or '',
             "days_text": "Bugun oxirgi kun!" if days_left == 0 else f"{days_left} kun qoldi",
         })
         if limit and len(items) >= limit:
@@ -398,73 +416,57 @@ def upcoming_reminders():
 
 @reminders_bp.route('/reminders')
 def reminders_page():
+    """Public catalogue of academic events/deadlines — no login required.
+    Upcoming first (soonest deadline on top), expired (last 90 days) greyed
+    out at the bottom. Filter tabs are applied client-side by type."""
     from data import get_connection
-    items = []
+    upcoming, expired = [], []
+    today = date.today()
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 _ensure_schema(cur)
-                items = _relevant_upcoming(cur)
+                cur.execute(f"""
+                    SELECT {_REMINDER_COLS} FROM smart_reminders
+                    WHERE is_active = TRUE
+                      AND (deadline_date IS NULL
+                           OR deadline_date >= CURRENT_DATE - 90)
+                    ORDER BY deadline_date ASC NULLS LAST, id DESC
+                """)
+                cols = [c[0] for c in cur.description]
+                for row in cur.fetchall():
+                    raw = dict(zip(cols, row))
+                    r = _reminder_row(cols, row)
+                    dl = raw['deadline_date']
+                    item = {
+                        "id": r['id'], "title": r['title'],
+                        "description": r['description'] or '',
+                        "type": r['reminder_type'], "icon": r['icon'],
+                        "type_label": r['type_label'],
+                        "deadline_uz": _uz_date(dl) if dl else '',
+                        "days_left": (dl - today).days if dl else None,
+                        "url": r['url'] or '',
+                    }
+                    if dl and dl < today:
+                        expired.append(item)
+                    else:
+                        item["days_text"] = ("Bugun oxirgi kun!" if item["days_left"] == 0
+                                             else f"{item['days_left']} kun qoldi"
+                                             if item["days_left"] is not None else "")
+                        upcoming.append(item)
             conn.commit()
         finally:
             conn.close()
     except Exception:
-        items = []
-    return render_template('reminders.html', items=items)
+        upcoming, expired = [], []
+    expired.reverse()  # most recently expired first
+    return render_template('reminders.html', upcoming=upcoming, expired=expired,
+                           reminder_types=REMINDER_TYPES)
 
 
-# ── Cabinet: notification preferences ────────────────────────────────────────
-
-_PREF_FIELDS = ('conference_reminders', 'grant_reminders',
-                'journal_reminders', 'telegram_enabled')
-
-
-@reminders_bp.route('/cabinet/api/notification-prefs', methods=['GET', 'POST'])
-@csrf.exempt
-def notification_prefs():
-    from cabinet import current_cabinet_user
-    from data import get_connection
-    user = current_cabinet_user()
-    if not user:
-        return jsonify({"ok": False, "error": "auth"}), 401
-    uid = user['id']
-    try:
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                _ensure_schema(cur)
-                if request.method == 'POST':
-                    data = request.get_json(silent=True) or {}
-                    vals = {f: bool(data.get(f, True)) for f in _PREF_FIELDS}
-                    cur.execute("""
-                        INSERT INTO user_notification_prefs
-                            (user_id, conference_reminders, grant_reminders,
-                             journal_reminders, telegram_enabled, updated_at)
-                        VALUES (%s, %s, %s, %s, %s, NOW())
-                        ON CONFLICT (user_id) DO UPDATE SET
-                            conference_reminders = EXCLUDED.conference_reminders,
-                            grant_reminders = EXCLUDED.grant_reminders,
-                            journal_reminders = EXCLUDED.journal_reminders,
-                            telegram_enabled = EXCLUDED.telegram_enabled,
-                            updated_at = NOW()
-                    """, (uid, vals['conference_reminders'], vals['grant_reminders'],
-                          vals['journal_reminders'], vals['telegram_enabled']))
-                cur.execute("SELECT conference_reminders, grant_reminders, "
-                            "journal_reminders, telegram_enabled "
-                            "FROM user_notification_prefs WHERE user_id = %s", (uid,))
-                row = cur.fetchone()
-                prefs = (dict(zip(_PREF_FIELDS, row)) if row
-                         else {f: True for f in _PREF_FIELDS})
-                cur.execute("SELECT telegram_id FROM cabinet_users WHERE id = %s", (uid,))
-                tg = cur.fetchone()
-            conn.commit()
-        finally:
-            conn.close()
-        return jsonify({"ok": True, "prefs": prefs,
-                        "has_telegram": bool(tg and tg[0])})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+# ── Cabinet notification preferences moved to blueprints/notifications.py ────
+# (GET/POST /api/v1/notifications/prefs — key-value notification_prefs table).
 
 
 # ── Admin: Smart Eslatmalar CRUD ─────────────────────────────────────────────
@@ -481,6 +483,9 @@ def _reminder_form_values():
     degrees = [d for d in request.form.getlist('target_degrees') if d in _DEGREE_CHOICES]
     regions = [r for r in request.form.getlist('target_regions') if r in UZ_REGIONS]
     specs = [s.strip() for s in g('target_specializations').split(',') if s.strip()]
+    channel = g('send_channel')
+    if channel not in SEND_CHANNELS:
+        channel = 'both'
     return {
         'title': g('title'), 'description': g('description') or None,
         'reminder_type': rtype, 'deadline_date': g('deadline_date') or None,
@@ -488,6 +493,7 @@ def _reminder_form_values():
         'target_degrees': degrees, 'target_specializations': specs,
         'target_regions': regions, 'url': g('url') or None,
         'is_active': request.form.get('is_active', 'on') == 'on',
+        'send_channel': channel,
     }
 
 
@@ -554,11 +560,12 @@ def admin_reminder_add():
                     INSERT INTO smart_reminders
                         (title, description, reminder_type, deadline_date,
                          reminder_days_before, target_degrees, target_specializations,
-                         target_regions, url, is_active, created_by)
+                         target_regions, url, is_active, created_by, send_channel)
                     VALUES (%(title)s, %(description)s, %(reminder_type)s,
                             %(deadline_date)s, %(reminder_days_before)s,
                             %(target_degrees)s, %(target_specializations)s,
-                            %(target_regions)s, %(url)s, %(is_active)s, %(created_by)s)
+                            %(target_regions)s, %(url)s, %(is_active)s, %(created_by)s,
+                            %(send_channel)s)
                 """, dict(v, created_by=current_user.id))
             conn.commit()
         finally:
@@ -592,7 +599,7 @@ def admin_reminder_edit(id):
                         target_degrees=%(target_degrees)s,
                         target_specializations=%(target_specializations)s,
                         target_regions=%(target_regions)s, url=%(url)s,
-                        is_active=%(is_active)s
+                        is_active=%(is_active)s, send_channel=%(send_channel)s
                     WHERE id=%(id)s
                 """, dict(v, id=id))
             conn.commit()
@@ -651,3 +658,102 @@ def admin_reminder_send_now(id):
     except Exception as e:
         flash("Xatolik: " + str(e), "error")
     return redirect('/admin/reminders')
+
+
+@reminders_bp.route('/admin/reminders/resend/<int:id>', methods=['POST'])
+@login_required
+def admin_reminder_resend(id):
+    """Force re-dispatch: clears the manual-send dedup log for this reminder
+    first, so every matching user gets it again (unlike "Hozir yuborish")."""
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    sent = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                r = _fetch_reminder(cur, id)
+                if not r:
+                    flash("Eslatma topilmadi.", "error")
+                    return redirect('/admin/reminders')
+                cur.execute("DELETE FROM reminder_sends "
+                            "WHERE reminder_id = %s AND days_before = %s",
+                            (id, _MANUAL_SEND))
+                sent = _dispatch(cur, r, _MANUAL_SEND)
+            conn.commit()
+        finally:
+            conn.close()
+        flash(f"Qayta yuborildi: {sent} ta xabar.", "success")
+    except Exception as e:
+        flash("Xatolik: " + str(e), "error")
+    return redirect('/admin/reminders')
+
+
+# ── Himoya e'lonlari auto-match (called from data.py /api/oak/import) ────────
+
+_HIMOYA_TITLE = "🎓 Yangi himoya e'loni"
+_HIMOYA_DAILY_CAP = 3  # max himoya notifications per user per day
+
+
+def notify_himoya_matches(new_records):
+    """Notify scholars whose ixtisoslik matches freshly imported OAK defense
+    announcements. `new_records` is a list of dicts with keys:
+    olim, mavzu, ixtisoslik, link. Opens its own connection (called after the
+    import transaction commits); never raises — import must not fail because
+    notification delivery hiccuped. Returns number of notifications created."""
+    records = [r for r in new_records if (r.get('ixtisoslik') or '').strip()]
+    if not records:
+        return 0
+    from data import get_connection
+    sent = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                from blueprints.notifications import _ensure_schema as _ensure_notif
+                _ensure_notif(cur)
+                users = [u for u in _fetch_audience(cur)
+                         if u['ixtisoslik'] and u['prefs'].get('himoya_elon', True)]
+                if not users:
+                    return 0
+                emails = [u['email'].lower() for u in users if u['email']]
+                site_uid = {}
+                if emails:
+                    cur.execute("SELECT LOWER(email), id FROM users "
+                                "WHERE LOWER(email) = ANY(%s)", (emails,))
+                    site_uid = {r[0]: r[1] for r in cur.fetchall()}
+                for u in users:
+                    main_uid = site_uid.get(u['email'].lower()) if u['email'] else None
+                    if not main_uid:
+                        continue
+                    # Daily anti-spam cap, counted against today's himoya alerts.
+                    cur.execute("""
+                        SELECT COUNT(*) FROM user_alerts
+                        WHERE user_id = %s AND created_at >= CURRENT_DATE
+                          AND title LIKE %s
+                    """, (main_uid, _HIMOYA_TITLE + '%'))
+                    budget = _HIMOYA_DAILY_CAP - (cur.fetchone()[0] or 0)
+                    if budget <= 0:
+                        continue
+                    mine = [r for r in records
+                            if _norm(r['ixtisoslik']) == _norm(u['ixtisoslik'])]
+                    for rec in mine[:budget]:
+                        msg = (f"Sizning ixtisosligingizda ({rec['ixtisoslik']}) "
+                               f"yangi himoya e'loni: {rec.get('olim') or ''} — "
+                               f"{rec.get('mavzu') or ''}")
+                        if rec.get('link'):
+                            msg += f"\n🔗 {rec['link']}"
+                        cur.execute("""
+                            INSERT INTO user_alerts (user_id, title, message, level)
+                            VALUES (%s, %s, %s, 'info')
+                        """, (main_uid, _HIMOYA_TITLE, msg))
+                        sent += 1
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return sent
+    return sent

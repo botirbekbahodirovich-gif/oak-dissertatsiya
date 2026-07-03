@@ -101,6 +101,28 @@
   .cab-grid { grid-template-columns: 1fr; }
   .gallery { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── notification prefs (Bildirishnomalar) ── */
+.np-card { background: #1e293b; border: 1px solid rgba(148,163,184,0.15); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+.np-group-title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px; }
+.np-row { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid rgba(148,163,184,0.1); }
+.np-row:last-child { border-bottom: none; }
+.np-ic { font-size: 1.25rem; width: 34px; text-align: center; flex-shrink: 0; }
+.np-label { flex: 1; min-width: 0; }
+.np-label b { display: block; color: #e2e8f0; font-size: 0.93rem; font-weight: 600; }
+.np-label small { display: block; color: #94a3b8; font-size: 0.78rem; margin-top: 2px; line-height: 1.4; }
+/* CSS-only toggle switch */
+.np-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+.np-switch input { opacity: 0; width: 0; height: 0; }
+.np-slider { position: absolute; inset: 0; cursor: pointer; background: #334155; border-radius: 26px; transition: background 0.2s; }
+.np-slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #94a3b8; border-radius: 50%; transition: transform 0.2s, background 0.2s; }
+.np-switch input:checked + .np-slider { background: linear-gradient(135deg, #3b82f6, #7c5cfc); }
+.np-switch input:checked + .np-slider::before { transform: translateX(20px); background: #fff; }
+.np-switch input:focus-visible + .np-slider { outline: 2px solid #60a5fa; outline-offset: 2px; }
+.np-switch input:disabled + .np-slider { opacity: 0.45; cursor: wait; }
+.np-saving { font-size: 0.78rem; color: #94a3b8; visibility: hidden; }
+.np-saving.on { visibility: visible; }
+@media (max-width: 480px) { .np-label small { font-size: 0.72rem; } .np-card { padding: 14px; } }
 </style>
 {% endblock %}
 
@@ -535,29 +557,55 @@
         </div>
       </section>
 
-      <!-- ── BILDIRISHNOMALAR SOZLAMALARI ── -->
+      <!-- ── 🔔 BILDIRISHNOMALAR SOZLAMALARI ── -->
       <section class="cab-panel" id="panel-bildirish">
         <div class="cab-section">
-          <h3>Bildirishnomalar sozlamalari</h3>
-          <p class="desc">Qaysi turdagi eslatmalarni olishni tanlang va yagona "Saqlash" tugmasini bosing.</p>
-          {% set _prefs = [
-            ('conference_reminders','🎤','Konferensiya eslatmalari'),
-            ('grant_reminders','🏆','Grant eslatmalari'),
-            ('journal_reminders','📰','Jurnal deadline eslatmalari'),
-            ('telegram_enabled','✈️','Telegram orqali xabar olish')
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3 style="margin:0;">🔔 Bildirishnomalar sozlamalari</h3>
+            <span class="np-saving" id="np-saving">Saqlanmoqda…</span>
+          </div>
+          <p class="desc">O'zgartirishlar avtomatik saqlanadi.</p>
+
+          {% set _content_prefs = [
+            ('konferensiya','📅','Konferensiyalar','Yaqin ilmiy konferensiyalar haqida eslatmalar'),
+            ('grant','🏆','Grantlar va moliyalashtirish','ERASMUS, DAAD, British Council va boshqa grant imkoniyatlari'),
+            ('himoya_elon','🎓',"Himoya e'lonlari","Sizning ixtisosligingizga mos yangi dissertatsiya himoyalari"),
+            ('jurnal','📰','Jurnallar',"Siz o'qiydigan sohadagi yangi jurnal sonlari"),
+            ('yangilik','📢','Yangiliklar',"Olimlar.uz ma'muriyatidan umumiy e'lonlar"),
+            ('deadline','⏰','Muhim muddatlar','Ariza topshirish, maqola yuborish muddatlari')
           ] %}
-          <form id="prefsForm" onsubmit="return false;">
-            {% for key, ic, label in _prefs %}
-            <div class="cab-link-row" id="pref-row-{{ key }}" {% if key == 'telegram_enabled' %}style="display:none;"{% endif %}>
-              <div class="cab-link-ic">{{ ic }}</div>
-              <label style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;">
-                <span style="color:#e2e8f0;">{{ label }}</span>
-                <input type="checkbox" data-pref="{{ key }}" checked style="width:20px;height:20px;accent-color:#3b82f6;cursor:pointer;">
+          {% set _channel_prefs = [
+            ('telegram_notify','✈️','Telegram orqali xabar olish','Telegram botimiz orqali tezkor bildirishnomalar'),
+            ('email_notify','📧','Email orqali xabar olish','Elektron pochta orqali kunlik xulosa')
+          ] %}
+
+          <div class="np-card">
+            <p class="np-group-title">Nima haqida xabar olishni xohlaysiz?</p>
+            {% for key, ic, label, desc in _content_prefs %}
+            <div class="np-row">
+              <span class="np-ic">{{ ic }}</span>
+              <div class="np-label"><b>{{ label }}</b><small>{{ desc }}</small></div>
+              <label class="np-switch">
+                <input type="checkbox" data-pref="{{ key }}" checked>
+                <span class="np-slider"></span>
               </label>
             </div>
             {% endfor %}
-            <div class="cab-save-bar"><button class="cab-btn" onclick="savePrefs()">💾 Saqlash</button></div>
-          </form>
+          </div>
+
+          <div class="np-card" id="np-channels" style="display:none;">
+            <p class="np-group-title">Qanday usulda xabar olasiz?</p>
+            {% for key, ic, label, desc in _channel_prefs %}
+            <div class="np-row" id="np-row-{{ key }}" style="display:none;">
+              <span class="np-ic">{{ ic }}</span>
+              <div class="np-label"><b>{{ label }}</b><small>{{ desc }}</small></div>
+              <label class="np-switch">
+                <input type="checkbox" data-pref="{{ key }}" checked>
+                <span class="np-slider"></span>
+              </label>
+            </div>
+            {% endfor %}
+          </div>
         </div>
       </section>
 
@@ -647,30 +695,51 @@ function saveForm(formId) {
 function saveProfileForm() { saveForm('profileForm'); }
 function saveLinksForm() { saveForm('linksForm'); }
 
-// ── notification preferences (Bildirishnomalar) ──
-fetch('/cabinet/api/notification-prefs')
-  .then(function (r) { return r.json(); })
-  .then(function (d) {
-    if (!d.ok) return;
-    Object.keys(d.prefs || {}).forEach(function (k) {
-      var el = document.querySelector('#prefsForm [data-pref="' + k + '"]');
-      if (el) el.checked = !!d.prefs[k];
+// ── notification preferences (Bildirishnomalar) — debounced auto-save ──
+(function () {
+  var toggles = document.querySelectorAll('#panel-bildirish [data-pref]');
+  if (!toggles.length) return;
+  var savingEl = document.getElementById('np-saving');
+  var dirty = {};
+  var timer = null;
+
+  fetch('/api/v1/notifications/prefs')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) return;
+      toggles.forEach(function (el) {
+        var k = el.getAttribute('data-pref');
+        if (k in (d.prefs || {})) el.checked = !!d.prefs[k];
+      });
+      // Channel toggles only make sense for linked channels.
+      var anyChannel = false;
+      if (d.has_telegram) { document.getElementById('np-row-telegram_notify').style.display = ''; anyChannel = true; }
+      if (d.has_email) { document.getElementById('np-row-email_notify').style.display = ''; anyChannel = true; }
+      if (anyChannel) document.getElementById('np-channels').style.display = '';
+    }).catch(function () {});
+
+  function flush() {
+    var body = { prefs: dirty };
+    dirty = {};
+    if (savingEl) savingEl.classList.add('on');
+    post('/api/v1/notifications/prefs', body).then(function (d) {
+      if (savingEl) savingEl.classList.remove('on');
+      if (d.success) { toast('Sozlamalar saqlandi ✓', true); }
+      else { toast(d.error || 'Xatolik yuz berdi', false); }
+    }).catch(function () {
+      if (savingEl) savingEl.classList.remove('on');
+      toast('Tarmoq xatosi', false);
     });
-    if (d.has_telegram) {
-      var row = document.getElementById('pref-row-telegram_enabled');
-      if (row) row.style.display = '';
-    }
-  }).catch(function () {});
-function savePrefs() {
-  var body = {};
-  document.querySelectorAll('#prefsForm [data-pref]').forEach(function (el) {
-    body[el.getAttribute('data-pref')] = el.checked;
+  }
+
+  toggles.forEach(function (el) {
+    el.addEventListener('change', function () {
+      dirty[el.getAttribute('data-pref')] = el.checked;
+      clearTimeout(timer);
+      timer = setTimeout(flush, 500);   // debounce rapid flipping
+    });
   });
-  post('/cabinet/api/notification-prefs', body).then(function (d) {
-    if (d.ok) { toast('Saqlandi ✓', true); }
-    else { toast(d.error || 'Xatolik yuz berdi', false); }
-  }).catch(function () { toast('Tarmoq xatosi', false); });
-}
+})();
 
 // ── avatar upload ──
 function uploadAvatar(input) {

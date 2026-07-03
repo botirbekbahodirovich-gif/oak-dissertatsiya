@@ -10,6 +10,16 @@ Public API (consumed by the global layout modal):
   GET  /api/v1/notifications/active   → unread global + personal notices for the session user
   POST /api/v1/notifications/dismiss  → acknowledge one notice (insert read / set is_read)
 
+Notification preferences (consumed by the cabinet "Bildirishnomalar" panel and
+the smart-reminders dispatcher in blueprints/reminders.py):
+  GET  /api/v1/notifications/prefs    → {pref_key: bool} for the current user (default: all ON)
+  POST /api/v1/notifications/prefs    → upsert {"prefs": {...}} into notification_prefs
+
+`notification_prefs.user_id` is cabinet_users.id — the cabinet is the identity
+home for scholar-facing settings (telegram_id, olim_profiles targeting live
+there); main-site Flask-Login visitors are bridged by e-mail, the same linkage
+cabinet.py uses.
+
 Admin API (draft + POST notices):
   POST /admin/api/notifications/broadcast  → global announcement
   POST /admin/api/notifications/alert      → targeted personal alert
@@ -18,7 +28,7 @@ Schema is created lazily on first request (idempotent CREATE IF NOT EXISTS), so 
 database is self-sufficient without touching app.py's init block. Shared helpers are
 lazy-imported inside views (auth.py / cabinet.py pattern) to avoid circular imports.
 """
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 from flask_login import login_required, current_user
 
 from app import csrf
@@ -26,6 +36,20 @@ from app import csrf
 notifications_bp = Blueprint('notifications', __name__)
 
 _schema_ready = False
+_prefs_schema_ready = False
+
+# Canonical preference keys. Content prefs gate WHAT a scholar is notified
+# about; channel prefs gate HOW. Everything defaults to ON (opt-out model).
+PREF_KEYS = (
+    'konferensiya',    # upcoming academic conferences
+    'grant',           # grant / funding opportunities
+    'himoya_elon',     # OAK defense announcements matching the specialization
+    'jurnal',          # new journal issues in the user's field
+    'yangilik',        # general olimlar.uz announcements
+    'deadline',        # application / submission deadlines
+    'telegram_notify', # channel: Telegram bot
+    'email_notify',    # channel: e-mail digest (stored now, dispatch needs SMTP)
+)
 
 
 def _ensure_schema(cur):
@@ -71,6 +95,70 @@ def _ensure_schema(cur):
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_alerts_user ON user_alerts(user_id, is_read)")
     _schema_ready = True
+
+
+def _ensure_prefs_schema(cur):
+    """Key-value notification preferences per cabinet user. Absence of a row
+    means the default (enabled) — only explicit choices are stored."""
+    global _prefs_schema_ready
+    if _prefs_schema_ready:
+        return
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS notification_prefs (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            pref_key VARCHAR(100) NOT NULL,
+            is_enabled BOOLEAN DEFAULT TRUE,
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, pref_key)
+        )
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_notification_prefs_user "
+                "ON notification_prefs(user_id)")
+    # One-time migration from the earlier column-per-toggle table
+    # (user_notification_prefs) so nobody's saved choices are lost.
+    cur.execute("SELECT to_regclass('user_notification_prefs')")
+    if cur.fetchone()[0]:
+        for old_col, new_key in (('conference_reminders', 'konferensiya'),
+                                 ('grant_reminders', 'grant'),
+                                 ('journal_reminders', 'jurnal'),
+                                 ('telegram_enabled', 'telegram_notify')):
+            cur.execute(f"""
+                INSERT INTO notification_prefs (user_id, pref_key, is_enabled)
+                SELECT user_id, %s, {old_col} FROM user_notification_prefs
+                ON CONFLICT (user_id, pref_key) DO NOTHING
+            """, (new_key,))
+        cur.execute("DROP TABLE user_notification_prefs")
+    _prefs_schema_ready = True
+
+
+def resolve_pref_identity(cur):
+    """Resolve the visitor to a cabinet_users row id (or None).
+
+    Order: cabinet session → main-site Flask-Login e-mail bridge (the same
+    linkage cabinet.py's _bridge_from_main uses, read-only here)."""
+    uid = session.get('cabinet_user_id')
+    if uid:
+        return uid
+    if getattr(current_user, 'is_authenticated', False):
+        email = (getattr(current_user, 'email', '') or '').strip().lower()
+        if email:
+            cur.execute("SELECT id FROM cabinet_users WHERE LOWER(email) = %s", (email,))
+            r = cur.fetchone()
+            if r:
+                return r[0]
+    return None
+
+
+def load_prefs(cur, uid):
+    """{pref_key: bool} for a cabinet user — defaults (True) filled in."""
+    prefs = {k: True for k in PREF_KEYS}
+    cur.execute("SELECT pref_key, is_enabled FROM notification_prefs "
+                "WHERE user_id = %s", (uid,))
+    for key, enabled in cur.fetchall():
+        if key in prefs:
+            prefs[key] = bool(enabled)
+    return prefs
 
 
 # ── Public: active notices for the current session ──────────────────────────
@@ -229,3 +317,45 @@ def admin_post_alert():
         return jsonify({"ok": True, "id": new_id})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ── Notification preferences (cabinet toggle panel) ──────────────────────────
+
+@notifications_bp.route('/api/v1/notifications/prefs', methods=['GET', 'POST'])
+@csrf.exempt
+def notification_prefs():
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_prefs_schema(cur)
+                uid = resolve_pref_identity(cur)
+                if not uid:
+                    return jsonify({"success": False, "error": "auth"}), 401
+                if request.method == 'POST':
+                    data = request.get_json(silent=True) or {}
+                    incoming = data.get('prefs') or {}
+                    if not isinstance(incoming, dict):
+                        return jsonify({"success": False, "error": "prefs must be an object"}), 400
+                    for key, val in incoming.items():
+                        if key not in PREF_KEYS:
+                            continue
+                        cur.execute("""
+                            INSERT INTO notification_prefs (user_id, pref_key, is_enabled, updated_at)
+                            VALUES (%s, %s, %s, NOW())
+                            ON CONFLICT (user_id, pref_key) DO UPDATE
+                                SET is_enabled = EXCLUDED.is_enabled, updated_at = NOW()
+                        """, (uid, key, bool(val)))
+                prefs = load_prefs(cur, uid)
+                # Channel availability — the UI hides toggles for unlinked channels.
+                cur.execute("SELECT telegram_id, email FROM cabinet_users WHERE id = %s", (uid,))
+                row = cur.fetchone() or (None, None)
+            conn.commit()
+        finally:
+            conn.close()
+        return jsonify({"success": True, "prefs": prefs,
+                        "has_telegram": bool(row[0]),
+                        "has_email": bool(row[1] and str(row[1]).strip())})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
