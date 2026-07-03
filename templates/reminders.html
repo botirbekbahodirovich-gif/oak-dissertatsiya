@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Yaqinlashayotgan muddatlar — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:860px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">⏳ Yaqinlashayotgan muddatlar</h1>
+  <p style="color:#94a3b8;">Sizga tegishli konferensiya, grant va jurnal muddatlari.</p>
+
+  {% if items %}
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px;">
+    {% for it in items %}
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid #e2e8f0;
+                border-radius:12px;background:#fff;">
+      <span style="font-size:1.5rem;">{{ it.icon }}</span>
+      <div style="flex:1;min-width:0;">
+        {% if it.url %}
+        <a href="{{ it.url }}" target="_blank" rel="noopener"
+           style="font-weight:600;color:#0f172a;text-decoration:none;">{{ it.title }}</a>
+        {% else %}
+        <span style="font-weight:600;color:#0f172a;">{{ it.title }}</span>
+        {% endif %}
+        <div style="font-size:0.82rem;color:#64748b;">{{ it.type_label }} · 📅 {{ it.deadline }}</div>
+      </div>
+      <span style="white-space:nowrap;font-size:0.85rem;font-weight:600;padding:4px 14px;border-radius:50px;
+                   {% if it.days_left <= 3 %}background:rgba(239,68,68,0.1);color:#dc2626;
+                   {% else %}background:rgba(59,130,246,0.1);color:#2563eb;{% endif %}">
+        {{ it.days_text }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px 0;color:#94a3b8;">
+    <div style="font-size:2.4rem;">📭</div>
+    <p style="margin-top:10px;">Hozircha yaqinlashayotgan muddatlar yo'q.</p>
+    {% if not current_user.is_authenticated %}
+    <p style="font-size:0.9rem;"><a href="/login" style="color:#3b82f6;">Kirish</a> orqali sizga moslashtirilgan eslatmalarni ko'ring.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

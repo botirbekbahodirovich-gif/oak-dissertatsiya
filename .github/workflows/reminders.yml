@@ -1,0 +1,20 @@
+name: Smart Eslatmalar dispatcher
+# Har kuni ertalab (04:00 UTC = 09:00 Toshkent) faol eslatmalarni tekshiradi:
+# muddatiga N kun qolgan bo'lsa mos foydalanuvchilarga sayt + Telegram orqali
+# yuboriladi. Endpoint idempotent — qayta chaqirish takroriy xabar yubormaydi.
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Eslatmalarni qayta ishlash
+        env:
+          REMINDERS_API_KEY: ${{ secrets.REMINDERS_API_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-API-Key: ${REMINDERS_API_KEY}" \
+            https://www.olimlar.uz/api/v1/reminders/process

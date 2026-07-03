@@ -1,0 +1,60 @@
+{# Yaqinlashayotgan muddatlar widget — fetches /api/v1/reminders/upcoming and
+   shows up to 3 items relevant to the visitor. Hidden while empty.
+   Set `rw_dark = true` before including on dark backgrounds (cabinet). #}
+{% set _dark = rw_dark|default(false) %}
+<div id="rw-widget" style="display:none;margin:14px 0;border-radius:14px;padding:16px 20px;
+     background:{{ '#162032' if _dark else '#fff' }};
+     border:1px solid {{ 'rgba(148,163,184,0.18)' if _dark else '#e2e8f0' }};
+     {{ '' if _dark else 'box-shadow:0 1px 6px rgba(15,23,42,0.06);' }}">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+    <b style="color:{{ '#e2e8f0' if _dark else '#0f172a' }};font-size:0.98rem;">⏳ Yaqinlashayotgan muddatlar</b>
+    <a href="/reminders" style="color:#60a5fa;font-size:0.85rem;text-decoration:none;">Barchasini ko'rish →</a>
+  </div>
+  <div id="rw-items"></div>
+</div>
+<script>
+(function () {
+  fetch('/api/v1/reminders/upcoming', { headers: { 'Accept': 'application/json' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var items = (d && d.reminders) || [];
+      if (!items.length) return;
+      var box = document.getElementById('rw-items');
+      var dark = {{ 'true' if _dark else 'false' }};
+      items.slice(0, 3).forEach(function (it) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;' +
+          'border-top:1px solid ' + (dark ? 'rgba(148,163,184,0.12)' : '#f1f5f9') + ';';
+        var urgent = it.days_left <= 3;
+
+        var icon = document.createElement('span');
+        icon.style.fontSize = '1.1rem';
+        icon.textContent = it.icon;
+
+        var mid = document.createElement('div');
+        mid.style.cssText = 'flex:1;min-width:0;';
+        var title = document.createElement(it.url ? 'a' : 'span');
+        if (it.url) { title.href = it.url; title.target = '_blank'; title.rel = 'noopener'; }
+        title.textContent = it.title;
+        title.style.cssText = 'display:block;font-size:0.9rem;font-weight:600;text-decoration:none;' +
+          'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' +
+          (dark ? '#e2e8f0' : '#0f172a') + ';';
+        var meta = document.createElement('div');
+        meta.style.cssText = 'font-size:0.78rem;color:' + (dark ? '#94a3b8' : '#64748b') + ';';
+        meta.textContent = it.type_label + ' · ' + it.deadline;
+        mid.appendChild(title); mid.appendChild(meta);
+
+        var badge = document.createElement('span');
+        badge.style.cssText = 'white-space:nowrap;font-size:0.8rem;font-weight:600;padding:3px 10px;border-radius:50px;' +
+          (urgent ? 'background:rgba(239,68,68,0.12);color:#ef4444;'
+                  : 'background:rgba(59,130,246,0.12);color:#3b82f6;');
+        badge.textContent = it.days_text;
+
+        row.appendChild(icon); row.appendChild(mid); row.appendChild(badge);
+        box.appendChild(row);
+      });
+      document.getElementById('rw-widget').style.display = 'block';
+    })
+    .catch(function () {});
+})();
+</script>

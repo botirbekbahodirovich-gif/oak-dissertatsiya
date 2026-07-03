@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Smart Eslatmalar (admin){% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1150px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">🔔 Smart Eslatmalar</h1>
+  <p style="color:#94a3b8;">Konferensiya, grant va jurnal muddatlari haqida olimlarga avtomatik eslatmalar. Jami: {{ items|length }} ta.</p>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <h2 style="font-size:1.05rem;margin-top:18px;">
+    {% if edit_r %}✏️ Eslatmani tahrirlash (#{{ edit_r.id }}){% else %}➕ Yangi eslatma qo'shish{% endif %}
+  </h2>
+  <form method="POST"
+        action="{% if edit_r %}/admin/reminders/edit/{{ edit_r.id }}{% else %}/admin/reminders/add{% endif %}"
+        style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+    {{ csrf_token()|safe }}
+    <label style="grid-column:1/-1;">Sarlavha *
+      <input name="title" class="form-control" required maxlength="500" value="{{ edit_r.title if edit_r else '' }}"></label>
+    <label style="grid-column:1/-1;">Tavsif
+      <textarea name="description" class="form-control" rows="3">{{ edit_r.description or '' if edit_r else '' }}</textarea></label>
+    <label>Turi
+      <select name="reminder_type" class="form-control">
+        {% for key, tl in reminder_types.items() %}
+        <option value="{{ key }}" {{ 'selected' if edit_r and edit_r.reminder_type == key }}>{{ tl[1] }} {{ tl[0] }}</option>
+        {% endfor %}
+      </select></label>
+    <label>Muddat (deadline)
+      <input name="deadline_date" type="date" class="form-control" value="{{ edit_r.deadline_date if edit_r else '' }}"></label>
+    <fieldset style="grid-column:1/-1;border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:10px 14px;">
+      <legend style="font-size:0.85rem;padding:0 6px;">Necha kun oldin eslatilsin</legend>
+      {% for d in days_choices %}
+      <label style="display:inline-flex;align-items:center;gap:5px;margin-right:16px;">
+        <input type="checkbox" name="reminder_days_before" value="{{ d }}"
+               {{ 'checked' if (edit_r and d in edit_r.reminder_days_before) or (not edit_r and d in [7,3,1]) }}>
+        {{ d }} kun
+      </label>
+      {% endfor %}
+    </fieldset>
+    <label>Maqsadli darajalar (bo'sh = hammasi)
+      <select name="target_degrees" class="form-control" multiple size="6">
+        {% for d in degree_choices %}
+        <option value="{{ d }}" {{ 'selected' if edit_r and d in edit_r.target_degrees }}>{{ d }}</option>
+        {% endfor %}
+      </select></label>
+    <label>Maqsadli hududlar (bo'sh = hammasi)
+      <select name="target_regions" class="form-control" multiple size="6">
+        {% for r in regions %}
+        <option value="{{ r }}" {{ 'selected' if edit_r and r in edit_r.target_regions }}>{{ r }}</option>
+        {% endfor %}
+      </select></label>
+    <label style="grid-column:1/-1;">Ixtisoslik shifrlari (vergul bilan, bo'sh = hammasi)
+      <input name="target_specializations" class="form-control" placeholder="05.01.01, 13.00.02"
+             value="{{ edit_r.target_specializations|join(', ') if edit_r else '' }}"></label>
+    <label style="grid-column:1/-1;">Havola (URL)
+      <input name="url" class="form-control" maxlength="500" placeholder="https://..." value="{{ edit_r.url or '' if edit_r else '' }}"></label>
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" name="is_active" {{ 'checked' if not edit_r or edit_r.is_active }}> Faol
+    </label>
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">{% if edit_r %}Saqlash{% else %}Qo'shish{% endif %}</button>
+      {% if edit_r %}<a href="/admin/reminders" class="btn btn-action">Bekor qilish</a>{% endif %}
+    </div>
+  </form>
+
+  <table class="table" style="width:100%;">
+    <thead><tr>
+      <th>ID</th><th>Sarlavha</th><th>Turi</th><th>Muddat</th><th>Auditoriya</th><th>Yuborilgan</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for r in items %}
+      <tr {% if not r.is_active %}style="opacity:0.5;"{% endif %}>
+        <td>{{ r.id }}</td>
+        <td>{{ r.icon }} {{ r.title }}{% if not r.is_active %} <span style="color:#94a3b8;">(nofaol)</span>{% endif %}</td>
+        <td>{{ r.type_label }}</td>
+        <td>{{ r.deadline_date or '—' }}
+          {% if r.days_left is not none and r.days_left >= 0 %}<br><small style="color:#94a3b8;">{{ r.days_left }} kun qoldi</small>{% endif %}</td>
+        <td style="font-size:0.82rem;color:#94a3b8;">
+          {{ r.target_degrees|join(', ') if r.target_degrees else 'Barcha darajalar' }}<br>
+          {{ r.target_regions|join(', ') if r.target_regions else 'Barcha hududlar' }}
+          {% if r.target_specializations %}<br>{{ r.target_specializations|join(', ') }}{% endif %}
+        </td>
+        <td>{{ r.sent_count }}</td>
+        <td style="white-space:nowrap;">
+          <a href="/admin/reminders?edit={{ r.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
+          <form method="POST" action="/admin/reminders/send-now/{{ r.id }}" style="display:inline;"
+                onsubmit="return confirm('Barcha mos foydalanuvchilarga hozir yuborilsinmi?');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#34d399;">📤 Hozir yuborish</button>
+          </form>
+          <form method="POST" action="/admin/reminders/delete/{{ r.id }}" style="display:inline;"
+                onsubmit="return confirm('Eslatmani o‘chirishni tasdiqlaysizmi?');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#f87171;">O'chirish</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
