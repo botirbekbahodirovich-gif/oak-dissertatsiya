@@ -187,11 +187,26 @@
     document.getElementById('ob-pct').textContent = pct + '%';
   }
 
-  // ── institution autocomplete (reuse /filters muassasa list) ──
+  // ── institution autocomplete (/filters preload + institution_map on typing) ──
   fetch('/filters').then(function (r) { return r.json(); }).then(function (d) {
     var dl = document.getElementById('ob-muassasa-list');
     (d.muassasa || []).forEach(function (m) { var o = document.createElement('option'); o.value = m; dl.appendChild(o); });
   }).catch(function () {});
+  var instTimer = null;
+  inst.addEventListener('input', function () {
+    var q = inst.value.trim();
+    if (q.length < 2) return;
+    clearTimeout(instTimer);
+    instTimer = setTimeout(function () {
+      fetch('/cabinet/api/search-institution?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var dl = document.getElementById('ob-muassasa-list');
+          dl.innerHTML = '';
+          (d.results || []).forEach(function (it) { var o = document.createElement('option'); o.value = it.name; dl.appendChild(o); });
+        }).catch(function () {});
+    }, 250);
+  });
 
   // ── live name match ──
   var timer = null;

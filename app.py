@@ -3486,7 +3486,7 @@ def get_university_dissertation_stats():
     return stats
 
 
-from institutions import INSTITUTION_CATEGORIES
+from institutions import INSTITUTION_CATEGORIES, transliterate_display
 
 
 @cache.cached(timeout=1800, key_prefix='institution_directory')
@@ -3517,7 +3517,8 @@ def get_institution_directory():
                 """)
                 for r in cur.fetchall():
                     out.append({
-                        'name': r[0], 'latin_name': r[1] or transliterate(r[0] or ''),
+                        # case-preserving Latin for display (stored latin_name is lowercase)
+                        'name': r[0], 'latin_name': transliterate_display(r[0] or ''),
                         'category': r[2] or 'universitet', 'region': r[3] or '',
                         'diss_count': r[4] or 0, 'olim_count': r[5] or 0,
                         'ixt_count': r[6] or 0,

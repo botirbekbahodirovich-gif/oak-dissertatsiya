@@ -41,8 +41,24 @@ _APOSTROPHES = ("'", "'", "`", "?", "ʼ", "‘", "’", "´")
 
 
 def transliterate(text):
-    """Uzbek Cyrillic → Latin (unknown chars pass through)."""
+    """Uzbek Cyrillic → Latin (unknown chars pass through). Lowercases, matching
+    app.transliterate — use transliterate_display() for human-facing labels."""
     return "".join(KIRILL_TO_LATIN.get(ch, ch) for ch in (text or ""))
+
+
+def transliterate_display(text):
+    """Case-preserving Cyrillic → Latin for display labels: an uppercase
+    Cyrillic letter yields a capitalized Latin (Тошкент → Toshkent)."""
+    out = []
+    for ch in (text or ""):
+        lat = KIRILL_TO_LATIN.get(ch)
+        if lat is None:
+            out.append(ch)
+        elif ch.isupper():
+            out.append(lat[:1].upper() + lat[1:])
+        else:
+            out.append(lat)
+    return "".join(out)
 
 
 def norm_key(name):

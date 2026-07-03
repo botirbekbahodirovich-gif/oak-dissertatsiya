@@ -734,7 +734,9 @@ def search_advisor():
 @cabinet_bp.route('/cabinet/api/search-institution')
 @cabinet_login_required
 def search_institution():
-    """Autocomplete over dissertations.muassasa (institution)."""
+    """Autocomplete over institution_map (deduped; matches Cyrillic AND Latin,
+    shows the Latin name). Falls back to raw dissertations.muassasa if the map
+    is not populated yet."""
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify({"results": []})
@@ -745,11 +747,22 @@ def search_institution():
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT TRIM(muassasa), COUNT(*) AS cnt FROM dissertations "
-                    "WHERE muassasa IS NOT NULL AND TRIM(muassasa) <> '' "
-                    "AND LOWER(TRIM(muassasa)) LIKE %s "
-                    "GROUP BY TRIM(muassasa) ORDER BY cnt DESC LIMIT 15", (like,))
-                results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
+                    "SELECT canonical_name, COUNT(*) AS variants "
+                    "FROM institution_map "
+                    "WHERE is_active = TRUE AND canonical_name IS NOT NULL "
+                    "AND (LOWER(cyrillic_name) LIKE %s OR LOWER(latin_name) LIKE %s) "
+                    "GROUP BY canonical_name ORDER BY variants DESC, canonical_name "
+                    "LIMIT 15", (like, like))
+                from institutions import transliterate_display
+                results = [{"name": transliterate_display(r[0]), "cyrillic": r[0],
+                            "count": r[1]} for r in cur.fetchall()]
+                if not results:
+                    cur.execute(
+                        "SELECT TRIM(muassasa), COUNT(*) AS cnt FROM dissertations "
+                        "WHERE muassasa IS NOT NULL AND TRIM(muassasa) <> '' "
+                        "AND LOWER(TRIM(muassasa)) LIKE %s "
+                        "GROUP BY TRIM(muassasa) ORDER BY cnt DESC LIMIT 15", (like,))
+                    results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
         finally:
             conn.close()
     except Exception:

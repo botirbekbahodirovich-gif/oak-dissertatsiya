@@ -20,33 +20,31 @@
   .uni-logo { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg,#1e40af,#3b82f6); display: grid; place-items: center; font-size: 1.6rem; overflow: hidden; }
   .uni-logo img { width: 100%; height: 100%; object-fit: cover; }
   .uni-name { color: #f1f5f9; font-weight: 700; font-size: 1rem; line-height: 1.3; }
-  .uni-latin { color: #64748b; font-size: 0.78rem; margin-top: -4px; }
+  .uni-sub { color: #64748b; font-size: 0.78rem; margin-top: -4px; }
   .uni-badges { display: flex; gap: 6px; flex-wrap: wrap; }
   .uni-badge { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
-  .uni-badge.davlat, .uni-badge.universitet { background: #3b82f6; }
-  .uni-badge.xususiy { background: #3b82f6; }
-  .uni-badge.xalqaro, .uni-badge.akademiya { background: #8b5cf6; }
+  .uni-badge.universitet { background: #3b82f6; }
+  .uni-badge.akademiya { background: #8b5cf6; }
   .uni-badge.institut { background: #059669; }
   .uni-badge.markaz { background: #e36403; }
+  .uni-badge.type { background: #475569; }
   .uni-badge.city { background: #334155; color: #cbd5e1; }
-  .uni-counts { display: flex; gap: 16px; color: #94a3b8; font-size: 0.82rem; margin-top: auto; flex-wrap: wrap; }
+  .uni-counts { display: flex; gap: 14px; color: #94a3b8; font-size: 0.82rem; margin-top: auto; flex-wrap: wrap; }
   .uni-counts b { color: #60a5fa; }
   .uni-empty { text-align: center; color: #64748b; padding: 3rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-{% set is_inst = (mode == 'institution') %}
-{% set filter_opts = categories if is_inst else type_labels %}
 <div class="uni-wrap">
   <div class="uni-head">
-    <h1>🏛️ {{ 'Ilmiy muassasalar' if is_inst else 'Universitetlar' }}</h1>
+    <h1>🏛️ Ilmiy muassasalar</h1>
     <p>O'zbekistondagi oliy ta'lim va ilmiy muassasalar — dissertatsiya statistikasi bilan</p>
   </div>
 
   <div class="uni-filters">
     <button class="uni-pill active" data-filter="all" onclick="filterCat('all', this)">Hammasi</button>
-    {% for val, label in filter_opts.items() %}
+    {% for val, label in categories.items() %}
     <button class="uni-pill" data-filter="{{ val }}" onclick="filterCat('{{ val }}', this)">{{ label }}</button>
     {% endfor %}
     <select id="regionFilter" onchange="applyFilters()">
@@ -58,26 +56,21 @@
 
   <div class="uni-grid" id="uniGrid">
     {% for u in items %}
-    {% set fval = u.category if is_inst else u.university_type %}
     <a class="uni-card" href="/university/{{ u.name|urlencode }}"
-       data-filter="{{ fval }}" data-region="{{ u.region }}"
-       data-name="{{ u.name|lower }}{{ ' ' ~ (u.latin_name|lower) if is_inst else '' }}">
+       data-filter="{{ u.category }}" data-region="{{ u.region }}"
+       data-name="{{ (u.display ~ ' ' ~ (u.sub or ''))|lower }}">
       <div class="uni-logo">{% if u.logo_url %}<img src="{{ u.logo_url }}" alt="">{% else %}🏛️{% endif %}</div>
-      <div class="uni-name">{{ u.name }}</div>
-      {% if is_inst and u.latin_name %}<div class="uni-latin">{{ u.latin_name }}</div>{% endif %}
+      <div class="uni-name">{{ u.display }}</div>
+      {% if u.sub and u.sub != u.display %}<div class="uni-sub">{{ u.sub }}</div>{% endif %}
       <div class="uni-badges">
-        {% if is_inst %}
-          {% if u.category %}<span class="uni-badge {{ u.category }}">{{ categories.get(u.category, u.category) }}</span>{% endif %}
-        {% else %}
-          {% if u.university_type %}<span class="uni-badge {{ u.university_type }}">{{ u.type_label }}</span>{% endif %}
-          {% if u.city %}<span class="uni-badge city">📍 {{ u.city }}</span>{% endif %}
-        {% endif %}
-        {% if is_inst and u.region %}<span class="uni-badge city">📍 {{ u.region }}</span>{% endif %}
+        {% if u.category %}<span class="uni-badge {{ u.category }}">{{ categories.get(u.category, u.category) }}</span>{% endif %}
+        {% if u.type_label %}<span class="uni-badge type">{{ u.type_label }}</span>{% endif %}
+        {% if u.region %}<span class="uni-badge city">📍 {{ u.region }}</span>{% endif %}
       </div>
       <div class="uni-counts">
         <span><b>{{ u.diss_count }}</b> dissertatsiya</span>
         <span><b>{{ u.olim_count }}</b> olim</span>
-        {% if is_inst %}<span><b>{{ u.ixt_count }}</b> ixtisoslik</span>{% endif %}
+        <span><b>{{ u.ixt_count }}</b> ixtisoslik</span>
       </div>
     </a>
     {% else %}

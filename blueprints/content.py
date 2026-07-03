@@ -218,42 +218,95 @@ def blog_post(slug):
 def universities():
     from data import get_connection
     from app import (get_institution_directory, get_university_dissertation_stats,
-                     _uni_row_to_dict, _UNI_TYPE_LABELS, INSTITUTION_CATEGORIES)
-    # Primary: the institution_map directory (every real defence institution,
-    # deduped + categorized, Cyrillic canonical names that the profile page
-    # matches directly). Falls back to the curated table until the map exists.
+                     _uni_keywords, _UNI_TYPE_LABELS, INSTITUTION_CATEGORIES)
+    from institutions import detect_category
+
+    # Primary source: institution_map (every real defence institution, deduped,
+    # categorized, with real dissertation counts). The curated `universities`
+    # table (manually-added OTMs incl. xorijiy — logos, types) is merged in:
+    # matching map entries get enriched, unmatched curated rows get appended.
     try:
         directory = get_institution_directory()
     except Exception:
         directory = []
-    if directory:
-        regions = sorted({d['region'] for d in directory if d.get('region')})
-        return render_template('universities.html', items=directory, mode='institution',
-                               regions=regions, categories=INSTITUTION_CATEGORIES)
 
-    items, regions = [], set()
+    curated = []
     try:
-        stats = get_university_dissertation_stats()
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT * FROM universities WHERE is_active = TRUE")
-                cols = [c[0] for c in cur.description]
-                for r in cur.fetchall():
-                    d = _uni_row_to_dict(cols, r)
-                    s = stats.get(d['id'], {})
-                    d['diss_count'] = s.get('total', 0)
-                    d['olim_count'] = s.get('olimlar', 0)
-                    if d.get('region'):
-                        regions.add(d['region'])
-                    items.append(d)
+                cur.execute("SELECT id, name, logo_url, city, region, university_type "
+                            "FROM universities WHERE is_active = TRUE")
+                curated = [{'id': r[0], 'name': r[1], 'logo_url': r[2] or '',
+                            'city': r[3] or '', 'region': r[4] or '',
+                            'university_type': r[5] or ''} for r in cur.fetchall()]
         finally:
             conn.close()
     except Exception:
-        items = []
-    items.sort(key=lambda x: -x.get('diss_count', 0))
-    return render_template('universities.html', items=items, mode='curated',
-                           regions=sorted(regions), type_labels=_UNI_TYPE_LABELS)
+        curated = []
+
+    items = []
+    if directory:
+        for d in directory:
+            items.append({
+                'name': d['name'],                                # canonical Cyrillic — profile URL
+                'display': d.get('latin_name') or d['name'],      # Latin, primary label
+                'sub': d['name'],                                 # Cyrillic, secondary label
+                'category': d.get('category') or 'universitet',
+                'region': d.get('region') or '',
+                'logo_url': '', 'type_label': '',
+                'diss_count': d.get('diss_count', 0),
+                'olim_count': d.get('olim_count', 0),
+                'ixt_count': d.get('ixt_count', 0),
+            })
+        for cu in curated:
+            kws = _uni_keywords(cu['name'])
+            match = None
+            if kws:
+                for it in items:
+                    hay = (it['display'] or '').lower()
+                    if all(k in hay for k in kws):
+                        match = it
+                        break
+            if match:
+                # enrich the map entry with curated metadata (logo, region, type)
+                match['logo_url'] = match['logo_url'] or cu['logo_url']
+                match['region'] = match['region'] or cu['region'] or cu['city']
+                if cu['university_type'] and not match['type_label']:
+                    match['type_label'] = _UNI_TYPE_LABELS.get(cu['university_type'], '')
+            else:
+                # manually-added university with no defence data (e.g. xorijiy)
+                items.append({
+                    'name': cu['name'], 'display': cu['name'], 'sub': '',
+                    'category': detect_category(cu['name']),
+                    'region': cu['region'] or cu['city'],
+                    'logo_url': cu['logo_url'],
+                    'type_label': _UNI_TYPE_LABELS.get(cu['university_type'], ''),
+                    'diss_count': 0, 'olim_count': 0, 'ixt_count': 0,
+                })
+    else:
+        # Map not populated yet — curated list with the legacy keyword stats.
+        stats = {}
+        try:
+            stats = get_university_dissertation_stats()
+        except Exception:
+            pass
+        for cu in curated:
+            s = stats.get(cu['id'], {})
+            items.append({
+                'name': cu['name'], 'display': cu['name'], 'sub': '',
+                'category': detect_category(cu['name']),
+                'region': cu['region'] or cu['city'],
+                'logo_url': cu['logo_url'],
+                'type_label': _UNI_TYPE_LABELS.get(cu['university_type'], ''),
+                'diss_count': s.get('total', 0), 'olim_count': s.get('olimlar', 0),
+                'ixt_count': 0,
+            })
+
+    items.sort(key=lambda x: (-x['diss_count'], (x['display'] or '').lower()))
+    regions = sorted({i['region'] for i in items if i['region']})
+    return render_template('universities.html', items=items, regions=regions,
+                           categories=INSTITUTION_CATEGORIES)
 
 
 @content_bp.route('/university/<path:name>')
@@ -265,7 +318,7 @@ def university_profile(name):
     uni = None
     stats = {'total': 0, 'phd': 0, 'dsc': 0, 'olimlar': 0, 'ixtisosliklar': 0, 'rahbarlar': 0}
     top_olimlar, top_rahbarlar, recent, by_year, top_ixtisos = [], [], [], [], []
-    gallery, rector_olim = [], None
+    gallery, rector_olim, im_info = [], None, None
     try:
         conn = get_connection()
         try:
@@ -282,6 +335,15 @@ def university_profile(name):
                     if variants:
                         where = "TRIM(muassasa) IN (" + ",".join(["%s"] * len(variants)) + ")"
                         params = list(variants)
+                    cur.execute(
+                        "SELECT MAX(canonical_name), MAX(category), MAX(region) "
+                        "FROM institution_map "
+                        "WHERE canonical_name = %s OR cyrillic_name = %s", (term, term))
+                    imr = cur.fetchone()
+                    if imr and imr[0]:
+                        from institutions import transliterate_display
+                        im_info = {'latin_name': transliterate_display(imr[0]),
+                                   'category': imr[1] or '', 'region': imr[2] or ''}
                 except Exception:
                     pass
                 cur.execute(f"""
@@ -298,7 +360,7 @@ def university_profile(name):
                 cur.execute(f"""
                     SELECT TRIM(olim), COUNT(*) cnt, MAX(daraja), MAX(photo_url)
                     FROM dissertations WHERE {where} AND olim IS NOT NULL AND TRIM(olim) <> ''
-                    GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 10
+                    GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 24
                 """, params)
                 top_olimlar = [{'name': x[0], 'display': clean_olim_name(x[0]), 'count': x[1],
                                 'daraja': x[2] or '', 'photo_url': x[3] or ''} for x in cur.fetchall()]
@@ -311,7 +373,7 @@ def university_profile(name):
                                   'photo_url': x[2] or ''} for x in cur.fetchall()]
                 cur.execute(f"""
                     SELECT id, olim, mavzu, daraja, sana FROM dissertations WHERE {where}
-                    ORDER BY id DESC LIMIT 10
+                    ORDER BY id DESC LIMIT 30
                 """, params)
                 recent = [{'id': x[0], 'olim': x[1] or '', 'display': clean_olim_name(x[1] or ''),
                            'mavzu': x[2] or '', 'daraja': x[3] or '', 'sana': x[4] or ''}
@@ -325,7 +387,7 @@ def university_profile(name):
                 cur.execute(f"""
                     SELECT TRIM(ixtisoslik), COUNT(*) cnt FROM dissertations
                     WHERE {where} AND ixtisoslik IS NOT NULL AND TRIM(ixtisoslik) <> ''
-                    GROUP BY TRIM(ixtisoslik) ORDER BY cnt DESC LIMIT 5
+                    GROUP BY TRIM(ixtisoslik) ORDER BY cnt DESC LIMIT 30
                 """, params)
                 top_ixtisos = [{'name': x[0], 'count': x[1]} for x in cur.fetchall()]
                 # Gallery images for this university.
@@ -355,6 +417,18 @@ def university_profile(name):
                'city': city, 'region': region, 'university_type': '', 'type_label': '',
                'description': '', 'founded_year': None, 'rector': '', 'address': '',
                'phone': '', 'email': '', 'telegram': ''}
+
+    # Institution-map metadata (Latin name, category, region) for the header.
+    if im_info:
+        # Curated rows already carry a proper Latin name; only map-only
+        # (Cyrillic) profiles get the transliterated display name.
+        if not uni.get('id'):
+            uni['latin_name'] = im_info['latin_name']
+        uni['im_category'] = im_info['category']
+        if not uni.get('region'):
+            uni['region'] = im_info['region']
+    stats['years'] = (by_year[0]['year'] + ' – ' + by_year[-1]['year']) if len(by_year) > 1 \
+        else (by_year[0]['year'] if by_year else '')
 
     is_admin = (current_user.is_authenticated and getattr(current_user, 'is_admin', False))
     return render_template('university_profile.html', uni=uni, stats=stats,

@@ -578,6 +578,11 @@
     bindAC('[data-pf="' + f + '"]', 'rahbar-list', '/cabinet/api/search-advisor');
   });
   bindAC('#shogird-student_name', 'shogird-list', '/cabinet/api/search-olim');
+  // institution inputs: query-driven suggestions from institution_map (Latin
+  // names, deduped) — overrides the static /filters preload while typing.
+  ['institution', 'magistratura_institution'].forEach(function (f) {
+    bindAC('[data-pf="' + f + '"]', 'muassasa-list', '/cabinet/api/search-institution');
+  });
 
   // set initial degree-field visibility
   if (typeof toggleDegreeFields === 'function') toggleDegreeFields();

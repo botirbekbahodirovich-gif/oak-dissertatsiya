@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ uni.name }} — Olimlar.uz{% endblock %}
-{% block meta_description %}{{ uni.name }} — {{ stats.total }} ta dissertatsiya, {{ stats.olimlar }} ta olim. {{ uni.city }}, {{ uni.region }}. Olimlar.uz{% endblock %}
-{% block og_title %}{{ uni.name }} — Olimlar.uz{% endblock %}
+{% block title %}{{ uni.latin_name or uni.name }} — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ uni.latin_name or uni.name }} — {{ stats.total }} ta dissertatsiya, {{ stats.olimlar }} ta olim. {{ uni.city }}, {{ uni.region }}. Olimlar.uz{% endblock %}
+{% block og_title %}{{ uni.latin_name or uni.name }} — Olimlar.uz{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -10,12 +10,17 @@
   .up-head-inner { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
   .up-logo { width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; font-size: 3.4rem; flex-shrink: 0; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); }
   .up-logo img { width: 100%; height: 100%; object-fit: cover; }
-  .up-htext h1 { font-size: 1.7rem; font-weight: 800; margin: 0 0 10px; line-height: 1.25; }
+  .up-htext h1 { font-size: 1.7rem; font-weight: 800; margin: 0 0 4px; line-height: 1.25; }
+  .up-subname { font-size: 0.92rem; opacity: 0.85; margin: 0 0 10px; }
   .up-badges { display: flex; gap: 8px; flex-wrap: wrap; }
   .up-badge { font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; }
   .up-badge.davlat { background: #059669; }
   .up-badge.xususiy { background: #3b82f6; }
   .up-badge.xalqaro { background: #8b5cf6; }
+  .up-badge.universitet { background: rgba(255,255,255,0.22); }
+  .up-badge.akademiya { background: #8b5cf6; }
+  .up-badge.institut { background: #059669; }
+  .up-badge.markaz { background: #e36403; }
   .up-badge.loc { background: rgba(255,255,255,0.2); }
   .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
   .up-stat b { font-size: 1.4rem; font-weight: 800; display: block; }
@@ -50,6 +55,14 @@
   .up-info-item a { color: #60a5fa; }
   .up-desc { color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
 
+  /* ── Tabs ── */
+  .up-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .up-tab { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 10px 18px;
+    border-radius: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
+  .up-tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .up-pane { display: none; }
+  .up-pane.active { display: block; }
+
   .up-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 760px) { .up-charts { grid-template-columns: 1fr; } }
   .up-ix-bar { margin-bottom: 10px; }
@@ -83,16 +96,19 @@
   <div class="up-head-inner">
     <div class="up-logo">{% if uni.logo_url %}<img src="{{ uni.logo_url }}" alt="logo">{% else %}🏛️{% endif %}</div>
     <div class="up-htext">
-      <h1>{{ uni.name }}</h1>
+      <h1>{{ uni.latin_name or uni.name }}</h1>
+      {% if uni.latin_name and uni.latin_name != uni.name %}<p class="up-subname">{{ uni.name }}</p>{% endif %}
       <div class="up-badges">
+        {% if uni.im_category %}<span class="up-badge {{ uni.im_category }}">{{ {'universitet':'Universitet','akademiya':'Akademiya','institut':'Institut','markaz':'Markaz'}.get(uni.im_category, uni.im_category) }}</span>{% endif %}
         {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
-        {% if uni.city %}<span class="up-badge loc">📍 {{ uni.city }}{% if uni.region and uni.region != uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
+        {% if uni.city or uni.region %}<span class="up-badge loc">📍 {{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
       </div>
       <div class="up-stats-row">
         <div class="up-stat"><b>{{ stats.total }}</b><span>dissertatsiya</span></div>
         <div class="up-stat"><b>{{ stats.olimlar }}</b><span>olim</span></div>
         <div class="up-stat"><b>{{ stats.ixtisosliklar }}</b><span>ixtisoslik</span></div>
         <div class="up-stat"><b>{{ stats.rahbarlar }}</b><span>ilmiy rahbar</span></div>
+        {% if stats.years %}<div class="up-stat"><b>{{ stats.years }}</b><span>faoliyat yillari</span></div>{% endif %}
         {% set uni_socials = [
           (('https://t.me/' ~ uni.telegram|replace('@','')) if uni.telegram else None, 'bi-telegram', 'Telegram'),
           (uni.instagram, 'bi-instagram', 'Instagram'),
@@ -112,7 +128,7 @@
 </div>
 
 <div class="up-wrap">
-  <!-- SECTION 1 — Umumiy ma'lumot -->
+  <!-- Umumiy ma'lumot -->
   <div class="up-section">
     <h2>ℹ️ Umumiy ma'lumot</h2>
     {% if uni.rector %}
@@ -132,11 +148,11 @@
       {% if uni.email %}<div class="up-info-item"><b>Email</b><a href="mailto:{{ uni.email }}">{{ uni.email }}</a></div>{% endif %}
       {% if uni.telegram %}<div class="up-info-item"><b>Telegram</b><a href="https://t.me/{{ uni.telegram|replace('@','') }}" target="_blank" rel="noopener">{{ uni.telegram }}</a></div>{% endif %}
       {% if uni.address %}<div class="up-info-item"><b>Manzil</b>{{ uni.address }}</div>{% endif %}
-      <div class="up-info-item"><b>Xaritada</b><a href="https://www.google.com/maps/search/{{ uni.name|urlencode }}" target="_blank" rel="noopener">Google Maps →</a></div>
+      <div class="up-info-item"><b>Xaritada</b><a href="https://www.google.com/maps/search/{{ (uni.latin_name or uni.name)|urlencode }}" target="_blank" rel="noopener">Google Maps →</a></div>
     </div>
   </div>
 
-  <!-- SECTION 1b — Galereya -->
+  <!-- Galereya -->
   {% if gallery %}
   <div class="up-section">
     <h2>🖼️ Galereya</h2>
@@ -156,17 +172,81 @@
   </div>
   {% endif %}
 
-  <!-- SECTION 2 — Statistika -->
+  <!-- ── Tabs: Dissertatsiyalar | Olimlar | Ixtisosliklar | Yillar ── -->
   {% if stats.total > 0 %}
-  <div class="up-section">
-    <h2>📊 Dissertatsiya statistikasi</h2>
-    <div class="up-charts">
-      <div><canvas id="degChart" height="220"></canvas></div>
-      <div><canvas id="yearChart" height="220"></canvas></div>
+  <div class="up-tabs">
+    <button class="up-tab active" data-pane="diss" onclick="upTab('diss', this)">📄 Dissertatsiyalar</button>
+    <button class="up-tab" data-pane="olimlar" onclick="upTab('olimlar', this)">🎓 Olimlar</button>
+    <button class="up-tab" data-pane="ixtisos" onclick="upTab('ixtisos', this)">🔬 Ixtisosliklar</button>
+    <button class="up-tab" data-pane="yillar" onclick="upTab('yillar', this)">📊 Yillar bo'yicha</button>
+  </div>
+
+  <!-- TAB 1 — Dissertatsiyalar -->
+  <div class="up-pane active" id="pane-diss">
+    <div class="up-section up-recent">
+      <h2>📄 So'nggi himoyalar</h2>
+      {% for d in recent %}
+      <div class="rc">
+        <a href="/dissertation/{{ d.id }}">{{ d.display or d.olim }}</a>
+        {% if 'PHD' in (d.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>{% elif 'DSC' in (d.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
+        <div class="mv">{{ d.mavzu }}</div>
+        <div class="mt">{{ d.sana }}</div>
+      </div>
+      {% else %}<p class="up-empty">Dissertatsiyalar topilmadi.</p>{% endfor %}
+      {% if stats.total > recent|length %}
+      <p style="color:#64748b;font-size:0.85rem;">Jami {{ stats.total }} tadan so'nggi {{ recent|length }} tasi ko'rsatildi.</p>
+      {% endif %}
     </div>
-    {% if top_ixtisos %}
-    <div style="margin-top:22px;">
-      <h2 style="font-size:1rem;">Top 5 ixtisoslik</h2>
+  </div>
+
+  <!-- TAB 2 — Olimlar -->
+  <div class="up-pane" id="pane-olimlar">
+    {% if top_olimlar %}
+    <div class="up-section">
+      <h2>🎓 Eng faol olimlar</h2>
+      <div class="up-people">
+        {% for o in top_olimlar %}
+        <a class="up-person" href="/olim/{{ o.name|urlencode }}">
+          <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" loading="lazy" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
+          <div style="min-width:0;">
+            <div class="nm">{{ o.display or o.name }}</div>
+            <div class="meta">
+              {% if 'PHD' in (o.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>
+              {% elif 'DSC' in (o.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
+              {{ o.count }} ta dissertatsiya
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if top_rahbarlar %}
+    <div class="up-section">
+      <h2>👨‍🏫 Top ilmiy rahbarlar</h2>
+      <div class="up-people">
+        {% for o in top_rahbarlar %}
+        <a class="up-person" href="/olim/{{ o.name|urlencode }}">
+          <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" loading="lazy" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
+          <div style="min-width:0;">
+            <div class="nm">{{ o.display or o.name }}</div>
+            <div class="meta">{{ o.count }} ta shogird</div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if not top_olimlar and not top_rahbarlar %}
+    <div class="up-section"><p class="up-empty">Olimlar topilmadi.</p></div>
+    {% endif %}
+  </div>
+
+  <!-- TAB 3 — Ixtisosliklar -->
+  <div class="up-pane" id="pane-ixtisos">
+    <div class="up-section">
+      <h2>🔬 Ixtisosliklar ({{ stats.ixtisosliklar }})</h2>
+      {% if top_ixtisos %}
       {% set ixmax = top_ixtisos[0].count or 1 %}
       {% for ix in top_ixtisos %}
       <div class="up-ix-bar">
@@ -174,67 +254,23 @@
         <div class="up-ix-track"><div class="up-ix-fill" style="width:{{ (ix.count / ixmax * 100)|round(0,'ceil') }}%;"></div></div>
       </div>
       {% endfor %}
+      {% else %}<p class="up-empty">Ixtisosliklar topilmadi.</p>{% endif %}
     </div>
-    {% endif %}
   </div>
-  {% endif %}
 
-  <!-- SECTION 3 — Eng faol olimlar -->
-  {% if top_olimlar %}
-  <div class="up-section">
-    <h2>🎓 Eng faol olimlar</h2>
-    <div class="up-people">
-      {% for o in top_olimlar %}
-      <a class="up-person" href="/olim/{{ o.name|urlencode }}">
-        <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
-        <div style="min-width:0;">
-          <div class="nm">{{ o.display or o.name }}</div>
-          <div class="meta">
-            {% if 'PHD' in (o.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>
-            {% elif 'DSC' in (o.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
-            {{ o.count }} ta dissertatsiya
-          </div>
-        </div>
-      </a>
-      {% endfor %}
+  <!-- TAB 4 — Yillar bo'yicha -->
+  <div class="up-pane" id="pane-yillar">
+    <div class="up-section">
+      <h2>📊 Himoyalar dinamikasi</h2>
+      <div class="up-charts">
+        <div><canvas id="degChart" height="220"></canvas></div>
+        <div><canvas id="yearChart" height="220"></canvas></div>
+      </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- SECTION 4 — Top ilmiy rahbarlar -->
-  {% if top_rahbarlar %}
-  <div class="up-section">
-    <h2>👨‍🏫 Top ilmiy rahbarlar</h2>
-    <div class="up-people">
-      {% for o in top_rahbarlar %}
-      <a class="up-person" href="/olim/{{ o.name|urlencode }}">
-        <div class="av"><img src="{{ o.photo_url or (o.name | avatar_url) }}" alt="{{ o.display or o.name }}" onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';"></div>
-        <div style="min-width:0;">
-          <div class="nm">{{ o.display or o.name }}</div>
-          <div class="meta">{{ o.count }} ta shogird</div>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- SECTION 5 — So'nggi himoyalar -->
-  {% if recent %}
-  <div class="up-section up-recent">
-    <h2>🆕 So'nggi himoyalar</h2>
-    {% for d in recent %}
-    <div class="rc">
-      <a href="/dissertation/{{ d.id }}">{{ d.display or d.olim }}</a>
-      {% if 'PHD' in (d.daraja or '')|upper %}<span class="deg-badge deg-phd">PhD</span>{% elif 'DSC' in (d.daraja or '')|upper %}<span class="deg-badge deg-dsc">DSc</span>{% endif %}
-      <div class="mv">{{ d.mavzu }}</div>
-      <div class="mt">{{ d.sana }}</div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- SECTION 6 — Admin logo upload -->
+  <!-- Admin: logo / gallery upload -->
   {% if is_admin and uni.id %}
   <div class="up-section">
     <h2>📷 Logo yuklash (admin)</h2>
@@ -258,7 +294,17 @@
 
 {% block scripts %}
 <script>
-(function () {
+var _chartsInit = false;
+function upTab(name, btn) {
+  document.querySelectorAll('.up-tab').forEach(function (t) { t.classList.remove('active'); });
+  document.querySelectorAll('.up-pane').forEach(function (p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  var pane = document.getElementById('pane-' + name);
+  if (pane) pane.classList.add('active');
+  // Chart.js draws 0-sized in hidden containers — init lazily on first open.
+  if (name === 'yillar' && !_chartsInit) { _chartsInit = true; initCharts(); }
+}
+function initCharts() {
   if (!window.Chart) return;
   var phd = {{ stats.phd|int }}, dsc = {{ stats.dsc|int }};
   var degEl = document.getElementById('degChart');
@@ -281,6 +327,6 @@
                            y: { ticks: { color: '#64748b' }, grid: { color: '#28344a' } } } }
     });
   }
-})();
+}
 </script>
 {% endblock %}
