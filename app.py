@@ -868,6 +868,22 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_university_images_uid "
                         "ON university_images (university_id)")
+            # Cyrillic↔Latin bridge for dissertations.muassasa. Populated (non-
+            # destructively) by migrate_institutions.py; drives /universities.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS institution_map (
+                    id SERIAL PRIMARY KEY,
+                    cyrillic_name TEXT NOT NULL UNIQUE,
+                    canonical_name TEXT,
+                    latin_name TEXT,
+                    category VARCHAR(50) DEFAULT 'universitet',
+                    region VARCHAR(100),
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_institution_map_canonical "
+                        "ON institution_map (canonical_name)")
             _seed_universities(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS journals (
@@ -3468,6 +3484,49 @@ def get_university_dissertation_stats():
     except Exception:
         stats = {}
     return stats
+
+
+from institutions import INSTITUTION_CATEGORIES
+
+
+@cache.cached(timeout=1800, key_prefix='institution_directory')
+def get_institution_directory():
+    """Every real defence institution from institution_map, grouped by canonical
+    name, with dissertation / scholar / specialization counts. Cached 30 min.
+    Returns [] until the map is populated (see migrate_institutions.py), so the
+    /universities route can fall back to the curated table."""
+    from data import get_connection
+    out = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT im.canonical_name,
+                           MAX(im.latin_name)           AS latin_name,
+                           MAX(im.category)             AS category,
+                           MAX(im.region)               AS region,
+                           COUNT(d.id)                  AS diss_count,
+                           COUNT(DISTINCT d.olim)       AS olim_count,
+                           COUNT(DISTINCT d.ixtisoslik) AS ixt_count
+                    FROM institution_map im
+                    LEFT JOIN dissertations d ON TRIM(d.muassasa) = im.cyrillic_name
+                    WHERE im.is_active = TRUE AND im.canonical_name IS NOT NULL
+                    GROUP BY im.canonical_name
+                    ORDER BY diss_count DESC, im.canonical_name
+                """)
+                for r in cur.fetchall():
+                    out.append({
+                        'name': r[0], 'latin_name': r[1] or transliterate(r[0] or ''),
+                        'category': r[2] or 'universitet', 'region': r[3] or '',
+                        'diss_count': r[4] or 0, 'olim_count': r[5] or 0,
+                        'ixt_count': r[6] or 0,
+                    })
+        finally:
+            conn.close()
+    except Exception:
+        out = []
+    return out
 
 
 def _uni_row_to_dict(cols, row):

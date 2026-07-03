@@ -217,9 +217,21 @@ def blog_post(slug):
 @content_bp.route('/universities')
 def universities():
     from data import get_connection
-    from app import get_university_dissertation_stats, _uni_row_to_dict, _UNI_TYPE_LABELS
-    items = []
-    regions = set()
+    from app import (get_institution_directory, get_university_dissertation_stats,
+                     _uni_row_to_dict, _UNI_TYPE_LABELS, INSTITUTION_CATEGORIES)
+    # Primary: the institution_map directory (every real defence institution,
+    # deduped + categorized, Cyrillic canonical names that the profile page
+    # matches directly). Falls back to the curated table until the map exists.
+    try:
+        directory = get_institution_directory()
+    except Exception:
+        directory = []
+    if directory:
+        regions = sorted({d['region'] for d in directory if d.get('region')})
+        return render_template('universities.html', items=directory, mode='institution',
+                               regions=regions, categories=INSTITUTION_CATEGORIES)
+
+    items, regions = [], set()
     try:
         stats = get_university_dissertation_stats()
         conn = get_connection()
@@ -240,7 +252,7 @@ def universities():
     except Exception:
         items = []
     items.sort(key=lambda x: -x.get('diss_count', 0))
-    return render_template('universities.html', items=items,
+    return render_template('universities.html', items=items, mode='curated',
                            regions=sorted(regions), type_labels=_UNI_TYPE_LABELS)
 
 
@@ -259,6 +271,19 @@ def university_profile(name):
         try:
             with conn.cursor() as cur:
                 uni = _find_university(cur, term)
+                # Prefer exact institution_map variant matching so the profile's
+                # counts equal the /universities directory's grouped counts.
+                # Falls back to the fuzzy _uni_where computed above.
+                try:
+                    cur.execute(
+                        "SELECT cyrillic_name FROM institution_map "
+                        "WHERE canonical_name = %s OR cyrillic_name = %s", (term, term))
+                    variants = [r[0] for r in cur.fetchall()]
+                    if variants:
+                        where = "TRIM(muassasa) IN (" + ",".join(["%s"] * len(variants)) + ")"
+                        params = list(variants)
+                except Exception:
+                    pass
                 cur.execute(f"""
                     SELECT COUNT(*),
                            SUM(CASE WHEN daraja ILIKE '%%PhD%%' OR daraja ILIKE '%%фан%%' THEN 1 ELSE 0 END),

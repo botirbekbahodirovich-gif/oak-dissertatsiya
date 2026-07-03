@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Universitetlar — Olimlar.uz{% endblock %}
-{% block meta_description %}O'zbekistondagi barcha oliy ta'lim muassasalari — dissertatsiya statistikasi, olimlar, ixtisosliklar.{% endblock %}
+{% block title %}Muassasalar — Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekistondagi barcha oliy ta'lim va ilmiy muassasalar — dissertatsiya statistikasi, olimlar, ixtisosliklar.{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -20,63 +20,79 @@
   .uni-logo { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg,#1e40af,#3b82f6); display: grid; place-items: center; font-size: 1.6rem; overflow: hidden; }
   .uni-logo img { width: 100%; height: 100%; object-fit: cover; }
   .uni-name { color: #f1f5f9; font-weight: 700; font-size: 1rem; line-height: 1.3; }
+  .uni-latin { color: #64748b; font-size: 0.78rem; margin-top: -4px; }
   .uni-badges { display: flex; gap: 6px; flex-wrap: wrap; }
   .uni-badge { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
-  .uni-badge.davlat { background: #059669; } .uni-badge.xususiy { background: #3b82f6; } .uni-badge.xalqaro { background: #8b5cf6; }
+  .uni-badge.davlat, .uni-badge.universitet { background: #3b82f6; }
+  .uni-badge.xususiy { background: #3b82f6; }
+  .uni-badge.xalqaro, .uni-badge.akademiya { background: #8b5cf6; }
+  .uni-badge.institut { background: #059669; }
+  .uni-badge.markaz { background: #e36403; }
   .uni-badge.city { background: #334155; color: #cbd5e1; }
-  .uni-counts { display: flex; gap: 16px; color: #94a3b8; font-size: 0.82rem; margin-top: auto; }
+  .uni-counts { display: flex; gap: 16px; color: #94a3b8; font-size: 0.82rem; margin-top: auto; flex-wrap: wrap; }
   .uni-counts b { color: #60a5fa; }
   .uni-empty { text-align: center; color: #64748b; padding: 3rem; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set is_inst = (mode == 'institution') %}
+{% set filter_opts = categories if is_inst else type_labels %}
 <div class="uni-wrap">
   <div class="uni-head">
-    <h1>🏛️ Universitetlar</h1>
-    <p>O'zbekistondagi barcha oliy ta'lim muassasalari</p>
+    <h1>🏛️ {{ 'Ilmiy muassasalar' if is_inst else 'Universitetlar' }}</h1>
+    <p>O'zbekistondagi oliy ta'lim va ilmiy muassasalar — dissertatsiya statistikasi bilan</p>
   </div>
 
   <div class="uni-filters">
-    <button class="uni-pill active" data-type="all" onclick="filterType('all', this)">Barchasi</button>
-    {% for val, label in type_labels.items() %}
-    <button class="uni-pill" data-type="{{ val }}" onclick="filterType('{{ val }}', this)">{{ label }}</button>
+    <button class="uni-pill active" data-filter="all" onclick="filterCat('all', this)">Hammasi</button>
+    {% for val, label in filter_opts.items() %}
+    <button class="uni-pill" data-filter="{{ val }}" onclick="filterCat('{{ val }}', this)">{{ label }}</button>
     {% endfor %}
     <select id="regionFilter" onchange="applyFilters()">
       <option value="">Barcha viloyatlar</option>
       {% for r in regions %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
     </select>
-    <input type="text" id="uniSearch" placeholder="Universitet qidirish..." oninput="applyFilters()">
+    <input type="text" id="uniSearch" placeholder="Muassasa qidirish..." oninput="applyFilters()">
   </div>
 
   <div class="uni-grid" id="uniGrid">
     {% for u in items %}
+    {% set fval = u.category if is_inst else u.university_type %}
     <a class="uni-card" href="/university/{{ u.name|urlencode }}"
-       data-type="{{ u.university_type }}" data-region="{{ u.region }}" data-name="{{ u.name|lower }}">
+       data-filter="{{ fval }}" data-region="{{ u.region }}"
+       data-name="{{ u.name|lower }}{{ ' ' ~ (u.latin_name|lower) if is_inst else '' }}">
       <div class="uni-logo">{% if u.logo_url %}<img src="{{ u.logo_url }}" alt="">{% else %}🏛️{% endif %}</div>
       <div class="uni-name">{{ u.name }}</div>
+      {% if is_inst and u.latin_name %}<div class="uni-latin">{{ u.latin_name }}</div>{% endif %}
       <div class="uni-badges">
-        {% if u.university_type %}<span class="uni-badge {{ u.university_type }}">{{ u.type_label }}</span>{% endif %}
-        {% if u.city %}<span class="uni-badge city">📍 {{ u.city }}</span>{% endif %}
+        {% if is_inst %}
+          {% if u.category %}<span class="uni-badge {{ u.category }}">{{ categories.get(u.category, u.category) }}</span>{% endif %}
+        {% else %}
+          {% if u.university_type %}<span class="uni-badge {{ u.university_type }}">{{ u.type_label }}</span>{% endif %}
+          {% if u.city %}<span class="uni-badge city">📍 {{ u.city }}</span>{% endif %}
+        {% endif %}
+        {% if is_inst and u.region %}<span class="uni-badge city">📍 {{ u.region }}</span>{% endif %}
       </div>
       <div class="uni-counts">
         <span><b>{{ u.diss_count }}</b> dissertatsiya</span>
         <span><b>{{ u.olim_count }}</b> olim</span>
+        {% if is_inst %}<span><b>{{ u.ixt_count }}</b> ixtisoslik</span>{% endif %}
       </div>
     </a>
     {% else %}
-    <div class="uni-empty">Universitetlar topilmadi.</div>
+    <div class="uni-empty">Muassasalar topilmadi.</div>
     {% endfor %}
   </div>
-  <div class="uni-empty" id="noResults" style="display:none;">Mos universitet topilmadi.</div>
+  <div class="uni-empty" id="noResults" style="display:none;">Mos muassasa topilmadi.</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-var curType = 'all';
-function filterType(t, btn) {
-  curType = t;
+var curFilter = 'all';
+function filterCat(t, btn) {
+  curFilter = t;
   document.querySelectorAll('.uni-pill').forEach(function (p) { p.classList.remove('active'); });
   btn.classList.add('active');
   applyFilters();
@@ -86,10 +102,10 @@ function applyFilters() {
   var q = (document.getElementById('uniSearch').value || '').toLowerCase().trim();
   var shown = 0;
   document.querySelectorAll('#uniGrid .uni-card').forEach(function (c) {
-    var okType = curType === 'all' || c.getAttribute('data-type') === curType;
+    var okFilter = curFilter === 'all' || c.getAttribute('data-filter') === curFilter;
     var okRegion = !region || c.getAttribute('data-region') === region;
     var okSearch = !q || (c.getAttribute('data-name') || '').indexOf(q) !== -1;
-    var show = okType && okRegion && okSearch;
+    var show = okFilter && okRegion && okSearch;
     c.style.display = show ? '' : 'none';
     if (show) shown++;
   });
