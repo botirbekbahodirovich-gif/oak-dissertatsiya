@@ -155,12 +155,20 @@
 .gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
 .gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.8rem; padding: 7px 11px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 240px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
 .gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; color: #475569; white-space: nowrap; pointer-events: none; }
-.gen-node .gn-name { fill: #f1f5f9; font-weight: 700; font-size: 12px; }
-.gen-node .gn-emoji { font-size: 13px; }
-.gen-node .gn-badge-t { fill: #fff; font-size: 10px; font-weight: 800; }
-.gen-node .gn-plus circle { fill: #3b82f6; }
-.gen-node .gn-plus text { fill: #fff; font-size: 15px; font-weight: 800; }
-.gen-node:hover .gn-rect { filter: brightness(1.12); }
+/* ── D3 tree (genealogy_tree.js → window.ShajaraTree) ── */
+#gen-canvas { position: absolute; inset: 0; }
+.shajara-svg { cursor: grab; }
+.shajara-svg:active { cursor: grabbing; }
+.sh-link { fill: none; stroke: #334155; stroke-width: 1.8px; stroke-opacity: 0.7; }
+.sh-node { cursor: pointer; }
+.sh-node .sh-bg { transition: stroke 0.25s, filter 0.25s; }
+.sh-node:hover .sh-bg { filter: brightness(1.12); }
+.sh-init { font-weight: 800; pointer-events: none; }
+.sh-avatar { pointer-events: none; }
+.sh-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
+.sh-badge-t { fill: #fff; font-size: 11px; font-weight: 800; pointer-events: none; }
+.sh-label { fill: #cbd5e1; font-size: 12px; font-weight: 600; pointer-events: none; }
+.shajara-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #f87171; }
 @media (max-width: 768px) { .gen-stage { height: 460px; } }
 </style>
 {% endblock %}
@@ -443,9 +451,9 @@
           <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
           <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
         </div>
-        <svg id="gen-svg" style="display:none;"></svg>
+        <div id="gen-canvas" style="display:none;"></div>
         <div class="gen-tooltip" id="gen-tooltip"></div>
-        <div class="gen-hint">🖱️ Sichqoncha bilan suring · ⚲ Aylantiring · Tugmani bosing → profilga o'ting</div>
+        <div class="gen-hint">🖱️ Suring · ⚲ Aylantiring · sharni bosing → shogirdlarni oching/yoping</div>
       </div>
     </div>
 
@@ -457,7 +465,7 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="/static/js/genealogy.js"></script>
+<script src="/static/js/genealogy_tree.js"></script>
 <script>
 (function () {
   // tabs
@@ -477,19 +485,22 @@
   function loadGenealogy() {
     if (genLoaded) return;
     genLoaded = true;
-    fetch('/api/genealogy/' + encodeURIComponent(OLIM))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
+    var canvas = document.getElementById('gen-canvas');
+    canvas.style.display = 'block';
+    window.ShajaraTree.mount({
+      container: canvas,
+      name: OLIM,
+      tooltip: '#gen-tooltip',
+      onEmpty: function () {
         document.getElementById('gen-loading').style.display = 'none';
-        var hasTree = (data.parents && data.parents.length) || (data.children && data.children.length) || (data.siblings && data.siblings.length);
-        if (!hasTree) { document.getElementById('gen-empty').style.display = 'flex'; return; }
-        document.getElementById('gen-svg').style.display = 'block';
-        genApi = window.renderGenealogy({ svg: '#gen-svg', data: data, tooltip: '#gen-tooltip', centerName: OLIM });
-      })
-      .catch(function () {
-        document.getElementById('gen-loading').style.display = 'none';
+        canvas.style.display = 'none';
         document.getElementById('gen-empty').style.display = 'flex';
-      });
+      },
+      onReady: function (api) {
+        document.getElementById('gen-loading').style.display = 'none';
+        genApi = api;
+      }
+    });
   }
   var shajaraBtn = document.getElementById('tab-btn-shajara');
   if (shajaraBtn) shajaraBtn.addEventListener('click', loadGenealogy);

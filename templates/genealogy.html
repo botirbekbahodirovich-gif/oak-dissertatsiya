@@ -17,32 +17,25 @@
 .gp-btn:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
 .gp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; }
 .gp-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.gp-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-.gp-stage { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 16px; height: 74vh; min-height: 540px; overflow: hidden; }
-.gp-stage svg { width: 100%; height: 100%; display: block; cursor: grab; }
-.gp-stage svg:active { cursor: grabbing; }
+.gp-legend .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 2px solid transparent; }
+.gp-stage { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 16px; height: 76vh; min-height: 560px; overflow: hidden; }
 .gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
-.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 7px 11px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 8px 12px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 280px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); line-height: 1.5; }
 .gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.74rem; color: #475569; pointer-events: none; }
-.gen-node .gn-name { fill: #f1f5f9; font-weight: 700; font-size: 12px; }
-.gen-node .gn-emoji { font-size: 13px; }
-.gen-node .gn-badge-t { fill: #fff; font-size: 10px; font-weight: 800; }
-.gen-node .gn-plus circle { fill: #3b82f6; }
-.gen-node .gn-plus text { fill: #fff; font-size: 15px; font-weight: 800; }
-.gen-node:hover .gn-rect { filter: brightness(1.12); }
 
-/* Recursive collapsible tree (genealogy_tree.js) */
+/* ── D3 tree (genealogy_tree.js → window.ShajaraTree) ── */
 #gen-canvas { position: absolute; inset: 0; }
-#gen-canvas .gen-tree-svg { width: 100%; height: 100%; }
-.gen-edge { fill: none; stroke: #475569; stroke-width: 1.6px; opacity: 0.6; }
-.gen-node-bg { fill: #1e293b; stroke: #3b82f6; stroke-width: 2px; }
-.gen-node.is-collapsed .gen-node-bg { stroke: #e36403; stroke-dasharray: 4 3; }
-.gen-node-initials { fill: #cbd5e1; font-weight: 800; font-family: inherit; }
-.gen-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
-.gen-badge-text { fill: #fff; font-weight: 800; }
-.gen-node-label { fill: #e2e8f0; font-size: 12px; font-weight: 600; }
-.gen-node { transition: transform 0.2s; }
-.gen-tree-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #f87171; text-align: center; padding: 20px; }
+.shajara-svg { cursor: grab; }
+.shajara-svg:active { cursor: grabbing; }
+.sh-link { fill: none; stroke: #334155; stroke-width: 1.8px; stroke-opacity: 0.7; }
+.sh-node .sh-bg { transition: stroke 0.25s, filter 0.25s; }
+.sh-node:hover .sh-bg { filter: brightness(1.12); }
+.sh-init { font-weight: 800; pointer-events: none; }
+.sh-avatar { pointer-events: none; }
+.sh-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
+.sh-badge-t { fill: #fff; font-size: 11px; font-weight: 800; pointer-events: none; }
+.sh-label { fill: #cbd5e1; font-size: 12px; font-weight: 600; pointer-events: none; }
+.shajara-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #f87171; }
 </style>
 {% endblock %}
 
@@ -53,19 +46,19 @@
     <div class="gp-head">
       <h1>🌳 {{ olim_name }} <small>— ilmiy shajara daraxti</small></h1>
       <div class="gp-actions">
-        <button type="button" class="gp-btn" id="gen-reset">🔄 Qayta joylashtirish</button>
+        <button type="button" class="gp-btn" id="gen-reset">🔄 Boshiga qaytish</button>
         <a class="gp-btn" href="/olim/{{ olim_name|urlencode }}">← Profilga qaytish</a>
       </div>
     </div>
     <div class="gp-legend">
-      <span><i class="dot" style="background:#1e40af;border:2px solid #3b82f6;"></i> Markaziy olim</span>
-      <span><i class="dot" style="background:#1e3a8a;"></i> Ilmiy rahbar</span>
-      <span><i class="dot" style="background:#059669;"></i> PhD shogird</span>
-      <span><i class="dot" style="background:#e36403;"></i> DSc shogird</span>
-      <span><i class="dot" style="background:#334155;"></i> Hamkasb</span>
+      <span><i class="dot" style="border-color:#e36403;"></i> DSc — fan doktori</span>
+      <span><i class="dot" style="border-color:#059669;"></i> PhD — falsafa doktori</span>
+      <span><i class="dot" style="border-color:#3b82f6;"></i> Daraja aniqlanmagan</span>
+      <span><i class="dot" style="border-color:#f59e0b;border-style:dashed;"></i> Yashirin shogirdlar (bosing)</span>
+      <span>🟠 raqam = bevosita shogirdlar soni · shar hajmi ∝ shogirdlar</span>
     </div>
     <div class="gp-stage" id="gen-stage">
-      <div class="gen-loading" id="gen-loading">🌳 Shajara daraxtini qurilmoqda...</div>
+      <div class="gen-loading" id="gen-loading">🌳 Shajara daraxti qurilmoqda...</div>
       <div class="gen-empty" id="gen-empty" style="display:none;">
         <div style="font-size:2.6rem;margin-bottom:10px;">🌳</div>
         <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
@@ -73,13 +66,14 @@
       </div>
       <div id="gen-canvas" style="display:none;"></div>
       <div class="gen-tooltip" id="gen-tooltip"></div>
-      <div class="gen-hint">🖱️ Sharni bosing → shogirdlarni oching/yoping · raqam = bevosita shogirdlar soni</div>
+      <div class="gen-hint">🖱️ Suring · ⚲ g'ildirak bilan kattalashtiring · sharni bosing → shogirdlarni oching/yoping</div>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="/static/js/genealogy_tree.js"></script>
 <script>
 (function () {
@@ -87,6 +81,7 @@
   var canvas = document.getElementById('gen-canvas');
   var loading = document.getElementById('gen-loading');
   var empty = document.getElementById('gen-empty');
+  var treeApi = null;
 
   function showEmpty() {
     loading.style.display = 'none';
@@ -94,22 +89,22 @@
     empty.style.display = 'flex';
   }
 
-  loading.style.display = 'flex';
-  canvas.style.display = 'block';
-  window.GenealogyTree.mountByName(canvas, OLIM, showEmpty);
-  // mountByName hides the loader itself once data resolves.
-  var poll = setInterval(function () {
-    if (!canvas.classList.contains('gen-tree-loading')) {
-      loading.style.display = 'none';
-      clearInterval(poll);
-    }
-  }, 120);
-
-  document.getElementById('gen-reset').addEventListener('click', function () {
+  function build() {
     loading.style.display = 'flex';
     empty.style.display = 'none';
     canvas.style.display = 'block';
-    window.GenealogyTree.mountByName(canvas, OLIM, showEmpty);
+    window.ShajaraTree.mount({
+      container: canvas,
+      name: OLIM,
+      tooltip: '#gen-tooltip',
+      onEmpty: showEmpty,
+      onReady: function (api) { loading.style.display = 'none'; treeApi = api; }
+    });
+  }
+
+  build();
+  document.getElementById('gen-reset').addEventListener('click', function () {
+    if (treeApi) treeApi.reset(); else build();
   });
 })();
 </script>

@@ -2532,105 +2532,178 @@ def _gen_degree(darajalar):
     return None
 
 
-def _genealogy_data(name, depth=2, child_cap=40, sibling_cap=30):
-    """Build the genealogy tree (parents↑, children↓, siblings↔) for a researcher."""
-    from data import get_connection, get_supervisor_counts
-    name = (name or '').strip()
-    res = {
-        "center": {"name": name, "degree": None, "dissertation_count": 0},
-        "parents": [], "children": [], "siblings": [],
-    }
-    if not name:
-        return res
+_GEN_MAX_NODES = 500   # hard cap on tree size (performance)
+_GEN_MAX_DEPTH = 25    # hard cap on generations traversed
+
+
+def _gen_degree_map(cur, names):
+    """{lower(name): 'DSc'|'PhD'|None} — each scholar's own degree (as a student)."""
+    lowered = list({(n or '').strip().lower() for n in names if n and n.strip()})
+    if not lowered:
+        return {}
+    cur.execute(
+        "SELECT LOWER(TRIM(olim)), daraja FROM dissertations "
+        "WHERE LOWER(TRIM(olim)) = ANY(%s)", (lowered,))
+    tmp = {}
+    for ln, d in cur.fetchall():
+        tmp.setdefault(ln, []).append(d)
+    return {ln: _gen_degree(ds) for ln, ds in tmp.items()}
+
+
+def _sup_counts_ci():
+    """Case-insensitive {lower(name): direct_student_count} from data.py."""
+    from data import get_supervisor_counts
     try:
-        sup_counts = get_supervisor_counts()
+        raw = get_supervisor_counts() or {}
     except Exception:
-        sup_counts = {}
+        raw = {}
+    out = {}
+    for k, v in raw.items():
+        if k:
+            out[k.strip().lower()] = int(v or 0)
+    return out
+
+
+def _gen_node(name, deg_map, sup_ci):
+    lname = (name or '').strip().lower()
+    return {
+        "name": name,
+        "degree": deg_map.get(lname),
+        "direct_students": sup_ci.get(lname, 0),
+        "avatar": avatar_url(name),
+        "children": [],
+        "has_more": False,
+    }
+
+
+def _genealogy_tree(name):
+    """Full recursive descendant tree (advisor → students → their students → …).
+
+    A WITH RECURSIVE CTE walks every generation, guarded by a path array (cycle
+    detection) and capped at _GEN_MAX_NODES / _GEN_MAX_DEPTH for performance.
+    Each node: {name, degree, direct_students, avatar, children[], has_more}.
+    has_more marks a leaf whose real students were cut by the caps — the client
+    lazy-loads them via /api/genealogy/expand/<name>.
+    """
+    from data import get_connection
+    name = (name or '').strip()
+    sup_ci = _sup_counts_ci()
+    empty = {"name": name, "degree": None,
+             "direct_students": sup_ci.get(name.lower(), 0),
+             "avatar": avatar_url(name), "children": [],
+             "total_nodes": 0, "truncated": False}
+    if not name:
+        return empty
+
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            def degree_of(person):
-                cur.execute("SELECT daraja FROM dissertations WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s))", (person,))
-                return _gen_degree([r[0] for r in cur.fetchall()])
-
-            # center
-            cur.execute("SELECT daraja FROM dissertations WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s))", (name,))
-            crows = [r[0] for r in cur.fetchall()]
-            res["center"]["dissertation_count"] = len(crows)
-            res["center"]["degree"] = _gen_degree(crows)
-
-            # parents (this person's advisors) + their advisors (grandparents)
             cur.execute(
-                "SELECT DISTINCT TRIM(ilmiy_rahbar) FROM dissertations "
-                "WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
-                "AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''", (name,))
-            parent_names = [r[0] for r in cur.fetchall()]
-            for pn in parent_names:
-                grand = []
-                if depth >= 2:
-                    cur.execute(
-                        "SELECT DISTINCT TRIM(ilmiy_rahbar) FROM dissertations "
-                        "WHERE LOWER(TRIM(olim)) = LOWER(TRIM(%s)) "
-                        "AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''", (pn,))
-                    gnames = [r[0] for r in cur.fetchall()]
-                    for gpn in gnames:
-                        grand.append({"name": gpn, "degree": degree_of(gpn)})
-                res["parents"].append({"name": pn, "degree": degree_of(pn), "parents": grand})
-
-            # children (students), with how many students each of them has
-            cur.execute(
-                "SELECT TRIM(olim), daraja FROM dissertations "
-                "WHERE LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)) "
-                "AND olim IS NOT NULL AND TRIM(olim) <> ''", (name,))
-            childmap = {}
-            for o, d in cur.fetchall():
-                childmap.setdefault(o, []).append(d)
-            children = [{
-                "name": cn, "degree": _gen_degree(drs),
-                "children_count": int(sup_counts.get(cn, 0)),
-            } for cn, drs in childmap.items()]
-            children.sort(key=lambda x: (-x["children_count"], x["name"]))
-            res["children"] = children[:child_cap]
-
-            # siblings (other students of the same advisors)
-            sib = {}
-            for pn in parent_names:
-                cur.execute(
-                    "SELECT TRIM(olim), daraja FROM dissertations "
-                    "WHERE LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)) "
-                    "AND LOWER(TRIM(olim)) <> LOWER(TRIM(%s)) "
-                    "AND olim IS NOT NULL AND TRIM(olim) <> ''", (pn, name))
-                for o, d in cur.fetchall():
-                    sib.setdefault(o, []).append(d)
-            res["siblings"] = [{"name": sn, "degree": _gen_degree(drs)}
-                               for sn, drs in list(sib.items())[:sibling_cap]]
+                """
+                WITH RECURSIVE tree AS (
+                    SELECT TRIM(%s)::text AS name,
+                           NULL::text     AS mentor,
+                           0              AS depth,
+                           ARRAY[LOWER(TRIM(%s))] AS path
+                    UNION ALL
+                    SELECT DISTINCT TRIM(d.olim)::text,
+                           t.name,
+                           t.depth + 1,
+                           t.path || LOWER(TRIM(d.olim))
+                    FROM tree t
+                    JOIN dissertations d
+                      ON LOWER(TRIM(d.ilmiy_rahbar)) = LOWER(TRIM(t.name))
+                    WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+                      AND NOT (LOWER(TRIM(d.olim)) = ANY(t.path))
+                      AND t.depth < %s
+                )
+                SELECT name, mentor, depth
+                FROM tree
+                ORDER BY depth, name
+                LIMIT %s
+                """,
+                (name, name, _GEN_MAX_DEPTH, _GEN_MAX_NODES))
+            rows = cur.fetchall()
+            deg_map = _gen_degree_map(cur, [r[0] for r in rows])
     finally:
         conn.close()
-    return res
+
+    # Flat rows (breadth-first) → nested tree. Dedup by name so a scholar with
+    # two advisors stays a single node (attached to the first mentor seen),
+    # keeping the structure a tree that d3.hierarchy can consume.
+    nodes = {}
+    seq = []
+    for nm, mentor, depth in rows:
+        key = nm.lower()
+        if key in nodes:
+            continue
+        nodes[key] = _gen_node(nm, deg_map, sup_ci)
+        seq.append((key, mentor))
+
+    root = nodes.get(name.lower())
+    if root is None:
+        return empty
+
+    for key, mentor in seq:
+        if not mentor:
+            continue
+        parent = nodes.get(mentor.lower())
+        if parent is not None and key != mentor.lower():
+            parent["children"].append(nodes[key])
+
+    # A leaf that still has students in the DB was cut by the caps → lazy-load.
+    for nd in nodes.values():
+        if not nd["children"] and nd["direct_students"] > 0:
+            nd["has_more"] = True
+
+    root["total_nodes"] = len(nodes)
+    root["truncated"] = len(nodes) >= _GEN_MAX_NODES
+    return root
+
+
+def _genealogy_children(name):
+    """Immediate students of a scholar (one level) — for lazy expansion."""
+    from data import get_connection
+    name = (name or '').strip()
+    if not name:
+        return {"name": name, "children": []}
+    sup_ci = _sup_counts_ci()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT DISTINCT TRIM(olim) FROM dissertations "
+                "WHERE LOWER(TRIM(ilmiy_rahbar)) = LOWER(TRIM(%s)) "
+                "AND olim IS NOT NULL AND TRIM(olim) <> ''", (name,))
+            child_names = [r[0] for r in cur.fetchall() if r[0]]
+            deg_map = _gen_degree_map(cur, child_names)
+    finally:
+        conn.close()
+    children = [_gen_node(cn, deg_map, sup_ci) for cn in child_names]
+    for c in children:
+        c["has_more"] = c["direct_students"] > 0
+    children.sort(key=lambda x: (-x["direct_students"], x["name"]))
+    return {"name": name, "children": children}
 
 
 @app.route('/api/genealogy/<path:name>')
 @cache.cached(timeout=900)
 def api_genealogy(name):
     try:
-        return jsonify(_genealogy_data(name, depth=2))
+        return jsonify(_genealogy_tree(name))
     except Exception as e:
-        return jsonify({"center": {"name": name, "degree": None, "dissertation_count": 0},
-                        "parents": [], "children": [], "siblings": [], "error": str(e)})
+        return jsonify({"name": name, "degree": None, "direct_students": 0,
+                        "avatar": avatar_url(name), "children": [],
+                        "total_nodes": 0, "truncated": False, "error": str(e)})
 
 
 @app.route('/api/genealogy/expand/<path:name>')
 def api_genealogy_expand(name):
-    """Immediate parents + children only (1 level) for live tree expansion."""
+    """Immediate children only (1 level) for live lazy-loading of the tree."""
     try:
-        d = _genealogy_data(name, depth=1)
-        return jsonify({
-            "name": name,
-            "parents": [{"name": p["name"], "degree": p["degree"]} for p in d["parents"]],
-            "children": d["children"],
-        })
+        return jsonify(_genealogy_children(name))
     except Exception as e:
-        return jsonify({"name": name, "parents": [], "children": [], "error": str(e)})
+        return jsonify({"name": name, "children": [], "error": str(e)})
 
 
 @app.route('/genealogy/<path:name>')
