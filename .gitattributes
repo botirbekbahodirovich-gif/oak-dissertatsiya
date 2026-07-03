@@ -1,0 +1,16 @@
+# Line-ending policy: hamma matn fayllar repoda LF bilan saqlanadi.
+# Bu Windows (\\wsl$ orqali) va WSL tahrirlovchilari aralash ishlaganda
+# paydo bo'ladigan doimiy CRLF/LF "dirty file" muammosini butunlay yopadi.
+* text=auto eol=lf
+
+# Binary fayllar — hech qachon konvertatsiya qilinmasin
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.db binary
+*.woff binary
+*.woff2 binary
