@@ -1244,224 +1244,138 @@ def _placeholder_news():
     } for t, s in items]
 
 
-@app.route("/")
-def home():
-    from data import clean_olim_name
-    rows = []
-    top_rows = []
-    news = []
-    total_stats = {"dissertations": 0, "researchers": 0, "institutions": 0, "specialties": 0}
-    top_random_rows = []
-    active_vacancy_count = 0
+# ── Bosh sahifa statistikasi — modul darajasidagi kesh (TTL 10 daqiqa) ───────
+# Developer talabi: yuklama ostida har bir so'rovda COUNT(*) yurmasin.
+# Birinchi chaqiriq DB dan o'qiydi, keyingilari (TTL ichida) keshdan qaytadi.
+_HOMEPAGE_STATS_CACHE = {"data": None, "ts": 0.0}
+_HOMEPAGE_STATS_TTL = 600  # soniya
+
+
+def get_homepage_stats():
+    """Bosh sahifa uchun barcha sonlar bitta lug'atda (keshlangan).
+
+    Keys: dissertations, researchers, universities, grants, users.
+    TTL ichidagi ikkinchi so'rov DB ga tegmaydi — `_HOMEPAGE_STATS_CACHE`
+    dan qaytadi (kesh isboti: gunicorn logida faqat ~10 daqiqada bitta
+    COUNT so'rovi ko'rinadi).
+    """
+    import time as _time
+    now = _time.time()
+    cached = _HOMEPAGE_STATS_CACHE["data"]
+    if cached and (now - _HOMEPAGE_STATS_CACHE["ts"]) < _HOMEPAGE_STATS_TTL:
+        return cached
+    stats = {"dissertations": 0, "researchers": 0, "universities": 0,
+             "grants": 0, "users": 0}
     try:
-        import datetime
-        # `sana` is free-form DD.MM.YYYY text — convert to YYYYMMDD for chronological compare/sort.
-        sana_key = r"NULLIF(regexp_replace(TRIM(sana), '^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(sana))"
-        threshold = (datetime.date.today() - datetime.timedelta(days=3)).strftime("%Y%m%d")
         from data import get_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                # Recent dissertations — last 3 days, fallback to latest 9 (newest first)
-                cur.execute(
-                    "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
-                    "FROM dissertations "
-                    f"WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' AND {sana_key} >= %s "
-                    f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 30",
-                    (threshold,)
-                )
-                cols = [d[0] for d in cur.description]
-                rows = [dict(zip(cols, row)) for row in cur.fetchall()]
-                if not rows:
-                    cur.execute(
-                        "SELECT id, olim, mavzu, daraja, sana, muassasa, ixtisoslik, photo_url "
-                        "FROM dissertations "
-                        "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
-                        f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 9"
-                    )
-                    cols = [d[0] for d in cur.description]
-                    rows = [dict(zip(cols, row)) for row in cur.fetchall()]
-
-                # Most active supervisors (top 20 by student count)
-                cur.execute(
-                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
-                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
-                    "FROM dissertations "
-                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
-                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 20"
-                )
-                top_rows = cur.fetchall()
-
-                # Random 20 supervisors for the marquee
-                cur.execute(
-                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
-                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
-                    "FROM dissertations "
-                    "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
-                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY RANDOM() LIMIT 20"
-                )
-                top_random_rows = cur.fetchall()
-
-                # Aggregate totals
                 cur.execute(
                     "SELECT COUNT(*), "
                     "COUNT(DISTINCT NULLIF(TRIM(olim), '')), "
-                    "COUNT(DISTINCT NULLIF(TRIM(muassasa), '')), "
-                    "COUNT(DISTINCT NULLIF(TRIM(ixtisoslik), '')) "
-                    "FROM dissertations"
-                )
-                srow = cur.fetchone()
-                if srow:
-                    total_stats = {
-                        "dissertations": srow[0] or 0,
-                        "researchers": srow[1] or 0,
-                        "institutions": srow[2] or 0,
-                        "specialties": srow[3] or 0,
-                    }
-
-                # Published news for the carousel
+                    "COUNT(DISTINCT NULLIF(TRIM(muassasa), '')) "
+                    "FROM dissertations")
+                row = cur.fetchone() or (0, 0, 0)
+                stats["dissertations"] = row[0] or 0
+                stats["researchers"] = row[1] or 0
+                stats["universities"] = row[2] or 0
                 try:
                     cur.execute(
-                        "SELECT id, title, summary, created_at, image_url, image_data FROM yangiliklar "
-                        "WHERE is_published = TRUE ORDER BY created_at DESC LIMIT 8"
-                    )
-                    news = [{
-                        "id": r[0], "title": r[1] or "", "summary": r[2] or "",
-                        "created_at": str(r[3])[:10] if r[3] else "",
-                        "image": r[4] or r[5] or "", "is_placeholder": False,
-                    } for r in cur.fetchall()]
+                        "SELECT COUNT(*) FROM grants WHERE is_active IS NOT FALSE "
+                        "AND (application_deadline IS NULL "
+                        "     OR application_deadline >= CURRENT_DATE)")
+                    stats["grants"] = (cur.fetchone() or [0])[0] or 0
                 except Exception:
-                    news = []
-
-                # Active (published, not expired) vacancy count for the home banner
+                    conn.rollback()
                 try:
-                    cur.execute(
-                        "SELECT COUNT(*) FROM vacancies WHERE is_published = TRUE "
-                        "AND (deadline IS NULL OR deadline >= CURRENT_DATE)"
-                    )
-                    active_vacancy_count = cur.fetchone()[0] or 0
+                    cur.execute("SELECT COUNT(*) FROM users")
+                    stats["users"] = (cur.fetchone() or [0])[0] or 0
                 except Exception:
-                    active_vacancy_count = 0
+                    conn.rollback()
         finally:
             conn.close()
     except Exception:
-        rows, top_rows, top_random_rows = [], [], []
+        # DB vaqtincha yiqilsa — eskirgan kesh bo'lsa ham o'shani qaytaramiz.
+        if cached:
+            return cached
+    _HOMEPAGE_STATS_CACHE["data"] = stats
+    _HOMEPAGE_STATS_CACHE["ts"] = now
+    return stats
 
-    if not news:
-        news = _placeholder_news()
 
-    recent = [{
-        "id": row.get("id"),
-        "Olim": row.get("olim", "") or "",
-        "Olim_display": clean_olim_name(row.get("olim", "") or ""),
-        "Mavzu": row.get("mavzu", "") or "",
-        "Daraja": row.get("daraja", "") or "",
-        "Sana": row.get("sana", "") or "",
-        "Muassasa": row.get("muassasa", "") or "",
-        "Ixtisoslik": row.get("ixtisoslik", "") or "",
-        "photo_url": row.get("photo_url") or "",
-    } for row in rows]
+@app.route("/")
+def home():
+    """Bosh sahifa (redizayn v2, 2026-07).
 
-    def _sup_list(src):
-        return [{
-            "name": r[0] or "",
-            "display": clean_olim_name(r[0] or ""),
-            "count": r[1] or 0,
-            "photo_url": r[2] or "",
-        } for r in src]
+    Rollback yo'li: eski sahifa templates/home_legacy.html da saqlangan
+    (zaxira commit: 38d251e). Qaytarish uchun shu funksiyaning eski
+    kontekst o'zgaruvchilarini git tarixidan tiklab, home_legacy.html ni
+    render qiling."""
+    from data import clean_olim_name, get_connection
 
-    top_supervisors = _sup_list(top_rows)
-    top_supervisors_random = _sup_list(top_random_rows)
-    # Combined list for the seamless marquee (top 20 + random 20)
-    top_marquee = top_supervisors + top_supervisors_random
-
-    # Specialties: split combined codes ("01.01.01 05.01.07" = 2 specialties), cached.
+    # So'nggi himoya e'lonlari — Live Pulse chap ustuni (server-rendered, 4 ta)
+    recent = []
     try:
-        from data import count_distinct_ixtisosliklar
-        total_stats["specialties"] = count_distinct_ixtisosliklar() or total_stats.get("specialties", 0)
-    except Exception:
-        pass
-
-    # Gender split (cached) for the Tadqiqotchilar stat card
-    gender_pct = {"male": 0, "female": 0}
-    try:
-        gs = compute_gender_stats()["gender_stats"]
-        gtot = (gs.get("male", 0) + gs.get("female", 0) + gs.get("unknown", 0)) or 1
-        gender_pct = {"male": round(gs.get("male", 0) / gtot * 100),
-                      "female": round(gs.get("female", 0) / gtot * 100)}
-    except Exception:
-        pass
-
-    # Latest 3 blog posts
-    latest_blog = []
-    try:
-        from data import get_connection
+        # `sana` erkin DD.MM.YYYY matn — xronologik tartib uchun YYYYMMDD.
+        sana_key = (r"NULLIF(regexp_replace(TRIM(sana), "
+                    r"'^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(sana))")
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT title, slug, summary, created_at FROM blog_posts "
-                    "WHERE is_published = TRUE ORDER BY created_at DESC, id DESC LIMIT 3")
-                latest_blog = [{
-                    "title": r[0] or "", "slug": r[1] or "", "summary": r[2] or "",
-                    "created_at": str(r[3])[:10] if r[3] else "",
-                } for r in cur.fetchall()]
+                    "SELECT id, olim, mavzu, daraja, sana, ixtisoslik, photo_url "
+                    "FROM dissertations "
+                    "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
+                    f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 4")
+                cols = [d[0] for d in cur.description]
+                for row in (dict(zip(cols, r)) for r in cur.fetchall()):
+                    recent.append({
+                        "id": row.get("id"),
+                        "Olim": row.get("olim") or "",
+                        "Olim_display": clean_olim_name(row.get("olim") or ""),
+                        "Mavzu": row.get("mavzu") or "",
+                        "Daraja": row.get("daraja") or "",
+                        "Sana": row.get("sana") or "",
+                        "Ixtisoslik": row.get("ixtisoslik") or "",
+                        "photo_url": row.get("photo_url") or "",
+                    })
         finally:
             conn.close()
     except Exception:
-        latest_blog = []
+        recent = []
 
-    # Top 6 universities by dissertation count for the home section
-    top_universities = []
+    # Muddati yaqin grantlar — Live Pulse o'ng ustuni (kunlar server tomonda,
+    # jonli hisoblagich shart emas)
+    deadline_grants = []
     try:
-        uni_stats = get_university_dissertation_stats()
-        from data import get_connection
+        from blueprints.grants import calculate_days_remaining, _uz_date
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id, name, logo_url, university_type, city "
-                            "FROM universities WHERE is_active = TRUE")
+                cur.execute(
+                    "SELECT id, COALESCE(NULLIF(title_uz, ''), title), "
+                    "COALESCE(organization, provider), country_flag, country, "
+                    "application_deadline FROM grants "
+                    "WHERE is_active IS NOT FALSE "
+                    "AND application_deadline >= CURRENT_DATE "
+                    "ORDER BY application_deadline ASC, id DESC LIMIT 4")
                 for r in cur.fetchall():
-                    s = uni_stats.get(r[0], {})
-                    top_universities.append({
-                        "name": r[1] or "", "logo_url": r[2] or "",
-                        "university_type": r[3] or "", "city": r[4] or "",
-                        "diss_count": s.get('total', 0)})
-        finally:
-            conn.close()
-        top_universities = sorted(top_universities, key=lambda x: -x['diss_count'])[:6]
-    except Exception:
-        top_universities = []
-
-    # Featured journals (OAK-approved) for the home section
-    featured_journals = []
-    try:
-        from data import get_connection
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT id, name, name_en, category, logo_url, oak_approved, "
-                    "scopus_indexed, wos_indexed FROM journals "
-                    "WHERE is_active = TRUE AND oak_approved = TRUE "
-                    "ORDER BY impact_factor DESC NULLS LAST, LOWER(name) LIMIT 4")
-                featured_journals = [{
-                    "id": r[0], "name": r[1] or "", "name_en": r[2] or "",
-                    "category": r[3] or "", "logo_url": r[4] or "", "oak_approved": r[5],
-                    "scopus_indexed": r[6], "wos_indexed": r[7]} for r in cur.fetchall()]
+                    deadline_grants.append({
+                        "id": r[0], "title": r[1] or "",
+                        "organization": r[2] or "",
+                        "flag": r[3] or "", "country": r[4] or "",
+                        "deadline_uz": _uz_date(r[5]) if r[5] else "",
+                        "days": calculate_days_remaining(r[5]),
+                    })
         finally:
             conn.close()
     except Exception:
-        featured_journals = []
+        deadline_grants = []
 
-    return render_template("home.html", recent=recent, news=news,
-                           top_supervisors=top_supervisors,
-                           top_supervisors_random=top_supervisors_random,
-                           top_marquee=top_marquee, total_stats=total_stats,
-                           gender_pct=gender_pct, latest_blog=latest_blog,
-                           active_vacancy_count=active_vacancy_count,
-                           top_universities=top_universities,
-                           featured_journals=featured_journals)
+    return render_template("home.html", recent=recent,
+                           deadline_grants=deadline_grants,
+                           hstats=get_homepage_stats())
 
 
 @app.route("/dashboard")

@@ -58,18 +58,50 @@
     "description": "O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://www.olimlar.uz/data?q={search_term}",
-      "query-input": "required name=search_term"
+      "target": "https://www.olimlar.uz/dashboard?q={search_term_string}",
+      "query-input": "required name=search_term_string"
     }
   }
   </script>
   {% endblock %}
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Self-hosted fonts (variable woff2, no Google Fonts request — O'zbekiston latency).
+       Faqat lotin fayllari preload qilinadi; qolgan subsetlar unicode-range orqali
+       kerak bo'lgandagina yuklanadi (OAK ma'lumotlari kirillcha bo'lishi mumkin). -->
+  <link rel="preload" href="/static/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/manrope-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    /* Inter — variable (wght 100–900) */
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url('/static/fonts/inter-var-cyrillic-ext.woff2') format('woff2');
+      unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url('/static/fonts/inter-var-cyrillic.woff2') format('woff2');
+      unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url('/static/fonts/inter-var-latin-ext.woff2') format('woff2');
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url('/static/fonts/inter-var-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    /* Manrope — variable (wght 200–800), sarlavhalar uchun */
+    @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: swap;
+      src: url('/static/fonts/manrope-var-cyrillic-ext.woff2') format('woff2');
+      unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
+    @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: swap;
+      src: url('/static/fonts/manrope-var-cyrillic.woff2') format('woff2');
+      unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+    @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: swap;
+      src: url('/static/fonts/manrope-var-latin-ext.woff2') format('woff2');
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+    @font-face { font-family: 'Manrope'; font-style: normal; font-weight: 200 800; font-display: swap;
+      src: url('/static/fonts/manrope-var-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  </style>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous" />
+  {% if request.path != '/' %}{# bosh sahifa grafiksiz — LCP uchun Chart.js keraksiz #}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  {% endif %}
   <style>
     :root {
       --oak-accent: #4a9eff;
@@ -166,25 +198,26 @@
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      padding: 1rem 0;
+      min-height: 64px;
+      padding: 0.45rem 0;
     }
     .brand-logo {
       display: flex;
       align-items: center;
-      gap: 0.85rem;
+      gap: 0.7rem;
     }
     .brand-icon {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
       display: grid;
       place-items: center;
-      border-radius: 12px;
+      border-radius: 10px;
       background: linear-gradient(135deg, #4a9eff, #7c5cfc);
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
     .brand-title { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
-    .brand-subtitle { margin: 0; color: var(--oak-muted); font-size: 0.75rem; }
+    .brand-subtitle { display: none; margin: 0; color: var(--oak-muted); font-size: 0.75rem; }
 
     .site-nav { background: var(--oak-surface); border-bottom: 1px solid var(--oak-border); }
     .nav-inner {
@@ -197,29 +230,77 @@
     .nav-links {
       display: flex;
       align-items: center;
-      gap: 0.35rem;
-      flex-wrap: wrap;
-      width: 100%;
+      gap: 0.15rem;
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-left: 0.5rem;
     }
     .nav-link {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.68rem 0.95rem;
+      padding: 0.62rem 0.85rem;
       border-radius: 10px;
       color: var(--oak-muted);
       font-size: 0.9rem;
       font-weight: 500;
-      transition: color 0.17s, background 0.17s;
+      white-space: nowrap;
+      transition: color 0.17s;
+    }
+    /* underline slide */
+    .nav-link::after {
+      content: "";
+      position: absolute;
+      left: 0.85rem; right: 0.85rem; bottom: 4px;
+      height: 2px; border-radius: 2px;
+      background: var(--oak-accent);
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 0.22s ease;
     }
     .nav-link.active,
-    .nav-link:hover { color: var(--oak-accent); background: rgba(74,158,255,0.08); }
+    .nav-link:hover { color: var(--oak-accent); text-decoration: none; }
+    .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+    .nav-pill-new {
+      margin-left: 6px;
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 999px;
+      background: rgba(52,211,153,0.16); color: #34d399;
+    }
+    /* "Boshqa" dropdown */
+    .nav-dd { position: relative; }
+    .nav-dd-btn { background: none; border: none; cursor: pointer; font-family: inherit; }
+    .nav-dd-btn::after { display: none; }
+    .nav-dd-menu {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 300;
+      min-width: 210px; padding: 8px;
+      background: var(--oak-surface-2); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; box-shadow: 0 18px 44px rgba(0,0,0,0.45);
+      display: none; flex-direction: column;
+    }
+    .nav-dd.open .nav-dd-menu { display: flex; }
+    .nav-dd-menu a {
+      display: block; padding: 8px 12px; border-radius: 8px;
+      color: var(--oak-muted); font-size: 0.88rem;
+    }
+    .nav-dd-menu a:hover { color: var(--oak-accent); background: rgba(74,158,255,0.08); text-decoration: none; }
+    .nav-dd-sep { height: 1px; margin: 6px 4px; background: rgba(255,255,255,0.08); }
+    [data-bs-theme="light"] .nav-dd-menu { background: #ffffff; border-color: rgba(15,23,42,0.12); }
+    .nav-icon-btn {
+      display: inline-grid; place-items: center;
+      width: 38px; height: 38px; border-radius: 10px;
+      color: var(--oak-muted); font-size: 1.02rem;
+      transition: color 0.17s, background 0.17s;
+    }
+    .nav-icon-btn:hover { color: var(--oak-accent); background: rgba(74,158,255,0.08); text-decoration: none; }
     .nav-actions {
       margin-left: auto;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
+      gap: 0.4rem;
+      flex-wrap: nowrap;
+      flex-shrink: 0;
     }
     .username {
       display: inline-flex;
@@ -367,7 +448,7 @@
 
     /* ── site-wide footer (edubaza style) ── */
     .oak-footer { background: #0f172a; color: #fff; padding: 56px 0 32px; margin-top: 3rem; }
-    .oak-footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; }
+    .oak-footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr; gap: 32px; }
     .oak-foot-logo { font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 12px; }
     .oak-foot-mission { font-size: 0.88rem; color: rgba(255,255,255,0.6); line-height: 1.6; max-width: 320px; margin: 0 0 14px; }
     .oak-foot-tg { display: inline-flex; align-items: center; gap: 6px; color: #60a5fa; font-size: 0.9rem; font-weight: 600; }
@@ -406,27 +487,39 @@
     .scroll-top.visible { opacity: 1; visibility: visible; transform: translateY(0); }
 
     @media (max-width: 992px) { .page-heading { flex-direction: column; align-items: flex-start; } }
-    @media (max-width: 768px) {
-      /* header: brand + actions row, menu below */
-      .header-inner { flex-wrap: wrap; padding: 0.6rem 0; gap: 0.35rem 0.5rem; align-items: center; }
+    @media (max-width: 1080px) {
+      /* mobil/planshet: brand + actions + hamburger; menyu — o'ngdan chiquvchi drawer */
+      .nav-toggle { display: inline-flex; flex-shrink: 0; }
       .brand-logo { flex: 1 1 auto; min-width: 0; }
-      .nav-toggle { display: inline-flex; flex-shrink: 0; order: 2; }
-      .nav-actions { flex-shrink: 0; order: 1; margin-left: auto; gap: 0.4rem; }
-      .username { font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+      .nav-actions { gap: 0.3rem; }
+      .username { font-size: 0.78rem; padding: 0.4rem 0.6rem; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .btn-logout { font-size: 0.76rem; padding: 0.4rem 0.6rem; }
-      /* collapsible nav links drop to full-width row below */
+      #nav-search-btn { display: none; }
       .nav-links {
-        display: none;
-        order: 99;
-        flex: 0 0 100%;
-        flex-direction: column;
-        gap: 0.2rem;
-        padding: 0.5rem 0 0.4rem;
-        border-top: 1px solid rgba(255,255,255,0.07);
-        margin-top: 0.15rem;
+        position: fixed; top: 0; right: 0; bottom: 0; z-index: 1300;
+        width: min(300px, 84vw); margin: 0;
+        flex-direction: column; align-items: stretch; gap: 0.15rem;
+        padding: 72px 14px 24px;
+        background: var(--oak-surface);
+        border-left: 1px solid rgba(255,255,255,0.1);
+        box-shadow: -24px 0 60px rgba(0,0,0,0.45);
+        overflow-y: auto;
+        transform: translateX(100%);
+        visibility: hidden;
+        transition: transform 0.28s ease, visibility 0.28s;
       }
-      .nav-links.open { display: flex; }
-      .nav-link { padding: 0.6rem 0.8rem; font-size: 0.88rem; }
+      .nav-links.open { transform: translateX(0); visibility: visible; }
+      .nav-link { padding: 0.7rem 0.85rem; font-size: 0.92rem; min-height: 44px; }
+      .nav-link::after { display: none; }
+      .nav-link.active { background: rgba(74,158,255,0.1); }
+      /* drawer ichida "Boshqa" ro'yxati doim ochiq */
+      .nav-dd-btn { display: none; }
+      .nav-dd-menu {
+        display: flex; position: static; min-width: 0; padding: 0;
+        background: transparent; border: none; box-shadow: none;
+        border-top: 1px solid rgba(255,255,255,0.08); margin-top: 6px; padding-top: 6px;
+      }
+      .nav-dd-menu a { padding: 0.65rem 0.85rem; min-height: 44px; display: flex; align-items: center; }
       .table thead th, .table tbody td { padding: 0.55rem 0.6rem; font-size: 0.82rem; }
     }
     @media (max-width: 576px) {
@@ -658,7 +751,9 @@
 <!-- /Yandex.Metrika counter -->
 </head>
 <body>
-  <!-- Preloader: pulsing brand logo shown until the page finishes loading. -->
+  {% if request.path != '/' %}
+  <!-- Preloader: pulsing brand logo shown until the page finishes loading.
+       Bosh sahifada o'chirilgan — LCP/FCP ni sekinlashtirmasin (redizayn v2). -->
   <style>
     #oak-preloader { position: fixed; inset: 0; z-index: 9999; display: flex;
       align-items: center; justify-content: center;
@@ -686,6 +781,7 @@
       setTimeout(hide, 6000);
     })();
   </script>
+  {% endif %}
   <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"><i class="bi bi-moon-fill"></i></button>
   <header class="site-header">
     <div class="container-xl header-inner">
@@ -696,49 +792,59 @@
           <span class="brand-subtitle">Olimlar uchun barcha qulayliklar</span>
         </span>
       </a>
-      <button id="nav-toggle" class="nav-toggle" aria-label="Menyu"><i class="bi bi-list"></i></button>
+      <button id="nav-toggle" class="nav-toggle" aria-label="Menyu" aria-expanded="false"><i class="bi bi-list"></i></button>
+      {# ── Slim navbar (redizayn v2): 6 ta asosiy band + "Boshqa" dropdown.
+           Hech bir route o'chirilmagan — qolganlari dropdown ichida. ── #}
       <div class="nav-links" id="nav-links">
-        <a href="/" class="nav-link"><i class="bi bi-house-fill"></i>Bosh sahifa</a>
-        <a href="/dashboard" class="nav-link{% if request.path == '/dashboard' %} active{% endif %}"><i class="bi bi-table"></i>Ma'lumotlar jadvali<span id="nav-total-badge" style="display:none;margin-left:6px;padding:1px 8px;border-radius:999px;background:rgba(74,158,255,0.14);color:#4a9eff;font-size:0.7rem;font-weight:700;vertical-align:middle;"></span></a>
-        <a href="/stats" class="nav-link{% if request.path.startswith('/stats') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Tahlil va grafiklar</a>
-        <a href="/trends" class="nav-link{% if request.path.startswith('/trends') %} active{% endif %}"><i class="bi bi-graph-up-arrow"></i>Trendlar</a>
-        <a href="/collaboration" class="nav-link{% if request.path.startswith('/collaboration') %} active{% endif %}"><i class="bi bi-diagram-3"></i>Hamkorlik</a>
-        <a href="/clustering" class="nav-link{% if request.path.startswith('/clustering') %} active{% endif %}"><i class="bi bi-grid-1x2"></i>Klasterlar</a>
-        <a href="/heatmap" class="nav-link{% if request.path.startswith('/heatmap') %} active{% endif %}"><i class="bi bi-geo-alt-fill"></i>Xarita</a>
-        <a href="/reyting" class="nav-link{% if request.path.startswith('/reyting') %} active{% endif %}"><i class="bi bi-bar-chart-fill"></i>Reyting</a>
-        <a href="/universities" class="nav-link{% if request.path == '/universities' or request.path.startswith('/university/') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar</a>
-        <a href="/journals" class="nav-link{% if request.path.startswith('/journals') %} active{% endif %}"><i class="bi bi-journal-bookmark-fill"></i>Jurnallar</a>
-        <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}"><i class="bi bi-trophy"></i>Grantlar</a>
-        <a href="/reminders" class="nav-link{% if request.path.startswith('/reminders') %} active{% endif %}"><i class="bi bi-alarm"></i>Muddatlar</a>
-        <a href="/yangiliklar" class="nav-link{% if request.path.startswith('/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar</a>
-        <a href="/compare" class="nav-link{% if request.path.startswith('/compare') or request.path.startswith('/mavzu-tahlili') %} active{% endif %}"><i class="bi bi-search-heart"></i>Mavzu tahlili</a>
-        {% if current_user.is_authenticated %}
-        <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Ish stoli</a>
-        <a href="/messages" class="nav-link position-relative{% if request.path.startswith('/messages') %} active{% endif %}" style="padding-right:1.1rem;">
-          <i class="bi bi-chat-dots"></i>Xabarlar
-          <span id="msg-badge" style="display:none;position:absolute;top:4px;right:2px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
-        </a>
-        <a href="/cabinet" class="nav-link{% if request.path.startswith('/cabinet') %} active{% endif %}"><i class="bi bi-person-badge"></i>Kabinet</a>
-        {% if current_user.is_admin %}
-        <a href="/admin/analytics" class="nav-link{% if request.path == '/admin/analytics' %} active{% endif %}"><i class="bi bi-speedometer2"></i>Admin</a>
-        <a href="/admin/yangiliklar" class="nav-link{% if request.path.startswith('/admin/yangiliklar') %} active{% endif %}"><i class="bi bi-newspaper"></i>Yangiliklar (admin)</a>
-        <a href="/admin/blog" class="nav-link{% if request.path.startswith('/admin/blog') %} active{% endif %}"><i class="bi bi-pencil-square"></i>Blog (admin)</a>
-        <a href="/admin/vacancies" class="nav-link{% if request.path.startswith('/admin/vacancies') %} active{% endif %}"><i class="bi bi-briefcase"></i>Vakansiyalar</a>
-        <a href="/admin/survey" class="nav-link{% if request.path.startswith('/admin/survey') %} active{% endif %}"><i class="bi bi-clipboard-check"></i>So'rovnoma</a>
-        <a href="/admin/universities" class="nav-link{% if request.path.startswith('/admin/universit') %} active{% endif %}"><i class="bi bi-bank"></i>Universitetlar (admin)</a>
-        <a href="/admin/journals" class="nav-link{% if request.path.startswith('/admin/journals') %} active{% endif %}"><i class="bi bi-journal-bookmark"></i>Jurnallar (admin)</a>
-        <a href="/admin/grants" class="nav-link{% if request.path.startswith('/admin/grants') %} active{% endif %}"><i class="bi bi-trophy-fill"></i>Grantlar (admin)</a>
-        <a href="/admin/reminders" class="nav-link{% if request.path.startswith('/admin/reminders') %} active{% endif %}"><i class="bi bi-alarm-fill"></i>Smart Eslatmalar</a>
-        {% endif %}
-        <a href="/notifications" class="nav-link position-relative" title="Yangiliklar" style="padding-right:1.1rem;">
-          <i class="bi bi-bell-fill"></i>
-          <span id="notif-badge" style="display:none;position:absolute;top:4px;right:2px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
-        </a>
-        {% endif %}
+        <a href="{{ '/dashboard' if current_user.is_authenticated else '/data' }}" class="nav-link{% if request.path == '/dashboard' or request.path == '/data' %} active{% endif %}">Dissertatsiyalar</a>
+        <a href="/top-olimlar" class="nav-link{% if request.path.startswith('/top-olimlar') or request.path.startswith('/olim/') %} active{% endif %}">Olimlar</a>
+        <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}">Grantlar</a>
+        <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}">Konstruktor<span class="nav-pill-new">Yangi</span></a>
+        <a href="/stats" class="nav-link{% if request.path.startswith('/stats') or request.path.startswith('/trends') %} active{% endif %}">Analitika</a>
+        <div class="nav-dd" id="nav-dd">
+          <button type="button" class="nav-link nav-dd-btn" id="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Boshqa <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i></button>
+          <div class="nav-dd-menu" id="nav-dd-menu">
+            <a href="/universities">Universitetlar</a>
+            <a href="/journals">Jurnallar</a>
+            <a href="/courses">Kurslar</a>
+            <a href="/yangiliklar">Yangiliklar</a>
+            <a href="/vacancies">Vakansiyalar</a>
+            <div class="nav-dd-sep"></div>
+            <a href="/trends">Trendlar</a>
+            <a href="/collaboration">Hamkorlik</a>
+            <a href="/clustering">Klasterlar</a>
+            <a href="/heatmap">Xarita</a>
+            <a href="/reyting">Reyting</a>
+            <a href="/reminders">Muddatlar</a>
+            <a href="/compare">Mavzu tahlili</a>
+            <a href="/blog">Blog</a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <div class="nav-dd-sep"></div>
+            <a href="/admin/analytics">Admin panel</a>
+            <a href="/admin/yangiliklar">Yangiliklar (admin)</a>
+            <a href="/admin/blog">Blog (admin)</a>
+            <a href="/admin/vacancies">Vakansiyalar (admin)</a>
+            <a href="/admin/survey">So'rovnoma (admin)</a>
+            <a href="/admin/universities">Universitetlar (admin)</a>
+            <a href="/admin/journals">Jurnallar (admin)</a>
+            <a href="/admin/grants">Grantlar (admin)</a>
+            <a href="/admin/reminders">Smart Eslatmalar</a>
+            {% endif %}
+          </div>
+        </div>
       </div>
       <div class="nav-actions">
+        <a href="{{ '/dashboard' if current_user.is_authenticated else '/data' }}" class="nav-icon-btn" id="nav-search-btn" title="Qidiruv" aria-label="Qidiruv"><i class="bi bi-search"></i></a>
         {% if current_user.is_authenticated %}
-        <span class="username"><i class="bi bi-person-circle"></i>{{ current_user.username }}</span>
+        <a href="/messages" class="nav-icon-btn position-relative" title="Xabarlar" aria-label="Xabarlar">
+          <i class="bi bi-chat-dots"></i>
+          <span id="msg-badge" style="display:none;position:absolute;top:2px;right:0;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
+        </a>
+        <a href="/notifications" class="nav-icon-btn position-relative" title="Bildirishnomalar" aria-label="Bildirishnomalar">
+          <i class="bi bi-bell"></i>
+          <span id="notif-badge" style="display:none;position:absolute;top:2px;right:0;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
+        </a>
+        <a href="/cabinet" class="username" title="Kabinet"><i class="bi bi-person-circle"></i>{{ current_user.username }}</a>
         <a href="/logout" class="btn-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
         {% else %}
         <a href="/login" class="btn-logout" style="border-color:rgba(74,158,255,0.25);background:rgba(74,158,255,0.08);color:#4a9eff;"><i class="bi bi-box-arrow-in-right"></i>Kirish</a>
@@ -776,34 +882,44 @@
           <a class="oak-foot-tg" href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer"><i class="bi bi-telegram"></i> @olimlar_uz</a>
         </div>
         <div class="oak-foot-col">
-          <h4>Biz haqimizda</h4>
+          <h4>Platforma</h4>
           <ul>
-            <li><a href="/about">Biz haqimizda</a></li>
-            <li><a href="/team">Jamoa</a></li>
-            <li><a href="/vacancies">Vakansiyalar</a></li>
-            <li><a href="/contact">Aloqa</a></li>
+            <li><a href="/dashboard">Dissertatsiyalar</a></li>
+            <li><a href="/top-olimlar">Olimlar</a></li>
+            <li><a href="/grants">Grantlar</a></li>
+            <li><a href="/workspace">Konstruktor</a></li>
+            <li><a href="/stats">Analitika</a></li>
+            <li><a href="/reyting">Reyting</a></li>
+            <li><a href="/compare">Mavzu tahlili</a></li>
           </ul>
         </div>
         <div class="oak-foot-col">
           <h4>Resurslar</h4>
           <ul>
-            <li><a href="/data">Mavzular jadvali</a></li>
             <li><a href="/yangiliklar">Yangiliklar</a></li>
             <li><a href="/blog">Blog</a></li>
-            <li><a href="/courses">Malaka oshirish</a></li>
             <li><a href="/courses">Kurslar</a></li>
+            <li><a href="/journals">Jurnallar</a></li>
+            <li><a href="/universities">Universitetlar</a></li>
             <li><a href="/preparation">Himoyaga tayyorlanish</a></li>
+            <li><a href="/reminders">Muddatlar</a></li>
           </ul>
         </div>
         <div class="oak-foot-col">
-          <h4>Yo'nalishlar</h4>
+          <h4>Aloqa</h4>
           <ul>
-            <li><a href="/data">Dissertatsiyalar</a></li>
-            <li><a href="/data">Qidiruv</a></li>
-            <li><a href="/">AI Chatbot</a></li>
-            <li><a href="/compare">Taqqoslash</a></li>
-            <li><a href="/stats">Statistika</a></li>
+            <li><a href="/about">Biz haqimizda</a></li>
+            <li><a href="/team">Jamoa</a></li>
+            <li><a href="/vacancies">Vakansiyalar</a></li>
+            <li><a href="/contact">Aloqa</a></li>
             <li><a href="/notifications">Bildirishnomalar</a></li>
+          </ul>
+        </div>
+        <div class="oak-foot-col">
+          <h4>Ijtimoiy tarmoqlar</h4>
+          <ul>
+            <li><a href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer">Telegram kanali</a></li>
+            <li><a href="https://t.me/send_kod_bot" target="_blank" rel="noopener noreferrer">Admin bilan aloqa</a></li>
           </ul>
         </div>
       </div>
@@ -825,8 +941,40 @@
         localStorage.setItem('oak-theme', next);
         this.innerHTML = next === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-fill"></i>';
       });
-      document.getElementById('nav-toggle')?.addEventListener('click', function() {
-        document.getElementById('nav-links')?.classList.toggle('open');
+      // Mobil drawer + "Boshqa" dropdown
+      var navToggle = document.getElementById('nav-toggle');
+      var navLinks = document.getElementById('nav-links');
+      navToggle?.addEventListener('click', function() {
+        var open = navLinks?.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        navToggle.innerHTML = open ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-list"></i>';
+      });
+      var dd = document.getElementById('nav-dd');
+      var ddBtn = document.getElementById('nav-dd-btn');
+      ddBtn?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var open = dd.classList.toggle('open');
+        ddBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function(e) {
+        if (dd && !dd.contains(e.target)) { dd.classList.remove('open'); ddBtn?.setAttribute('aria-expanded', 'false'); }
+        if (navLinks?.classList.contains('open') && !navLinks.contains(e.target) && !navToggle.contains(e.target)) {
+          navLinks.classList.remove('open');
+          navToggle?.setAttribute('aria-expanded', 'false');
+          if (navToggle) navToggle.innerHTML = '<i class="bi bi-list"></i>';
+        }
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          dd?.classList.remove('open');
+          navLinks?.classList.remove('open');
+          if (navToggle) navToggle.innerHTML = '<i class="bi bi-list"></i>';
+        }
+      });
+      // Qidiruv ikonkasi: bosh sahifada hero qidiruviga fokus, boshqa sahifalarda /dashboard
+      document.getElementById('nav-search-btn')?.addEventListener('click', function(e) {
+        var hero = document.getElementById('hx-search-input');
+        if (hero) { e.preventDefault(); hero.scrollIntoView({ block: 'center' }); hero.focus({ preventScroll: true }); }
       });
       var badge = document.getElementById('nav-total-badge');
       if (badge) {
