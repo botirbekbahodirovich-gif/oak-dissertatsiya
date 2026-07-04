@@ -12,7 +12,8 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
 # Shared secret for the scraper → VPS import endpoint (/api/v1/import-oak).
 SITE_API_KEY = os.environ.get('SITE_API_KEY', '')
-from flask import Blueprint, jsonify, request, send_file, render_template, abort
+from flask import (Blueprint, jsonify, request, send_file, render_template,
+                   abort, redirect, Response)
 from flask_login import login_required
 from extensions import cache
 try:
@@ -660,6 +661,351 @@ def filters():
         "ilmiy_kengash": _distinct_values("ilmiy_kengash"),
         "yillar":        _distinct_years(),
     })
+
+
+# ═════════════════════════════════════════════════════════════════════════
+#  Dashboard v2 — faceted search (ProQuest/Scopus pattern)
+#  Bitta so'rov: rows + facet counts + yil histogrammasi. Facetlar ham,
+#  qatorlar ham BITTA where-quruvchidan o'tadi (drift yo'q). Qidiruv qismi
+#  mavjud _build_filter_clause ga delegatsiya qilinadi (translit saqlangan).
+# ═════════════════════════════════════════════════════════════════════════
+
+_bookmarks_ready = False
+_export_last = {}   # user_id -> ts (per-worker rate limit, 30s)
+
+_YEAR_EXPR = r"(regexp_match(TRIM(d.sana), '(19|20)\d{2}'))[1]"
+
+
+def _ensure_dashboard_schema(cur):
+    global _bookmarks_ready
+    if _bookmarks_ready:
+        return
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_bookmarks (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            dissertation_id INTEGER NOT NULL REFERENCES dissertations(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, dissertation_id)
+        )""")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_bookmarks_user "
+                "ON user_bookmarks(user_id, created_at DESC)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_dissertations_fan_tarmoqi "
+                "ON dissertations(fan_tarmoqi)")
+    _bookmarks_ready = True
+
+
+def _csvlist(s):
+    return [x.strip() for x in (s or '').split(',') if x.strip()]
+
+
+def _dashboard_filters(a):
+    """URL query → filter dict. Eski nomlar (search/daraja/ixtisoslik/sana_yil)
+    HAM qabul qilinadi — mavjud havolalar buzilmaydi."""
+    from flask_login import current_user
+    scope = a.get('scope', 'all').strip()
+    if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
+        scope = 'all'
+    gender = a.get('gender', '').strip().lower()
+    if gender not in ('male', 'female'):
+        gender = ''
+    daraja = [d for d in _csvlist(a.get('daraja')) if d.upper() in ('PHD', 'DSC')]
+    # yil: "2020-2024" birlashgan yoki yil_min/yil_max; legacy sana_yil (bitta yil)
+    yil_min = yil_max = None
+    yil = (a.get('yil') or '').strip()
+    m = re.match(r'^(\d{4})\s*-\s*(\d{4})$', yil)
+    if m:
+        yil_min, yil_max = int(m.group(1)), int(m.group(2))
+    elif re.match(r'^\d{4}$', yil):
+        yil_min = yil_max = int(yil)
+    for key, var in (('yil_min', 'yil_min'), ('yil_max', 'yil_max')):
+        v = (a.get(key) or '').strip()
+        if re.match(r'^\d{4}$', v):
+            if key == 'yil_min':
+                yil_min = int(v)
+            else:
+                yil_max = int(v)
+    sana_yil = (a.get('sana_yil') or '').strip()
+    if not yil_min and re.match(r'^\d{4}$', sana_yil):
+        yil_min = yil_max = int(sana_yil)
+    if yil_min and yil_max and yil_min > yil_max:
+        yil_min, yil_max = yil_max, yil_min
+    saved = a.get('saved') == '1' and getattr(current_user, 'is_authenticated', False)
+    return {
+        'search': (a.get('q') or a.get('search') or '').strip(),
+        'scope': scope, 'gender': gender,
+        'daraja': daraja,
+        'fan': _csvlist(a.get('fan') or a.get('fan_tarmoqi'))[:10],
+        'muassasa': _csvlist(a.get('muassasa'))[:10],
+        'ixt': [c for c in _csvlist(a.get('ixt') or a.get('ixtisoslik'))][:10],
+        'yil_min': yil_min, 'yil_max': yil_max,
+        'saved': saved,
+        'sort': a.get('sort') if a.get('sort') in ('sana_desc', 'sana_asc', 'olim_az') else 'sana_desc',
+    }
+
+
+def _dashboard_where(f, exclude=None, user_id=None):
+    """WHERE quruvchi — rows, count, har bir facet va histogram uchun yagona
+    manba. `exclude` — facet o'z tanlovini hisobga olmasligi uchun (standart
+    faceting xulqi)."""
+    base_clause, params = _build_filter_clause(
+        f['search'], '', '', '', scope=f['scope'], gender=f['gender'])
+    clauses = []
+    if base_clause:
+        clauses.append(base_clause[len(' WHERE '):])
+    if exclude != 'daraja' and f['daraja']:
+        clauses.append("UPPER(TRIM(d.daraja)) = ANY(%s)")
+        params.append([d.upper() for d in f['daraja']])
+    if exclude != 'fan' and f['fan']:
+        clauses.append("TRIM(COALESCE(d.fan_tarmoqi, '')) = ANY(%s)")
+        params.append(f['fan'])
+    if exclude != 'muassasa' and f['muassasa']:
+        clauses.append("TRIM(d.muassasa) = ANY(%s)")
+        params.append(f['muassasa'])
+    if exclude != 'ixt' and f['ixt']:
+        ors = []
+        for c in f['ixt']:
+            ors.append("d.ixtisoslik ILIKE %s")
+            params.append(f"%{c}%")
+        clauses.append("(" + " OR ".join(ors) + ")")
+    if exclude != 'yil' and (f['yil_min'] or f['yil_max']):
+        # sana erkin matn (DD.MM.YYYY) — yil regexp bilan ajratiladi. 27.7k
+        # qatordagi filtrlangan to'plamda bu arzon (btree LIKE '%..%' ni
+        # baribir ishlatmaydi — joriy sana_yil filtri bilan bir xil xulq).
+        lo = f['yil_min'] or 1900
+        hi = f['yil_max'] or 2100
+        clauses.append(r"d.sana ~ '(19|20)\d{2}' AND "
+                       f"({_YEAR_EXPR})::int BETWEEN %s AND %s")
+        params.extend([lo, hi])
+    if f['saved'] and user_id:
+        clauses.append("d.id IN (SELECT dissertation_id FROM user_bookmarks WHERE user_id = %s)")
+        params.append(user_id)
+    return (" WHERE " + " AND ".join(clauses)) if clauses else "", params
+
+
+_DASH_SORTS = {
+    'sana_desc': _SANA_ORDER_DESC,           # joriy standart (yangidan eskiga)
+    'sana_asc': (r"NULLIF(regexp_replace(TRIM(d.sana), "
+                 r"'^(\d{2})\.(\d{2})\.(\d{4})$', '\3\2\1'), TRIM(d.sana)) "
+                 "ASC NULLS LAST, d.id ASC"),
+    'olim_az': "LOWER(TRIM(d.olim)) ASC, d.id ASC",
+}
+
+
+def _dashboard_facets(cur, f, user_id):
+    """3 ta GROUP BY + 1 histogram — har biri o'z faceti chiqarilgan WHERE bilan."""
+    facets = {}
+    w, p = _dashboard_where(f, exclude='daraja', user_id=user_id)
+    cur.execute(f"SELECT UPPER(TRIM(d.daraja)), COUNT(*) FROM dissertations d{w} "
+                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 10", p)
+    facets['daraja'] = [{'value': r[0], 'count': r[1]} for r in cur.fetchall()
+                        if r[0] in ('PHD', 'DSC')]
+    w, p = _dashboard_where(f, exclude='fan', user_id=user_id)
+    cur.execute(f"SELECT TRIM(d.fan_tarmoqi), COUNT(*) FROM dissertations d{w} "
+                f"AND d.fan_tarmoqi IS NOT NULL AND TRIM(d.fan_tarmoqi) <> '' "
+                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30"
+                if w else
+                f"SELECT TRIM(d.fan_tarmoqi), COUNT(*) FROM dissertations d "
+                f"WHERE d.fan_tarmoqi IS NOT NULL AND TRIM(d.fan_tarmoqi) <> '' "
+                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30", p)
+    facets['fan'] = [{'value': r[0], 'count': r[1]} for r in cur.fetchall()]
+    w, p = _dashboard_where(f, exclude='muassasa', user_id=user_id)
+    cur.execute(f"SELECT TRIM(d.muassasa), COUNT(*) FROM dissertations d{w} "
+                f"AND d.muassasa IS NOT NULL AND TRIM(d.muassasa) <> '' "
+                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30"
+                if w else
+                f"SELECT TRIM(d.muassasa), COUNT(*) FROM dissertations d "
+                f"WHERE d.muassasa IS NOT NULL AND TRIM(d.muassasa) <> '' "
+                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30", p)
+    facets['muassasa'] = [{'value': r[0], 'count': r[1]} for r in cur.fetchall()]
+    w, p = _dashboard_where(f, exclude='yil', user_id=user_id)
+    year_where = (w + " AND " if w else " WHERE ") + r"d.sana ~ '(19|20)\d{2}'"
+    cur.execute(f"SELECT ({_YEAR_EXPR})::int AS yr, COUNT(*) "
+                f"FROM dissertations d{year_where} GROUP BY 1 ORDER BY 1", p)
+    histogram = [{'year': r[0], 'count': r[1]} for r in cur.fetchall() if r[0]]
+    return facets, histogram
+
+
+def _dashboard_is_default(f):
+    return not (f['search'] or f['daraja'] or f['fan'] or f['muassasa']
+                or f['ixt'] or f['yil_min'] or f['yil_max'] or f['saved']
+                or f['gender'])
+
+
+@data_bp.route('/api/dashboard/search')
+def dashboard_search():
+    from flask_login import current_user
+    a = request.args
+    f = _dashboard_filters(a)
+    uid = current_user.id if getattr(current_user, 'is_authenticated', False) else None
+    try:
+        page = max(1, int(a.get('page', 1)))
+    except ValueError:
+        page = 1
+    per_page = 25
+    order = _DASH_SORTS[f['sort']]
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_dashboard_schema(cur)
+                w, p = _dashboard_where(f, user_id=uid)
+                cur.execute(f"SELECT COUNT(*) FROM dissertations d{w}", p)
+                total = cur.fetchone()[0] or 0
+                total_pages = max(1, (total + per_page - 1) // per_page)
+                page = min(page, total_pages)
+                # facets + histogram: standart (filtrsiz) holat 10 daqiqa kesh
+                cache_key = 'dashboard_facets_default_v1'
+                cached = cache.get(cache_key) if _dashboard_is_default(f) else None
+                if cached:
+                    facets, histogram = cached
+                else:
+                    facets, histogram = _dashboard_facets(cur, f, uid)
+                    if _dashboard_is_default(f):
+                        cache.set(cache_key, (facets, histogram), timeout=600)
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        return jsonify({'records': [], 'total': 0, 'page': 1, 'per_page': per_page,
+                        'total_pages': 1, 'facets': {}, 'histogram': [],
+                        'error': str(e)}), 500
+    try:
+        w2, p2 = _dashboard_where(f, user_id=uid)
+        rows = _query_rows(
+            'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
+            'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
+            'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
+            f'FROM dissertations d{w2} '
+            f'ORDER BY {order} LIMIT %s OFFSET %s',
+            p2 + [per_page, (page - 1) * per_page])
+        # bookmark holati — bitta so'rov (N+1 yo'q)
+        if uid and rows:
+            ids = [r['id'] for r in rows if r.get('id')]
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT dissertation_id FROM user_bookmarks "
+                                "WHERE user_id = %s AND dissertation_id = ANY(%s)", (uid, ids))
+                    marked = {r[0] for r in cur.fetchall()}
+            finally:
+                conn.close()
+            for r in rows:
+                r['bookmarked'] = r.get('id') in marked
+    except Exception:
+        rows = []
+    return jsonify({'records': rows, 'total': total, 'page': page,
+                    'per_page': per_page, 'total_pages': total_pages,
+                    'facets': facets, 'histogram': histogram,
+                    'logged_in': bool(uid)})
+
+
+@data_bp.route('/api/bookmarks/toggle', methods=['POST'])
+def bookmark_toggle():
+    from flask_login import current_user
+    if not getattr(current_user, 'is_authenticated', False):
+        return jsonify({'success': False, 'error': 'auth'}), 401
+    data = request.get_json(silent=True) or {}
+    try:
+        did = int(data.get('dissertation_id'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': "Noto'g'ri so'rov"}), 400
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_dashboard_schema(cur)
+            cur.execute("DELETE FROM user_bookmarks "
+                        "WHERE user_id = %s AND dissertation_id = %s",
+                        (current_user.id, did))
+            if cur.rowcount:
+                bookmarked = False
+            else:
+                cur.execute("INSERT INTO user_bookmarks (user_id, dissertation_id) "
+                            "VALUES (%s, %s) ON CONFLICT DO NOTHING", (current_user.id, did))
+                bookmarked = True
+        conn.commit()
+        return jsonify({'success': True, 'bookmarked': bookmarked})
+    finally:
+        conn.close()
+
+
+@data_bp.route('/api/bookmarks')
+def bookmarks_list():
+    from flask_login import current_user
+    if not getattr(current_user, 'is_authenticated', False):
+        return jsonify({'success': False, 'error': 'auth'}), 401
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except ValueError:
+        page = 1
+    rows = _query_rows(
+        'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
+        'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
+        'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
+        'FROM user_bookmarks b JOIN dissertations d ON d.id = b.dissertation_id '
+        'WHERE b.user_id = %s ORDER BY b.created_at DESC LIMIT 25 OFFSET %s',
+        (current_user.id, (page - 1) * 25))
+    return jsonify({'success': True, 'records': rows, 'page': page})
+
+
+@data_bp.route('/api/dashboard/export.csv')
+def dashboard_export():
+    """CSV eksport — joriy filtrlangan to'plam. Bepul: 50 qator + premium
+    eslatmasi; premium (users.is_premium): 5000 qator. UTF-8 BOM (Excel)."""
+    import csv
+    import io
+    import time as _time
+    from flask_login import current_user
+    if not getattr(current_user, 'is_authenticated', False):
+        return redirect('/login')
+    now = _time.time()
+    if now - _export_last.get(current_user.id, 0) < 30:
+        return Response("Eksport tayyorlanmoqda, biroz kuting", status=429,
+                        mimetype='text/plain; charset=utf-8')
+    _export_last[current_user.id] = now
+    f = _dashboard_filters(request.args)
+    uid = current_user.id
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_dashboard_schema(cur)
+            cur.execute("SELECT COALESCE(is_premium, FALSE) FROM users WHERE id = %s", (uid,))
+            premium = bool((cur.fetchone() or [False])[0])
+    finally:
+        conn.close()
+    limit = 5000 if premium else 50
+    w, p = _dashboard_where(f, user_id=uid)
+    order = _DASH_SORTS[f['sort']]
+
+    def generate():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        yield '﻿'  # UTF-8 BOM — Excel o'zbek matnini to'g'ri ochadi
+        writer.writerow(['sana', 'olim', 'mavzu', 'daraja', 'ixtisoslik',
+                         'fan_tarmoqi', 'ilmiy_rahbar', 'muassasa'])
+        yield buf.getvalue()
+        buf.seek(0); buf.truncate(0)
+        conn2 = get_connection()
+        try:
+            with conn2.cursor() as cur:
+                cur.execute(
+                    "SELECT d.sana, d.olim, d.mavzu, d.daraja, d.ixtisoslik, "
+                    "COALESCE(d.fan_tarmoqi, ''), d.ilmiy_rahbar, d.muassasa "
+                    f"FROM dissertations d{w} ORDER BY {order} LIMIT %s",
+                    p + [limit])
+                for row in cur.fetchall():
+                    writer.writerow([(x or '').strip() if isinstance(x, str) else (x or '')
+                                     for x in row])
+                    yield buf.getvalue()
+                    buf.seek(0); buf.truncate(0)
+        finally:
+            conn2.close()
+        if not premium:
+            writer.writerow(["Ko'proq eksport qilish uchun Premium kerak — olimlar.uz/premium"])
+            yield buf.getvalue()
+    return Response(generate(), mimetype='text/csv; charset=utf-8',
+                    headers={'Content-Disposition':
+                             'attachment; filename="olimlar-dissertatsiyalar.csv"'})
 
 
 @data_bp.route('/search-stats')

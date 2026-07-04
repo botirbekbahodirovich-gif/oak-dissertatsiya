@@ -33,10 +33,12 @@
   .data-table td[data-col-key="ixti"],
   .data-table th[data-col-key="ixti"] { text-align: center; }
 
-  /* zebra + hover */
-  .data-table tbody tr:nth-child(odd)  { background: rgba(255,255,255,0.04); }
-  .data-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
-  .data-table tbody tr.data-row:hover  { background: rgba(74,158,255,0.10) !important; border-left: 3px solid #4a9eff; cursor: pointer; }
+  /* toza qatorlar (Scopus/ProQuest uslubi): zebra yo'q, faqat hover */
+  .data-table td, .data-table th { padding: 10px 12px; }
+  .data-table tbody tr.data-row:hover  { background: rgba(255,255,255,0.04); cursor: pointer; }
+  .cell-star { text-align: center; cursor: pointer; font-size: 1rem; color: #64748b; user-select: none; }
+  .cell-star.on { color: #fbbf24; }
+  .cell-star:hover { color: #fbbf24; }
 
   /* resize handle */
   .resize-handle {
@@ -75,16 +77,6 @@
   .cell-rahbar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .cell-rahbar a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
   .cell-rahbar:hover a { color: #4a9eff !important; text-decoration: underline; }
-
-  /* font size controls */
-  .font-size-controls { display: flex; gap: 4px; flex-shrink: 0; }
-  .font-size-controls button {
-    padding: 4px 10px; border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: transparent; color: #94a3b8;
-    cursor: pointer; font-size: 12px; line-height: 1;
-  }
-  .font-size-controls button:hover { border-color: #4a9eff; color: #4a9eff; }
 
   /* daraja badges */
   .badge-dsc.badge-role { background: #e36403 !important; color: #fff !important; cursor: default !important; }
@@ -221,6 +213,75 @@
   .card-page-btn { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
   .card-page-btn:hover { background: #334155; }
   .card-page-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+
+  /* ── Facet sidebar (ProQuest "Narrow results") ── */
+  .dash-wrap { display: flex; gap: 14px; align-items: flex-start; }
+  .facet-side { width: 260px; flex-shrink: 0; background: var(--oak-surface, #1a1d23);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px;
+    position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
+  .facet-group { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 10px 0; }
+  .facet-group:last-child { border-bottom: none; }
+  .facet-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px; }
+  .facet-opt { display: flex; align-items: center; gap: 7px; padding: 3px 0;
+    font-size: 0.83rem; color: #cbd5e1; cursor: pointer; }
+  .facet-opt input { accent-color: #4a9eff; cursor: pointer; flex-shrink: 0; }
+  .facet-opt .fo-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .facet-opt .fo-count { color: #64748b; font-size: 0.74rem; }
+  .facet-more { border: none; background: transparent; color: #4a9eff; font-size: 0.78rem;
+    cursor: pointer; padding: 4px 0; }
+  .facet-mini-input { width: 100%; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    padding: 5px 9px; background: rgba(255,255,255,0.04); color: #e2e8f0; font-size: 0.8rem;
+    margin-bottom: 6px; }
+  .facet-year-row { display: flex; gap: 6px; align-items: center; }
+  .facet-year-row input { width: 70px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+    padding: 5px 8px; background: rgba(255,255,255,0.04); color: #e2e8f0; font-size: 0.8rem; }
+  .facet-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(74,158,255,0.14);
+    color: #7cb8ff; border: 1px solid rgba(74,158,255,0.35); border-radius: 50px;
+    padding: 3px 11px; font-size: 0.78rem; font-weight: 600; margin: 2px 4px 2px 0; }
+  .facet-chip button { border: none; background: transparent; color: inherit; cursor: pointer;
+    font-size: 0.85rem; padding: 0; line-height: 1; }
+  #active-chips { display: flex; flex-wrap: wrap; align-items: center; padding: 6px 0 2px; }
+  .chips-clear { border: none; background: transparent; color: #f87171; font-size: 0.78rem;
+    cursor: pointer; font-weight: 600; }
+  .hdr-btn { border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #94a3b8;
+    padding: 4px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .hdr-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
+  .hdr-btn.on { background: #4a9eff; border-color: #4a9eff; color: #fff; }
+  #sort-select { border: 1px solid rgba(255,255,255,0.15); background: var(--oak-surface,#1a1d23);
+    color: #e2e8f0; border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+  /* histogram */
+  #year-histogram { background: var(--oak-surface, #1a1d23); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 8px 12px 4px; margin-bottom: 10px; }
+  #year-histogram svg { display: block; width: 100%; height: 64px; }
+  #year-histogram .yh-bar { fill: #4a9eff; opacity: 0.75; cursor: pointer; }
+  #year-histogram .yh-bar:hover { opacity: 1; }
+  .yh-head { display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.72rem; color: #94a3b8; }
+  #yh-tip { position: fixed; z-index: 500; background: #1e2330; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; padding: 4px 10px; font-size: 0.78rem; color: #e2e8f0; pointer-events: none; display: none; }
+  /* mobile drawer */
+  #facet-mobile-btn { display: none; }
+  @media (max-width: 900px) {
+    .facet-side { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto;
+      max-height: 78vh; z-index: 1300; border-radius: 16px 16px 0 0; transform: translateY(105%);
+      transition: transform 0.25s; }
+    .facet-side.open { transform: translateY(0); }
+    #facet-mobile-btn { display: inline-flex; }
+    #facet-backdrop { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.6); z-index: 1290; }
+    #facet-backdrop.show { display: block; }
+    #year-histogram { display: none; }
+    #year-histogram.mobile-show { display: block; }
+  }
+  /* cite modal */
+  #cite-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.7);
+    z-index: 1400; align-items: center; justify-content: center; padding: 16px; }
+  #cite-modal-bg.show { display: flex; }
+  .cite-modal { background: #1e2330; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;
+    padding: 20px; width: 100%; max-width: 620px; color: #e2e8f0; }
+  .cite-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.5; margin: 6px 0 12px; }
+  .cite-label { font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
 </style>
 {% endblock %}
 {% block content %}
@@ -282,12 +343,6 @@
         <div class="select-trigger"><span class="selected-text">Sana (yil)</span><button class="clear-btn" type="button">✕</button><span class="arrow">▾</span></div>
         <div class="dropdown-panel" style="display:none"><input type="text" class="dropdown-search" placeholder="Yil..."><ul class="option-list"></ul></div>
       </div>
-      <!-- Font size controls -->
-      <div class="font-size-controls">
-        <button onclick="setFontSize(12)" title="Kichik">A-</button>
-        <button onclick="setFontSize(14)" title="O'rtacha">A</button>
-        <button onclick="setFontSize(16)" title="Katta">A+</button>
-      </div>
       <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">✕ Tozalash</button>
     </div>
     <!-- Search stats bar -->
@@ -303,10 +358,79 @@
 
   {{ ad_banner('dashboard-top', 'inline') }}
 
+  <div class="dash-wrap">
+    <!-- ═══ FACET SIDEBAR (ProQuest "Narrow results") ═══ -->
+    <aside class="facet-side" id="facet-side">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:0.9rem;">🔍 Filtrlar</b>
+        <button class="hdr-btn" id="facet-close" style="display:none;">✕</button>
+      </div>
+      <div class="facet-group" id="fg-daraja">
+        <div class="facet-title">Daraja</div>
+        <div class="fg-opts"></div>
+      </div>
+      <div class="facet-group" id="fg-yil">
+        <div class="facet-title">Yil</div>
+        <div class="facet-year-row">
+          <input type="number" id="yil-min" placeholder="dan" min="1990" max="2035">
+          <span style="color:#64748b;">—</span>
+          <input type="number" id="yil-max" placeholder="gacha" min="1990" max="2035">
+          <button class="hdr-btn" id="yil-apply">OK</button>
+        </div>
+        <input type="range" id="yil-range" style="width:100%;margin-top:8px;accent-color:#4a9eff;" min="2000" max="2026" step="1" title="Yil bo'yicha siljitish">
+      </div>
+      <div class="facet-group" id="fg-fan">
+        <div class="facet-title">Fan tarmog'i</div>
+        <div class="fg-opts"></div>
+        <button class="facet-more" data-more="fan" style="display:none;">Ko'proq ko'rsatish ▾</button>
+      </div>
+      <div class="facet-group" id="fg-muassasa">
+        <div class="facet-title">Muassasa</div>
+        <input class="facet-mini-input" id="muassasa-filter" placeholder="Muassasa qidirish…">
+        <div class="fg-opts"></div>
+        <button class="facet-more" data-more="muassasa" style="display:none;">Ko'proq ko'rsatish ▾</button>
+      </div>
+      <div class="facet-group" id="fg-ixt">
+        <div class="facet-title">Ixtisoslik shifri</div>
+        <input class="facet-mini-input" id="ixt-input" placeholder="masalan: 05.01" list="ixt-datalist">
+        <datalist id="ixt-datalist"></datalist>
+        <div id="ixt-chips"></div>
+      </div>
+      <div style="padding-top:10px;">
+        <button class="hdr-btn on" id="facet-apply-mobile" style="width:100%;display:none;">Natijalarni ko'rsatish</button>
+      </div>
+    </aside>
+    <div id="facet-backdrop"></div>
+
+    <div style="flex:1;min-width:0;">
+    <!-- ═══ YIL HISTOGRAMMASI ═══ -->
+    <div id="year-histogram" style="display:none;">
+      <div class="yh-head">
+        <span>📊 Yillar bo'yicha taqsimot</span>
+        <button class="hdr-btn" id="yh-toggle" style="border:none;">yashirish ▴</button>
+      </div>
+      <svg id="yh-svg" preserveAspectRatio="none"></svg>
+    </div>
+    <div id="yh-tip"></div>
+
   <div class="table-panel" data-protected>
-    <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-      <div id="result-info" class="result-count">Topildi: <strong>—</strong> ta natija</div>
-      <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
+    <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);flex-wrap:wrap;">
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
+        <div id="result-info" class="result-count">Topildi: <strong>—</strong> ta natija</div>
+        <div id="active-chips"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;flex-wrap:wrap;">
+        <button class="hdr-btn" id="facet-mobile-btn">🔍 Filtrlar <span id="facet-count-badge"></span></button>
+        <select id="sort-select" title="Tartiblash">
+          <option value="sana_desc">Sana: yangidan eskiga</option>
+          <option value="sana_asc">Sana: eskidan yangiga</option>
+          <option value="olim_az">Olim: A→Z</option>
+        </select>
+        {% if current_user.is_authenticated %}
+        <button class="hdr-btn" id="saved-toggle" title="Faqat saqlanganlar">⭐ Saqlanganlar</button>
+        {% endif %}
+        <button class="hdr-btn" id="copy-link-btn" title="Joriy qidiruv havolasi">🔗 Havolani nusxalash</button>
+        <a class="hdr-btn" id="export-btn" href="#" title="Joriy natijalarni CSV yuklab olish">⬇️ Eksport (CSV)</a>
         <div class="view-toggle" id="view-toggle">
           <button type="button" class="vt-btn active" id="vt-table">📋 Jadval</button>
           <button type="button" class="vt-btn" id="vt-card">🃏 Kartochka</button>
@@ -324,26 +448,28 @@
       <table class="table table-hover align-middle mb-0 table-sticky data-table">
         <colgroup>
           <col id="col-num" style="width:35px">
-          <col id="col-sana" style="width:85px">
           <col id="col-olim" style="width:180px">
           <col id="col-mavzu" style="width:300px">
           <col id="col-daraja" style="width:55px">
           <col id="col-ixtisoslik" style="width:75px">
           <col id="col-rahbar" style="width:180px">
+          <col id="col-sana" style="width:85px">
+          <col id="col-star" style="width:40px">
         </colgroup>
         <thead><tr>
           <th data-col-key="num"><span class="col-label">#</span><div class="resize-handle"></div></th>
-          <th data-col-key="sana"><span class="col-label">Sana</span><div class="resize-handle"></div></th>
           <th data-col-key="olim"><span class="col-label">Olim</span><div class="resize-handle"></div></th>
           <th data-col-key="mavzu"><span class="col-label">Mavzu</span><div class="resize-handle"></div></th>
           <th data-col-key="daraja"><span class="col-label">Daraja</span><div class="resize-handle"></div></th>
           <th data-col-key="ixti" class="col-ixtisoslik"><span class="col-label">Ixtisoslik</span><div class="resize-handle"></div></th>
           <th data-col-key="rahbar"><span class="col-label">Ilmiy rahbar</span><div class="resize-handle"></div></th>
+          <th data-col-key="sana"><span class="col-label">Sana</span><div class="resize-handle"></div></th>
+          <th data-col-key="star" title="Saqlanganlar">⭐</th>
         </tr></thead>
         <tbody id="table-body">
-          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:85%"></div></td></tr>
-          <tr class="skeleton-row"><td colspan="7"><div class="skeleton-bar" style="width:92%"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="8"><div class="skeleton-bar"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="8"><div class="skeleton-bar" style="width:85%"></div></td></tr>
+          <tr class="skeleton-row"><td colspan="8"><div class="skeleton-bar" style="width:92%"></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -356,6 +482,24 @@
 
     <div class="pagination-bar" id="pagination-bar"></div>
   </div>
+    </div><!-- /right column -->
+  </div><!-- /dash-wrap -->
+
+  <!-- ═══ IQTIBOS MODALI (GOST + APA) ═══ -->
+  <div id="cite-modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="cite-modal">
+      <h3 style="font-size:1rem;margin:0 0 12px;">📋 Iqtibos olish</h3>
+      <div class="cite-label">GOST (O'zbekiston OAK uslubi)</div>
+      <div class="cite-box" id="cite-gost"></div>
+      <button class="hdr-btn" onclick="copyCite('cite-gost', this)">📋 Nusxalash</button>
+      <div class="cite-label" style="margin-top:14px;">APA 7</div>
+      <div class="cite-box" id="cite-apa"></div>
+      <button class="hdr-btn" onclick="copyCite('cite-apa', this)">📋 Nusxalash</button>
+      <div style="text-align:right;margin-top:10px;">
+        <button class="hdr-btn" onclick="document.getElementById('cite-modal-bg').classList.remove('show')">Yopish</button>
+      </div>
+    </div>
+  </div>
 
   {{ ad_banner('dashboard-bottom', 'horizontal') }}
 {% endblock %}
@@ -366,6 +510,10 @@
   let currentTotal = 0;
   let currentRecords = [];
   let currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'', gender:'' };
+  // v2 facet holati (ProQuest uslubi) — eski filtrlarga qo'shimcha
+  let facetState = { daraja: [], fan: [], muassasa: [], ixt: [],
+                     yilMin: '', yilMax: '', saved: false, sort: 'sana_desc' };
+  let lastFacets = null;
   let currentScope = 'all';
   let searchController = null;
   let summaryController = null;
@@ -397,7 +545,7 @@
   }
   function renderRows(records, startIndex) {
     if (!records.length) {
-      tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i><div>Ma\'lumot topilmadi</div></div></td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i><div>Ma\'lumot topilmadi</div></div></td></tr>';
       return;
     }
     const term = currentFilters.search.trim();
@@ -435,15 +583,16 @@
         : escHtml(shifr);
       rows.push(`<tr class="data-row" data-row-id="${rowId}">
           <td data-col-key="num" style="color:var(--oak-muted);font-size:0.78rem;">${startIndex + i + 1}</td>
-          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
           <td data-col-key="olim" class="cell-olim">${olimLink}</td>
           <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}${opponentBadge}</td>
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
           <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
+          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
+          <td data-col-key="star" class="cell-star ${r.bookmarked ? 'on' : ''}" onclick="event.stopPropagation();toggleBookmark(${num}, this)" title="Saqlash">${r.bookmarked ? '★' : '☆'}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
-          <td colspan="7">
+          <td colspan="8">
             <div class="detail-grid">
               <div class="detail-item"><label>Mavzu (to'liq)</label><span>${escHtml(r.Mavzu || '—')}</span></div>
               <div class="detail-item"><label>Ixtisoslik</label><span>${escHtml(r.Ixtisoslik || '—')}</span></div>
@@ -454,6 +603,8 @@
             </div>
             <div class="detail-actions">
               <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-file-text me-1"></i>Batafsil</a>
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openCite(${i})">📋 Iqtibos</button>
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();toggleBookmark(${num}, this.closest('tr').previousElementSibling?.querySelector('.cell-star'))">${r.bookmarked ? '★ Saqlangan' : '☆ Saqlash'}</button>
               ${(r.Link || r.oak_id) ? `<a href="${escHtml(r.Link || 'https://oak.uz/pages/' + r.oak_id)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish →</a>` : ''}
             </div>
           </td>
@@ -605,7 +756,8 @@
 
   function applyInitialFiltersFromUrl() {
     const p = new URLSearchParams(window.location.search);
-    currentFilters.search = p.get('search') || '';
+    // q (yangi) yoki search (eski) — ikkalasi ham qabul qilinadi
+    currentFilters.search = p.get('q') || p.get('search') || '';
     document.getElementById('search-input').value = currentFilters.search;
     const cb = document.getElementById('search-clear-btn');
     if (cb) cb.style.display = currentFilters.search ? '' : 'none';
@@ -615,9 +767,76 @@
     if (csIxti) csIxti.setValue(currentFilters.ixtisoslik);
     if (csSana) csSana.setValue(currentFilters.sana_yil);
 
+    // daraja: eski bitta qiymat eski tugmalarga, vergul bo'lsa facet holatiga
     const darajaParam = p.get('daraja') || '';
-    _setDaraja(darajaParam);
+    if (darajaParam.includes(',')) {
+      facetState.daraja = darajaParam.split(',').filter(Boolean);
+      _setDaraja('');
+    } else {
+      _setDaraja(darajaParam);
+    }
     _setGender(p.get('gender') || '');
+
+    const scopeParam = p.get('scope') || '';
+    if (['all','olim','rahbar','opponent','mavzu'].includes(scopeParam)) {
+      currentScope = scopeParam;
+      document.querySelectorAll('.scope-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.scope === scopeParam));
+    }
+    // v2 facetlar
+    facetState.fan = (p.get('fan') || '').split(',').filter(Boolean);
+    facetState.muassasa = (p.get('muassasa') || '').split(',').filter(Boolean);
+    facetState.ixt = (p.get('ixt') || '').split(',').filter(Boolean);
+    const yil = p.get('yil') || '';
+    const ym = yil.match(/^(\d{4})-(\d{4})$/);
+    if (ym) { facetState.yilMin = ym[1]; facetState.yilMax = ym[2]; }
+    else if (/^\d{4}$/.test(yil)) { facetState.yilMin = facetState.yilMax = yil; }
+    facetState.saved = p.get('saved') === '1';
+    const sortP = p.get('sort');
+    if (['sana_desc','sana_asc','olim_az'].includes(sortP)) facetState.sort = sortP;
+    const ss = document.getElementById('sort-select');
+    if (ss) ss.value = facetState.sort;
+    const st = document.getElementById('saved-toggle');
+    if (st) st.classList.toggle('on', facetState.saved);
+    document.getElementById('yil-min').value = facetState.yilMin;
+    document.getElementById('yil-max').value = facetState.yilMax;
+    try { currentPage = Math.max(1, parseInt(p.get('page') || '1', 10)); } catch(e) {}
+  }
+
+  // ── so'rov parametrlari (URL sync va fetch uchun YAGONA manba) ──
+  function buildSearchParams(withPage) {
+    const params = new URLSearchParams();
+    if (currentFilters.search) params.set('q', currentFilters.search);
+    if (currentScope !== 'all') params.set('scope', currentScope);
+    // daraja: eski bitta tugma YOKI yangi checkboxlar (birlashtiriladi)
+    const darajaVals = facetState.daraja.length
+      ? facetState.daraja
+      : (currentFilters.daraja ? [currentFilters.daraja] : []);
+    if (darajaVals.length) params.set('daraja', darajaVals.join(','));
+    if (currentFilters.gender) params.set('gender', currentFilters.gender);
+    if (facetState.fan.length) params.set('fan', facetState.fan.join(','));
+    if (facetState.muassasa.length) params.set('muassasa', facetState.muassasa.join(','));
+    const ixtVals = facetState.ixt.length
+      ? facetState.ixt
+      : (currentFilters.ixtisoslik ? [currentFilters.ixtisoslik] : []);
+    if (ixtVals.length) params.set('ixt', ixtVals.join(','));
+    if (facetState.yilMin || facetState.yilMax) {
+      params.set('yil', (facetState.yilMin || facetState.yilMax) + '-' + (facetState.yilMax || facetState.yilMin));
+    } else if (currentFilters.sana_yil) {
+      params.set('yil', currentFilters.sana_yil);
+    }
+    if (facetState.saved) params.set('saved', '1');
+    if (facetState.sort !== 'sana_desc') params.set('sort', facetState.sort);
+    if (facetState.sort === 'sana_desc') params.delete('sort');
+    if (withPage) { params.set('page', currentPage); params.set('sort', facetState.sort); }
+    return params;
+  }
+
+  function syncUrl() {
+    const params = buildSearchParams(false);
+    if (currentPage > 1) params.set('page', currentPage);
+    const qs = params.toString();
+    history.replaceState(null, '', qs ? '/dashboard?' + qs : '/dashboard');
   }
 
   // ── Daraja toggle buttons ──────────────────────────────────────────────────
@@ -657,7 +876,7 @@
 
   function showSkeleton() {
     const cell = `<td><div style="height:14px;background:rgba(255,255,255,0.06);border-radius:4px;animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
-    tableBody.innerHTML = Array(8).fill(`<tr>${Array(7).fill(cell).join('')}</tr>`).join('');
+    tableBody.innerHTML = Array(8).fill(`<tr>${Array(8).fill(cell).join('')}</tr>`).join('');
   }
   function _searchSpinner(on) {
     const icon = document.getElementById('search-icon');
@@ -732,17 +951,8 @@
     // Dim existing rows instead of clearing — keeps context visible while loading
     tableBody.style.opacity = '0.5';
     _searchSpinner(true);
-    const params = new URLSearchParams({
-      search:     currentFilters.search,
-      daraja:     currentFilters.daraja,
-      ixtisoslik: currentFilters.ixtisoslik,
-      sana_yil:   currentFilters.sana_yil,
-      gender:     currentFilters.gender,
-      page:       currentPage,
-      per_page:   PER_PAGE,
-      scope:      currentScope
-    });
-    fetch('/data?' + params, { signal: searchController.signal })
+    const params = buildSearchParams(true);
+    fetch('/api/dashboard/search?' + params, { signal: searchController.signal })
       .then(r => r.json())
       .then(data => {
         currentTotal   = data.total;
@@ -750,12 +960,17 @@
         renderRows(currentRecords, (data.page - 1) * PER_PAGE);
         renderInfo(data.page, data.total);
         renderPagination(data.page, data.total);
+        if (data.facets) { lastFacets = data.facets; renderFacets(data.facets); }
+        if (data.histogram) renderHistogram(data.histogram);
+        renderChips();
+        syncUrl();
+        updateExportLink();
         tableBody.style.opacity = '1';
         _searchSpinner(false);
       })
       .catch(e => {
         if (e.name === 'AbortError') return;
-        tableBody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-exclamation-triangle"></i><div>Ma\'lumotlarni yuklashda xatolik yuz berdi</div></div></td></tr>';
         tableBody.style.opacity = '1';
         _searchSpinner(false);
       });
@@ -825,13 +1040,24 @@
     document.querySelectorAll('.scope-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === 'all'));
     customSelects.forEach(s => s.reset());
     currentFilters = { search:'', daraja:'', ixtisoslik:'', sana_yil:'', gender:'' };
+    clearFacetState();
     updateData(true);
   });
 
+  function clearFacetState() {
+    facetState = { daraja: [], fan: [], muassasa: [], ixt: [],
+                   yilMin: '', yilMax: '', saved: false, sort: facetState.sort };
+    document.getElementById('yil-min').value = '';
+    document.getElementById('yil-max').value = '';
+    document.getElementById('ixt-input').value = '';
+    const st = document.getElementById('saved-toggle');
+    if (st) st.classList.remove('on');
+  }
+
   // ── Column resize (independent via <col> widths) ──────────────────────────
   const defaultWidths = {
-    'col-num': 35, 'col-sana': 85, 'col-olim': 180,
-    'col-mavzu': 300, 'col-daraja': 55, 'col-ixtisoslik': 75, 'col-rahbar': 180
+    'col-num': 35, 'col-olim': 180, 'col-mavzu': 300, 'col-daraja': 55,
+    'col-ixtisoslik': 75, 'col-rahbar': 180, 'col-sana': 85, 'col-star': 40
   };
   function saveColWidth(colId, width) {
     try { localStorage.setItem('col-width-' + colId, width); } catch(e) {}
@@ -850,7 +1076,7 @@
       const handle = th.querySelector('.resize-handle');
       if (!handle) return;
       // map th data-col-key → col id
-      const colKeyMap = { num:'col-num', sana:'col-sana', olim:'col-olim', mavzu:'col-mavzu', daraja:'col-daraja', ixti:'col-ixtisoslik', rahbar:'col-rahbar' };
+      const colKeyMap = { num:'col-num', olim:'col-olim', mavzu:'col-mavzu', daraja:'col-daraja', ixti:'col-ixtisoslik', rahbar:'col-rahbar', sana:'col-sana', star:'col-star' };
       const colId = colKeyMap[th.dataset.colKey];
       if (!colId) return;
       let startX = 0, startW = 0;
@@ -877,21 +1103,14 @@
     });
   }
 
-  // ── Font size ──────────────────────────────────────────────────────────────
-  function setFontSize(size) {
-    const t = document.querySelector('.data-table');
-    if (t) t.style.fontSize = size + 'px';
-    try { localStorage.setItem('table-font-size', size); } catch(e) {}
-  }
-
   // ── Column visibility ──────────────────────────────────────────────────────
   const COL_VIS_KEY = 'dashboard-col-visibility';
   const COL_DEFS = [
-    { key: 'sana',   label: 'Sana' },
     { key: 'olim',   label: 'Olim' },
     { key: 'daraja', label: 'Daraja' },
     { key: 'ixti',   label: 'Ixtisoslik' },
     { key: 'rahbar', label: 'Ilmiy rahbar' },
+    { key: 'sana',   label: 'Sana' },
   ];
   let colVis = {};
   function loadColVis() {
@@ -922,9 +1141,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    // restore font size
-    const savedSize = localStorage.getItem('table-font-size');
-    if (savedSize) { const t = document.querySelector('.data-table'); if (t) t.style.fontSize = savedSize + 'px'; }
     loadColVis(); applyColVis(); initColToggle();
     applyColWidths();
     await loadFilters();
@@ -933,6 +1149,313 @@
     updateData(true);
     initResizeHandles();
   });
+
+  // ════════════════════════════════════════════════════════════════════
+  // DASHBOARD v2 — facetlar, chips, histogram, iqtibos, bookmark, eksport
+  // ════════════════════════════════════════════════════════════════════
+  const LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
+  let facetExpanded = { fan: false, muassasa: false };
+  let muassasaQuery = '';
+
+  function facetToggle(kind, value) {
+    const arr = facetState[kind];
+    const i = arr.indexOf(value);
+    if (i >= 0) arr.splice(i, 1); else arr.push(value);
+    updateData(true);
+  }
+
+  function renderFacetGroup(kind, items, selected, hostSel, moreSel) {
+    const host = document.querySelector(hostSel);
+    if (!host) return;
+    let list = items || [];
+    if (kind === 'muassasa' && muassasaQuery) {
+      list = list.filter(it => it.value.toLowerCase().includes(muassasaQuery));
+    }
+    const visible = facetExpanded[kind] ? list : list.slice(0, kind === 'muassasa' ? 15 : 10);
+    host.innerHTML = visible.map(it => {
+      const checked = selected.includes(it.value) || (kind === 'daraja' && selected.map(s=>s.toUpperCase()).includes(it.value));
+      const label = kind === 'daraja' ? (it.value === 'PHD' ? 'PhD' : 'DSc') : it.value;
+      return `<label class="facet-opt"><input type="checkbox" data-fv="${escHtml(it.value)}" ${checked ? 'checked' : ''}>` +
+        `<span class="fo-label" title="${escHtml(label)}">${escHtml(label)}</span>` +
+        `<span class="fo-count">${(it.count || 0).toLocaleString('uz')}</span></label>`;
+    }).join('') || '<div style="color:#64748b;font-size:0.78rem;">—</div>';
+    host.querySelectorAll('input[data-fv]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const v = cb.dataset.fv;
+        facetToggle(kind, kind === 'daraja' ? (v === 'PHD' ? 'PhD' : 'DSc') : v);
+      });
+    });
+    const moreBtn = document.querySelector(moreSel);
+    if (moreBtn) {
+      moreBtn.style.display = list.length > visible.length || facetExpanded[kind] ? '' : 'none';
+      moreBtn.textContent = facetExpanded[kind] ? "Kamroq ko'rsatish ▴" : "Ko'proq ko'rsatish ▾";
+    }
+  }
+
+  function renderFacets(facets) {
+    renderFacetGroup('daraja', facets.daraja, facetState.daraja, '#fg-daraja .fg-opts', null);
+    renderFacetGroup('fan', facets.fan, facetState.fan, '#fg-fan .fg-opts', '[data-more="fan"]');
+    renderFacetGroup('muassasa', facets.muassasa, facetState.muassasa, '#fg-muassasa .fg-opts', '[data-more="muassasa"]');
+    // faol filtr soni (mobil tugma badge)
+    const n = facetState.daraja.length + facetState.fan.length + facetState.muassasa.length +
+      facetState.ixt.length + (facetState.yilMin || facetState.yilMax ? 1 : 0) + (facetState.saved ? 1 : 0);
+    const badge = document.getElementById('facet-count-badge');
+    if (badge) badge.textContent = n ? '(' + n + ')' : '';
+  }
+
+  document.querySelectorAll('.facet-more').forEach(btn => {
+    btn.addEventListener('click', () => {
+      facetExpanded[btn.dataset.more] = !facetExpanded[btn.dataset.more];
+      if (lastFacets) renderFacets(lastFacets);
+    });
+  });
+  document.getElementById('muassasa-filter')?.addEventListener('input', function() {
+    muassasaQuery = this.value.trim().toLowerCase();
+    if (lastFacets) renderFacets(lastFacets);
+  });
+
+  // ixtisoslik chips + autocomplete (prefiks — /filters ro'yxatidan)
+  let ixtAllCodes = [];
+  (async () => {
+    try { const d = await (await fetch('/filters')).json(); ixtAllCodes = d.ixtisoslik || []; } catch(e) {}
+  })();
+  const ixtInput = document.getElementById('ixt-input');
+  ixtInput?.addEventListener('input', function() {
+    const v = this.value.trim();
+    const dl = document.getElementById('ixt-datalist');
+    if (dl && v.length >= 1) {
+      dl.innerHTML = ixtAllCodes.filter(c => c.startsWith(v)).slice(0, 12)
+        .map(c => `<option value="${escHtml(c)}">`).join('');
+    }
+  });
+  ixtInput?.addEventListener('change', function() {
+    const v = this.value.trim();
+    if (/^\d{2}(\.\d{2}(\.\d{2})?)?$/.test(v) && !facetState.ixt.includes(v)) {
+      facetState.ixt.push(v);
+      this.value = '';
+      renderIxtChips();
+      updateData(true);
+    }
+  });
+  function renderIxtChips() {
+    const host = document.getElementById('ixt-chips');
+    if (!host) return;
+    host.innerHTML = facetState.ixt.map(c =>
+      `<span class="facet-chip">${escHtml(c)} <button data-rm-ixt="${escHtml(c)}">✕</button></span>`).join('');
+    host.querySelectorAll('[data-rm-ixt]').forEach(b => b.addEventListener('click', () => {
+      facetState.ixt = facetState.ixt.filter(x => x !== b.dataset.rmIxt);
+      renderIxtChips();
+      updateData(true);
+    }));
+  }
+
+  // yil filtri
+  document.getElementById('yil-apply')?.addEventListener('click', () => {
+    facetState.yilMin = document.getElementById('yil-min').value.trim();
+    facetState.yilMax = document.getElementById('yil-max').value.trim();
+    updateData(true);
+  });
+  document.getElementById('yil-range')?.addEventListener('change', function() {
+    facetState.yilMin = facetState.yilMax = this.value;
+    document.getElementById('yil-min').value = this.value;
+    document.getElementById('yil-max').value = this.value;
+    updateData(true);
+  });
+
+  // ── faol filtr chiplari ──
+  function renderChips() {
+    const host = document.getElementById('active-chips');
+    if (!host) return;
+    const chips = [];
+    const chip = (label, fn) => chips.push({ label, fn });
+    facetState.daraja.forEach(d => chip(d, () => facetToggle('daraja', d)));
+    if (facetState.yilMin || facetState.yilMax) {
+      const l = (facetState.yilMin || '…') + '–' + (facetState.yilMax || '…');
+      chip('📅 ' + l, () => { facetState.yilMin = facetState.yilMax = '';
+        document.getElementById('yil-min').value = ''; document.getElementById('yil-max').value = '';
+        updateData(true); });
+    }
+    facetState.fan.forEach(f => chip(f.length > 28 ? f.slice(0, 28) + '…' : f, () => facetToggle('fan', f)));
+    facetState.muassasa.forEach(m => chip('🏛️ ' + (m.length > 28 ? m.slice(0, 28) + '…' : m), () => facetToggle('muassasa', m)));
+    facetState.ixt.forEach(c => chip('🔢 ' + c, () => {
+      facetState.ixt = facetState.ixt.filter(x => x !== c); renderIxtChips(); updateData(true); }));
+    if (facetState.saved) chip('⭐ Saqlanganlar', () => { facetState.saved = false;
+      document.getElementById('saved-toggle')?.classList.remove('on'); updateData(true); });
+    host.innerHTML = '';
+    chips.forEach(c => {
+      const el = document.createElement('span');
+      el.className = 'facet-chip';
+      el.innerHTML = escHtml(c.label) + ' <button>✕</button>';
+      el.querySelector('button').addEventListener('click', c.fn);
+      host.appendChild(el);
+    });
+    if (chips.length) {
+      const clr = document.createElement('button');
+      clr.className = 'chips-clear';
+      clr.textContent = 'Hammasini tozalash';
+      clr.addEventListener('click', () => { clearFacetState(); renderIxtChips(); updateData(true); });
+      host.appendChild(clr);
+    }
+    renderIxtChips();
+  }
+
+  // ── yil histogrammasi (sof SVG) ──
+  const YH_KEY = 'dashboard-histogram-visible';
+  function renderHistogram(hist) {
+    const box = document.getElementById('year-histogram');
+    const svg = document.getElementById('yh-svg');
+    if (!box || !svg) return;
+    if (!hist || !hist.length) { box.style.display = 'none'; return; }
+    const visible = localStorage.getItem(YH_KEY) !== '0';
+    box.style.display = '';
+    if (window.innerWidth >= 768 || box.classList.contains('mobile-show')) box.style.display = '';
+    svg.style.display = visible ? '' : 'none';
+    document.getElementById('yh-toggle').textContent = visible ? 'yashirish ▴' : "ko'rsatish ▾";
+    if (!visible) return;
+    const W = 1000, H = 64, max = Math.max(...hist.map(h => h.count));
+    const bw = W / hist.length;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.innerHTML = hist.map((h, i) => {
+      const bh = Math.max(2, (h.count / max) * (H - 14));
+      return `<rect class="yh-bar" x="${(i * bw + 1).toFixed(1)}" y="${(H - bh).toFixed(1)}" ` +
+        `width="${Math.max(1, bw - 2).toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" ` +
+        `data-year="${h.year}" data-count="${h.count}"></rect>`;
+    }).join('');
+    const tip = document.getElementById('yh-tip');
+    svg.querySelectorAll('.yh-bar').forEach(bar => {
+      bar.addEventListener('mousemove', e => {
+        tip.style.display = 'block';
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 30) + 'px';
+        tip.textContent = bar.dataset.year + ': ' + (+bar.dataset.count).toLocaleString('uz') + ' ta';
+      });
+      bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      bar.addEventListener('click', () => {
+        facetState.yilMin = facetState.yilMax = bar.dataset.year;
+        document.getElementById('yil-min').value = bar.dataset.year;
+        document.getElementById('yil-max').value = bar.dataset.year;
+        updateData(true);
+      });
+    });
+  }
+  document.getElementById('yh-toggle')?.addEventListener('click', () => {
+    const cur = localStorage.getItem(YH_KEY) !== '0';
+    localStorage.setItem(YH_KEY, cur ? '0' : '1');
+    updateData(false);
+  });
+
+  // ── sort / saved / havola / eksport ──
+  document.getElementById('sort-select')?.addEventListener('change', function() {
+    facetState.sort = this.value;
+    updateData(true);
+  });
+  document.getElementById('saved-toggle')?.addEventListener('click', function() {
+    facetState.saved = !facetState.saved;
+    this.classList.toggle('on', facetState.saved);
+    updateData(true);
+  });
+  document.getElementById('copy-link-btn')?.addEventListener('click', function() {
+    const url = window.location.href;
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+      .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => this.textContent = '🔗 Havolani nusxalash', 1600); })
+      .catch(() => prompt('Havolani nusxalang:', url));
+  });
+  function updateExportLink() {
+    const a = document.getElementById('export-btn');
+    if (a) a.href = '/api/dashboard/export.csv?' + buildSearchParams(false).toString();
+  }
+  document.getElementById('export-btn')?.addEventListener('click', function(e) {
+    if (!LOGGED_IN) {
+      e.preventDefault();
+      if (confirm("Eksport uchun tizimga kirish kerak. Kirish sahifasiga o'tilsinmi?"))
+        window.location.href = '/login';
+    }
+  });
+
+  // ── mobil filter drawer ──
+  const facetSide = document.getElementById('facet-side');
+  const facetBackdrop = document.getElementById('facet-backdrop');
+  function openFacetDrawer() {
+    facetSide.classList.add('open');
+    facetBackdrop.classList.add('show');
+    document.getElementById('facet-close').style.display = '';
+    document.getElementById('facet-apply-mobile').style.display = '';
+  }
+  function closeFacetDrawer() {
+    facetSide.classList.remove('open');
+    facetBackdrop.classList.remove('show');
+  }
+  document.getElementById('facet-mobile-btn')?.addEventListener('click', openFacetDrawer);
+  document.getElementById('facet-close')?.addEventListener('click', closeFacetDrawer);
+  facetBackdrop?.addEventListener('click', closeFacetDrawer);
+  document.getElementById('facet-apply-mobile')?.addEventListener('click', closeFacetDrawer);
+  // mobil apply tugmasida natija sonini ko'rsatish
+  const _origRenderInfo = renderInfo;
+  renderInfo = function(page, total) {
+    _origRenderInfo(page, total);
+    const btn = document.getElementById('facet-apply-mobile');
+    if (btn) btn.textContent = 'Natijalarni ko\'rsatish (' + total.toLocaleString('uz') + ')';
+  };
+
+  // ── bookmark (Google Scholar "Save") ──
+  window.toggleBookmark = function(dissId, starEl) {
+    if (!LOGGED_IN) {
+      if (starEl) {
+        const old = starEl.title;
+        starEl.title = 'Saqlash uchun tizimga kiring';
+      }
+      if (confirm("Saqlash uchun tizimga kirish kerak. Kirish sahifasiga o'tilsinmi?"))
+        window.location.href = '/login';
+      return;
+    }
+    fetch('/api/bookmarks/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dissertation_id: dissId })
+    }).then(r => r.json()).then(d => {
+      if (!d.success) return;
+      if (starEl) {
+        starEl.classList.toggle('on', d.bookmarked);
+        starEl.textContent = d.bookmarked ? '★' : '☆';
+      }
+      const rec = currentRecords.find(r => r.id === dissId);
+      if (rec) rec.bookmarked = d.bookmarked;
+    }).catch(() => {});
+  };
+
+  // ── iqtibos (ProQuest "Cite"): GOST + APA, mavjud satr ma'lumotidan ──
+  window.openCite = function(idx) {
+    const r = currentRecords[idx];
+    if (!r) return;
+    const olim = (r.Olim || '').trim();
+    // "Familiya Ism Otaism" → "Familiya I.O." (GOST) va "Familiya, I." (APA)
+    const parts = olim.split(/\s+/);
+    const fam = parts[0] || '';
+    const initials = parts.slice(1).map(p => p[0] ? p[0].toUpperCase() + '.' : '').join('');
+    const yearM = String(r.Sana || '').match(/(19|20)\d{2}/);
+    const year = yearM ? yearM[0] : '';
+    const daraja = (r.Daraja || '').toUpperCase() === 'DSC'
+      ? 'fan doktori (DSc)' : 'falsafa doktori (PhD)';
+    const gost = [
+      fam && initials ? `${fam} ${initials}` : olim,
+      r.Mavzu ? `${r.Mavzu}: ${daraja} diss. avtoref.` : '',
+      [r.Muassasa ? `— ${r.Muassasa}` : '', year ? `${year}.` : ''].filter(Boolean).join(', ')
+    ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    const apaParts = [];
+    if (fam) apaParts.push(`${fam},${initials ? ' ' + initials : ''}`);
+    if (year) apaParts.push(`(${year}).`);
+    if (r.Mavzu) apaParts.push(`${r.Mavzu}`);
+    apaParts.push(`[Doctoral dissertation${r.Muassasa ? ', ' + r.Muassasa : ''}].`);
+    document.getElementById('cite-gost').textContent = gost;
+    document.getElementById('cite-apa').textContent = apaParts.join(' ').replace(/\s+/g, ' ').trim();
+    document.getElementById('cite-modal-bg').classList.add('show');
+  };
+  window.copyCite = function(boxId, btn) {
+    const text = document.getElementById(boxId).textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => btn.textContent = '📋 Nusxalash', 1500); })
+      .catch(() => prompt('Nusxalang:', text));
+  };
 
   // ════════════════════════════════════════════════════════════════════
   // CARD VIEW (additive — reuses the table's data source, filters & paging)
