@@ -1,147 +1,255 @@
 {% extends "base.html" %}
-{% block title %}Ilmiy grantlar va stipendiyalar — Olimlar.uz{% endblock %}
+{% block title %}Ilmiy Grantlar va Stipendiyalar — Olimlar.uz{% endblock %}
+{% block meta_description %}Xalqaro va mahalliy grantlar, stipendiyalar: DAAD, Fulbright, Erasmus, El-yurt umidi va boshqalar. Muddatlar, talablar, hujjatlar ro'yxati.{% endblock %}
+
+{% block extra_head %}
+<style>
+.gr-hero { text-align: center; padding: 10px 0 6px; }
+.gr-hero h1 { font-size: 1.7rem; margin-bottom: 6px; }
+.gr-hero p { color: #94a3b8; margin-bottom: 10px; }
+.gr-stats { display: flex; gap: 8px 22px; justify-content: center; flex-wrap: wrap; color: #64748b; font-size: 0.88rem; }
+.gr-stats b { color: var(--oak-accent, #4a9eff); }
+.gr-search { max-width: 560px; margin: 16px auto 0; position: relative; }
+.gr-search input { width: 100%; padding: 11px 16px 11px 42px; border-radius: 50px; border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(148,163,184,0.06); color: inherit; font-size: 0.95rem; }
+.gr-search::before { content: "🔍"; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); }
+
+.gr-filterbar { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(10px);
+  background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.15); border-radius: 14px;
+  padding: 10px 14px; margin: 18px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+[data-bs-theme="light"] .gr-filterbar { background: rgba(255,255,255,0.9); }
+.gr-filterbar select { border: 1px solid rgba(148,163,184,0.25); border-radius: 10px; padding: 7px 10px;
+  background: transparent; color: inherit; font-size: 0.85rem; }
+.gr-filterbar select option { color: #0f172a; }
+.gr-toggle-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.gr-toggle { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  padding: 6px 13px; border-radius: 50px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.gr-toggle.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+.gr-clear { border: none; background: rgba(239,68,68,0.1); color: #f87171; border-radius: 10px;
+  padding: 7px 13px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+
+.gr-row-title { font-size: 1.02rem; font-weight: 800; margin: 22px 0 12px; display: flex; align-items: center; gap: 8px; }
+.gr-carousel { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 10px; scroll-snap-type: x mandatory; }
+.gr-carousel .gr-card { min-width: 320px; max-width: 320px; scroll-snap-align: start; border-color: rgba(74,158,255,0.4); }
+
+.gr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 1024px) { .gr-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .gr-grid { grid-template-columns: 1fr; } }
+
+.gr-card { border: 1px solid rgba(148,163,184,0.15); border-radius: 16px; overflow: hidden;
+  background: rgba(30,41,59,0.55); backdrop-filter: blur(8px); display: flex; flex-direction: column;
+  transition: transform 0.15s, box-shadow 0.15s; }
+[data-bs-theme="light"] .gr-card { background: #fff; box-shadow: 0 1px 8px rgba(15,23,42,0.06); }
+.gr-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(15,23,42,0.28); }
+.gr-card.urgent { border-color: rgba(239,68,68,0.6); animation: grPulse 1.6s ease-in-out infinite; }
+@keyframes grPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
+.gr-card.expired { opacity: 0.55; filter: grayscale(0.5); }
+.gr-cover { height: 110px; background: linear-gradient(135deg, #1e40af, #7c5cfc); background-size: cover;
+  background-position: center; position: relative; }
+.gr-cover .gr-badge { position: absolute; top: 10px; right: 10px; background: rgba(15,23,42,0.75);
+  color: #fbbf24; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; }
+.gr-cover .gr-badge.expired-badge { color: #cbd5e1; }
+.gr-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.gr-org { color: #94a3b8; font-size: 0.76rem; }
+.gr-title-l { font-weight: 700; font-size: 0.97rem; line-height: 1.35; }
+.gr-title-l a { color: inherit; text-decoration: none; }
+.gr-title-l a:hover { color: var(--oak-accent, #4a9eff); }
+.gr-meta { display: flex; gap: 6px 12px; flex-wrap: wrap; color: #94a3b8; font-size: 0.8rem; }
+.gr-deadline { margin-top: auto; }
+.gr-deadline-txt { display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; margin-bottom: 5px; }
+.gr-bar { height: 6px; border-radius: 6px; background: rgba(148,163,184,0.18); overflow: hidden; }
+.gr-bar i { display: block; height: 100%; border-radius: 6px; }
+.gr-actions { display: flex; gap: 8px; margin-top: 10px; }
+.gr-btn { flex: 1; text-align: center; border-radius: 10px; padding: 8px 10px; font-size: 0.84rem; font-weight: 700;
+  cursor: pointer; text-decoration: none; border: none; }
+.gr-btn.primary { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; }
+.gr-btn.track { background: rgba(148,163,184,0.12); color: inherit; border: 1px solid rgba(148,163,184,0.25); }
+.gr-btn.track.tracked { background: rgba(34,197,94,0.14); color: #4ade80; border-color: rgba(34,197,94,0.4); }
+
+.gr-pagination { display: flex; gap: 6px; justify-content: center; align-items: center; margin: 22px 0 4px; flex-wrap: wrap; }
+.gr-page-btn { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  min-width: 36px; padding: 7px 10px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+.gr-page-btn.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+.gr-results { text-align: center; color: #94a3b8; font-size: 0.82rem; }
+.gr-empty { text-align: center; padding: 52px 0; color: #94a3b8; }
+.gr-empty .ic { font-size: 2.6rem; }
+
+.gr-kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.gr-kcol { border: 1px solid rgba(148,163,184,0.15); border-radius: 14px; padding: 12px; background: rgba(30,41,59,0.4); }
+[data-bs-theme="light"] .gr-kcol { background: #f8fafc; }
+.gr-kcol h4 { font-size: 0.85rem; margin-bottom: 10px; }
+.gr-kcard { border: 1px solid rgba(148,163,184,0.18); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px;
+  background: rgba(15,23,42,0.35); font-size: 0.85rem; }
+[data-bs-theme="light"] .gr-kcard { background: #fff; }
+.gr-kcard a { color: inherit; font-weight: 700; text-decoration: none; }
+.gr-kcard textarea { width: 100%; margin-top: 8px; border-radius: 8px; border: 1px solid rgba(148,163,184,0.25);
+  background: transparent; color: inherit; font-size: 0.8rem; padding: 6px 8px; min-height: 44px; }
+.gr-kcard select { margin-top: 6px; width: 100%; border-radius: 8px; padding: 5px; font-size: 0.8rem;
+  border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit; }
+.gr-kcard select option { color: #0f172a; }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-  .grants-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 22px; align-items: start; }
-  .grants-filters { background: var(--card-bg, #0f172a); border: 1px solid #334155;
-    border-radius: 14px; padding: 18px; position: sticky; top: 80px; }
-  .grants-filters h4 { margin: 0 0 6px; font-size: 0.82rem; text-transform: uppercase;
-    letter-spacing: .04em; color: #94a3b8; }
-  .gf-group { margin-bottom: 16px; }
-  .gf-opt { display: flex; align-items: center; gap: 8px; font-size: 0.9rem;
-    color: #cbd5e1; padding: 3px 0; cursor: pointer; }
-  .grants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  .grant-card { background: var(--card-bg, #0f172a); border: 1px solid #334155;
-    border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
-  .grant-card h3 { margin: 0; font-size: 1.05rem; }
-  .grant-card h3 a { color: #f1f5f9; text-decoration: none; }
-  .grant-meta { display: flex; flex-wrap: wrap; gap: 6px; }
-  .g-tag { font-size: 0.72rem; padding: 2px 9px; border-radius: 999px;
-    background: #1e293b; color: #93c5fd; }
-  .g-tag.full { background: #052e16; color: #4ade80; }
-  .g-tag.partial { background: #422006; color: #fbbf24; }
-  .g-countdown { font-weight: 700; font-size: 0.85rem; color: #f87171; }
-  .g-countdown.safe { color: #4ade80; }
-  .grants-empty { padding: 40px; text-align: center; color: #94a3b8; }
-  @media (max-width: 820px) { .grants-wrap { grid-template-columns: 1fr; }
-    .grants-filters { position: static; } }
-</style>
-
-<div class="container-xl" style="padding-top:18px;">
-  <h1 style="margin:0 0 4px;">🎓 Ilmiy grantlar va stipendiyalar</h1>
-  <p style="color:#94a3b8;margin:0 0 18px;">Erasmus+, Fulbright, DAAD, El-yurt umidi va boshqalar.</p>
-
-  <div class="grants-wrap">
-    <aside class="grants-filters" id="grantFilters">
-      <div class="gf-group">
-        <h4>Moliyalashtirish</h4>
-        {% for f in funding_types %}
-        <label class="gf-opt"><input type="checkbox" name="funding_type" value="{{ f }}"> {{ f }}</label>
-        {% endfor %}
-      </div>
-      <div class="gf-group">
-        <h4>Daraja</h4>
-        {% for l in academic_levels %}
-        <label class="gf-opt"><input type="checkbox" name="academic_level" value="{{ l }}"> {{ l }}</label>
-        {% endfor %}
-      </div>
-      <div class="gf-group">
-        <h4>Davlat</h4>
-        {% for c in countries %}
-        <label class="gf-opt"><input type="checkbox" name="country" value="{{ c }}"> {{ c }}</label>
-        {% endfor %}
-      </div>
-      <div class="gf-group">
-        <h4>Mutaxassislik shifri</h4>
-        <input type="text" id="codeFilter" placeholder="05.01.01" class="form-control form-control-sm"
-               style="background:#162032;border:1px solid #334155;color:#e2e8f0;">
-      </div>
-    </aside>
-
-    <div>
-      <div id="grantsCount" style="color:#94a3b8;font-size:0.85rem;margin-bottom:10px;"></div>
-      <div class="grants-grid" id="grantsGrid"></div>
+{# ── card macro (grants.js renderCard() mirrors this markup for AJAX) ── #}
+{% macro card(g, tracking) %}
+<div class="gr-card {{ 'urgent' if g.days_remaining is not none and 0 <= g.days_remaining < 7 }} {{ 'expired' if g.expired }}" data-grant-id="{{ g.id }}">
+  <div class="gr-cover" {% if g.cover_image_url %}style="background-image:url('{{ g.cover_image_url }}');"{% endif %}>
+    {% if g.expired %}<span class="gr-badge expired-badge">Muddat tugagan</span>
+    {% elif g.is_featured %}<span class="gr-badge">🌟 Tavsiya</span>{% endif %}
+  </div>
+  <div class="gr-body">
+    <div class="gr-org">🏛️ {{ g.organization or '—' }}</div>
+    <div class="gr-title-l"><a href="/grants/{{ g.slug }}">📌 {{ g.display_title }}</a></div>
+    <div class="gr-meta">
+      <span>{{ g.country_flag }} {{ g.country }}</span>
+      {% if g.levels_uz %}<span>🎓 {{ g.levels_uz | join(', ') }}</span>{% endif %}
+      {% if g.funding_label %}<span>{{ g.funding_label }}</span>{% endif %}
+    </div>
+    <div class="gr-meta">
+      {% if g.stipend_amount %}<span>💰 {{ g.stipend_amount }}</span>{% endif %}
+      {% if g.duration %}<span>📅 {{ g.duration }}</span>{% endif %}
+    </div>
+    <div class="gr-deadline">
+      {% if g.days_remaining is not none and not g.expired %}
+      {% set color = '#4ade80' if g.days_remaining > 7 else ('#fbbf24' if g.days_remaining >= 3 else '#f87171') %}
+      {% set pct = 100 - (g.days_remaining * 100 // 60) %}
+      <div class="gr-deadline-txt"><span style="color:{{ color }};" class="countdown" data-deadline="{{ g.deadline }}">⏰ {{ g.days_remaining }} kun qoldi</span><span style="color:#64748b;">{{ g.deadline_uz }}</span></div>
+      <div class="gr-bar"><i style="width:{{ [([pct, 5] | max), 100] | min }}%;background:{{ color }};"></i></div>
+      {% elif g.expired %}
+      <div class="gr-deadline-txt"><span style="color:#94a3b8;">Muddat tugagan</span><span style="color:#64748b;">{{ g.deadline_uz }}</span></div>
+      {% else %}
+      <div class="gr-deadline-txt"><span style="color:#94a3b8;">Doimiy ochiq</span></div>
+      {% endif %}
+    </div>
+    <div class="gr-actions">
+      <a class="gr-btn primary" href="/grants/{{ g.slug }}">Batafsil →</a>
+      {% set tstat = tracking.get(g.id) if tracking else none %}
+      <button class="gr-btn track {{ 'tracked' if tstat }}" onclick="toggleTrackGrant({{ g.id }}, this)">
+        {{ '✅ Kuzatilmoqda' if tstat else '⭐ Kuzatish' }}</button>
     </div>
   </div>
+</div>
+{% endmacro %}
+
+<div class="container-xl" style="max-width:1200px;">
+
+  {% if my %}
+  <!-- ═══ MENING GRANTLARIM (kanban) ═══ -->
+  <div class="gr-hero">
+    <h1>⭐ Mening grantlarim</h1>
+    <p>Kuzatilayotgan grantlaringiz — holat bo'yicha guruhlangan. <a href="/grants" style="color:#4a9eff;">← Barcha grantlar</a></p>
+  </div>
+  {% if my_grants %}
+  <div class="gr-kanban">
+    {% for skey, slabel in status_labels.items() %}
+    {% set col = my_grants | selectattr('track_status', 'equalto', skey) | list %}
+    <div class="gr-kcol">
+      <h4>{{ {'interested':'🔵','preparing':'🟡','documents_ready':'🟢','applied':'🟣','accepted':'✅','rejected':'❌'}[skey] }} {{ slabel }} ({{ col|length }})</h4>
+      {% for g in col %}
+      <div class="gr-kcard" data-grant-id="{{ g.id }}">
+        <a href="/grants/{{ g.slug }}">{{ g.display_title }}</a>
+        <div style="color:#94a3b8;font-size:0.76rem;margin-top:3px;">{{ g.country_flag }} {{ g.organization or g.country }}</div>
+        {% if g.days_remaining is not none and g.days_remaining >= 0 %}
+        <div style="font-size:0.76rem;margin-top:4px;color:{{ '#f87171' if g.days_remaining <= 3 else ('#fbbf24' if g.days_remaining <= 7 else '#4ade80') }};">
+          ⏰ {{ g.days_remaining }} kun qoldi · {{ g.deadline_uz }}</div>
+        {% elif g.expired %}<div style="font-size:0.76rem;margin-top:4px;color:#94a3b8;">Muddat tugagan</div>{% endif %}
+        <select onchange="updateTrackingStatus({{ g.id }}, this.value)">
+          {% for k, v in status_labels.items() %}
+          <option value="{{ k }}" {{ 'selected' if k == g.track_status }}>{{ v }}</option>
+          {% endfor %}
+        </select>
+        <textarea placeholder="Shaxsiy eslatma…" onblur="saveNote({{ g.id }}, this.value)">{{ g.notes }}</textarea>
+      </div>
+      {% endfor %}
+      {% if not col %}<div style="color:#64748b;font-size:0.78rem;">—</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="gr-empty"><div class="ic">📭</div>
+    <p>Hali birorta grant kuzatilmayapti. <a href="/grants" style="color:#4a9eff;">Grantlarni ko'ring</a> va ⭐ tugmasini bosing.</p></div>
+  {% endif %}
+
+  {% else %}
+  <!-- ═══ HERO ═══ -->
+  <div class="gr-hero">
+    <h1>🎓 Ilmiy Grantlar va Stipendiyalar</h1>
+    <p>Xalqaro va mahalliy moliyalashtirish imkoniyatlari — magistratura, PhD va postdoc uchun</p>
+    <div class="gr-stats">
+      <span><b>{{ stats.active }}</b> ta aktiv grant</span>
+      <span><b>{{ stats.countries }}</b> ta mamlakat</span>
+      <span><b>{{ stats.tracked }}</b> ta kuzatilmoqda</span>
+      {% if current_user.is_authenticated %}<a href="/grants?my=1" style="color:#4a9eff;">⭐ Mening grantlarim →</a>{% endif %}
+    </div>
+    <div class="gr-search"><input id="gr-search" type="search" placeholder="Grant, tashkilot yoki mamlakat qidirish…"></div>
+  </div>
+
+  <!-- ═══ FILTER BAR ═══ -->
+  <div class="gr-filterbar" id="gr-filterbar">
+    <select id="f-country" title="Mamlakat">
+      <option value="">🌍 Barcha mamlakatlar</option>
+      {% for c in countries %}<option value="{{ c.name }}">{{ c.flag }} {{ c.name }}</option>{% endfor %}
+    </select>
+    <div class="gr-toggle-group" data-filter="level">
+      <button class="gr-toggle active" data-value="">Hammasi</button>
+      {% for k, v in levels.items() %}<button class="gr-toggle" data-value="{{ k }}">{{ v }}</button>{% endfor %}
+    </div>
+    <div class="gr-toggle-group" data-filter="funding">
+      <button class="gr-toggle active" data-value="">Hammasi</button>
+      {% for k, v in funding_types.items() %}<button class="gr-toggle" data-value="{{ k }}">{{ v }}</button>{% endfor %}
+    </div>
+    <select id="f-sort" title="Tartiblash">
+      <option value="deadline">⏰ Deadline yaqin</option>
+      <option value="new">🆕 Yangi qo'shilgan</option>
+      <option value="popular">👁️ Ko'p ko'rilgan</option>
+      <option value="stipend">💰 Stipendiya miqdori</option>
+    </select>
+    <button class="gr-clear" id="f-clear" style="display:none;">✕ Tozalash</button>
+  </div>
+
+  {% if recommended %}
+  <!-- ═══ SHAXSIY TAVSIYALAR ═══ -->
+  <div class="gr-row-title">✨ Sizga mos grantlar <span style="color:#64748b;font-weight:500;font-size:0.8rem;">profilingiz asosida</span></div>
+  <div class="gr-carousel">
+    {% for g in recommended %}{{ card(g, tracking) }}{% endfor %}
+  </div>
+  {% elif current_user.is_authenticated and not has_profile %}
+  <div style="border:1px dashed rgba(74,158,255,0.4);border-radius:14px;padding:14px 18px;margin-bottom:6px;color:#94a3b8;">
+    💡 <a href="/cabinet" style="color:#4a9eff;font-weight:600;">Profilingizni to'ldiring</a> — sizga mos grantlarni topamiz!
+  </div>
+  {% endif %}
+
+  {% if featured %}
+  <!-- ═══ FEATURED ═══ -->
+  <div class="gr-row-title">🌟 Tavsiya etilgan grantlar</div>
+  <div class="gr-carousel">
+    {% for g in featured %}{{ card(g, tracking) }}{% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ GRID ═══ -->
+  <div class="gr-row-title">📋 Barcha grantlar</div>
+  <div class="gr-grid" id="gr-grid">
+    {% for g in grants %}{{ card(g, tracking) }}{% endfor %}
+  </div>
+  <div class="gr-empty" id="gr-empty" {% if grants %}style="display:none;"{% endif %}>
+    <div class="ic">🔭</div>
+    <p>Hozircha bu parametrlarga mos grant topilmadi.<br>Filtrlarni o'zgartiring yoki <a href="#" onclick="clearFilters();return false;" style="color:#4a9eff;">barcha grantlarni ko'ring</a>.</p>
+  </div>
+  <div class="gr-pagination" id="gr-pagination"></div>
+  <div class="gr-results" id="gr-results"></div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-(function () {
-  var grid = document.getElementById('grantsGrid');
-  var countEl = document.getElementById('grantsCount');
-  var filters = document.getElementById('grantFilters');
-  var codeInput = document.getElementById('codeFilter');
-  var timer = null;
-
-  function fmtCountdown(deadline) {
-    if (!deadline) return { text: 'Muddat belgilanmagan', safe: true };
-    var end = new Date(deadline + 'T23:59:59').getTime();
-    var diff = end - Date.now();
-    if (diff <= 0) return { text: 'Yakunlangan', safe: false };
-    var days = Math.floor(diff / 86400000);
-    var hrs = Math.floor((diff % 86400000) / 3600000);
-    return { text: days + ' kun ' + hrs + ' soat qoldi', safe: days > 7 };
-  }
-
-  function card(g) {
-    var cd = fmtCountdown(g.application_deadline);
-    var ft = (g.funding_type || '').toLowerCase();
-    return '<div class="grant-card">' +
-      '<h3><a href="/grants/' + g.id + '">' + (g.title || '') + '</a></h3>' +
-      '<div class="grant-meta">' +
-        (g.country ? '<span class="g-tag">' + g.country + '</span>' : '') +
-        (g.academic_level ? '<span class="g-tag">' + g.academic_level + '</span>' : '') +
-        (g.funding_type ? '<span class="g-tag ' + ft + '">' + g.funding_type + '</span>' : '') +
-      '</div>' +
-      '<div class="g-countdown' + (cd.safe ? ' safe' : '') + '" data-deadline="' +
-        (g.application_deadline || '') + '">' + cd.text + '</div>' +
-    '</div>';
-  }
-
-  function selected(name) {
-    return Array.prototype.map.call(
-      filters.querySelectorAll('input[name="' + name + '"]:checked'),
-      function (i) { return i.value; });
-  }
-
-  function load() {
-    var params = new URLSearchParams();
-    ['funding_type', 'academic_level', 'country'].forEach(function (n) {
-      selected(n).forEach(function (v) { params.append(n, v); });
-    });
-    if (codeInput.value.trim()) params.append('scientific_codes', codeInput.value.trim());
-    fetch('/api/v1/grants?' + params.toString())
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var list = (d && d.grants) || [];
-        countEl.textContent = list.length + ' ta grant topildi';
-        grid.innerHTML = list.length
-          ? list.map(card).join('')
-          : '<div class="grants-empty">Filtrga mos grant topilmadi.</div>';
-        tick();
-      }).catch(function () { grid.innerHTML = '<div class="grants-empty">Xatolik.</div>'; });
-  }
-
-  // Real-time countdown refresh (no page reload).
-  function tick() {
-    document.querySelectorAll('.g-countdown[data-deadline]').forEach(function (el) {
-      var cd = fmtCountdown(el.getAttribute('data-deadline'));
-      el.textContent = cd.text;
-      el.classList.toggle('safe', cd.safe);
-    });
-  }
-
-  filters.addEventListener('change', load);
-  var debounce;
-  codeInput.addEventListener('input', function () {
-    clearTimeout(debounce); debounce = setTimeout(load, 350);
-  });
-  if (timer) clearInterval(timer);
-  timer = setInterval(tick, 60000);
-  load();
-})();
+window.GR_STATE = {
+  page: {{ page }}, pages: {{ pages }}, total: {{ total }},
+  loggedIn: {{ 'true' if current_user.is_authenticated else 'false' }},
+  my: {{ 'true' if my else 'false' }}
+};
 </script>
+<script src="{{ url_for('static', filename='js/grants.js') }}"></script>
 {% endblock %}

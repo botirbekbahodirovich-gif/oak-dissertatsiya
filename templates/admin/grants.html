@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Grantlar (admin) — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1150px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h1 style="margin:0;">🏆 Grantlarni boshqarish</h1>
+    <div style="display:flex;gap:8px;">
+      <a href="/admin/grants/add" class="btn btn-primary">➕ Yangi grant qo'shish</a>
+      <form method="POST" action="/admin/grants/seed" style="display:inline;"
+            onsubmit="return confirm('15 ta tayyor grant bazaga qo\'shilsinmi? (dublikatlar o\'tkazib yuboriladi)');">
+        {{ csrf_token()|safe }}
+        <button type="submit" class="btn btn-action">🌱 Seed (15 ta grant)</button>
+      </form>
+    </div>
+  </div>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <!-- Stats -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin:16px 0;color:#94a3b8;font-size:0.88rem;">
+    <span>Aktiv: <b style="color:#4ade80;">{{ stats.get('active', 0) }}</b></span>
+    <span>Kuzatuvlar: <b style="color:#4a9eff;">{{ stats.get('tracked', 0) }}</b></span>
+    {% for k, v in stats.get('by_status', {}).items() %}
+    <span>{{ status_labels.get(k, k) }}: <b>{{ v }}</b></span>
+    {% endfor %}
+  </div>
+  {% if top %}
+  <div style="color:#94a3b8;font-size:0.82rem;margin-bottom:14px;">
+    👁️ Eng mashhur: {% for t in top %}<span style="margin-right:12px;">{{ t.title[:40] }} ({{ t.views }})</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Filter -->
+  <div style="display:flex;gap:6px;margin-bottom:14px;">
+    {% for key, label in [('all','Hammasi'), ('active','Aktiv'), ('expired','Muddati o\'tgan'), ('inactive','Nofaol')] %}
+    <a href="/admin/grants?f={{ key }}" class="btn btn-sm {{ 'btn-primary' if flt == key else 'btn-action' }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <div style="overflow-x:auto;">
+  <table class="table" style="width:100%;">
+    <thead><tr>
+      <th>ID</th><th>Sarlavha</th><th>Tashkilot</th><th>Mamlakat</th><th>Deadline</th>
+      <th>Holat</th><th>⭐</th><th>👁️</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for g in items %}
+      <tr {% if not g.is_active %}style="opacity:0.5;"{% endif %}>
+        <td>{{ g.id }}</td>
+        <td><a href="/grants/{{ g.slug }}" target="_blank">{{ g.display_title[:48] }}</a></td>
+        <td style="font-size:0.82rem;">{{ g.organization[:32] }}</td>
+        <td>{{ g.country_flag }} {{ g.country }}</td>
+        <td>{{ g.deadline or '—' }}
+          {% if g.expired %}<br><small style="color:#f87171;">tugagan</small>
+          {% elif g.days_remaining is not none %}<br><small style="color:#94a3b8;">{{ g.days_remaining }} kun</small>{% endif %}</td>
+        <td>{{ '🟢 Aktiv' if g.is_active and not g.expired else ('⌛' if g.expired else '⚪ Nofaol') }}</td>
+        <td>{{ '🌟' if g.is_featured else '—' }}</td>
+        <td>{{ g.view_count }}</td>
+        <td style="white-space:nowrap;">
+          <a href="/admin/grants/edit/{{ g.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
+          <form method="POST" action="/admin/grants/toggle-featured/{{ g.id }}" style="display:inline;">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#fbbf24;" title="Featured yoqish/o'chirish">🌟</button>
+          </form>
+          <form method="POST" action="/admin/grants/delete/{{ g.id }}" style="display:inline;"
+                onsubmit="return confirm('Grant nofaol qilinsinmi? (kuzatuvlar tarixi saqlanadi)');">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm" style="color:#f87171;">O'chirish</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not items %}<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:26px;">Grant topilmadi — "Seed" tugmasini bosing yoki yangi qo'shing.</td></tr>{% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

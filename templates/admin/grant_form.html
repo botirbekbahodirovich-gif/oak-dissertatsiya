@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Grantni tahrirlash' if edit_mode else 'Yangi grant' }} (admin) — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:960px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">{% if edit_mode %}✏️ Grantni tahrirlash (#{{ item.id }}){% else %}➕ Yangi grant qo'shish{% endif %}</h1>
+  <p style="color:#94a3b8;"><a href="/admin/grants" style="color:#4a9eff;">← Grantlar ro'yxati</a></p>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% set v = item or {} %}
+  <form method="POST" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;"
+        action="{% if edit_mode %}/admin/grants/edit/{{ item.id }}{% else %}/admin/grants/add{% endif %}">
+    {{ csrf_token()|safe }}
+    <label style="grid-column:1/-1;">Sarlavha (asl) *
+      <input name="title" class="form-control" required maxlength="500" value="{{ v.get('title', '') }}"></label>
+    <label style="grid-column:1/-1;">Sarlavha (o'zbekcha)
+      <input name="title_uz" class="form-control" maxlength="500" value="{{ v.get('title_uz', '') }}"></label>
+    <label>Slug (bo'sh = avtomatik)
+      <input name="slug" class="form-control" maxlength="200" value="{{ v.get('slug', '') }}"></label>
+    <label>Tashkilot
+      <input name="organization" class="form-control" maxlength="300" value="{{ v.get('organization', '') }}"></label>
+    <label>Mamlakat
+      <input name="country" class="form-control" maxlength="100" value="{{ v.get('country', '') }}"></label>
+    <label>Bayroq emoji (bo'sh = avtomatik)
+      <input name="country_flag" class="form-control" maxlength="10" value="{{ v.get('country_flag', '') }}"></label>
+    <label>Moliya turi
+      <select name="funding_type" class="form-control">
+        <option value="">—</option>
+        {% for k, l in funding_types.items() %}
+        <option value="{{ k }}" {{ 'selected' if v.get('funding_type') == k }}>{{ l }}</option>
+        {% endfor %}
+      </select></label>
+    <fieldset style="border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:8px 12px;">
+      <legend style="font-size:0.82rem;padding:0 6px;">Darajalar</legend>
+      {% for k, l in levels.items() %}
+      <label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:0.85rem;">
+        <input type="checkbox" name="academic_levels" value="{{ k }}"
+               {{ 'checked' if k in (v.get('academic_levels') or []) }}> {{ l }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>Deadline
+      <input name="deadline" type="date" class="form-control" value="{{ v.get('deadline', '') }}"></label>
+    <label>Boshlanish sanasi
+      <input name="start_date" type="date" class="form-control" value="{{ v.get('start_date', '') }}"></label>
+    <label>Stipendiya miqdori
+      <input name="stipend_amount" class="form-control" maxlength="200" placeholder="€1,200/oy" value="{{ v.get('stipend_amount', '') }}"></label>
+    <label>Davomiyligi
+      <input name="duration" class="form-control" maxlength="200" placeholder="12 oy" value="{{ v.get('duration', '') }}"></label>
+    <label>Til talablari
+      <input name="language_requirements" class="form-control" maxlength="300" placeholder="IELTS 6.5+" value="{{ v.get('language_requirements', '') }}"></label>
+    <label>Ilmiy yo'nalish shifrlari (vergul bilan)
+      <input name="scientific_fields" class="form-control" placeholder="05.01.01, 13.00.02" value="{{ (v.get('scientific_fields') or []) | join(', ') }}"></label>
+    <label style="grid-column:1/-1;">Ariza havolasi (application URL)
+      <input name="application_url" class="form-control" maxlength="500" value="{{ v.get('application_url', '') }}"></label>
+    <label style="grid-column:1/-1;">Muqova rasmi (URL)
+      <input name="cover_image_url" class="form-control" maxlength="500" value="{{ v.get('cover_image_url', '') }}"></label>
+    <label style="grid-column:1/-1;">Teglar (vergul bilan)
+      <input name="tags" class="form-control" placeholder="Yevropa, doktorantura" value="{{ (v.get('tags') or []) | join(', ') }}"></label>
+    <label style="grid-column:1/-1;">Umumiy ma'lumot (description)
+      <textarea name="description" class="form-control" rows="5">{{ v.get('description', '') }}</textarea></label>
+    <label style="grid-column:1/-1;">Talablar (requirements)
+      <textarea name="requirements" class="form-control" rows="3">{{ v.get('requirements', '') }}</textarea></label>
+    <label style="grid-column:1/-1;">Imkoniyatlar (benefits)
+      <textarea name="benefits" class="form-control" rows="3">{{ v.get('benefits', '') }}</textarea></label>
+    <label style="grid-column:1/-1;">Ariza strategiyasi (tips)
+      <textarea name="application_tips" class="form-control" rows="3">{{ v.get('application_tips', '') }}</textarea></label>
+
+    <fieldset style="grid-column:1/-1;border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:10px 14px;">
+      <legend style="font-size:0.85rem;padding:0 6px;">📋 Kerakli hujjatlar ro'yxati</legend>
+      <div id="doc-rows">
+        {% for d in (v.get('documents_checklist') or []) %}
+        <div class="doc-row" style="display:grid;grid-template-columns:2fr 3fr 2fr auto auto;gap:6px;margin-bottom:6px;">
+          <input name="doc_name" class="form-control" placeholder="Hujjat nomi" value="{{ d.get('name', '') }}">
+          <input name="doc_tip" class="form-control" placeholder="Maslahat" value="{{ d.get('tip', '') }}">
+          <input name="doc_template" class="form-control" placeholder="Namuna URL" value="{{ d.get('template_url', '') }}">
+          <select name="doc_required" class="form-control">
+            <option value="1" {{ 'selected' if d.get('required', True) }}>Majburiy</option>
+            <option value="0" {{ 'selected' if not d.get('required', True) }}>Ixtiyoriy</option>
+          </select>
+          <button type="button" class="btn btn-sm" style="color:#f87171;" onclick="this.parentElement.remove()">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-sm btn-action" onclick="addDocRow()">＋ Hujjat qo'shish</button>
+    </fieldset>
+
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" name="is_featured" {{ 'checked' if v.get('is_featured') }}> 🌟 Featured (tavsiya etilgan)</label>
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" name="is_active" {{ 'checked' if v.get('is_active', True) }}> Faol</label>
+
+    <div style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-primary">{% if edit_mode %}Saqlash{% else %}Qo'shish{% endif %}</button>
+      <a href="/admin/grants" class="btn btn-action">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+
+<template id="doc-row-tpl">
+  <div class="doc-row" style="display:grid;grid-template-columns:2fr 3fr 2fr auto auto;gap:6px;margin-bottom:6px;">
+    <input name="doc_name" class="form-control" placeholder="Hujjat nomi">
+    <input name="doc_tip" class="form-control" placeholder="Maslahat">
+    <input name="doc_template" class="form-control" placeholder="Namuna URL">
+    <select name="doc_required" class="form-control">
+      <option value="1">Majburiy</option><option value="0">Ixtiyoriy</option>
+    </select>
+    <button type="button" class="btn btn-sm" style="color:#f87171;" onclick="this.parentElement.remove()">✕</button>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addDocRow() {
+  var tpl = document.getElementById('doc-row-tpl');
+  document.getElementById('doc-rows').appendChild(tpl.content.cloneNode(true));
+}
+</script>
+{% endblock %}

@@ -1,124 +1,197 @@
 {% extends "base.html" %}
-{% block title %}{{ g.title }} — Grant — Olimlar.uz{% endblock %}
+{% block title %}{{ g.display_title }} — Grant — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ g.display_title }} — {{ g.organization }}. Muddat: {{ g.deadline_uz or 'ochiq' }}. Talablar, hujjatlar ro'yxati va ariza strategiyasi.{% endblock %}
+
+{% block extra_head %}
+<style>
+.gd-cover { height: 300px; border-radius: 18px; overflow: hidden; position: relative;
+  background: linear-gradient(135deg, #1e40af, #7c5cfc); background-size: cover; background-position: center; }
+.gd-cover::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(15,23,42,0) 30%, rgba(15,23,42,0.85)); }
+.gd-cover-inner { position: absolute; left: 24px; right: 24px; bottom: 18px; z-index: 2; }
+.gd-cover-inner h1 { color: #fff; font-size: 1.5rem; margin: 6px 0; }
+.gd-chip { display: inline-block; background: rgba(255,255,255,0.14); backdrop-filter: blur(6px);
+  color: #e2e8f0; font-size: 0.78rem; font-weight: 600; padding: 4px 12px; border-radius: 50px; margin-right: 6px; }
+.gd-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin-top: 20px; align-items: start; }
+@media (max-width: 900px) { .gd-layout { grid-template-columns: 1fr; } }
+
+.gd-countdown { border: 1px solid rgba(148,163,184,0.18); border-radius: 16px; padding: 16px 20px;
+  display: flex; gap: 18px; align-items: center; justify-content: center; margin-top: 16px;
+  background: rgba(30,41,59,0.5); }
+.gd-cd-num { text-align: center; }
+.gd-cd-num b { display: block; font-size: 1.7rem; font-weight: 800; }
+.gd-cd-num span { color: #94a3b8; font-size: 0.72rem; }
+.gd-countdown.green b { color: #4ade80; } .gd-countdown.yellow b { color: #fbbf24; }
+.gd-countdown.red b { color: #f87171; }
+.gd-countdown.red { animation: gdPulse 1.4s ease-in-out infinite; border-color: rgba(239,68,68,0.5); }
+@keyframes gdPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+
+.gd-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+@media (max-width: 560px) { .gd-info-grid { grid-template-columns: 1fr; } }
+.gd-info { border: 1px solid rgba(148,163,184,0.15); border-radius: 12px; padding: 10px 14px;
+  background: rgba(30,41,59,0.4); font-size: 0.86rem; }
+.gd-info b { display: block; color: #94a3b8; font-size: 0.72rem; font-weight: 600; margin-bottom: 2px; }
+.gd-info a { color: #4a9eff; word-break: break-all; }
+
+.gd-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 22px 0 0; border-bottom: 1px solid rgba(148,163,184,0.15); }
+.gd-tab { border: none; background: transparent; color: #94a3b8; padding: 10px 14px; font-size: 0.86rem;
+  font-weight: 700; cursor: pointer; border-bottom: 2px solid transparent; }
+.gd-tab.active { color: var(--oak-accent, #4a9eff); border-bottom-color: var(--oak-accent, #4a9eff); }
+.gd-tabpane { display: none; padding: 18px 4px; line-height: 1.7; white-space: pre-line; }
+.gd-tabpane.active { display: block; }
+.gd-doc { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid rgba(148,163,184,0.15);
+  border-radius: 12px; margin-bottom: 8px; background: rgba(30,41,59,0.35); }
+.gd-doc input { width: 18px; height: 18px; margin-top: 2px; accent-color: #4ade80; cursor: pointer; }
+.gd-doc .nm { font-weight: 700; font-size: 0.9rem; }
+.gd-doc .tip { color: #94a3b8; font-size: 0.79rem; margin-top: 2px; }
+.gd-doc .opt { color: #64748b; font-size: 0.74rem; }
+.gd-doc a { color: #4a9eff; font-size: 0.79rem; }
+.gd-doc.done .nm { text-decoration: line-through; color: #64748b; }
+
+.gd-story { border-left: 3px solid rgba(74,158,255,0.5); padding: 8px 14px; margin-bottom: 12px; }
+.gd-story .who { color: #94a3b8; font-size: 0.78rem; margin-top: 4px; }
+
+.gd-side { position: sticky; top: 16px; border: 1px solid rgba(148,163,184,0.18); border-radius: 16px;
+  padding: 16px; background: rgba(30,41,59,0.5); display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 900px) { .gd-side { position: static; } }
+.gd-side .apply { display: block; text-align: center; background: linear-gradient(135deg, #3b82f6, #7c5cfc);
+  color: #fff; font-weight: 800; padding: 12px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; }
+.gd-side .track-btn { border: 1px solid rgba(148,163,184,0.3); background: transparent; color: inherit;
+  font-weight: 700; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 0.88rem; }
+.gd-side .track-btn.tracked { background: rgba(34,197,94,0.14); color: #4ade80; border-color: rgba(34,197,94,0.4); }
+.gd-side select { border: 1px solid rgba(148,163,184,0.25); border-radius: 10px; padding: 8px; background: transparent;
+  color: inherit; font-size: 0.85rem; }
+.gd-side select option { color: #0f172a; }
+.gd-share { display: flex; gap: 8px; }
+.gd-share button, .gd-share a { flex: 1; border: 1px solid rgba(148,163,184,0.25); background: transparent;
+  color: inherit; padding: 8px; border-radius: 10px; cursor: pointer; font-size: 0.8rem; text-align: center; text-decoration: none; }
+.gd-rel { border-top: 1px solid rgba(148,163,184,0.15); padding-top: 10px; }
+.gd-rel a { display: block; color: inherit; text-decoration: none; font-size: 0.84rem; font-weight: 600; padding: 7px 0; }
+.gd-rel a:hover { color: #4a9eff; }
+.gd-rel small { color: #94a3b8; font-weight: 400; }
+[data-bs-theme="light"] .gd-countdown, [data-bs-theme="light"] .gd-info,
+[data-bs-theme="light"] .gd-side, [data-bs-theme="light"] .gd-doc { background: #fff; }
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-  .gd-wrap { max-width: 880px; margin: 0 auto; padding: 20px 0; }
-  .gd-head { background: var(--card-bg, #0f172a); border: 1px solid #334155;
-    border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-  .gd-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-  .g-tag { font-size: 0.78rem; padding: 3px 11px; border-radius: 999px;
-    background: #1e293b; color: #93c5fd; }
-  .g-tag.full { background: #052e16; color: #4ade80; }
-  .g-tag.partial { background: #422006; color: #fbbf24; }
-  .gd-countdown { font-size: 1.3rem; font-weight: 800; color: #f87171; margin: 8px 0; }
-  .gd-countdown.safe { color: #4ade80; }
-  .gd-section { background: var(--card-bg, #0f172a); border: 1px solid #334155;
-    border-radius: 14px; padding: 20px; margin-bottom: 18px; }
-  .gd-section h2 { font-size: 1.05rem; margin: 0 0 12px; color: #f1f5f9; }
-  .gd-checklist { list-style: none; padding: 0; margin: 0; }
-  .gd-checklist li { padding: 7px 0 7px 28px; position: relative; color: #cbd5e1; }
-  .gd-checklist li::before { content: '📄'; position: absolute; left: 0; }
-  .gd-track { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-  .gd-track button { border: 1px solid #334155; background: #162032; color: #e2e8f0;
-    border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 600; }
-  .gd-track button.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-  .gd-track button.remove { color: #f87171; }
-</style>
+<div class="container-xl" style="max-width:1100px;">
+  <p style="margin:4px 0 12px;"><a href="/grants" style="color:#94a3b8;text-decoration:none;">← Barcha grantlar</a></p>
 
-<div class="gd-wrap">
-  <div class="gd-head">
-    <a href="/grants" style="color:#60a5fa;font-size:0.85rem;">← Barcha grantlar</a>
-    <h1 style="margin:8px 0 0;">{{ g.title }}</h1>
-    {% if g.provider %}<div style="color:#94a3b8;">{{ g.provider }}</div>{% endif %}
-    <div class="gd-meta">
-      {% if g.country %}<span class="g-tag">{{ g.country }}</span>{% endif %}
-      {% if g.academic_level %}<span class="g-tag">{{ g.academic_level }}</span>{% endif %}
-      {% if g.funding_type %}<span class="g-tag {{ g.funding_type|lower }}">{{ g.funding_type }}</span>{% endif %}
-      {% for c in g.codes %}<span class="g-tag">{{ c }}</span>{% endfor %}
-    </div>
-    <div class="gd-countdown" id="gdCountdown" data-deadline="{{ g.application_deadline }}"></div>
-    {% if g.application_deadline %}<div style="color:#94a3b8;font-size:0.85rem;">Muddat: {{ g.application_deadline }}</div>{% endif %}
-
-    <div class="gd-track" data-grant="{{ g.id }}">
-      <button data-status="interested" class="{{ 'active' if tracked_status == 'interested' }}">⭐ Qiziqarli</button>
-      <button data-status="in_progress" class="{{ 'active' if tracked_status == 'in_progress' }}">🚀 Jarayonda</button>
-      <button data-status="remove" class="remove">✕ Kuzatuvni olib tashlash</button>
+  <!-- ═══ HEADER ═══ -->
+  <div class="gd-cover" {% if g.cover_image_url %}style="background-image:url('{{ g.cover_image_url }}');"{% endif %}>
+    <div class="gd-cover-inner">
+      <span class="gd-chip">🏛️ {{ g.organization or '—' }}</span>
+      <span class="gd-chip">{{ g.country_flag }} {{ g.country }}</span>
+      <h1>{{ g.display_title }}</h1>
+      <div>
+        {% for l in g.levels_uz %}<span class="gd-chip">🎓 {{ l }}</span>{% endfor %}
+        {% if g.funding_label %}<span class="gd-chip">💰 {{ g.funding_label }}</span>{% endif %}
+        {% for t in g.tags[:4] %}<span class="gd-chip">#{{ t }}</span>{% endfor %}
+      </div>
     </div>
   </div>
 
-  {% if g.description %}
-  <div class="gd-section"><h2>Dastur tavsifi</h2><p style="color:#cbd5e1;white-space:pre-wrap;">{{ g.description }}</p></div>
+  <!-- ═══ COUNTDOWN ═══ -->
+  {% if g.deadline and not g.expired %}
+  {% set cls = 'green' if g.days_remaining > 14 else ('yellow' if g.days_remaining >= 7 else 'red') %}
+  <div class="gd-countdown {{ cls }}" id="gd-countdown" data-deadline="{{ g.deadline }}">
+    <div class="gd-cd-num"><b data-u="d">{{ g.days_remaining }}</b><span>kun</span></div>
+    <div class="gd-cd-num"><b data-u="h">—</b><span>soat</span></div>
+    <div class="gd-cd-num"><b data-u="m">—</b><span>daqiqa</span></div>
+    <div style="color:#94a3b8;font-size:0.85rem;">📅 Deadline: <b style="color:inherit;">{{ g.deadline_uz }}</b></div>
+  </div>
+  {% elif g.expired %}
+  <div class="gd-countdown"><span class="gd-chip" style="background:rgba(148,163,184,0.2);">⌛ Muddat tugagan — {{ g.deadline_uz }}</span></div>
   {% endif %}
 
-  <div class="gd-section">
-    <h2>Talab qilinadigan hujjatlar</h2>
-    <ul class="gd-checklist">
-      {% set docs = g.requirements_json.get('documents') if g.requirements_json else None %}
-      {% if docs %}
-        {% for doc in docs %}<li>{{ doc }}</li>{% endfor %}
-      {% else %}
-        <li>Motivatsiya xati (Motivation Letter)</li>
-        <li>Tadqiqot rejasi (Research Proposal)</li>
-        <li>Tavsiya xatlari (Letters of Recommendation)</li>
-        <li>CV / akademik ma'lumotnoma</li>
-        <li>Til sertifikati (IELTS/TOEFL)</li>
-      {% endif %}
-    </ul>
-  </div>
+  <div class="gd-layout">
+    <div>
+      <!-- ═══ QUICK INFO ═══ -->
+      <div class="gd-info-grid">
+        {% if g.stipend_amount %}<div class="gd-info"><b>💰 Stipendiya</b>{{ g.stipend_amount }}</div>{% endif %}
+        {% if g.duration %}<div class="gd-info"><b>📅 Muddati</b>{{ g.duration }}</div>{% endif %}
+        <div class="gd-info"><b>🌍 Mamlakat</b>{{ g.country_flag }} {{ g.country }}</div>
+        {% if g.levels_uz %}<div class="gd-info"><b>🎓 Daraja</b>{{ g.levels_uz | join(', ') }}</div>{% endif %}
+        {% if g.language_requirements %}<div class="gd-info"><b>🗣️ Til talabi</b>{{ g.language_requirements }}</div>{% endif %}
+        {% if g.funding_label %}<div class="gd-info"><b>📋 Moliya turi</b>{{ g.funding_label }}</div>{% endif %}
+        <div class="gd-info"><b>👁️ Ko'rishlar</b>{{ g.view_count }}</div>
+        {% if g.application_url %}<div class="gd-info"><b>🔗 Rasmiy havola</b><a href="{{ g.application_url }}" target="_blank" rel="noopener">{{ g.application_url[:48] }}…</a></div>{% endif %}
+      </div>
 
-  <div class="gd-section">
-    <h2>Muvaffaqiyat strategiyasi va formatlash</h2>
-    {% set tips = g.requirements_json.get('strategy') if g.requirements_json else None %}
-    <ul class="gd-checklist" style="list-style:none;">
-      {% if tips %}
-        {% for t in tips %}<li style="padding-left:28px;">✅ {{ t }}</li>{% endfor %}
-      {% else %}
-        <li style="padding-left:28px;">✅ Tadqiqot rejasini provayder ustuvorliklariga moslang.</li>
-        <li style="padding-left:28px;">✅ Motivatsiya xatini aniq va o'lchanadigan maqsadlar bilan tuzing.</li>
-        <li style="padding-left:28px;">✅ Tavsiya xatlarini muddatdan oldin so'rang.</li>
-        <li style="padding-left:28px;">✅ Formatlash talablariga (shrift, hajm, struktura) qat'iy amal qiling.</li>
-      {% endif %}
-    </ul>
-  </div>
+      <!-- ═══ TABS ═══ -->
+      <div class="gd-tabs">
+        <button class="gd-tab active" data-tab="info" onclick="switchTab('info')">Umumiy ma'lumot</button>
+        {% if g.requirements %}<button class="gd-tab" data-tab="req" onclick="switchTab('req')">Talablar</button>{% endif %}
+        {% if g.benefits %}<button class="gd-tab" data-tab="ben" onclick="switchTab('ben')">Imkoniyatlar</button>{% endif %}
+        {% if g.documents_checklist %}<button class="gd-tab" data-tab="docs" onclick="switchTab('docs')">Kerakli hujjatlar</button>{% endif %}
+        {% if g.application_tips %}<button class="gd-tab" data-tab="tips" onclick="switchTab('tips')">Ariza strategiyasi</button>{% endif %}
+        {% if stories %}<button class="gd-tab" data-tab="stories" onclick="switchTab('stories')">Muvaffaqiyat hikoyalari</button>{% endif %}
+      </div>
+      <div class="gd-tabpane active" id="tab-info">{{ g.description or "Ma'lumot hali kiritilmagan." }}</div>
+      <div class="gd-tabpane" id="tab-req">{{ g.requirements }}</div>
+      <div class="gd-tabpane" id="tab-ben">{{ g.benefits }}</div>
+      <div class="gd-tabpane" id="tab-docs" style="white-space:normal;">
+        <p style="color:#94a3b8;font-size:0.82rem;">Belgilagan hujjatlaringiz shu qurilmada saqlanadi (localStorage).</p>
+        {% for d in g.documents_checklist %}
+        <div class="gd-doc" data-doc-index="{{ loop.index0 }}">
+          <input type="checkbox" onchange="toggleDocumentCheck({{ g.id }}, {{ loop.index0 }}, this)">
+          <div style="flex:1;">
+            <div class="nm">{{ d.name }} {% if not d.get('required', True) %}<span class="opt">(ixtiyoriy)</span>{% endif %}</div>
+            {% if d.get('tip') %}<div class="tip">{{ d.tip }}</div>{% endif %}
+            {% if d.get('template_url') %}<a href="{{ d.template_url }}" target="_blank" rel="noopener">📎 Namuna yuklab olish</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="gd-tabpane" id="tab-tips">{{ g.application_tips }}</div>
+      <div class="gd-tabpane" id="tab-stories" style="white-space:normal;">
+        {% for s in stories %}
+        <div class="gd-story">
+          <div>“{{ s.testimonial }}”</div>
+          <div class="who">— {{ 'Anonim' if s.anonymous else (s.university or 'Bitiruvchi') }}{% if s.year %}, {{ s.year }}{% endif %}{% if s.country %} · {{ s.country }}{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
 
-  {% if g.source_url %}
-  <a href="{{ g.source_url }}" target="_blank" rel="noopener"
-     style="display:inline-block;background:#3b82f6;color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;text-decoration:none;">Rasmiy sahifaga o'tish →</a>
-  {% endif %}
+    <!-- ═══ SIDEBAR ═══ -->
+    <div class="gd-side">
+      {% if g.application_url and not g.expired %}
+      <a class="apply" href="{{ g.application_url }}" target="_blank" rel="noopener">Ariza berish →</a>
+      {% endif %}
+      {% if current_user.is_authenticated %}
+      <button class="track-btn {{ 'tracked' if tracking }}" id="gd-track" onclick="toggleTrackGrant({{ g.id }}, this)">
+        {{ '✅ Kuzatilmoqda' if tracking else '⭐ Kuzatishga olish' }}</button>
+      <select id="gd-status" onchange="updateTrackingStatus({{ g.id }}, this.value)"
+              {% if not tracking %}style="display:none;"{% endif %}>
+        {% for k, v in status_labels.items() %}
+        <option value="{{ k }}" {{ 'selected' if tracking and tracking.status == k }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <a class="track-btn" href="/login" style="text-align:center;text-decoration:none;">⭐ Kuzatish uchun kiring</a>
+      {% endif %}
+      <div class="gd-share">
+        <a href="https://t.me/share/url?url={{ request.url | urlencode }}&text={{ g.display_title | urlencode }}"
+           target="_blank" rel="noopener">✈️ Telegram</a>
+        <button onclick="shareGrant('copy', '{{ request.url }}', '')">🔗 Nusxalash</button>
+      </div>
+      {% if related %}
+      <div class="gd-rel">
+        <b style="font-size:0.8rem;color:#94a3b8;">O'XSHASH GRANTLAR</b>
+        {% for r in related %}
+        <a href="/grants/{{ r.slug }}">{{ r.country_flag }} {{ r.display_title }}<br>
+          <small>{% if r.days_remaining is not none and r.days_remaining >= 0 %}⏰ {{ r.days_remaining }} kun qoldi{% else %}{{ r.organization }}{% endif %}</small></a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-(function () {
-  var el = document.getElementById('gdCountdown');
-  function render() {
-    var dl = el.getAttribute('data-deadline');
-    if (!dl) { el.textContent = 'Muddat belgilanmagan'; el.classList.add('safe'); return; }
-    var diff = new Date(dl + 'T23:59:59').getTime() - Date.now();
-    if (diff <= 0) { el.textContent = '⏰ Muddat yakunlangan'; return; }
-    var d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000),
-        m = Math.floor((diff % 3600000) / 60000);
-    el.textContent = '⏳ ' + d + ' kun ' + h + ' soat ' + m + ' daqiqa qoldi';
-    el.classList.toggle('safe', d > 7);
-  }
-  render(); setInterval(render, 60000);
-
-  var track = document.querySelector('.gd-track');
-  track.addEventListener('click', function (e) {
-    var btn = e.target.closest('button[data-status]');
-    if (!btn) return;
-    fetch('/api/v1/grants/track', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ grant_id: parseInt(track.getAttribute('data-grant')),
-                             status: btn.getAttribute('data-status') })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d.ok) return;
-      track.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
-      if (d.status !== 'remove') btn.classList.add('active');
-    });
-  });
-})();
-</script>
+<script>window.GR_STATE = { loggedIn: {{ 'true' if current_user.is_authenticated else 'false' }}, detailGrantId: {{ g.id }} };</script>
+<script src="{{ url_for('static', filename='js/grants.js') }}"></script>
 {% endblock %}
