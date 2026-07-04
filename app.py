@@ -542,6 +542,7 @@ from blueprints.content import content_bp
 from blueprints.notifications import notifications_bp
 from blueprints.grants import grants_bp
 from blueprints.reminders import reminders_bp
+from blueprints.reyting import reyting_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -553,6 +554,7 @@ app.register_blueprint(content_bp)
 app.register_blueprint(notifications_bp)
 app.register_blueprint(grants_bp)
 app.register_blueprint(reminders_bp)
+app.register_blueprint(reyting_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -3245,6 +3247,7 @@ def _build_sitemap_xml():
         ("/about", "monthly", "0.4"), ("/heatmap", "weekly", "0.6"),
         ("/universities", "weekly", "0.7"), ("/journals", "weekly", "0.7"),
         ("/grants", "daily", "0.7"), ("/reminders", "daily", "0.6"),
+        ("/reyting", "daily", "0.8"),
     ]
     top_olimlar, blog_posts = [], []
     try:

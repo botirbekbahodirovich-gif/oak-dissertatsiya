@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Reyting — tashkilotlar va olimlar — Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston ilmiy tashkilotlari va olimlarining yagona reytingi: universitetlar, institutlar va ulardagi olimlar — hudud, tarmoq shifri bo'yicha filtrlar bilan.{% endblock %}
+
+{% block extra_head %}
+<style>
+.ry-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 18px 0; }
+.ry-filters select, .ry-filters input { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px;
+  font-size: 0.88rem; background: #fff; color: #0f172a; min-width: 150px; }
+.ry-filters input[type="search"] { flex: 1; min-width: 180px; }
+.ry-clear { border: none; background: rgba(239,68,68,0.08); color: #dc2626; border-radius: 10px;
+  padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: none; }
+.ry-tabs { display: flex; gap: 8px; margin: 4px 0 16px; }
+.ry-tab { border: 1px solid #e2e8f0; background: #fff; color: #475569; padding: 8px 20px;
+  border-radius: 50px; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+.ry-tab.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+.ry-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ry-table th { text-align: left; color: #64748b; font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.4px; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.ry-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.ry-table tr:hover td { background: rgba(59,130,246,0.04); }
+.ry-rank { font-weight: 800; color: #64748b; width: 52px; white-space: nowrap; }
+.ry-name a { color: #0f172a; font-weight: 700; text-decoration: none; }
+.ry-name a:hover { color: #2563eb; }
+.ry-sub { color: #64748b; font-size: 0.78rem; margin-top: 2px; }
+.ry-sub a { color: #64748b; text-decoration: none; }
+.ry-sub a:hover { color: #2563eb; }
+.ry-score { font-weight: 800; color: #2563eb; white-space: nowrap; }
+.ry-chip { display: inline-block; padding: 2px 10px; border-radius: 50px; font-size: 0.75rem;
+  font-weight: 600; background: rgba(100,116,139,0.1); color: #475569; }
+.ry-chip.dsc { background: rgba(168,85,247,0.12); color: #9333ea; }
+.ry-chip.phd { background: rgba(59,130,246,0.12); color: #2563eb; }
+.ry-orgbtn { border: none; background: rgba(59,130,246,0.08); color: #2563eb; border-radius: 8px;
+  padding: 5px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.ry-more { display: block; margin: 16px auto 0; border: 1px solid #e2e8f0; background: #fff;
+  color: #2563eb; padding: 9px 26px; border-radius: 50px; font-weight: 700; cursor: pointer; }
+.ry-stats { display: flex; gap: 18px; flex-wrap: wrap; color: #64748b; font-size: 0.85rem; margin-top: 2px; }
+.ry-stats b { color: #0f172a; }
+.ry-note { color: #94a3b8; font-size: 0.78rem; margin-top: 14px; line-height: 1.5; }
+.ry-loading { text-align: center; color: #94a3b8; padding: 32px 0; }
+.ry-wrap { overflow-x: auto; }
+[data-bs-theme="dark"] .ry-filters select, [data-bs-theme="dark"] .ry-filters input,
+[data-bs-theme="dark"] .ry-tab, [data-bs-theme="dark"] .ry-more { background: #1e293b; border-color: rgba(148,163,184,0.2); color: #cbd5e1; }
+[data-bs-theme="dark"] .ry-tab.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; }
+[data-bs-theme="dark"] .ry-name a { color: #e2e8f0; }
+[data-bs-theme="dark"] .ry-table td { border-color: rgba(148,163,184,0.1); }
+[data-bs-theme="dark"] .ry-stats b { color: #e2e8f0; }
+@media (max-width: 640px) { .ry-table { font-size: 0.82rem; } .ry-table td, .ry-table th { padding: 7px 6px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card" style="max-width:1080px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">🏆 Reyting</h1>
+  <p style="color:#94a3b8;margin-bottom:6px;">Tashkilotlar va olimlar — yagona zanjirda. Tashkilot bali = undagi olimlar ballari yig'indisi.</p>
+  <div class="ry-stats">
+    {% if totals %}
+    <span>🏛️ Tashkilotlar: <b>{{ totals.orgs }}</b></span>
+    <span>👨‍🎓 Olimlar: <b>{{ "{:,}".format(totals.scholars).replace(",", " ") }}</b></span>
+    <span>📄 Dissertatsiyalar: <b>{{ "{:,}".format(totals.dissertations).replace(",", " ") }}</b></span>
+    {% endif %}
+  </div>
+
+  <!-- Yagona filtrlar — ikkala tab uchun bitta boshqaruv -->
+  <div class="ry-filters">
+    <select id="f-region">
+      <option value="">Barcha hududlar</option>
+      {% for r in regions %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+    <select id="f-category">
+      <option value="">Barcha turlar</option>
+      {% for key, label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+    </select>
+    <input id="f-code" type="text" placeholder="Ixtisoslik shifri (masalan 05.01)" style="width:210px;">
+    <input id="f-q" type="search" placeholder="🔍 Nomi bo'yicha qidirish…">
+    <button class="ry-clear" id="f-clear">✕ Filtrlarni tozalash</button>
+  </div>
+
+  <div class="ry-tabs">
+    <button class="ry-tab active" data-tab="orgs">🏛️ Tashkilotlar</button>
+    <button class="ry-tab" data-tab="olimlar">👨‍🎓 Olimlar</button>
+  </div>
+
+  <div class="ry-wrap">
+    <table class="ry-table" id="tbl-orgs">
+      <thead><tr>
+        <th>O'rin</th><th>Tashkilot</th><th>Olimlar</th><th>Diss.</th><th>DSc</th><th>PhD</th><th>Ball</th><th></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <table class="ry-table" id="tbl-olimlar" style="display:none;">
+      <thead><tr>
+        <th>O'rin</th><th>Olim</th><th>Daraja</th><th>Rahbarlik</th><th>Opponentlik</th><th>Ball</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="ry-loading" id="ry-loading" style="display:none;">Yuklanmoqda…</div>
+  <button class="ry-more" id="ry-more" style="display:none;">Yana ko'rsatish</button>
+
+  <p class="ry-note">
+    Ball formulasi: DSc dissertatsiya — 50, PhD — 30, boshqa — 20, har bir ilmiy rahbarlik — 8,
+    opponentlik — 2 ball. Olim o'zi eng ko'p himoya qilgan muassasaga biriktiriladi; tashkilot bali
+    — o'sha tashkilot olimlarining ballari yig'indisi. Ma'lumot manbasi: OAK himoya e'lonlari.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var state = { tab: 'orgs', region: '', category: '', code: '', q: '', org: '', offset: 0 };
+  var LIMIT = 100;
+  var els = {
+    region: document.getElementById('f-region'),
+    category: document.getElementById('f-category'),
+    code: document.getElementById('f-code'),
+    q: document.getElementById('f-q'),
+    clear: document.getElementById('f-clear'),
+    loading: document.getElementById('ry-loading'),
+    more: document.getElementById('ry-more'),
+    tblOrgs: document.getElementById('tbl-orgs'),
+    tblOlim: document.getElementById('tbl-olimlar')
+  };
+
+  function esc(s) {
+    var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML;
+  }
+  function params(extra) {
+    var p = new URLSearchParams();
+    ['region', 'category', 'code', 'q'].forEach(function (k) { if (state[k]) p.set(k, state[k]); });
+    Object.keys(extra || {}).forEach(function (k) { if (extra[k] !== '') p.set(k, extra[k]); });
+    return p.toString();
+  }
+  function updateClear() {
+    var any = state.region || state.category || state.code || state.q || state.org;
+    els.clear.style.display = any ? '' : 'none';
+  }
+
+  function renderOrgs(items) {
+    var tb = els.tblOrgs.querySelector('tbody');
+    tb.innerHTML = '';
+    if (!items.length) {
+      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:28px;">Mos tashkilot topilmadi</td></tr>';
+      return;
+    }
+    items.forEach(function (o) {
+      var medal = o.rank === 1 ? '🥇' : o.rank === 2 ? '🥈' : o.rank === 3 ? '🥉' : '#' + o.rank;
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="ry-rank">' + medal + '</td>' +
+        '<td class="ry-name"><a href="/university/' + encodeURIComponent(o.canonical) + '">' + esc(o.latin) + '</a>' +
+        '<div class="ry-sub">' + esc(o.region || '') + '</div></td>' +
+        '<td>' + o.scholars + '</td>' +
+        '<td>' + o.diss + '</td>' +
+        '<td><span class="ry-chip dsc">' + o.dsc + '</span></td>' +
+        '<td><span class="ry-chip phd">' + o.phd + '</span></td>' +
+        '<td class="ry-score">' + o.score.toLocaleString() + '</td>' +
+        '<td><button class="ry-orgbtn" data-org="' + esc(o.canonical) + '">Olimlari →</button></td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('.ry-orgbtn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.org = b.getAttribute('data-org');
+        switchTab('olimlar');
+      });
+    });
+  }
+
+  function renderOlimlar(items, append) {
+    var tb = els.tblOlim.querySelector('tbody');
+    if (!append) tb.innerHTML = '';
+    if (!items.length && !append) {
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:28px;">Mos olim topilmadi</td></tr>';
+      return;
+    }
+    items.forEach(function (s) {
+      var medal = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : '#' + s.rank;
+      var deg = '';
+      if (s.dsc) deg += '<span class="ry-chip dsc">DSc×' + s.dsc + '</span> ';
+      if (s.phd) deg += '<span class="ry-chip phd">PhD×' + s.phd + '</span> ';
+      if (s.other) deg += '<span class="ry-chip">boshqa×' + s.other + '</span>';
+      var orgLine = s.org
+        ? '<div class="ry-sub"><a href="/university/' + encodeURIComponent(s.org) + '">🏛️ ' + esc(s.org_latin) +
+          (s.org_rank ? ' <span class="ry-chip">reytingda #' + s.org_rank + '</span>' : '') + '</a></div>'
+        : '';
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="ry-rank">' + medal + '</td>' +
+        '<td class="ry-name"><a href="/olim/' + encodeURIComponent(s.name) + '">' + esc(s.name) + '</a>' + orgLine + '</td>' +
+        '<td>' + (deg || '—') + '</td>' +
+        '<td>' + s.rahbarlik + '</td>' +
+        '<td>' + s.opponentlik + '</td>' +
+        '<td class="ry-score">' + s.score.toLocaleString() + '</td>';
+      tb.appendChild(tr);
+    });
+  }
+
+  var seq = 0;
+  function load(append) {
+    var mySeq = ++seq;
+    els.loading.style.display = '';
+    if (!append) els.more.style.display = 'none';
+    updateClear();
+    if (state.tab === 'orgs') {
+      fetch('/api/v1/reyting/orgs?' + params({}))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (mySeq !== seq) return;
+          els.loading.style.display = 'none';
+          if (d.ok) renderOrgs(d.orgs);
+        }).catch(function () { els.loading.style.display = 'none'; });
+    } else {
+      if (!append) state.offset = 0;
+      fetch('/api/v1/reyting/olimlar?' + params({ org: state.org, offset: state.offset, limit: LIMIT }))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (mySeq !== seq) return;
+          els.loading.style.display = 'none';
+          if (!d.ok) return;
+          renderOlimlar(d.olimlar, append);
+          state.offset += d.olimlar.length;
+          els.more.style.display = state.offset < d.total ? '' : 'none';
+        }).catch(function () { els.loading.style.display = 'none'; });
+    }
+  }
+
+  function switchTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.ry-tab').forEach(function (t) {
+      t.classList.toggle('active', t.getAttribute('data-tab') === tab);
+    });
+    els.tblOrgs.style.display = tab === 'orgs' ? '' : 'none';
+    els.tblOlim.style.display = tab === 'olimlar' ? '' : 'none';
+    load(false);
+  }
+
+  document.querySelectorAll('.ry-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      if (t.getAttribute('data-tab') !== 'olimlar') state.org = '';
+      switchTab(t.getAttribute('data-tab'));
+    });
+  });
+
+  var debounce;
+  function onFilter() {
+    state.region = els.region.value;
+    state.category = els.category.value;
+    state.code = els.code.value.trim();
+    state.q = els.q.value.trim();
+    clearTimeout(debounce);
+    debounce = setTimeout(function () { load(false); }, 300);
+  }
+  [els.region, els.category].forEach(function (el) { el.addEventListener('change', onFilter); });
+  [els.code, els.q].forEach(function (el) { el.addEventListener('input', onFilter); });
+  els.clear.addEventListener('click', function () {
+    els.region.value = ''; els.category.value = ''; els.code.value = ''; els.q.value = '';
+    state.region = state.category = state.code = state.q = state.org = '';
+    load(false);
+  });
+  els.more.addEventListener('click', function () { load(true); });
+
+  load(false);
+})();
+</script>
+{% endblock %}
