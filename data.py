@@ -933,7 +933,30 @@ def olim_profile(name):
     except Exception:
         journal_map = {}
 
+    # "Xabar yuborish" target: this scholar's claimed cabinet account, bridged
+    # to the main users row by e-mail (messaging is keyed to users.id).
+    message_target_id = None
+    try:
+        from flask_login import current_user as _cu
+        if getattr(_cu, 'is_authenticated', False):
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT u.id FROM cabinet_users cu
+                        JOIN users u ON LOWER(u.email) = LOWER(cu.email)
+                        WHERE LOWER(TRIM(cu.olim_name)) = LOWER(TRIM(%s))
+                          AND u.id <> %s LIMIT 1
+                    """, (term, _cu.id))
+                    r = cur.fetchone()
+                    message_target_id = r[0] if r else None
+            finally:
+                conn.close()
+    except Exception:
+        message_target_id = None
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
+                           message_target_id=message_target_id,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,
                            stats=stats, profile=profile, maqolalar=maqolalar,

@@ -207,6 +207,12 @@
         <span><b>{{ stats.opponent_count }}</b> opponentlik</span>
         <span><b>{{ stats.supervisor_count or 0 }}</b> shogird</span>
       </div>
+      {% if message_target_id and not is_owner %}
+      <button onclick="startConversation({{ message_target_id }})"
+              style="margin-top:10px;border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:8px 18px;border-radius:50px;cursor:pointer;font-size:0.86rem;">
+        ✉️ Xabar yuborish</button>
+      <script src="/static/js/messages.js" defer></script>
+      {% endif %}
     </div>
 
     <div class="op-side">

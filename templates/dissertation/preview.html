@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} — Master Preview — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.pv-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 14px 0 20px; }
+.pv-btn { border: 1px solid rgba(148,163,184,0.3); background: transparent; color: inherit;
+  padding: 8px 18px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 0.86rem;
+  text-decoration: none; display: inline-block; }
+.pv-btn.primary { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border: none; color: #fff; }
+/* qog'oz ko'rinishi — dark temada ham oq sahifa */
+.pv-paper { background: #fff; color: #111; max-width: 820px; margin: 0 auto 40px;
+  padding: 60px 70px; border-radius: 6px; box-shadow: 0 10px 40px rgba(2,6,23,0.5);
+  font-family: 'Times New Roman', Times, serif; font-size: 14pt; line-height: 1.5; }
+.pv-paper h1, .pv-paper h2, .pv-paper h3 { font-family: inherit; color: #111; }
+.pv-title-page { text-align: center; padding: 120px 0; }
+.pv-title-page h1 { font-size: 18pt; font-weight: 800; margin: 30px 0; }
+.pv-toc { page-break-after: always; }
+.pv-toc-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #999;
+  padding: 3px 0; font-size: 12pt; }
+.pv-section { margin-top: 28px; }
+.pv-section h2 { font-size: 15pt; font-weight: 800; }
+.pv-section img { max-width: 100%; }
+.pv-section table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+.pv-section td, .pv-section th { border: 1px solid #555; padding: 5px 9px; font-size: 12pt; }
+@media print {
+  nav, footer, .pv-actions, .site-header, .site-nav, .oak-footer, .btn-theme-toggle,
+  .scroll-top, #oak-preloader { display: none !important; }
+  body { background: #fff !important; }
+  .pv-paper { box-shadow: none; padding: 0; margin: 0; max-width: 100%; border-radius: 0;
+    font-size: 14pt; line-height: 1.5; }
+  .pv-section { page-break-inside: avoid; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="pv-actions">
+    <a class="pv-btn" href="javascript:history.back()">← Muharrirga qaytish</a>
+    <button class="pv-btn" onclick="window.print()">🖨️ Chop etish</button>
+    <a class="pv-btn primary" href="/workspace/{{ project.id }}/export-docx">📄 Word (.docx) yuklab olish</a>
+  </div>
+
+  <div class="pv-paper">
+    <div class="pv-title-page">
+      <div>{{ project.specialty_code or '' }}</div>
+      <h1>{{ project.title }}</h1>
+      <div>{{ owner_name }}</div>
+      <div style="margin-top:60px;">{{ year }}</div>
+    </div>
+
+    <div class="pv-toc">
+      <h2 style="text-align:center;">MUNDARIJA</h2>
+      {% for b in blocks %}
+      <div class="pv-toc-row" style="padding-left:{{ b.depth * 18 }}px;">
+        <span>{{ b.numbering }}. {{ b.title }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% for b in blocks %}
+    <div class="pv-section">
+      <h2 style="font-size:{{ 15 - b.depth }}pt;">{{ b.numbering }}. {{ b.title }}</h2>
+      {# blok kontenti saqlashda bleach bilan sanitizatsiya qilingan — xavfsiz #}
+      <div>{{ b.content | safe }}</div>
+    </div>
+    {% endfor %}
+    {% if not blocks %}
+    <p style="text-align:center;color:#666;">Hali qismlar yaratilmagan.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

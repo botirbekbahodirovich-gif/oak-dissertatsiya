@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}{{ block.title }} — Muharrir — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+<style>
+.ed-layout { display: grid; grid-template-columns: 280px 1fr 320px; gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .ed-layout { grid-template-columns: 240px 1fr; } .ed-right { display: none; }
+  .ed-right.mobile-open { display: block; position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+    z-index: 1100; overflow-y: auto; } }
+@media (max-width: 760px) { .ed-layout { grid-template-columns: 1fr; } .ed-left { display: none; }
+  .ed-left.mobile-open { display: block; } }
+.ed-panel { border: 1px solid rgba(148,163,184,0.18); border-radius: 14px;
+  background: rgba(30,41,59,0.55); padding: 12px; }
+[data-bs-theme="light"] .ed-panel { background: #fff; }
+.ed-left { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
+.ed-right { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
+
+/* TOC */
+.toc-node { border-radius: 8px; }
+.toc-row { display: flex; align-items: center; gap: 5px; padding: 5px 6px; border-radius: 8px;
+  cursor: pointer; font-size: 0.84rem; }
+.toc-row:hover { background: rgba(59,130,246,0.08); }
+.toc-row.active { background: rgba(59,130,246,0.16); font-weight: 700; }
+.toc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #64748b; }
+.toc-dot.deficiencies { background: #ef4444; } .toc-dot.task_assigned { background: #fbbf24; }
+.toc-dot.approved { background: #22c55e; }
+.toc-count { background: rgba(251,191,36,0.2); color: #fbbf24; font-size: 0.68rem;
+  border-radius: 50px; padding: 1px 7px; font-weight: 700; }
+.toc-actions { display: none; gap: 3px; margin-left: auto; }
+.toc-row:hover .toc-actions { display: flex; }
+.toc-actions button { border: none; background: transparent; cursor: pointer; font-size: 0.75rem;
+  padding: 2px; color: inherit; }
+.toc-children { margin-left: 16px; }
+.toc-row.drag-over { outline: 2px dashed #4a9eff; }
+
+/* editor */
+.ed-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ed-topbar h1 { font-size: 1.05rem; margin: 0; flex: 1; min-width: 200px; }
+.ed-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 50px;
+  background: rgba(148,163,184,0.15); color: #94a3b8; }
+.ed-badge.deficiencies { background: rgba(239,68,68,0.15); color: #f87171; }
+.ed-badge.task_assigned { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.ed-badge.approved { background: rgba(34,197,94,0.15); color: #4ade80; }
+.ed-btn { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  padding: 7px 13px; border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+  text-decoration: none; display: inline-block; }
+.ed-btn.primary { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border: none; color: #fff; }
+#editor-container { background: #fff; color: #0f172a; border-radius: 0 0 10px 10px; min-height: 55vh; }
+.ql-toolbar { border-radius: 10px 10px 0 0; background: #f1f5f9; }
+.ed-status { display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.78rem; margin-top: 8px; }
+.ed-readonly-note { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
+  color: #60a5fa; border-radius: 10px; padding: 8px 14px; font-size: 0.85rem; margin-bottom: 10px; }
+.annotation-highlight { background: rgba(251,191,36,0.35); cursor: pointer; }
+.annotation-highlight.pulse { animation: annPulse 1s ease-in-out 2; }
+@keyframes annPulse { 50% { background: rgba(251,191,36,0.8); } }
+
+/* annotations panel */
+.ann-card { border: 1px solid rgba(148,163,184,0.18); border-radius: 12px; padding: 10px 12px;
+  margin-bottom: 10px; font-size: 0.83rem; cursor: pointer; }
+.ann-card.resolved { opacity: 0.55; }
+.ann-avatar { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center;
+  justify-content: center; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff;
+  font-weight: 800; font-size: 0.7rem; }
+.ann-type { font-size: 0.66rem; font-weight: 700; padding: 2px 8px; border-radius: 50px; }
+.ann-type.comment { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.ann-type.correction { background: rgba(239,68,68,0.15); color: #f87171; }
+.ann-type.task { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.ann-anchor { color: #94a3b8; font-style: italic; font-size: 0.75rem; border-left: 2px solid #fbbf24;
+  padding-left: 8px; margin: 5px 0; }
+.ann-reply { border-top: 1px dashed rgba(148,163,184,0.2); margin-top: 6px; padding-top: 6px; }
+.ann-input { width: 100%; border: 1px solid rgba(148,163,184,0.25); border-radius: 8px; padding: 6px 9px;
+  background: transparent; color: inherit; font-size: 0.8rem; margin-top: 6px; }
+#float-annotate { position: absolute; z-index: 1150; display: none; background: #1e293b;
+  border: 1px solid rgba(148,163,184,0.3); border-radius: 10px; padding: 5px 10px; color: #fbbf24;
+  cursor: pointer; font-size: 0.8rem; font-weight: 700; box-shadow: 0 8px 20px rgba(2,6,23,0.5); }
+
+/* slide-over versions */
+.ver-panel { position: fixed; top: 0; right: -420px; bottom: 0; width: 400px; max-width: 92vw;
+  background: #1e293b; border-left: 1px solid rgba(148,163,184,0.25); z-index: 1250;
+  transition: right 0.25s; padding: 18px; overflow-y: auto; color: #e2e8f0; }
+.ver-panel.open { right: 0; }
+.ver-item { border: 1px solid rgba(148,163,184,0.18); border-radius: 10px; padding: 9px 12px;
+  margin-bottom: 8px; font-size: 0.83rem; cursor: pointer; }
+.ver-item:hover { border-color: #4a9eff; }
+.dw-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.7);
+  z-index: 1300; align-items: center; justify-content: center; padding: 16px; }
+.dw-modal-bg.show { display: flex; }
+.dw-modal { background: #1e293b; border: 1px solid rgba(148,163,184,0.2); border-radius: 16px;
+  padding: 20px; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; color: #e2e8f0; }
+.dw-btn { border: none; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff;
+  font-weight: 700; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; }
+.dw-btn.ghost { background: rgba(148,163,184,0.12); color: inherit; border: 1px solid rgba(148,163,184,0.25); }
+.ed-banner { border-radius: 12px; padding: 11px 16px; margin-bottom: 10px; font-size: 0.88rem;
+  display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ed-banner.info { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); }
+.ed-banner.warn { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.35); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl" style="max-width:1400px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <a href="/workspace" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">← Ish stoli</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="ed-btn" href="/workspace/{{ project.id }}/preview">👁️ Master Preview</a>
+      {% if role == 'owner' %}
+      <button class="ed-btn primary" onclick="submitForReview()">📤 Ko'rib chiqishga yuborish</button>
+      {% else %}
+      <button class="ed-btn primary" onclick="finishReview()">✅ Ko'rib chiqishni yakunlash</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="dw-banners"></div>
+  {% if role == 'advisor' %}
+  <div class="ed-readonly-note">👁️ Siz ko'rib chiqish rejimidasiz — matn tahrirlanmaydi, izoh qoldirishingiz mumkin.</div>
+  {% endif %}
+
+  <div class="ed-layout">
+    <!-- TOC -->
+    <aside class="ed-panel ed-left" id="toc-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <b style="font-size:0.85rem;">📑 Mundarija</b>
+        {% if role == 'owner' %}
+        <button class="ed-btn" style="padding:3px 10px;font-size:0.75rem;" onclick="addBlock(null)">＋ Bob</button>
+        {% endif %}
+      </div>
+      <div id="toc-tree"></div>
+    </aside>
+
+    <!-- EDITOR -->
+    <main>
+      <div class="ed-topbar ed-panel" style="padding:10px 14px;">
+        <h1><span id="blk-numbering">{{ block.numbering }}</span>. <span id="blk-title">{{ block.title }}</span></h1>
+        <span class="ed-badge {{ block.review_status }}" id="blk-status">{{ review_labels[block.review_status] }}</span>
+        <button class="ed-btn" onclick="openVersions()">🕐 Versiyalar</button>
+        <button class="ed-btn" onclick="toggleAnnPanel()">💬 Izohlar</button>
+      </div>
+      <div id="editor-container"></div>
+      <div class="ed-status">
+        <span id="save-status">✓ Yuklandi</span>
+        <span id="word-count">{{ block.word_count }} so'z</span>
+      </div>
+    </main>
+
+    <!-- ANNOTATIONS -->
+    <aside class="ed-panel ed-right" id="ann-panel">
+      <b style="font-size:0.85rem;">💬 Izohlar va topshiriqlar</b>
+      {% if role == 'advisor' %}
+      <select id="review-select" class="ann-input" onchange="setReviewStatus(this.value)">
+        <option value="">— Qism holatini belgilash —</option>
+        <option value="deficiencies">🔴 Kamchiliklar bor</option>
+        <option value="task_assigned">🟡 Topshiriq berildi</option>
+        <option value="approved">🟢 Ma'qullandi</option>
+      </select>
+      {% endif %}
+      <div id="ann-list" style="margin-top:10px;"></div>
+    </aside>
+  </div>
+</div>
+
+<button id="float-annotate" onclick="openAnnotateForm()">💬 Izoh qoldirish</button>
+
+<!-- annotatsiya formasi -->
+<div class="dw-modal-bg" id="ann-modal">
+  <div class="dw-modal" style="max-width:460px;">
+    <h3 style="margin:0 0 10px;font-size:1rem;">💬 Izoh qoldirish</h3>
+    <div class="ann-anchor" id="ann-selected"></div>
+    <select id="ann-type" class="ann-input">
+      <option value="comment">💬 Izoh</option>
+      <option value="correction">✏️ Tuzatish</option>
+      <option value="task">📋 Topshiriq</option>
+    </select>
+    <textarea id="ann-body" class="ann-input" rows="4" placeholder="Izoh matni…" maxlength="5000"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="dw-btn ghost" onclick="closeModal('ann-modal')">Bekor</button>
+      <button class="dw-btn" onclick="createAnnotation()">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<!-- versiya preview modali -->
+<div class="dw-modal-bg" id="ver-modal">
+  <div class="dw-modal">
+    <h3 style="margin:0 0 10px;font-size:1rem;">🕐 Versiya <span id="ver-date"></span></h3>
+    <div id="ver-content" style="background:#fff;color:#0f172a;border-radius:10px;padding:14px;max-height:55vh;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button class="dw-btn ghost" onclick="closeModal('ver-modal')">Yopish</button>
+      {% if role == 'owner' %}
+      <button class="dw-btn" id="ver-restore-btn">↩️ Ushbu versiyani tiklash</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="ver-panel" id="ver-panel">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <b>🕐 Versiyalar tarixi</b>
+    <button class="dw-btn ghost" style="padding:4px 10px;" onclick="closeVersions()">✕</button>
+  </div>
+  <div id="ver-list"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script>
+window.ED_STATE = {
+  dissId: {{ project.id }},
+  blockId: {{ block.id }},
+  role: '{{ role }}',
+  readOnly: {{ 'true' if role == 'advisor' else 'false' }},
+  content: {{ block.content | tojson }},
+  updatedAt: {{ (block.updated_at | string) | tojson }},
+  reviewLabels: {{ review_labels | tojson }},
+  tree: {{ tree | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/dissertation.js') }}"></script>
+{% endblock %}

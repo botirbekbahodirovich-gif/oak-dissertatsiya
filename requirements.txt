@@ -10,3 +10,5 @@ psycopg2-binary==2.9.6
 groq
 gunicorn
 requests-oauthlib==2.0.0
+bleach==6.4.0
+python-docx==1.2.0

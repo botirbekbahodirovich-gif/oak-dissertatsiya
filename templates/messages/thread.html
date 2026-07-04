@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ other.name }} — Xabarlar — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.th-wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column;
+  height: calc(100vh - 220px); min-height: 420px; }
+.th-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border: 1px solid rgba(148,163,184,0.18); border-radius: 14px 14px 0 0;
+  background: rgba(30,41,59,0.6); }
+[data-bs-theme="light"] .th-head { background: #fff; }
+.th-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-weight: 800; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; }
+.th-msgs { flex: 1; overflow-y: auto; padding: 14px; border-left: 1px solid rgba(148,163,184,0.18);
+  border-right: 1px solid rgba(148,163,184,0.18); background: rgba(15,23,42,0.3); }
+[data-bs-theme="light"] .th-msgs { background: #f8fafc; }
+.th-day { text-align: center; color: #64748b; font-size: 0.72rem; margin: 12px 0 8px; }
+.th-msg { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; }
+.th-msg.mine { flex-direction: row-reverse; }
+.th-bubble { max-width: 72%; padding: 8px 13px; border-radius: 14px; font-size: 0.88rem;
+  line-height: 1.45; word-wrap: break-word; white-space: pre-wrap;
+  background: rgba(148,163,184,0.15); }
+.th-msg.mine .th-bubble { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; }
+.th-time { color: #64748b; font-size: 0.66rem; margin-top: 3px; }
+.th-msg.mine .th-time { color: rgba(255,255,255,0.7); }
+.th-img { max-width: 240px; max-height: 220px; border-radius: 10px; cursor: pointer; display: block; }
+.th-file { display: flex; align-items: center; gap: 8px; background: rgba(2,6,23,0.25);
+  border-radius: 10px; padding: 7px 10px; color: inherit; text-decoration: none; font-size: 0.8rem; }
+.th-input { display: flex; gap: 8px; align-items: flex-end; padding: 10px;
+  border: 1px solid rgba(148,163,184,0.18); border-radius: 0 0 14px 14px;
+  background: rgba(30,41,59,0.6); }
+[data-bs-theme="light"] .th-input { background: #fff; }
+.th-input textarea { flex: 1; border: 1px solid rgba(148,163,184,0.25); border-radius: 12px;
+  padding: 9px 12px; background: transparent; color: inherit; resize: none; max-height: 120px;
+  font-size: 0.9rem; }
+.th-send { border: none; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff;
+  border-radius: 12px; padding: 9px 16px; font-weight: 800; cursor: pointer; }
+.th-attach { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  border-radius: 12px; padding: 9px 12px; cursor: pointer; }
+#lightbox { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.9); z-index: 1400;
+  align-items: center; justify-content: center; cursor: zoom-out; }
+#lightbox.show { display: flex; }
+#lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="th-wrap">
+    <div class="th-head">
+      <a href="/messages" style="color:#94a3b8;text-decoration:none;margin-right:4px;">←</a>
+      <span class="th-avatar">{{ other.name[:1] | upper }}</span>
+      <b>{{ other.name }}</b>
+    </div>
+    <div class="th-msgs" id="th-msgs">
+      <div style="text-align:center;margin-bottom:10px;">
+        <button class="th-attach" id="load-older" style="font-size:0.75rem;">↑ Oldingi xabarlar</button>
+      </div>
+    </div>
+    <div class="th-input">
+      <button class="th-attach" onclick="document.getElementById('th-file').click()">📎</button>
+      <input type="file" id="th-file" style="display:none;"
+             accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.xlsx,.pptx,.zip">
+      <textarea id="th-text" rows="1" placeholder="Xabar yozing… (Enter = yuborish)"></textarea>
+      <button class="th-send" onclick="sendCurrentMessage()">➤</button>
+    </div>
+  </div>
+</div>
+<div id="lightbox" onclick="this.classList.remove('show')"><img id="lightbox-img" alt=""></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.MSG_STATE = {
+  conversationId: {{ conversation_id }},
+  initialMessages: {{ messages | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/messages.js') }}"></script>
+{% endblock %}
