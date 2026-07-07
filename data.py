@@ -760,7 +760,15 @@ def _dashboard_where(f, exclude=None, user_id=None):
         clauses.append("TRIM(COALESCE(d.fan_tarmoqi, '')) = ANY(%s)")
         params.append(f['fan'])
     if exclude != 'muassasa' and f['muassasa']:
-        clauses.append("TRIM(d.muassasa) = ANY(%s)")
+        # Facet values are canonical institution names (grouped via
+        # institution_map). Match a raw variant directly OR any raw variant that
+        # maps to a selected canonical, so merges/renames filter as one unit.
+        # The direct match keeps old links (raw muassasa values) working.
+        clauses.append(
+            "(TRIM(d.muassasa) = ANY(%s) OR TRIM(d.muassasa) IN ("
+            "SELECT cyrillic_name FROM institution_map "
+            "WHERE COALESCE(canonical_name, cyrillic_name) = ANY(%s) AND is_active = TRUE))")
+        params.append(f['muassasa'])
         params.append(f['muassasa'])
     if exclude != 'ixt' and f['ixt']:
         ors = []
@@ -809,14 +817,21 @@ def _dashboard_facets(cur, f, user_id):
                 f"WHERE d.fan_tarmoqi IS NOT NULL AND TRIM(d.fan_tarmoqi) <> '' "
                 f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30", p)
     facets['fan'] = [{'value': r[0], 'count': r[1]} for r in cur.fetchall()]
+    # Group the muassasa facet by canonical institution (institution_map) so
+    # merged/renamed institutions collapse into one row with summed counts.
+    # Unmapped values fall back to the raw muassasa string. cyrillic_name is
+    # UNIQUE, so the LEFT JOIN never fans out a dissertation row.
     w, p = _dashboard_where(f, exclude='muassasa', user_id=user_id)
-    cur.execute(f"SELECT TRIM(d.muassasa), COUNT(*) FROM dissertations d{w} "
+    _mj = ("LEFT JOIN institution_map im "
+           "ON im.cyrillic_name = TRIM(d.muassasa) AND im.is_active = TRUE")
+    _mcol = "COALESCE(im.canonical_name, TRIM(d.muassasa))"
+    cur.execute(f"SELECT {_mcol} AS canon, COUNT(*) FROM dissertations d {_mj}{w} "
                 f"AND d.muassasa IS NOT NULL AND TRIM(d.muassasa) <> '' "
-                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30"
+                f"GROUP BY canon ORDER BY 2 DESC LIMIT 30"
                 if w else
-                f"SELECT TRIM(d.muassasa), COUNT(*) FROM dissertations d "
+                f"SELECT {_mcol} AS canon, COUNT(*) FROM dissertations d {_mj} "
                 f"WHERE d.muassasa IS NOT NULL AND TRIM(d.muassasa) <> '' "
-                f"GROUP BY 1 ORDER BY 2 DESC LIMIT 30", p)
+                f"GROUP BY canon ORDER BY 2 DESC LIMIT 30", p)
     facets['muassasa'] = [{'value': r[0], 'count': r[1]} for r in cur.fetchall()]
     w, p = _dashboard_where(f, exclude='yil', user_id=user_id)
     year_where = (w + " AND " if w else " WHERE ") + r"d.sana ~ '(19|20)\d{2}'"

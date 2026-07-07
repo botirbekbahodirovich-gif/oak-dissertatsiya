@@ -1334,6 +1334,203 @@ def admin_university_delete(id):
     return redirect(url_for('admin.admin_universities'))
 
 
+# ── Institution rename + merge-on-collision ─────────────────────────────────
+# Admins rename any canonical institution in institution_map. Renaming to a name
+# that already exists MERGES the two groups: every raw variant of the old group
+# repoints to the one canonical string. Each change is logged in
+# institution_renames (with the moved variant list) and is fully reversible.
+
+# Canonical groups with their variant + dissertation counts. Grouping key is the
+# same COALESCE the /universities directory uses, so counts stay in lock-step.
+_INST_GROUPS_SQL = """
+    SELECT COALESCE(im.canonical_name, im.cyrillic_name) AS canon,
+           COUNT(DISTINCT im.cyrillic_name)              AS variant_count,
+           COUNT(d.id)                                   AS diss_count
+    FROM institution_map im
+    LEFT JOIN dissertations d ON TRIM(d.muassasa) = im.cyrillic_name
+    WHERE im.is_active = TRUE
+    GROUP BY canon
+"""
+
+
+def _inst_group_exists(cur, canonical):
+    cur.execute("SELECT 1 FROM institution_map "
+                "WHERE COALESCE(canonical_name, cyrillic_name) = %s AND is_active = TRUE "
+                "LIMIT 1", (canonical,))
+    return cur.fetchone() is not None
+
+
+def _inst_group_diss_count(cur, canonical):
+    cur.execute("SELECT COUNT(d.id) FROM institution_map im "
+                "LEFT JOIN dissertations d ON TRIM(d.muassasa) = im.cyrillic_name "
+                "WHERE im.is_active = TRUE "
+                "AND COALESCE(im.canonical_name, im.cyrillic_name) = %s", (canonical,))
+    r = cur.fetchone()
+    return (r[0] or 0) if r else 0
+
+
+@admin_bp.route('/admin/institutions')
+@login_required
+def admin_institutions():
+    from app import _require_admin, transliterate
+    _require_admin()
+    from data import get_connection
+    q = (request.args.get('q') or '').strip()
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 50
+
+    groups, recent = [], []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(_INST_GROUPS_SQL)
+                groups = [{'name': r[0], 'variant_count': r[1] or 0,
+                           'diss_count': r[2] or 0} for r in cur.fetchall()]
+                cur.execute(
+                    "SELECT id, old_name, new_name, was_merge, moved_variants, "
+                    "admin_username, created_at FROM institution_renames "
+                    "ORDER BY id DESC LIMIT 20")
+                for r in cur.fetchall():
+                    mv = r[4] if isinstance(r[4], list) else []
+                    recent.append({
+                        'id': r[0], 'old_name': r[1], 'new_name': r[2],
+                        'was_merge': r[3], 'variant_count': len(mv),
+                        'admin_username': r[5] or '',
+                        'created_at': str(r[6])[:16] if r[6] else ''})
+        finally:
+            conn.close()
+    except Exception:
+        groups, recent = [], []
+
+    # Search matches in both scripts via the site's Cyrillic→Latin helper: fold
+    # the query and each name to Latin so Latin input finds Cyrillic names.
+    if q:
+        ql = transliterate(q).lower()
+        groups = [g for g in groups if ql in transliterate(g['name']).lower()]
+    groups.sort(key=lambda g: (-g['diss_count'], (g['name'] or '').lower()))
+
+    total = len(groups)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+    start = (page - 1) * per_page
+    items = groups[start:start + per_page]
+
+    return render_template('admin_institutions.html', items=items, q=q,
+                           page=page, total_pages=total_pages, total=total,
+                           recent=recent)
+
+
+@admin_bp.route('/admin/institutions/rename', methods=['POST'])
+@login_required
+def admin_institutions_rename():
+    from urllib.parse import quote
+    from app import _require_admin, cache
+    from institutions import transliterate as _translit
+    _require_admin()
+    from data import get_connection
+    from psycopg2.extras import Json
+
+    data = request.get_json(silent=True) or {}
+    old_name = (data.get('old_name') or '').strip()
+    new_name = (data.get('new_name') or '').strip()
+    confirm = bool(data.get('confirm'))
+
+    if not old_name or not new_name:
+        return jsonify(ok=False, error="Nom bo'sh bo'lishi mumkin emas."), 400
+    if new_name == old_name:
+        return jsonify(ok=False, status='noop', message="Nom o'zgarmadi."), 200
+
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                if not _inst_group_exists(cur, old_name):
+                    return jsonify(ok=False, error="Institut topilmadi."), 404
+                is_merge = _inst_group_exists(cur, new_name)
+
+                # Merge needs an explicit confirm from the UI with the sums shown.
+                if is_merge and not confirm:
+                    x = _inst_group_diss_count(cur, old_name)
+                    y = _inst_group_diss_count(cur, new_name)
+                    msg = ("«%s» «%s» bilan birlashtiriladi: %d + %d = %d ta "
+                           "dissertatsiya. Davom etasizmi?"
+                           % (old_name, new_name, x, y, x + y))
+                    return jsonify(ok=True, status='confirm', merge=True,
+                                   message=msg), 200
+
+                # Lock the source group's rows, then repoint them to new_name.
+                cur.execute(
+                    "SELECT cyrillic_name FROM institution_map "
+                    "WHERE COALESCE(canonical_name, cyrillic_name) = %s AND is_active = TRUE "
+                    "FOR UPDATE", (old_name,))
+                moved = [r[0] for r in cur.fetchall()]
+                if not moved:
+                    return jsonify(ok=False, error="Institut topilmadi."), 404
+                cur.execute(
+                    "UPDATE institution_map SET canonical_name = %s, latin_name = %s "
+                    "WHERE cyrillic_name = ANY(%s)",
+                    (new_name, _translit(new_name), moved))
+                cur.execute(
+                    "INSERT INTO institution_renames "
+                    "(old_name, new_name, was_merge, moved_variants, admin_username) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (old_name, new_name, is_merge, Json(moved),
+                     getattr(current_user, 'username', '') or ''))
+            conn.commit()
+        finally:
+            conn.close()
+        cache.delete('institution_directory')
+        cache.delete('university_stats')
+        return jsonify(ok=True, status=('merged' if is_merge else 'renamed'),
+                       new_name=new_name,
+                       redirect='/university/' + quote(new_name, safe='')), 200
+    except Exception:
+        return jsonify(ok=False, error="Saqlashda xatolik yuz berdi."), 500
+
+
+@admin_bp.route('/admin/institutions/undo/<int:rename_id>', methods=['POST'])
+@login_required
+def admin_institutions_undo(rename_id):
+    from app import _require_admin, cache
+    from institutions import transliterate as _translit
+    _require_admin()
+    from data import get_connection
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT old_name, moved_variants FROM institution_renames "
+                            "WHERE id = %s FOR UPDATE", (rename_id,))
+                row = cur.fetchone()
+                if not row:
+                    flash("O'zgarish topilmadi.", "error")
+                    return redirect(url_for('admin.admin_institutions'))
+                old_name = row[0]
+                moved = row[1] if isinstance(row[1], list) else []
+                if moved:
+                    # Restore the previous mapping; un-merges a merge.
+                    cur.execute("SELECT 1 FROM institution_map "
+                                "WHERE cyrillic_name = ANY(%s) FOR UPDATE", (moved,))
+                    cur.execute(
+                        "UPDATE institution_map SET canonical_name = %s, latin_name = %s "
+                        "WHERE cyrillic_name = ANY(%s)",
+                        (old_name, _translit(old_name), moved))
+                cur.execute("DELETE FROM institution_renames WHERE id = %s", (rename_id,))
+            conn.commit()
+        finally:
+            conn.close()
+        cache.delete('institution_directory')
+        cache.delete('university_stats')
+        flash("«%s» qayta tiklandi." % old_name, "success")
+    except Exception:
+        flash("Bekor qilishda xatolik.", "error")
+    return redirect(url_for('admin.admin_institutions'))
+
+
 @admin_bp.route('/admin/journals')
 @login_required
 def admin_journals():

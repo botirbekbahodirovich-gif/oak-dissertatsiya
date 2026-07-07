@@ -901,6 +901,22 @@ def _run_startup_migrations():
                         "WHERE canonical_name IS NULL")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_institution_map_canonical "
                         "ON institution_map (canonical_name)")
+            # Admin rename/merge audit log for institution_map canonical names.
+            # moved_variants keeps the raw variant list that was repointed, so any
+            # rename or merge can be undone from this row alone (see admin.py).
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS institution_renames (
+                    id SERIAL PRIMARY KEY,
+                    old_name TEXT NOT NULL,
+                    new_name TEXT NOT NULL,
+                    was_merge BOOLEAN DEFAULT FALSE,
+                    moved_variants JSONB,
+                    admin_username TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_institution_renames_old "
+                        "ON institution_renames (old_name)")
             _seed_universities(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS journals (
@@ -3702,6 +3718,58 @@ def _uni_row_to_dict(cols, row):
     d = dict(zip(cols, row))
     d['type_label'] = _UNI_TYPE_LABELS.get(d.get('university_type'), d.get('university_type') or '')
     return d
+
+
+def _institution_is_canonical(cur, name):
+    """True if ``name`` is a live canonical institution in institution_map."""
+    cur.execute("SELECT 1 FROM institution_map "
+                "WHERE COALESCE(canonical_name, cyrillic_name) = %s AND is_active = TRUE "
+                "LIMIT 1", (name,))
+    return cur.fetchone() is not None
+
+
+def _resolve_institution_redirect(cur, term):
+    """Map an institution URL name to the canonical it should 301 to, or None.
+
+    Returns the current canonical name when ``term`` is (a) a raw variant of a
+    live canonical, or (b) an old name recorded in institution_renames whose
+    chain resolves to a live canonical. Returns None when ``term`` is already a
+    live canonical or cannot be resolved (caller keeps existing behavior)."""
+    if not term or _institution_is_canonical(cur, term):
+        return None
+    # Raw variant (cyrillic_name) → its current canonical, if different.
+    cur.execute("SELECT COALESCE(canonical_name, cyrillic_name) FROM institution_map "
+                "WHERE cyrillic_name = %s AND is_active = TRUE LIMIT 1", (term,))
+    row = cur.fetchone()
+    if row and row[0] and row[0] != term:
+        return row[0]
+    # Walk the rename chain (latest rename per old_name) to the newest name.
+    # A SAVEPOINT isolates this from the caller's transaction so a missing
+    # institution_renames table can never abort the profile page render.
+    target = None
+    try:
+        cur.execute("SAVEPOINT _ir_chain")
+        seen = {term}
+        cur_name = term
+        for _ in range(50):
+            cur.execute("SELECT new_name FROM institution_renames "
+                        "WHERE old_name = %s ORDER BY id DESC LIMIT 1", (cur_name,))
+            r = cur.fetchone()
+            if not r or not r[0] or r[0] in seen:
+                break
+            cur_name = r[0]
+            seen.add(cur_name)
+            if _institution_is_canonical(cur, cur_name):
+                target = cur_name
+                break
+        cur.execute("RELEASE SAVEPOINT _ir_chain")
+    except Exception:
+        try:
+            cur.execute("ROLLBACK TO SAVEPOINT _ir_chain")
+        except Exception:
+            pass
+        return None
+    return target
 
 
 def _find_university(cur, term):

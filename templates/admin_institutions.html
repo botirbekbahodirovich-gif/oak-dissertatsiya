@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Institutlarni birlashtirish — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-hint { color: #94a3b8; font-size: 0.86rem; margin: 0 0 1rem; max-width: 60ch; }
+  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .adm-search { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .adm-search input { flex: 1; min-width: 220px; background: #0f1626; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; }
+  .adm-search button { background: #3b82f6; color: #fff; font-weight: 700; padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer; }
+  .adm-search a.clear { align-self: center; color: #94a3b8; font-size: 0.84rem; text-decoration: none; }
+  .adm-table-wrap { border-radius: 14px; overflow-x: auto; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; white-space: nowrap; }
+  .adm-table td { padding: 0.6rem 0.9rem; font-size: 0.88rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .adm-table td.num { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .adm-name a { color: #60a5fa; text-decoration: none; }
+  .adm-name a:hover { text-decoration: underline; }
+  .adm-btn { font-size: 0.95rem; padding: 5px 11px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; line-height: 1; background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .adm-btn:hover { background: rgba(59,130,246,0.28); }
+  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+  .adm-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 1.1rem 0; color: #94a3b8; font-size: 0.86rem; }
+  .adm-pager a { color: #60a5fa; text-decoration: none; padding: 6px 12px; border: 1px solid #334155; border-radius: 8px; }
+  .adm-pager a.disabled { color: #475569; pointer-events: none; border-color: #1e293b; }
+  /* log */
+  .adm-log-h { margin: 2rem 0 0.8rem; font-size: 1.1rem; font-weight: 800; color: #f1f5f9; }
+  .log-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0.55rem 0.9rem; border-top: 1px solid #334155; font-size: 0.85rem; color: #cbd5e1; }
+  .log-row:first-child { border-top: none; }
+  .log-arrow { color: #64748b; }
+  .log-old { color: #f87171; } .log-new { color: #34d399; }
+  .log-badge { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(139,92,246,0.2); color: #a78bfa; }
+  .log-meta { color: #64748b; margin-left: auto; white-space: nowrap; }
+  .log-undo { background: rgba(239,68,68,0.14); color: #f87171; border: none; cursor: pointer; font-size: 0.8rem; padding: 5px 10px; border-radius: 8px; }
+  .log-undo:hover { background: rgba(239,68,68,0.26); }
+  /* modal */
+  .rn-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.72); display: none; align-items: center; justify-content: center; z-index: 3000; padding: 1rem; }
+  .rn-overlay.open { display: flex; }
+  .rn-box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 520px; }
+  .rn-box h3 { margin: 0 0 0.4rem; color: #f1f5f9; font-size: 1.1rem; }
+  .rn-box p { color: #94a3b8; font-size: 0.84rem; margin: 0 0 1rem; }
+  .rn-box label { display: block; color: #cbd5e1; font-size: 0.8rem; margin-bottom: 6px; }
+  .rn-box input { width: 100%; background: #0f1626; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 14px; font-size: 0.95rem; }
+  .rn-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.25rem; }
+  .rn-save { background: #059669; color: #fff; font-weight: 700; padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; }
+  .rn-save:disabled { opacity: 0.6; cursor: default; }
+  .rn-cancel { background: transparent; color: #94a3b8; padding: 10px 18px; border: 1px solid #334155; border-radius: 10px; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:none">{{ csrf_token()|safe }}</div>
+
+<div class="adm-head">
+  <h1>🏛️ Institutlarni birlashtirish ({{ total }})</h1>
+  <a href="/admin/universities" class="adm-btn">← Universitetlar boshqaruvi</a>
+</div>
+<p class="adm-hint">Muassasa nomini tahrirlang. Agar yangi nom mavjud boshqa muassasa nomiga
+  aynan mos kelsa — ikki muassasa avtomatik <b>birlashtiriladi</b> (barcha ma'lumotlar birlashadi).</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+{% endwith %}
+
+<form class="adm-search" method="GET" action="/admin/institutions">
+  <input type="text" name="q" value="{{ q }}" placeholder="Nomi bo'yicha qidirish (lotin yoki kirill)…" autocomplete="off">
+  <button type="submit">Qidirish</button>
+  {% if q %}<a class="clear" href="/admin/institutions">Tozalash</a>{% endif %}
+</form>
+
+{% if items %}
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr><th>Nomi</th><th style="text-align:right;">Variantlar</th><th style="text-align:right;">Dissertatsiya</th><th style="width:1%;">Amal</th></tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td class="adm-name"><a href="/university/{{ it.name|urlencode }}" target="_blank" rel="noopener">{{ it.name }}</a></td>
+        <td class="num">{{ it.variant_count }}</td>
+        <td class="num">{{ it.diss_count }}</td>
+        <td>
+          <button type="button" class="adm-btn rn-edit" data-name="{{ it.name }}" title="Tahrirlash">✏️</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<div class="adm-pager">
+  {% set prev_url = '/admin/institutions?page=' ~ (page-1) ~ ('&q=' ~ (q|urlencode) if q else '') %}
+  {% set next_url = '/admin/institutions?page=' ~ (page+1) ~ ('&q=' ~ (q|urlencode) if q else '') %}
+  <a class="{{ 'disabled' if page <= 1 else '' }}" href="{{ prev_url }}">← Oldingi</a>
+  <span>{{ page }} / {{ total_pages }}</span>
+  <a class="{{ 'disabled' if page >= total_pages else '' }}" href="{{ next_url }}">Keyingi →</a>
+</div>
+{% endif %}
+{% else %}
+<div class="adm-table-wrap"><div class="adm-empty">{% if q %}«{{ q }}» bo'yicha muassasa topilmadi.{% else %}Muassasalar ro'yxati bo'sh.{% endif %}</div></div>
+{% endif %}
+
+{% if recent %}
+<div class="adm-log-h">Oxirgi o'zgarishlar</div>
+<div class="adm-table-wrap">
+  {% for r in recent %}
+  <div class="log-row">
+    <span class="log-old">{{ r.old_name }}</span>
+    <span class="log-arrow">→</span>
+    <span class="log-new">{{ r.new_name }}</span>
+    {% if r.was_merge %}<span class="log-badge">birlashtirish</span>{% endif %}
+    <span class="log-meta">{{ r.variant_count }} variant · {{ r.admin_username }} · {{ r.created_at }}</span>
+    <form method="POST" action="/admin/institutions/undo/{{ r.id }}"
+          onsubmit="return confirm('Bu o\'zgarish bekor qilinsinmi? Avvalgi holat tiklanadi.')" style="display:inline;">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="log-undo" title="Bekor qilish">↩️ Bekor qilish</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- rename / merge modal -->
+<div class="rn-overlay" id="rnOverlay">
+  <div class="rn-box">
+    <h3>Muassasa nomini tahrirlash</h3>
+    <p>Yangi nom mavjud muassasa nomiga aynan mos kelsa, ular birlashtiriladi.</p>
+    <label for="rnInput">Nomi</label>
+    <input type="text" id="rnInput" autocomplete="off">
+    <div class="rn-actions">
+      <button type="button" class="rn-cancel" id="rnCancel">Bekor qilish</button>
+      <button type="button" class="rn-save" id="rnSave">Saqlash</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var overlay = document.getElementById('rnOverlay');
+  var input = document.getElementById('rnInput');
+  var saveBtn = document.getElementById('rnSave');
+  var cancelBtn = document.getElementById('rnCancel');
+  var oldName = '';
+
+  function csrf() {
+    var el = document.querySelector('input[name=csrf_token]');
+    return el ? el.value : '';
+  }
+  function openModal(name) {
+    oldName = name;
+    input.value = name;
+    overlay.classList.add('open');
+    setTimeout(function () { input.focus(); input.select(); }, 30);
+  }
+  function closeModal() { overlay.classList.remove('open'); saveBtn.disabled = false; }
+
+  function rename(newName, confirmMerge) {
+    saveBtn.disabled = true;
+    return fetch('/admin/institutions/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+      body: JSON.stringify({ old_name: oldName, new_name: newName, confirm: !!confirmMerge })
+    }).then(function (res) {
+      return res.json().then(function (d) { return { ok: res.ok, d: d }; })
+        .catch(function () { return { ok: false, d: {} }; });
+    }).then(function (r) {
+      var d = r.d || {};
+      if (!r.ok || d.ok === false) {
+        if (d.status === 'noop') { closeModal(); return; }
+        alert(d.error || 'Xatolik yuz berdi.');
+        saveBtn.disabled = false;
+        return;
+      }
+      if (d.status === 'confirm') {
+        if (window.confirm(d.message)) { rename(newName, true); }
+        else { saveBtn.disabled = false; }
+        return;
+      }
+      // renamed or merged → refresh the admin list
+      window.location.href = '/admin/institutions';
+    }).catch(function () {
+      alert('Tarmoq xatosi.');
+      saveBtn.disabled = false;
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.rn-edit'), function (btn) {
+    btn.addEventListener('click', function () { openModal(btn.getAttribute('data-name')); });
+  });
+  saveBtn.addEventListener('click', function () {
+    var v = (input.value || '').trim();
+    if (!v) { alert("Nom bo'sh bo'lishi mumkin emas."); return; }
+    if (v === oldName) { closeModal(); return; }
+    rename(v, false);
+  });
+  cancelBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+})();
+</script>
+{% endblock %}

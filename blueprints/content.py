@@ -311,8 +311,11 @@ def universities():
 
 @content_bp.route('/university/<path:name>')
 def university_profile(name):
+    from urllib.parse import quote
+    from flask import redirect
     from data import get_connection, clean_olim_name
-    from app import _uni_where, _find_university, detect_uni_city_region
+    from app import (_uni_where, _find_university, detect_uni_city_region,
+                     _resolve_institution_redirect)
     term = (name or '').strip()
     where, params = _uni_where(term)
     uni = None
@@ -323,6 +326,11 @@ def university_profile(name):
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                # Old/variant URLs 301 to the current canonical so renamed or
+                # merged institutions never leave a dead link.
+                canon = _resolve_institution_redirect(cur, term)
+                if canon:
+                    return redirect('/university/' + quote(canon, safe=''), code=301)
                 uni = _find_university(cur, term)
                 # Prefer exact institution_map variant matching so the profile's
                 # counts equal the /universities directory's grouped counts.
