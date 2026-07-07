@@ -111,7 +111,7 @@
 {% endblock %}
 
 {% block content %}
-{% set read_only = (role == 'advisor') %}
+{% set read_only = read_only if read_only is defined else (role == 'advisor') %}
 <div class="container-xl" style="max-width:1400px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
     <a href="/workspace" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">← Ish stoli</a>
@@ -119,14 +119,14 @@
       <a class="ed-btn" href="/workspace/{{ project.id }}/preview">👁️ Master Preview</a>
       {% if role == 'owner' %}
       <button class="ed-btn primary" onclick="submitForReview()">📤 Ko'rib chiqishga yuborish</button>
-      {% else %}
+      {% elif role == 'advisor' %}
       <button class="ed-btn primary" onclick="finishReview()">✅ Ko'rib chiqishni yakunlash</button>
       {% endif %}
     </div>
   </div>
 
   <div id="dw-banners"></div>
-  {% if role == 'advisor' %}
+  {% if read_only %}
   <div class="ed-readonly-note">👁️ Siz ko'rib chiqish rejimidasiz — matn tahrirlanmaydi, izoh qoldirishingiz mumkin.</div>
   {% endif %}
 
@@ -163,7 +163,7 @@
     <!-- ANNOTATIONS -->
     <aside class="ed-panel ed-right" id="ann-panel">
       <b style="font-size:0.85rem;">💬 Izohlar va topshiriqlar</b>
-      {% if role == 'advisor' %}
+      {% if can_review %}
       <select id="review-select" class="ann-input" onchange="setReviewStatus(this.value)">
         <option value="">— Qism holatini belgilash —</option>
         <option value="deficiencies">🔴 Kamchiliklar bor</option>

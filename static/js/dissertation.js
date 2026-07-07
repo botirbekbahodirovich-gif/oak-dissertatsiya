@@ -94,6 +94,85 @@
       });
   };
 
+  /* ══════════ COLLABORATORS (owner boshqaruvi) ══════════ */
+  var _collabDiss = null;
+  window.openCollaborators = function (dissId) {
+    _collabDiss = dissId;
+    var box = document.getElementById('collab-link-box');
+    if (box) box.style.display = 'none';
+    openModal('collab-modal');
+    loadCollaborators();
+  };
+  function loadCollaborators() {
+    fetch('/api/dissertation/' + _collabDiss + '/collaborators')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var host = document.getElementById('collab-list');
+        if (!host) return;
+        if (!d.success) { host.innerHTML = ''; return; }
+        if (!d.collaborators.length) {
+          host.innerHTML = '<p style="color:#94a3b8;font-size:0.83rem;">Hali hamkorlar yo\'q.</p>';
+          return;
+        }
+        host.innerHTML = d.collaborators.map(function (c) {
+          var perm = function (key, label) {
+            return '<label style="font-size:0.78rem;margin-right:10px;white-space:nowrap;">' +
+              '<input type="checkbox" style="width:auto;margin:0 3px 0 0;" ' +
+              (c[key] ? 'checked' : '') + (c.status !== 'accepted' ? ' disabled' : '') +
+              ' onchange="toggleCollabPerm(' + c.id + ',\'' + key + '\',this.checked)"> ' + label + '</label>';
+          };
+          return '<div style="border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:9px 11px;margin-bottom:8px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<b>' + esc(c.username) + '</b>' +
+            '<span style="font-size:0.72rem;color:#94a3b8;">' +
+            (c.status === 'accepted' ? '✓ qabul qildi' : '⏳ kutilmoqda') + '</span></div>' +
+            '<div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;">' +
+            perm('can_comment', 'Izoh') + perm('can_edit', 'Tahrir') + perm('can_review_status', 'Baholash') +
+            '<button class="dw-btn ghost" style="padding:3px 10px;font-size:0.74rem;color:#f87171;margin-left:auto;" onclick="removeCollaborator(' + c.id + ')">O\'chirish</button>' +
+            '</div></div>';
+        }).join('');
+      }).catch(function () {});
+  }
+  function collabPerms() {
+    return {
+      can_comment: document.getElementById('collab-comment').checked,
+      can_edit: document.getElementById('collab-edit').checked,
+      can_review_status: document.getElementById('collab-review').checked
+    };
+  }
+  window.inviteCollaborator = function () {
+    var body = collabPerms();
+    body.username_or_email = document.getElementById('collab-ident').value;
+    postJSON('/api/dissertation/' + _collabDiss + '/collaborators/invite', body)
+      .then(function (d) {
+        if (!d.success) { alert(d.error || 'Xatolik'); return; }
+        document.getElementById('collab-ident').value = '';
+        loadCollaborators();
+      });
+  };
+  window.createCollabLink = function () {
+    postJSON('/api/dissertation/' + _collabDiss + '/collaborators/invite-link', collabPerms())
+      .then(function (d) {
+        if (!d.success) { alert(d.error || 'Xatolik'); return; }
+        document.getElementById('collab-link-url').value = d.url;
+        document.getElementById('collab-link-box').style.display = 'block';
+      });
+  };
+  window.toggleCollabPerm = function (cid, key, val) {
+    var body = {}; body[key] = val;
+    postJSON('/api/collaborators/' + cid + '/permissions', body)
+      .then(function (d) { if (!d.success) { alert(d.error || 'Xatolik'); loadCollaborators(); } });
+  };
+  window.removeCollaborator = function (cid) {
+    if (!confirm('Ushbu hamkor loyihadan olib tashlansinmi?')) return;
+    postJSON('/api/collaborators/' + cid + '/remove', {})
+      .then(function (d) { if (d.success) loadCollaborators(); else alert(d.error || 'Xatolik'); });
+  };
+  window.respondCollaborator = function (collabId, action) {
+    postJSON('/api/collaborators/respond', { collab_id: collabId, action: action })
+      .then(function (d) { if (d.success) location.reload(); else alert(d.error || 'Xatolik'); });
+  };
+
   /* ══════════ NOTIFICATION POLL (workspace sahifalarida, 15s) ══════════ */
   var shownNotifs = {};
   function pollNotifications() {
@@ -105,13 +184,20 @@
           shownNotifs[n.id] = true;
           var p = n.payload || {};
           var markRead = function () { postJSON('/api/diss-notifications/mark-read', { ids: [n.id] }); };
-          // hamkorlik taklifi — bevosita "Qabul / Rad etish" tugmalari bilan
+          var accBtn = function (fn, id) {
+            return '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="' + fn + '(' + id + ',\'accept\')">✅ Qabul qilish</button> ' +
+              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="' + fn + '(' + id + ',\'decline\')">❌ Rad etish</button>';
+          };
+          // rahbar/shogird taklifi — bevosita tugmalar bilan
           if (n.event_type === 'advisor_invite' && p.link_id) {
-            banner('info',
-              '👥 <b>' + esc(p.from || '') + '</b> sizni hamkorlikka taklif qilmoqda. ' +
-              '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="respondInvite(' + p.link_id + ',\'accept\')">✅ Qabul qilish</button> ' +
-              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="respondInvite(' + p.link_id + ',\'decline\')">❌ Rad etish</button>',
-              markRead);
+            banner('info', '👥 <b>' + esc(p.from || '') + '</b> sizni hamkorlikka taklif qilmoqda. ' +
+              accBtn('respondInvite', p.link_id), markRead);
+            return;
+          }
+          // qo'shimcha hamkor taklifi — bevosita tugmalar bilan
+          if (n.event_type === 'collaborator_invite' && p.collab_id) {
+            banner('info', '🤝 <b>' + esc(p.from || '') + '</b> sizni "' + esc(p.diss_title || 'loyiha') +
+              '" ga hamkor qilib taklif qilmoqda. ' + accBtn('respondCollaborator', p.collab_id), markRead);
             return;
           }
           var link = n.dissertation_id ? '/workspace/' + n.dissertation_id + '/first' : '/workspace';

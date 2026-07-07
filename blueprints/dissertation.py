@@ -263,6 +263,25 @@ def _ensure_schema(cur):
         )""")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_tokens_token "
                 "ON advisor_invite_tokens(token)")
+    # qo'shimcha hamkorlar (loyihaga max 3) — granular ruxsatlar bilan
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS diss_collaborators (
+            id SERIAL PRIMARY KEY,
+            dissertation_id INTEGER NOT NULL REFERENCES diss_projects(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            invited_by INTEGER REFERENCES users(id),
+            status VARCHAR(20) DEFAULT 'pending'
+                CHECK (status IN ('pending', 'accepted', 'declined', 'removed')),
+            can_comment BOOLEAN DEFAULT TRUE,
+            can_edit BOOLEAN DEFAULT FALSE,
+            can_review_status BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(dissertation_id, user_id)
+        )""")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_diss_collab_user "
+                "ON diss_collaborators(user_id) WHERE status = 'accepted'")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_diss_collab_diss "
+                "ON diss_collaborators(dissertation_id)")
     _migrate_block_types(cur)
     _schema_ready = True
 
@@ -329,30 +348,76 @@ def _project_dict(row):
     return d
 
 
-def get_dissertation_or_403(cur, diss_id, allow_advisor=True):
-    """Loyiha qatori + rol ('owner'|'advisor'). Egasi bo'lmasa va qabul
-    qilingan rahbar ham bo'lmasa — 403 (adminlar uchun ham istisno YO'Q:
-    dissertatsiya intellektual mulk)."""
+def _fetch_project(cur, diss_id):
     cur.execute(f"SELECT {_project_cols('d')} FROM diss_projects d WHERE d.id = %s",
                 (diss_id,))
     row = cur.fetchone()
     if not row:
         abort(404)
-    p = _project_dict(row)
-    if p['owner_id'] == current_user.id:
-        return p, 'owner'
-    if allow_advisor and p['advisor_id'] == current_user.id:
-        cur.execute("""
-            SELECT 1 FROM advisor_links
-            WHERE student_id = %s AND advisor_id = %s AND status = 'accepted'
-        """, (p['owner_id'], current_user.id))
+    return _project_dict(row)
+
+
+def _caps(role, view, edit, structure, comment, review, manage):
+    """Chaqiruvchi qobiliyatlar to'plami."""
+    return {'role': role, 'can_view': view, 'can_edit': edit,
+            'can_structure': structure, 'can_comment': comment,
+            'can_review_status': review, 'can_manage': manage}
+
+
+def _collaborator_caps(cur, diss_id, uid):
+    """Qabul qilingan hamkorning ruxsatlari yoki None."""
+    cur.execute("""SELECT can_comment, can_edit, can_review_status
+                   FROM diss_collaborators
+                   WHERE dissertation_id = %s AND user_id = %s AND status = 'accepted'""",
+                (diss_id, uid))
+    r = cur.fetchone()
+    if not r:
+        return None
+    return {'can_comment': bool(r[0]), 'can_edit': bool(r[1]),
+            'can_review_status': bool(r[2])}
+
+
+def get_access(cur, diss_id):
+    """(project, caps) — chaqiruvchining loyihaga qobiliyatlari. Kirish
+    umuman yo'q bo'lsa 403 (loyiha topilmasa 404). Adminlar uchun istisno
+    YO'Q: dissertatsiya intellektual mulk.
+      - owner: hamma narsa
+      - advisor: ko'rish + izoh + qism holati (tuzilma/tahrir/boshqaruv YO'Q)
+      - collaborator: ko'rish + bayroqlarga qarab izoh/tahrir/holat"""
+    p = _fetch_project(cur, diss_id)
+    uid = current_user.id
+    if p['owner_id'] == uid:
+        # ega: tuzilma/tahrir/izoh/boshqaruv HAMMASI; lekin qism "holati" —
+        # ko'ruvchining (rahbar/holat-huquqli hamkor) ishi, o'zini o'zi
+        # ma'qullamasligi uchun can_review_status = False.
+        return p, _caps('owner', True, True, True, True, False, True)
+    if p['advisor_id'] == uid:
+        cur.execute("""SELECT 1 FROM advisor_links
+                       WHERE student_id = %s AND advisor_id = %s AND status = 'accepted'""",
+                    (p['owner_id'], uid))
         if cur.fetchone():
-            return p, 'advisor'
+            return p, _caps('advisor', True, False, False, True, True, False)
+    c = _collaborator_caps(cur, diss_id, uid)
+    if c is not None:
+        return p, _caps('collaborator', True, c['can_edit'], False,
+                        c['can_comment'], c['can_review_status'], False)
     abort(403)
 
 
-def get_block_or_403(cur, block_id, allow_advisor=True):
-    """Blok + loyiha + rol; egalik loyiha orqali tekshiriladi."""
+def get_dissertation_or_403(cur, diss_id, allow_advisor=True):
+    """Orqaga moslik: (project, role). allow_advisor=False => faqat EGA
+    (tuzilma/boshqaruv endpointlari uchun). allow_advisor=True => ega/rahbar/
+    hamkor (ko'rish darajasi). Tahrir/izoh/holat kabi nozik ruxsatlar uchun
+    endpointlar get_access/get_block_access + caps'dan foydalanadi."""
+    p, caps = get_access(cur, diss_id)
+    if caps['role'] == 'owner':
+        return p, 'owner'
+    if not allow_advisor:
+        abort(403)          # faqat ega ruxsat etilgan endpoint
+    return p, caps['role']  # 'advisor' yoki 'collaborator' (ko'rish)
+
+
+def _fetch_block(cur, block_id):
     cur.execute("""
         SELECT id, dissertation_id, parent_id, title, numbering, sort_order,
                depth, content, content_plain, word_count, review_status,
@@ -368,9 +433,22 @@ def get_block_or_403(cur, block_id, allow_advisor=True):
     block = dict(zip(cols, row))
     block['is_special'] = (block.get('block_type') or 'chapter') == 'special'
     block['heading'] = _heading_label(block.get('numbering') or '', block.get('title'))
+    return block
+
+
+def get_block_or_403(cur, block_id, allow_advisor=True):
+    """Blok + loyiha + rol; egalik loyiha orqali tekshiriladi."""
+    block = _fetch_block(cur, block_id)
     project, role = get_dissertation_or_403(cur, block['dissertation_id'],
                                             allow_advisor=allow_advisor)
     return block, project, role
+
+
+def get_block_access(cur, block_id):
+    """Blok + loyiha + caps (nozik ruxsatlar: tahrir/izoh/holat uchun)."""
+    block = _fetch_block(cur, block_id)
+    project, caps = get_access(cur, block['dissertation_id'])
+    return block, project, caps
 
 
 # ── HTML sanitizatsiya + plain text ──────────────────────────────────────────
@@ -527,11 +605,54 @@ def _enable_pair_messaging(cur, uid_a, uid_b, welcome_from_id, welcome_text):
         return None
 
 
+MAX_COLLABORATORS = 3
+
+
+def _collab_count(cur, diss_id):
+    """pending + accepted hamkorlar soni (3 chegarasi uchun)."""
+    cur.execute("""SELECT COUNT(*) FROM diss_collaborators
+                   WHERE dissertation_id = %s AND status IN ('pending', 'accepted')""",
+                (diss_id,))
+    return cur.fetchone()[0] or 0
+
+
 def _accept_collaborator_token(cur, diss_id, created_by, can_comment, can_edit, can_review):
-    """Hamkorlik taklif havolasini qabul qilish (Feature 6 to'liq amalga
-    oshiradi). Hozircha faqat 'collaborator' tokeni bo'lsa chaqiriladi —
-    Feature 4 bosqichida bunday token yaratilmaydi. Xato matnini qaytaradi."""
-    return 'Hamkorlik takliflari hali mavjud emas.'
+    """Hamkorlik taklif havolasini qabul: joriy foydalanuvchini
+    diss_collaborators ga 'accepted' qilib qo'shadi (max 3 accepted), messaging
+    yoqadi, egaga xabar beradi. Muvaffaqiyatda None, aks holda xato matni."""
+    if not diss_id:
+        return "Havola loyihaga bog'lanmagan."
+    cur.execute("SELECT owner_id FROM diss_projects WHERE id = %s", (diss_id,))
+    pr = cur.fetchone()
+    if not pr:
+        return 'Loyiha topilmadi.'
+    owner_id = pr[0]
+    if owner_id == current_user.id:
+        return 'Bu sizning loyihangiz.'
+    cur.execute("SELECT id, status FROM diss_collaborators "
+                "WHERE dissertation_id = %s AND user_id = %s", (diss_id, current_user.id))
+    ex = cur.fetchone()
+    if ex and ex[1] == 'accepted':
+        return None                       # allaqachon hamkor — jim o'tkazamiz
+    cur.execute("""SELECT COUNT(*) FROM diss_collaborators
+                   WHERE dissertation_id = %s AND status = 'accepted'""", (diss_id,))
+    if (cur.fetchone()[0] or 0) >= MAX_COLLABORATORS:
+        return f"Bu loyihada hamkorlar soni to'lgan (maksimal {MAX_COLLABORATORS} ta)."
+    if ex:
+        cur.execute("""UPDATE diss_collaborators SET status = 'accepted', invited_by = %s,
+                       can_comment = %s, can_edit = %s, can_review_status = %s
+                       WHERE id = %s""",
+                    (created_by, can_comment, can_edit, can_review, ex[0]))
+    else:
+        cur.execute("""INSERT INTO diss_collaborators
+                       (dissertation_id, user_id, invited_by, status,
+                        can_comment, can_edit, can_review_status)
+                       VALUES (%s, %s, %s, 'accepted', %s, %s, %s)""",
+                    (diss_id, current_user.id, created_by, can_comment, can_edit, can_review))
+    _notify(cur, owner_id, 'invite_accepted', diss_id, payload={'by': current_user.username})
+    _enable_pair_messaging(cur, owner_id, current_user.id, owner_id,
+                           f"{current_user.username} hamkorlik havolasi orqali qo'shildi. ✍️")
+    return None
 
 
 # ═════════════════════════════ ADVISOR LINKING ══════════════════════════════
@@ -829,13 +950,235 @@ def invite_respond(token):
         conn.close()
 
 
+# ═══════════════════════════ COLLABORATORS (max 3) ══════════════════════════
+
+@dissertation_bp.route('/api/dissertation/<int:id>/collaborators')
+@login_required
+def collaborator_list(id):
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            get_dissertation_or_403(cur, id, allow_advisor=False)   # faqat ega
+            cur.execute("""
+                SELECT c.id, c.user_id, u.username, c.status,
+                       c.can_comment, c.can_edit, c.can_review_status
+                FROM diss_collaborators c JOIN users u ON u.id = c.user_id
+                WHERE c.dissertation_id = %s AND c.status IN ('pending', 'accepted')
+                ORDER BY c.created_at
+            """, (id,))
+            items = [{'id': r[0], 'user_id': r[1], 'username': r[2], 'status': r[3],
+                      'can_comment': r[4], 'can_edit': r[5], 'can_review_status': r[6]}
+                     for r in cur.fetchall()]
+        conn.commit()
+        return jsonify({'success': True, 'collaborators': items, 'max': MAX_COLLABORATORS})
+    finally:
+        conn.close()
+
+
+@dissertation_bp.route('/api/dissertation/<int:id>/collaborators/invite', methods=['POST'])
+@csrf.exempt
+@login_required
+def collaborator_invite(id):
+    data = request.get_json(silent=True) or {}
+    ident = (data.get('username_or_email') or '').strip()
+    if not ident:
+        return jsonify({'success': False, 'error': 'Username yoki email kiriting'}), 400
+    can_comment = bool(data.get('can_comment', True))
+    can_edit = bool(data.get('can_edit', False))
+    can_review = bool(data.get('can_review_status', False))
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            p, role = get_dissertation_or_403(cur, id, allow_advisor=False)  # faqat ega
+            cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(%s) "
+                        "OR LOWER(email) = LOWER(%s)", (ident, ident))
+            target = cur.fetchone()
+            if not target:
+                return jsonify({'success': False, 'error': 'Foydalanuvchi topilmadi'}), 404
+            tid = target[0]
+            if tid == current_user.id:
+                return jsonify({'success': False, 'error': "O'zingizni qo'sha olmaysiz"}), 400
+            if tid == p['advisor_id']:
+                return jsonify({'success': False,
+                                'error': 'Bu foydalanuvchi allaqachon ilmiy rahbar'}), 400
+            cur.execute("SELECT id, status FROM diss_collaborators "
+                        "WHERE dissertation_id = %s AND user_id = %s", (id, tid))
+            ex = cur.fetchone()
+            if ex and ex[1] in ('pending', 'accepted'):
+                return jsonify({'success': False, 'error': 'Bu foydalanuvchi allaqachon hamkor'}), 409
+            if _collab_count(cur, id) >= MAX_COLLABORATORS:
+                return jsonify({'success': False,
+                                'error': f'Maksimal {MAX_COLLABORATORS} ta hamkor qo\'shish mumkin'}), 400
+            if ex:
+                cur.execute("""UPDATE diss_collaborators SET status = 'pending', invited_by = %s,
+                               can_comment = %s, can_edit = %s, can_review_status = %s
+                               WHERE id = %s RETURNING id""",
+                            (current_user.id, can_comment, can_edit, can_review, ex[0]))
+            else:
+                cur.execute("""INSERT INTO diss_collaborators
+                               (dissertation_id, user_id, invited_by, status,
+                                can_comment, can_edit, can_review_status)
+                               VALUES (%s, %s, %s, 'pending', %s, %s, %s) RETURNING id""",
+                            (id, tid, current_user.id, can_comment, can_edit, can_review))
+            collab_id = cur.fetchone()[0]
+            _notify(cur, tid, 'collaborator_invite', id,
+                    payload={'collab_id': collab_id, 'from': current_user.username,
+                             'diss_title': p['title']})
+        conn.commit()
+        return jsonify({'success': True, 'collab_id': collab_id})
+    except Exception as e:
+        conn.rollback()
+        if getattr(e, 'code', None) in (403, 404):
+            raise
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@dissertation_bp.route('/api/dissertation/<int:id>/collaborators/invite-link', methods=['POST'])
+@csrf.exempt
+@login_required
+def collaborator_invite_link(id):
+    data = request.get_json(silent=True) or {}
+    can_comment = bool(data.get('can_comment', True))
+    can_edit = bool(data.get('can_edit', False))
+    can_review = bool(data.get('can_review_status', False))
+    token = secrets.token_urlsafe(32)[:64]
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            get_dissertation_or_403(cur, id, allow_advisor=False)   # faqat ega
+            if _collab_count(cur, id) >= MAX_COLLABORATORS:
+                return jsonify({'success': False,
+                                'error': f'Maksimal {MAX_COLLABORATORS} ta hamkor qo\'shish mumkin'}), 400
+            cur.execute("""INSERT INTO advisor_invite_tokens
+                           (token, created_by, role, dissertation_id,
+                            can_comment, can_edit, can_review_status)
+                           VALUES (%s, %s, 'collaborator', %s, %s, %s, %s)""",
+                        (token, current_user.id, id, can_comment, can_edit, can_review))
+        conn.commit()
+        url = request.url_root.rstrip('/') + '/invite/' + token
+        return jsonify({'success': True, 'url': url})
+    finally:
+        conn.close()
+
+
+@dissertation_bp.route('/api/collaborators/<int:cid>/permissions', methods=['POST'])
+@csrf.exempt
+@login_required
+def collaborator_permissions(cid):
+    data = request.get_json(silent=True) or {}
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("SELECT dissertation_id FROM diss_collaborators WHERE id = %s", (cid,))
+            r = cur.fetchone()
+            if not r:
+                abort(404)
+            get_dissertation_or_403(cur, r[0], allow_advisor=False)   # faqat ega
+            fields, params = [], []
+            for key in ('can_comment', 'can_edit', 'can_review_status'):   # oq ro'yxat
+                if key in data:
+                    fields.append(f'{key} = %s')
+                    params.append(bool(data[key]))
+            if not fields:
+                return jsonify({'success': False, 'error': "O'zgartirish yo'q"}), 400
+            params.append(cid)
+            cur.execute(f"UPDATE diss_collaborators SET {', '.join(fields)} WHERE id = %s",
+                        tuple(params))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+
+@dissertation_bp.route('/api/collaborators/<int:cid>/remove', methods=['POST'])
+@csrf.exempt
+@login_required
+def collaborator_remove(cid):
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("SELECT dissertation_id FROM diss_collaborators WHERE id = %s", (cid,))
+            r = cur.fetchone()
+            if not r:
+                abort(404)
+            get_dissertation_or_403(cur, r[0], allow_advisor=False)   # faqat ega
+            cur.execute("UPDATE diss_collaborators SET status = 'removed' WHERE id = %s", (cid,))
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+
+@dissertation_bp.route('/api/collaborators/respond', methods=['POST'])
+@csrf.exempt
+@login_required
+def collaborator_respond():
+    data = request.get_json(silent=True) or {}
+    action = data.get('action')
+    try:
+        collab_id = int(data.get('collab_id'))
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'error': "Noto'g'ri so'rov"}), 400
+    if action not in ('accept', 'decline'):
+        return jsonify({'success': False, 'error': "Noto'g'ri amal"}), 400
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("""SELECT dissertation_id, user_id, status
+                           FROM diss_collaborators WHERE id = %s FOR UPDATE""", (collab_id,))
+            r = cur.fetchone()
+            if not r:
+                abort(404)
+            diss_id, user_id, status = r
+            if user_id != current_user.id:
+                abort(403)
+            if status != 'pending':
+                return jsonify({'success': False, 'error': 'Taklif allaqachon javoblangan'}), 409
+            if action == 'decline':
+                cur.execute("UPDATE diss_collaborators SET status = 'declined' WHERE id = %s",
+                            (collab_id,))
+                conn.commit()
+                return jsonify({'success': True, 'status': 'declined'})
+            cur.execute("""SELECT COUNT(*) FROM diss_collaborators
+                           WHERE dissertation_id = %s AND status = 'accepted'""", (diss_id,))
+            if (cur.fetchone()[0] or 0) >= MAX_COLLABORATORS:
+                return jsonify({'success': False,
+                                'error': f'Bu loyihada hamkorlar soni to\'lgan (maksimal {MAX_COLLABORATORS} ta)'}), 400
+            cur.execute("UPDATE diss_collaborators SET status = 'accepted' WHERE id = %s",
+                        (collab_id,))
+            cur.execute("SELECT owner_id FROM diss_projects WHERE id = %s", (diss_id,))
+            pr = cur.fetchone()
+            if pr:
+                _notify(cur, pr[0], 'invite_accepted', diss_id,
+                        payload={'by': current_user.username})
+                _enable_pair_messaging(cur, pr[0], current_user.id, pr[0],
+                                       f"{current_user.username} hamkorlik taklifini qabul qildi. ✍️")
+        conn.commit()
+        return jsonify({'success': True, 'status': 'accepted'})
+    except Exception as e:
+        conn.rollback()
+        if getattr(e, 'code', None) in (403, 404):
+            raise
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
 # ═════════════════════════════ PROJECT CRUD ═════════════════════════════════
 
 @dissertation_bp.route('/workspace')
 @login_required
 def workspace_list():
     conn = _conn()
-    mine, students_work, pending_invites = [], {}, []
+    mine, students_work, pending_invites, collab_projects = [], {}, [], []
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
@@ -879,6 +1222,27 @@ def workspace_list():
             names = _usernames(cur, adv_ids)
             for p in mine:
                 p['advisor_name'] = names.get(p['advisor_id'], '')
+            # hamkorlikdagi loyihalar (men qabul qilingan hamkorman)
+            cur.execute(f"""
+                SELECT {_project_cols('d')},
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id),
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id
+                          AND b.review_status = 'approved'),
+                       u.username, c.can_comment, c.can_edit, c.can_review_status
+                FROM diss_projects d
+                JOIN diss_collaborators c ON c.dissertation_id = d.id
+                     AND c.user_id = %s AND c.status = 'accepted'
+                JOIN users u ON u.id = d.owner_id
+                WHERE d.status <> 'archived'
+                ORDER BY d.updated_at DESC LIMIT 50
+            """, (current_user.id,))
+            for r in cur.fetchall():
+                p = _project_dict(r[:-6])
+                p['total_blocks'], p['approved_blocks'] = r[-6] or 0, r[-5] or 0
+                p['progress'] = round(p['approved_blocks'] * 100 / p['total_blocks']) if p['total_blocks'] else 0
+                p['owner_name'] = r[-4]
+                p['can_comment'], p['can_edit'], p['can_review_status'] = r[-3], r[-2], r[-1]
+                collab_projects.append(p)
             # menga kelgan pending takliflar
             cur.execute("""
                 SELECT l.id, l.invited_by, l.invite_message, u.username,
@@ -898,6 +1262,7 @@ def workspace_list():
     return render_template('dissertation/list.html', mine=mine,
                            students_work=students_work,
                            pending_invites=pending_invites,
+                           collab_projects=collab_projects,
                            degree_labels=DEGREE_LABELS, status_labels=STATUS_LABELS)
 
 
@@ -1244,7 +1609,7 @@ def editor_page(id, block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id)
+            block, project, caps = get_block_access(cur, block_id)
             if block['dissertation_id'] != id:
                 abort(404)
             tree = _fetch_tree(cur, id)
@@ -1252,7 +1617,10 @@ def editor_page(id, block_id):
     finally:
         conn.close()
     return render_template('dissertation/editor.html', project=project,
-                           block=block, tree=tree, role=role,
+                           block=block, tree=tree, role=caps['role'],
+                           read_only=not caps['can_edit'],
+                           can_review=caps['can_review_status'],
+                           can_comment=caps['can_comment'],
                            review_labels=REVIEW_LABELS, annot_types=ANNOT_TYPES,
                            status_labels=STATUS_LABELS)
 
@@ -1275,7 +1643,9 @@ def block_save(block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id, allow_advisor=False)
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_edit']:          # ega yoki can_edit hamkor
+                abort(403)
             # soft-lock: boshqa foydalanuvchining yangi (3 daqiqadan yosh) locki
             cur.execute("""
                 SELECT is_locked_by FROM dissertation_blocks
@@ -1330,7 +1700,9 @@ def block_lock(block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id, allow_advisor=False)
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_edit']:
+                abort(403)
             if (block['is_locked_by'] and block['is_locked_by'] != current_user.id
                     and block['locked_at']
                     and (datetime.now() - block['locked_at']).total_seconds() < LOCK_TTL):
@@ -1416,7 +1788,9 @@ def version_restore(block_id, version_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id, allow_advisor=False)
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_edit']:
+                abort(403)
             cur.execute("SELECT content FROM block_versions WHERE id = %s AND block_id = %s",
                         (version_id, block_id))
             v = cur.fetchone()
@@ -1472,7 +1846,9 @@ def block_upload_image(block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id, allow_advisor=False)
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_edit']:
+                abort(403)
         conn.commit()
     finally:
         conn.close()
@@ -1552,7 +1928,9 @@ def annotation_create(block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id)
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_comment']:
+                abort(403)
             offset = data.get('anchor_offset')
             pos = (block['content_plain'] or '').find(anchor)
             if pos >= 0:
@@ -1567,12 +1945,12 @@ def annotation_create(block_id):
                   (data.get('anchor_suffix') or '')[:100],
                   offset, body))
             aid = cur.fetchone()[0]
-            # qarshi tomonga xabar
-            other = project['advisor_id'] if role == 'owner' else project['owner_id']
-            if other:
-                _notify(cur, other, 'annotation_added', project['id'], block_id,
-                        {'annotation_id': aid, 'type': atype,
-                         'block_title': block['title']})
+            # asosiy tomonlarga (ega + rahbar) xabar — o'zidan boshqasiga
+            for target in {project['owner_id'], project['advisor_id']}:
+                if target and target != current_user.id:
+                    _notify(cur, target, 'annotation_added', project['id'], block_id,
+                            {'annotation_id': aid, 'type': atype,
+                             'block_title': block['title']})
         conn.commit()
         return jsonify({'success': True, 'id': aid})
     finally:
@@ -1588,9 +1966,9 @@ def _get_annotation_or_403(cur, aid):
     r = cur.fetchone()
     if not r:
         abort(404)
-    block, project, role = get_block_or_403(cur, r[1])
+    block, project, caps = get_block_access(cur, r[1])
     return {'id': r[0], 'block_id': r[1], 'author_id': r[2], 'status': r[3],
-            'reply_count': r[4]}, project, role
+            'reply_count': r[4]}, project, caps
 
 
 @dissertation_bp.route('/api/annotations/<int:id>/reply', methods=['POST'])
@@ -1604,7 +1982,9 @@ def annotation_reply(id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            ann, project, role = _get_annotation_or_403(cur, id)
+            ann, project, caps = _get_annotation_or_403(cur, id)
+            if not caps['can_comment']:
+                abort(403)
             cur.execute("""
                 INSERT INTO annotation_replies (annotation_id, author_id, body)
                 VALUES (%s, %s, %s) RETURNING id
@@ -1624,7 +2004,12 @@ def annotation_resolve(id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            _get_annotation_or_403(cur, id)
+            ann, project, caps = _get_annotation_or_403(cur, id)
+            if not caps['can_comment']:
+                abort(403)
+            # hamkor faqat O'Z izohini hal qila oladi; ega/rahbar — istalganini
+            if caps['role'] == 'collaborator' and ann['author_id'] != current_user.id:
+                abort(403)
             cur.execute("""
                 UPDATE block_annotations
                 SET status = 'resolved', resolved_by = %s, resolved_at = NOW()
@@ -1644,8 +2029,8 @@ def annotation_reopen(id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            ann, project, role = _get_annotation_or_403(cur, id)
-            if role != 'advisor':
+            ann, project, caps = _get_annotation_or_403(cur, id)
+            if not caps['can_review_status']:      # rahbar yoki holat-huquqli hamkor
                 abort(403)
             cur.execute("UPDATE block_annotations SET status = 'open', "
                         "resolved_by = NULL, resolved_at = NULL WHERE id = %s", (id,))
@@ -1663,7 +2048,7 @@ def annotation_delete(id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            ann, project, role = _get_annotation_or_403(cur, id)
+            ann, project, caps = _get_annotation_or_403(cur, id)
             if ann['author_id'] != current_user.id:
                 abort(403)
             if ann['reply_count']:
@@ -1689,8 +2074,8 @@ def block_review_status(block_id):
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            block, project, role = get_block_or_403(cur, block_id)
-            if role != 'advisor':
+            block, project, caps = get_block_access(cur, block_id)
+            if not caps['can_review_status']:     # rahbar yoki holat-huquqli hamkor
                 abort(403)
             cur.execute("""
                 UPDATE dissertation_blocks

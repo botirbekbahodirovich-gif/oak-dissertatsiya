@@ -191,3 +191,39 @@ WHERE block_type <> 'special'
     'adabiyotlar ro''yxati', 'ilova', 'ilovalar', 'mundarija', 'qisqartmalar', 'shartli belgilar');
 -- ESLATMA: numbering (1, 1.1, ...) ilova mantiqida (_recompute_numbering) qayta
 -- hisoblanadi — server birinchi so'rovda _migrate_block_types orqali bajaradi.
+
+-- ── v0.2.2 patch: havola orqali taklif + qo'shimcha hamkorlar ──
+-- 9. Bir martalik taklif tokenlari (advisor / student / collaborator; 7 kun)
+CREATE TABLE IF NOT EXISTS advisor_invite_tokens (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(15) NOT NULL DEFAULT 'advisor'
+        CHECK (role IN ('advisor', 'student', 'collaborator')),
+    dissertation_id INTEGER REFERENCES diss_projects(id) ON DELETE CASCADE,
+    can_comment BOOLEAN DEFAULT TRUE,
+    can_edit BOOLEAN DEFAULT FALSE,
+    can_review_status BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '7 days'),
+    used_by INTEGER REFERENCES users(id),
+    used_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_invite_tokens_token ON advisor_invite_tokens(token);
+
+-- 10. Qo'shimcha hamkorlar (loyihaga max 3 — chegara ilova mantiqida)
+CREATE TABLE IF NOT EXISTS diss_collaborators (
+    id SERIAL PRIMARY KEY,
+    dissertation_id INTEGER NOT NULL REFERENCES diss_projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invited_by INTEGER REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'pending'
+        CHECK (status IN ('pending', 'accepted', 'declined', 'removed')),
+    can_comment BOOLEAN DEFAULT TRUE,
+    can_edit BOOLEAN DEFAULT FALSE,
+    can_review_status BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(dissertation_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_diss_collab_user ON diss_collaborators(user_id) WHERE status = 'accepted';
+CREATE INDEX IF NOT EXISTS idx_diss_collab_diss ON diss_collaborators(dissertation_id);
