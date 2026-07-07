@@ -24,6 +24,7 @@ _schema_ready = False
 
 MAX_BODY = 10000
 FILE_MAX_BYTES = 10 * 1024 * 1024   # 10MB
+RETENTION_DAYS = 3                  # yozishmalar 3 kundan keyin o'chiriladi
 # ruxsat etilgan biriktirmalar: MIME → (kengaytmalar, tur belgisi)
 _ALLOWED_FILES = {
     'image/jpeg': (('.jpg', '.jpeg'), 'image'),
@@ -86,6 +87,40 @@ def _ensure_schema(cur):
 def _conn():
     from data import get_connection
     return get_connection()
+
+
+def _remove_upload_file(url):
+    """Biriktirma faylini lokal diskdan xavfsiz o'chirish (static ichida qolishi
+    kafolatlanadi). Xato yutiladi — tozalash bloklanmasin."""
+    try:
+        if not url or '/static/' not in url:
+            return
+        rel = url.split('/static/', 1)[1]
+        base = os.path.realpath(current_app.static_folder)
+        path = os.path.realpath(os.path.join(base, rel))
+        if path.startswith(base + os.sep) and os.path.isfile(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+
+def _purge_old_messages(cur, conversation_id=None):
+    """Retention: RETENTION_DAYS kundan eski xabarlarni HARD delete qiladi va
+    biriktirma fayllarini diskdan o'chiradi. conversation_id berilsa faqat shu
+    suhbat (arzon, indeksli), aks holda global tozalash (kunlik cron).
+    created_at ustuni indekslangan (idx_messages_conversation)."""
+    params = [RETENTION_DAYS]
+    where = "created_at < NOW() - make_interval(days => %s)"
+    if conversation_id is not None:
+        where += " AND conversation_id = %s"
+        params.append(conversation_id)
+    # avval o'chiriladigan biriktirma yo'llarini yig'amiz
+    cur.execute("SELECT attachment_url FROM messages WHERE " + where +
+                " AND attachment_url IS NOT NULL", tuple(params))
+    urls = [r[0] for r in cur.fetchall()]
+    cur.execute("DELETE FROM messages WHERE " + where, tuple(params))
+    for u in urls:
+        _remove_upload_file(u)
 
 
 def ensure_direct_conversation(cur, user_a, user_b):
@@ -202,6 +237,7 @@ def thread(conversation_id):
         with conn.cursor() as cur:
             _ensure_schema(cur)
             _require_participant(cur, conversation_id)
+            _purge_old_messages(cur, conversation_id)   # 3 kunlik retention (lazy)
             cur.execute("""
                 SELECT u.id, u.username FROM conversation_participants cp
                 JOIN users u ON u.id = cp.user_id
@@ -342,6 +378,7 @@ def send_message(conversation_id):
         with conn.cursor() as cur:
             _ensure_schema(cur)
             _require_participant(cur, conversation_id)
+            _purge_old_messages(cur, conversation_id)   # 3 kunlik retention (lazy)
             cur.execute(f"""
                 INSERT INTO messages (conversation_id, sender_id, body)
                 VALUES (%s, %s, %s) RETURNING {_MSG_COLS}
@@ -394,6 +431,7 @@ def upload_attachment(conversation_id):
             except Exception:
                 return jsonify({'success': False,
                                 'error': "Fayl yuklashda xatolik. Qayta urinib ko'ring."}), 500
+            _purge_old_messages(cur, conversation_id)   # 3 kunlik retention (lazy)
             cur.execute(f"""
                 INSERT INTO messages (conversation_id, sender_id, body, attachment_url,
                                       attachment_name, attachment_type, attachment_size)
@@ -474,5 +512,35 @@ def unread_count():
             n = cur.fetchone()[0] or 0
         conn.commit()
         return jsonify({'success': True, 'unread': n})
+    finally:
+        conn.close()
+
+
+@messages_bp.route('/api/v1/messages/cleanup', methods=['POST'])
+@csrf.exempt
+def messages_cleanup():
+    """Global retention sweep — 3 kundan eski BARCHA xabarlarni o'chiradi
+    (kunlik GitHub Actions cron chaqiradi). Auth: admin sessiya YOKI X-API-Key
+    (MESSAGES_RETENTION_KEY yoki mavjud REMINDERS_API_KEY)."""
+    import hmac
+    keys = [os.environ.get('MESSAGES_RETENTION_KEY', ''),
+            os.environ.get('REMINDERS_API_KEY', '')]
+    provided = request.headers.get('X-API-Key') or request.args.get('key') or ''
+    is_admin = (getattr(current_user, 'is_authenticated', False)
+                and getattr(current_user, 'is_admin', False))
+    ok = is_admin or any(k and provided and hmac.compare_digest(provided, k) for k in keys)
+    if not ok:
+        return jsonify({'success': False, 'error': 'unauthorized'}), 403
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("SELECT COUNT(*) FROM messages "
+                        "WHERE created_at < NOW() - make_interval(days => %s)",
+                        (RETENTION_DAYS,))
+            n = cur.fetchone()[0] or 0
+            _purge_old_messages(cur)
+        conn.commit()
+        return jsonify({'success': True, 'deleted': n})
     finally:
         conn.close()

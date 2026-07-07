@@ -84,6 +84,8 @@
   }
 
   function appendMessage(m, prepend) {
+    var e0 = document.getElementById('th-empty');
+    if (e0) e0.remove();
     var day = dayOf(m.created_at);
     if (!prepend && day !== lastDay) {
       var sep = document.createElement('div');
@@ -105,6 +107,14 @@
   }
 
   (T.initialMessages || []).forEach(function (m) { appendMessage(m); });
+  if (!(T.initialMessages || []).length) {
+    var empty = document.createElement('div');
+    empty.className = 'th-day';
+    empty.id = 'th-empty';
+    empty.style.marginTop = '20px';
+    empty.textContent = "Hali xabarlar yo'q. Yozishmalar 3 kun saqlanadi.";
+    msgsEl.appendChild(empty);
+  }
   msgsEl.scrollTop = msgsEl.scrollHeight;
 
   /* yuborish */

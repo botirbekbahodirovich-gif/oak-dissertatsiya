@@ -31,6 +31,16 @@ jobs:
           SITE_API_KEY: ${{ secrets.SITE_API_KEY }}
         run: python send_to_site.py
 
+      # Chat retention — 3 kundan eski yozishmalarni global tozalash (idempotent).
+      # Lazy tozalash send/GET da ham ishlaydi; bu esa jim suhbatlarni ham tozalaydi.
+      - name: Eski yozishmalarni tozalash (3 kun)
+        env:
+          REMINDERS_API_KEY: ${{ secrets.REMINDERS_API_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-API-Key: ${REMINDERS_API_KEY}" \
+            https://www.olimlar.uz/api/v1/messages/cleanup || true
+
       # Watermark (last_state.json) ni repo ga qaytaramiz — aks holda har run
       # bir xil eski holatdan boshlanib, e'lonlarni qayta-qayta yuborardi.
       # Faqat yuborish muvaffaqiyatli bo'lsa ishga tushadi (oldingi qadam xato
