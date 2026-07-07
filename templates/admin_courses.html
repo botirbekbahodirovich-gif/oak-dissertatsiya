@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Kurslar talabi — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-sub { color: #94a3b8; font-size: 0.9rem; margin: 0 0 1.25rem; }
+  .adm-cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .adm-kpi { flex: 1; min-width: 160px; background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px 20px; }
+  .adm-kpi .v { font-size: 1.8rem; font-weight: 900; color: #f1f5f9; }
+  .adm-kpi .l { font-size: 0.78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+  .adm-table-wrap { border-radius: 14px; overflow-x: auto; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; white-space: nowrap; }
+  .adm-table td { padding: 0.7rem 0.9rem; font-size: 0.9rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:nth-child(even) td { background: #162032; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .adm-table td.num { font-weight: 700; text-align: right; }
+  .pub-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .st-soon { background: rgba(245,158,11,0.16); color: #fbbf24; }
+  .st-plan { background: rgba(148,163,184,0.16); color: #94a3b8; }
+  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+  .adm-note { margin-top: 1.25rem; color: #64748b; font-size: 0.82rem; line-height: 1.55; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1>🎓 Kurslar talabi</h1>
+</div>
+<p class="adm-sub">Ishlab chiqarishdan oldin har bir kurs bo'yicha real talabni o'lchash — qiziqish va ko'rishlar soni.</p>
+
+<div class="adm-cards">
+  <div class="adm-kpi"><div class="v">{{ totals.interested }}</div><div class="l">Jami qiziqish</div></div>
+  <div class="adm-kpi"><div class="v">{{ totals.views }}</div><div class="l">Jami ko'rishlar</div></div>
+  <div class="adm-kpi"><div class="v">{{ rows|length }}</div><div class="l">Kurslar</div></div>
+</div>
+
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr>
+        <th>Kurs</th>
+        <th>Holat</th>
+        <th style="text-align:right;">Qiziqish</th>
+        <th style="text-align:right;">Ko'rishlar</th>
+        <th style="text-align:right;">Konversiya</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.title }}</td>
+        <td>
+          {% if r.status == 'soon' %}<span class="pub-badge st-soon">Tez orada</span>
+          {% else %}<span class="pub-badge st-plan">Rejalashtirilgan</span>{% endif %}
+        </td>
+        <td class="num">{{ r.interested }}</td>
+        <td class="num">{{ r.views }}</td>
+        <td class="num">{{ r.conversion }}%</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="adm-empty">Hozircha ma'lumot yo'q.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="adm-note">Eslatma: kurs holati <b>launched/available</b> ga o'zgarganda, qiziqish bildirgan foydalanuvchilar keyinchalik xabardor qilinadi (course_interest jadvalida user_id + course_id saqlanadi).</p>
+{% endblock %}

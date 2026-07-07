@@ -35,6 +35,16 @@
 .crs-prog > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #6366f1); }
 .crs-prog-t { font-size: 0.78rem; color: #64748b; margin-top: 7px; font-weight: 600; }
 
+/* interest tracking row */
+.crs-hot { position: absolute; top: 18px; left: 18px; font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 999px; color: #fff; background: linear-gradient(90deg, #f97316, #ef4444); box-shadow: 0 2px 8px rgba(239,68,68,0.4); }
+.crs-interest { margin-top: 16px; padding-top: 16px; border-top: 1px solid #334155; }
+.crs-int-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #0f172a; border: 1px solid #3b82f6; color: #93c5fd; font-weight: 700; font-size: 0.9rem; padding: 10px 14px; border-radius: 12px; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.crs-int-btn:hover { background: #1d2b45; }
+.crs-int-btn.active { background: #065f46; border-color: #10b981; color: #6ee7b7; }
+.crs-int-btn:disabled { opacity: 0.6; cursor: default; }
+.crs-counts { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 10px; font-size: 0.78rem; color: #64748b; font-weight: 600; }
+.crs-counts b { color: #93c5fd; }
+
 /* quotes */
 .q-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .q-card { background: #162032; border: 1px solid #334155; border-radius: 16px; padding: 28px 24px; position: relative; }
@@ -89,54 +99,31 @@
       <h2>Rejalashtirilgan kurslar</h2>
       <p class="sub">Quyidagi kurslar ustida ishlamoqdamiz</p>
       <div class="crs-grid">
-        <div class="crs-card">
+        {% for c in courses %}
+        <div class="crs-card" data-course-id="{{ c.id }}">
+          {% if c.interested >= 10 %}<span class="crs-hot">🔥 Talab yuqori</span>{% endif %}
+          {% if c.status == 'soon' %}
           <span class="crs-badge badge-soon">Tez orada</span>
-          <div class="ico">🎯</div>
-          <h3>Dissertatsiya A dan Z gacha</h3>
-          <p>Mavzu tanlashdan himoyagacha — to'liq qo'llanma. 20+ video dars.</p>
-          <div class="crs-prog"><div style="width:60%;"></div></div>
-          <div class="crs-prog-t">60% tayyor</div>
-        </div>
-        <div class="crs-card">
-          <span class="crs-badge badge-soon">Tez orada</span>
-          <div class="ico">📝</div>
-          <h3>Ilmiy maqola yozish san'ati</h3>
-          <p>Scopus va Web of Science jurnallariga maqola yozish va yuborish.</p>
-          <div class="crs-prog"><div style="width:40%;"></div></div>
-          <div class="crs-prog-t">40% tayyor</div>
-        </div>
-        <div class="crs-card">
+          {% else %}
           <span class="crs-badge badge-plan">Rejalashtirilgan</span>
-          <div class="ico">📊</div>
-          <h3>Tadqiqot metodologiyasi</h3>
-          <p>Sifat va miqdor tadqiqot usullari, ma'lumotlar tahlili.</p>
-          <div class="crs-prog"><div style="width:20%;"></div></div>
-          <div class="crs-prog-t">20% tayyor</div>
+          {% endif %}
+          <div class="ico">{{ c.icon }}</div>
+          <h3>{{ c.title }}</h3>
+          <p>{{ c.description }}</p>
+          <div class="crs-prog"><div style="width:{{ c.progress }}%;"></div></div>
+          <div class="crs-prog-t">{{ c.progress }}% tayyor</div>
+          <div class="crs-interest">
+            <button type="button" class="crs-int-btn {{ 'active' if c.is_interested }}"
+                    data-course="{{ c.id }}" onclick="toggleInterest(this)">
+              <span class="lbl">{{ '✅ Qiziqyapman' if c.is_interested else '🔔 Qiziqish bildirish' }}</span>
+            </button>
+            <div class="crs-counts">
+              <span>👥 <b class="int-count">{{ c.interested }}</b> kishi qiziqish bildirdi</span>
+              <span>· 👁 {{ c.views }} marta ko'rildi</span>
+            </div>
+          </div>
         </div>
-        <div class="crs-card">
-          <span class="crs-badge badge-plan">Rejalashtirilgan</span>
-          <div class="ico">🤖</div>
-          <h3>AI bilan ilmiy tadqiqot</h3>
-          <p>Sun'iy intellektdan tadqiqotda samarali foydalanish.</p>
-          <div class="crs-prog"><div style="width:15%;"></div></div>
-          <div class="crs-prog-t">15% tayyor</div>
-        </div>
-        <div class="crs-card">
-          <span class="crs-badge badge-plan">Rejalashtirilgan</span>
-          <div class="ico">📄</div>
-          <h3>Avtoreferat va himoya nutqi</h3>
-          <p>Avtoreferatni to'g'ri yozish va himoyada taqdimot qilish.</p>
-          <div class="crs-prog"><div style="width:10%;"></div></div>
-          <div class="crs-prog-t">10% tayyor</div>
-        </div>
-        <div class="crs-card">
-          <span class="crs-badge badge-plan">Rejalashtirilgan</span>
-          <div class="ico">🌍</div>
-          <h3>Xorijda PhD — qo'llanma</h3>
-          <p>Xorijiy universitetlarda PhD dasturlariga hujjat topshirish.</p>
-          <div class="crs-prog"><div style="width:5%;"></div></div>
-          <div class="crs-prog-t">5% tayyor</div>
-        </div>
+        {% endfor %}
       </div>
     </div>
   </section>
@@ -168,6 +155,17 @@
     </div>
   </section>
 
+  <!-- LOGIN PROMPT (guests clicking interest) -->
+  <div id="crs-login-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(2,6,23,0.7); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:18px; padding:32px 28px; max-width:380px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="font-size:2.6rem; margin-bottom:12px;">🔔</div>
+      <h3 style="color:#f1f5f9; font-size:1.15rem; font-weight:800; margin:0 0 10px;">Qiziqish bildirish uchun tizimga kiring</h3>
+      <p style="color:#94a3b8; font-size:0.92rem; line-height:1.55; margin:0 0 22px;">Kursga qiziqishingizni bildirish uchun avval hisobingizga kiring.</p>
+      <a href="/login?next=/courses" style="display:inline-block; background:#3b82f6; color:#fff; font-weight:700; padding:12px 28px; border-radius:12px; text-decoration:none;">Tizimga kirish →</a>
+      <div><button type="button" onclick="document.getElementById('crs-login-modal').style.display='none';" style="margin-top:16px; background:none; border:none; color:#64748b; font-size:0.85rem; cursor:pointer;">Yopish</button></div>
+    </div>
+  </div>
+
   <!-- FAQ -->
   <section class="crs-sec alt">
     <div class="crs-container">
@@ -195,6 +193,42 @@
 
 {% block scripts %}
 <script>
+var COURSE_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
+
+function toggleInterest(btn) {
+  if (!COURSE_LOGGED_IN) {
+    document.getElementById('crs-login-modal').style.display = 'flex';
+    return;
+  }
+  var id = btn.getAttribute('data-course');
+  btn.disabled = true;
+  fetch('/api/courses/' + id + '/interest', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    btn.disabled = false;
+    if (!d.success) return;
+    var card = btn.closest('.crs-card');
+    var lbl = btn.querySelector('.lbl');
+    if (d.interested) { btn.classList.add('active'); lbl.textContent = '✅ Qiziqyapman'; }
+    else { btn.classList.remove('active'); lbl.textContent = '🔔 Qiziqish bildirish'; }
+    var cnt = card.querySelector('.int-count');
+    if (cnt) cnt.textContent = d.count;
+    var hot = card.querySelector('.crs-hot');
+    if (d.count >= 10 && !hot) {
+      hot = document.createElement('span');
+      hot.className = 'crs-hot';
+      hot.textContent = '🔥 Talab yuqori';
+      card.insertBefore(hot, card.firstChild);
+    } else if (d.count < 10 && hot) {
+      hot.remove();
+    }
+  }).catch(function () { btn.disabled = false; });
+}
+
+document.getElementById('crs-login-modal').addEventListener('click', function (e) {
+  if (e.target === this) this.style.display = 'none';
+});
+
 function subscribeCourse(ev) {
   ev.preventDefault();
   var email = document.getElementById('sub-email').value.trim();

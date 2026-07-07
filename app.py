@@ -1184,6 +1184,39 @@ def _run_startup_migrations():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # Planned-course catalogue + demand tracking. Courses were formerly
+            # hardcoded in templates/courses.html; now DB-backed so we can measure
+            # interest (course_interest) and page views (course_views) per course
+            # BEFORE producing them — the owner prioritises by real demand.
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS courses (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(300) NOT NULL,
+                    description VARCHAR(600),
+                    icon VARCHAR(16),
+                    status VARCHAR(20) DEFAULT 'planned',
+                    progress_percent INTEGER DEFAULT 0,
+                    sort_order INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS course_interest (
+                    id SERIAL PRIMARY KEY,
+                    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(course_id, user_id)
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS course_views (
+                    course_id INTEGER PRIMARY KEY REFERENCES courses(id) ON DELETE CASCADE,
+                    view_count BIGINT DEFAULT 0
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_course_interest_course ON course_interest(course_id)")
             # Region (viloyat) for registered main-site users — collected via the
             # mandatory post-registration popup for geography analytics.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
@@ -1220,8 +1253,58 @@ def _seed_blog_posts():
         pass
 
 
+def _seed_courses():
+    """Insert the 6 planned courses once (only if the table is empty).
+
+    Mirrors the cards that used to be hardcoded in templates/courses.html.
+    status: 'soon' → 'Tez orada' badge, 'planned' → 'Rejalashtirilgan' badge.
+    """
+    try:
+        from data import get_connection
+    except Exception:
+        return
+    seed = [
+        ("Dissertatsiya A dan Z gacha",
+         "Mavzu tanlashdan himoyagacha — to'liq qo'llanma. 20+ video dars.",
+         "🎯", "soon", 60, 1),
+        ("Ilmiy maqola yozish san'ati",
+         "Scopus va Web of Science jurnallariga maqola yozish va yuborish.",
+         "📝", "soon", 40, 2),
+        ("Tadqiqot metodologiyasi",
+         "Sifat va miqdor tadqiqot usullari, ma'lumotlar tahlili.",
+         "📊", "planned", 20, 3),
+        ("AI bilan ilmiy tadqiqot",
+         "Sun'iy intellektdan tadqiqotda samarali foydalanish.",
+         "🤖", "planned", 15, 4),
+        ("Avtoreferat va himoya nutqi",
+         "Avtoreferatni to'g'ri yozish va himoyada taqdimot qilish.",
+         "📄", "planned", 10, 5),
+        ("Xorijda PhD — qo'llanma",
+         "Xorijiy universitetlarda PhD dasturlariga hujjat topshirish.",
+         "🌍", "planned", 5, 6),
+    ]
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) FROM courses")
+                if (cur.fetchone()[0] or 0) > 0:
+                    return
+                for title, desc, icon, status, prog, order in seed:
+                    cur.execute(
+                        "INSERT INTO courses (title, description, icon, status, "
+                        "progress_percent, sort_order) VALUES (%s, %s, %s, %s, %s, %s)",
+                        (title, desc, icon, status, prog, order))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+
 _run_startup_migrations()
 _seed_blog_posts()
+_seed_courses()
 
 
 def _placeholder_news():
@@ -3042,6 +3125,45 @@ def course_subscribe():
     return jsonify({"success": True, "message": "Rahmat! Sizga xabar beramiz."})
 
 
+@app.route("/admin/courses")
+@login_required
+def admin_courses():
+    """Read-only demand dashboard: interest + views + conversion per course."""
+    _require_admin()
+    from data import get_connection
+    rows = []
+    totals = {"interested": 0, "views": 0}
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT c.id, c.title, c.status, c.progress_percent,
+                           COUNT(ci.id) AS interested,
+                           COALESCE(cv.view_count, 0) AS views
+                    FROM courses c
+                    LEFT JOIN course_interest ci ON ci.course_id = c.id
+                    LEFT JOIN course_views cv ON cv.course_id = c.id
+                    GROUP BY c.id, cv.view_count
+                    ORDER BY interested DESC, c.sort_order
+                """)
+                for r in cur.fetchall():
+                    interested, views = r[4] or 0, r[5] or 0
+                    conv = round(interested * 100.0 / views, 1) if views else 0.0
+                    rows.append({
+                        "id": r[0], "title": r[1], "status": r[2],
+                        "progress": r[3] or 0, "interested": interested,
+                        "views": views, "conversion": conv,
+                    })
+                    totals["interested"] += interested
+                    totals["views"] += views
+        finally:
+            conn.close()
+    except Exception:
+        rows = []
+    return render_template("admin_courses.html", rows=rows, totals=totals)
+
+
 @app.route("/preparation")
 def preparation():
     return render_template("preparation.html")
@@ -3049,7 +3171,114 @@ def preparation():
 
 @app.route("/courses")
 def courses():
-    return render_template("courses.html")
+    from data import get_connection
+    from flask import session as _sess
+    courses_list = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # One aggregate query — interest counts + view counts for every
+                # active course, no N+1. LEFT JOINs so zero-count courses appear.
+                cur.execute("""
+                    SELECT c.id, c.title, c.description, c.icon, c.status,
+                           c.progress_percent, COUNT(ci.id) AS interested,
+                           COALESCE(cv.view_count, 0) AS views
+                    FROM courses c
+                    LEFT JOIN course_interest ci ON ci.course_id = c.id
+                    LEFT JOIN course_views cv ON cv.course_id = c.id
+                    WHERE c.is_active = TRUE
+                    GROUP BY c.id, cv.view_count
+                    ORDER BY c.sort_order, c.id
+                """)
+                rows = cur.fetchall()
+                for r in rows:
+                    courses_list.append({
+                        "id": r[0], "title": r[1], "description": r[2],
+                        "icon": r[3], "status": r[4], "progress": r[5] or 0,
+                        "interested": r[6] or 0, "views": r[7] or 0,
+                    })
+
+                # Which of these the current user already flagged (for button state).
+                interested_ids = set()
+                if getattr(current_user, "is_authenticated", False):
+                    try:
+                        uid = int(current_user.get_id())
+                        cur.execute(
+                            "SELECT course_id FROM course_interest WHERE user_id = %s",
+                            (uid,))
+                        interested_ids = {row[0] for row in cur.fetchall()}
+                    except Exception:
+                        interested_ids = set()
+
+                # Page-level view counting: increment once per session per course
+                # (guests included). Session guard stops refresh-spam inflation.
+                viewed = set(_sess.get("courses_viewed") or [])
+                new_ids = [c["id"] for c in courses_list if c["id"] not in viewed]
+                if new_ids:
+                    cur.execute(
+                        "INSERT INTO course_views (course_id, view_count) "
+                        "SELECT id, 1 FROM courses WHERE id = ANY(%s) "
+                        "ON CONFLICT (course_id) DO UPDATE "
+                        "SET view_count = course_views.view_count + 1",
+                        (new_ids,))
+                    conn.commit()
+                    _sess["courses_viewed"] = list(viewed | set(new_ids))
+                    # Reflect this render's increment in the numbers shown now.
+                    for c in courses_list:
+                        if c["id"] in new_ids:
+                            c["views"] += 1
+        finally:
+            conn.close()
+    except Exception:
+        interested_ids = set()
+
+    for c in courses_list:
+        c["is_interested"] = c["id"] in interested_ids
+    return render_template("courses.html", courses=courses_list)
+
+
+@app.route("/api/courses/<int:course_id>/interest", methods=["POST"])
+@login_required
+@csrf.exempt
+def course_interest_toggle(course_id):
+    from data import get_connection
+    try:
+        uid = int(current_user.get_id())
+    except Exception:
+        return jsonify({"success": False, "error": "Avtorizatsiya xatosi"}), 401
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # 404 for unknown / inactive course.
+                cur.execute(
+                    "SELECT 1 FROM courses WHERE id = %s AND is_active = TRUE",
+                    (course_id,))
+                if not cur.fetchone():
+                    return jsonify({"success": False, "error": "Kurs topilmadi"}), 404
+                # Toggle: delete if present, else insert (UNIQUE-safe).
+                cur.execute(
+                    "DELETE FROM course_interest WHERE course_id = %s AND user_id = %s",
+                    (course_id, uid))
+                if cur.rowcount:
+                    interested = False
+                else:
+                    cur.execute(
+                        "INSERT INTO course_interest (course_id, user_id) VALUES (%s, %s) "
+                        "ON CONFLICT (course_id, user_id) DO NOTHING",
+                        (course_id, uid))
+                    interested = True
+                cur.execute(
+                    "SELECT COUNT(*) FROM course_interest WHERE course_id = %s",
+                    (course_id,))
+                count = cur.fetchone()[0] or 0
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return jsonify({"success": False, "error": "Xatolik yuz berdi"}), 200
+    return jsonify({"success": True, "interested": interested, "count": count})
 
 
 # ════════════════════════════════════════════════════════════════════
