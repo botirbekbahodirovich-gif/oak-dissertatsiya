@@ -223,12 +223,21 @@ def _usernames(cur, ids):
     return {r[0]: r[1] or f'user{r[0]}' for r in cur.fetchall()}
 
 
-_PROJECT_COLS = ('id, owner_id, title, degree_type, specialty_code, language, '
-                 'status, advisor_id, last_submitted_at, created_at, updated_at')
+_PROJECT_COL_NAMES = ('id', 'owner_id', 'title', 'degree_type', 'specialty_code',
+                      'language', 'status', 'advisor_id', 'last_submitted_at',
+                      'created_at', 'updated_at')
+
+
+def _project_cols(alias=''):
+    """SELECT uchun ustunlar ro'yxati. JOIN'li so'rovlarda ustun nomi bir necha
+    jadvalda uchrasa "ambiguous column" xatosi bo'ladi — shuning uchun alias
+    berib prefikslaymiz, masalan _project_cols('d') → 'd.id, d.owner_id, ...'."""
+    prefix = f'{alias}.' if alias else ''
+    return ', '.join(prefix + c for c in _PROJECT_COL_NAMES)
 
 
 def _project_dict(row):
-    d = dict(zip([c.strip() for c in _PROJECT_COLS.split(',')], row))
+    d = dict(zip(_PROJECT_COL_NAMES, row))
     d['degree_label'] = DEGREE_LABELS.get(d['degree_type'], d['degree_type'])
     d['status_label'] = STATUS_LABELS.get(d['status'], d['status'])
     return d
@@ -238,7 +247,8 @@ def get_dissertation_or_403(cur, diss_id, allow_advisor=True):
     """Loyiha qatori + rol ('owner'|'advisor'). Egasi bo'lmasa va qabul
     qilingan rahbar ham bo'lmasa — 403 (adminlar uchun ham istisno YO'Q:
     dissertatsiya intellektual mulk)."""
-    cur.execute(f"SELECT {_PROJECT_COLS} FROM diss_projects WHERE id = %s", (diss_id,))
+    cur.execute(f"SELECT {_project_cols('d')} FROM diss_projects d WHERE d.id = %s",
+                (diss_id,))
     row = cur.fetchone()
     if not row:
         abort(404)
@@ -564,13 +574,13 @@ def workspace_list():
             _ensure_schema(cur)
             # mening loyihalarim + progress (1 so'rov)
             cur.execute(f"""
-                SELECT {_PROJECT_COLS},
-                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = diss_projects.id),
-                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = diss_projects.id
+                SELECT {_project_cols('d')},
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id),
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id
                           AND b.review_status = 'approved')
-                FROM diss_projects
-                WHERE owner_id = %s AND status <> 'archived'
-                ORDER BY updated_at DESC LIMIT 50
+                FROM diss_projects d
+                WHERE d.owner_id = %s AND d.status <> 'archived'
+                ORDER BY d.updated_at DESC LIMIT 50
             """, (current_user.id,))
             adv_ids = set()
             for r in cur.fetchall():
@@ -582,17 +592,17 @@ def workspace_list():
                     adv_ids.add(p['advisor_id'])
             # shogirdlarim loyihalari (rahbar sifatida)
             cur.execute(f"""
-                SELECT {_PROJECT_COLS},
-                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = diss_projects.id),
-                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = diss_projects.id
+                SELECT {_project_cols('d')},
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id),
+                       (SELECT COUNT(*) FROM dissertation_blocks b WHERE b.dissertation_id = d.id
                           AND b.review_status = 'approved'),
                        u.username
-                FROM diss_projects
-                JOIN advisor_links l ON l.student_id = diss_projects.owner_id
+                FROM diss_projects d
+                JOIN advisor_links l ON l.student_id = d.owner_id
                      AND l.advisor_id = %s AND l.status = 'accepted'
-                JOIN users u ON u.id = diss_projects.owner_id
-                WHERE diss_projects.advisor_id = %s AND diss_projects.status <> 'archived'
-                ORDER BY diss_projects.last_submitted_at DESC NULLS LAST LIMIT 100
+                JOIN users u ON u.id = d.owner_id
+                WHERE d.advisor_id = %s AND d.status <> 'archived'
+                ORDER BY d.last_submitted_at DESC NULLS LAST LIMIT 100
             """, (current_user.id, current_user.id))
             for r in cur.fetchall():
                 p = _project_dict(r[:-3])
