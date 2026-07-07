@@ -56,6 +56,41 @@ REVIEW_LABELS = {'not_reviewed': "Ko'rilmagan", 'deficiencies': 'Kamchiliklar bo
                  'task_assigned': 'Topshiriq berildi', 'approved': "Ma'qullandi"}
 ANNOT_TYPES = {'comment': 'Izoh', 'correction': 'Tuzatish', 'task': 'Topshiriq'}
 
+# OAK tuzilmasida RAQAMLANMAYDIGAN maxsus bo'limlar (normallashtirilgan,
+# to'g'ri apostrof bilan). Sarlavha shu ro'yxatga tushsa block_type='special'.
+_SPECIAL_TITLES = {
+    'kirish', 'annotatsiya', 'xulosa', 'umumiy xulosa',
+    'xulosa, taklif va tavsiyalar',
+    'foydalanilgan adabiyotlar', "foydalanilgan adabiyotlar ro'yxati",
+    "adabiyotlar ro'yxati", 'ilova', 'ilovalar', 'mundarija',
+    'qisqartmalar', 'shartli belgilar',
+}
+
+# har xil apostroflarni to'g'ri ' ga keltirish (Kirill/lotin/curly variantlari)
+_APOS_TRANSLATE = {ord(c): "'" for c in "`ʻʼ‘’"}
+
+# "I BOB", "II-bob", "1 bob", "1-BOB" kabi sarlavhalar allaqachon o'z raqamiga
+# ega — displayда ikki karra raqamlamaslik uchun aniqlanadi.
+_BOB_LABEL_RE = re.compile(r'^\s*(?:[ivxlcdm]+|\d+)\s*[-.–\s]*bob\b', re.I)
+
+
+def _norm_title(title):
+    return (title or '').strip().lower().translate(_APOS_TRANSLATE)
+
+
+def _is_special_title(title):
+    return _norm_title(title) in _SPECIAL_TITLES
+
+
+def _heading_label(numbering, title):
+    """Ko'rsatiladigan sarlavha: raqam bo'lsa "1.2. Nom", lekin sarlavha
+    allaqachon 'I BOB' bilan boshlansa yoki raqam yo'q bo'lsa — faqat nom."""
+    title = title or ''
+    if numbering and not _BOB_LABEL_RE.match(title):
+        return f'{numbering}. {title}'
+    return title
+
+
 # per-worker rate-limit xotirasi: {block_id: last_save_ts}, {user_id: export_ts}
 _last_save = {}
 _last_export = {}
@@ -128,6 +163,18 @@ def _ensure_schema(cur):
         )""")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_blocks_dissertation "
                 "ON dissertation_blocks(dissertation_id, parent_id, sort_order)")
+    # block_type: 'special' bo'limlar (Kirish, Xulosa, Adabiyotlar...) RAQAMLANMAYDI
+    cur.execute("ALTER TABLE dissertation_blocks "
+                "ADD COLUMN IF NOT EXISTS block_type VARCHAR(20) DEFAULT 'chapter'")
+    cur.execute("""
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                         WHERE conname = 'dissertation_blocks_block_type_chk') THEN
+            ALTER TABLE dissertation_blocks
+              ADD CONSTRAINT dissertation_blocks_block_type_chk
+              CHECK (block_type IN ('chapter', 'special'));
+          END IF;
+        END $$;""")
     cur.execute("""
         CREATE TABLE IF NOT EXISTS block_versions (
             id SERIAL PRIMARY KEY,
@@ -196,7 +243,26 @@ def _ensure_schema(cur):
             result JSONB,
             created_at TIMESTAMP DEFAULT NOW()
         )""")
+    _migrate_block_types(cur)
     _schema_ready = True
+
+
+def _migrate_block_types(cur):
+    """Bir martalik migratsiya (worker boshiga): mavjud bloklarning sarlavhasi
+    special ro'yxatga tushsa block_type='special' qilinadi va shu loyihalarning
+    raqamlashi qayta hisoblanadi. Xato bo'lsa sxema initini buzmaydi."""
+    try:
+        cur.execute("""
+            UPDATE dissertation_blocks SET block_type = 'special'
+            WHERE block_type <> 'special'
+              AND translate(lower(btrim(title)), $$`ʻʼ‘’$$, $$'''''$$) = ANY(%s)
+            RETURNING dissertation_id
+        """, (list(_SPECIAL_TITLES),))
+        affected = {r[0] for r in cur.fetchall()}
+        for diss_id in affected:
+            _recompute_numbering(cur, diss_id)
+    except Exception:
+        pass
 
 
 # ── umumiy yordamchilar ──────────────────────────────────────────────────────
@@ -270,7 +336,7 @@ def get_block_or_403(cur, block_id, allow_advisor=True):
     cur.execute("""
         SELECT id, dissertation_id, parent_id, title, numbering, sort_order,
                depth, content, content_plain, word_count, review_status,
-               is_locked_by, locked_at, updated_at
+               is_locked_by, locked_at, updated_at, block_type
         FROM dissertation_blocks WHERE id = %s
     """, (block_id,))
     row = cur.fetchone()
@@ -278,8 +344,10 @@ def get_block_or_403(cur, block_id, allow_advisor=True):
         abort(404)
     cols = ('id', 'dissertation_id', 'parent_id', 'title', 'numbering',
             'sort_order', 'depth', 'content', 'content_plain', 'word_count',
-            'review_status', 'is_locked_by', 'locked_at', 'updated_at')
+            'review_status', 'is_locked_by', 'locked_at', 'updated_at', 'block_type')
     block = dict(zip(cols, row))
+    block['is_special'] = (block.get('block_type') or 'chapter') == 'special'
+    block['heading'] = _heading_label(block.get('numbering') or '', block.get('title'))
     project, role = get_dissertation_or_403(cur, block['dissertation_id'],
                                             allow_advisor=allow_advisor)
     return block, project, role
@@ -321,7 +389,7 @@ def _fetch_tree(cur, diss_id):
     """Bitta so'rov — daraxt Python'da quriladi (N+1 yo'q)."""
     cur.execute("""
         SELECT b.id, b.parent_id, b.title, b.numbering, b.sort_order, b.depth,
-               b.word_count, b.review_status,
+               b.word_count, b.review_status, b.block_type,
                (SELECT COUNT(*) FROM block_annotations a
                  WHERE a.block_id = b.id AND a.status = 'open')
         FROM dissertation_blocks b
@@ -330,10 +398,13 @@ def _fetch_tree(cur, diss_id):
     """, (diss_id,))
     nodes = {}
     for r in cur.fetchall():
+        bt = r[8] or 'chapter'
         nodes[r[0]] = {'id': r[0], 'parent_id': r[1], 'title': r[2],
                        'numbering': r[3] or '', 'sort_order': r[4], 'depth': r[5],
                        'word_count': r[6] or 0, 'review_status': r[7],
-                       'open_annotations_count': r[8] or 0, 'children': []}
+                       'block_type': bt, 'is_special': bt == 'special',
+                       'heading': _heading_label(r[3] or '', r[2]),
+                       'open_annotations_count': r[9] or 0, 'children': []}
     roots = []
     for n in nodes.values():
         if n['parent_id'] and n['parent_id'] in nodes:
@@ -350,16 +421,25 @@ def _fetch_tree(cur, diss_id):
 
 def _recompute_numbering(cur, diss_id):
     """Tuzilma o'zgargach: DFS bilan "1", "1.1", "1.1.1" raqamlarini qayta
-    hisoblab, faqat o'zgarganlarini yangilaydi (bitta batched pass)."""
+    hisoblab, faqat o'zgarganlarini yangilaydi (bitta batched pass).
+    'special' bloklar (Kirish, Xulosa...) RAQAMLANMAYDI (numbering = NULL) va
+    sanoqqa kirmaydi; special blokning bolalari ham raqamlanmaydi."""
     tree = _fetch_tree(cur, diss_id)
     updates = []
-    def walk(items, prefix):
-        for i, n in enumerate(items, 1):
-            num = f'{prefix}{i}' if not prefix else f'{prefix}.{i}'
-            if n['numbering'] != num:
-                updates.append((num, n['id']))
-            walk(n['children'], num)
-    walk(tree, '')
+    def walk(items, prefix, unnumbered):
+        i = 0
+        for n in items:
+            if unnumbered or n['is_special']:
+                if n['numbering']:                    # eski raqamni tozalash
+                    updates.append((None, n['id']))
+                walk(n['children'], '', True)
+            else:
+                i += 1
+                num = f'{prefix}.{i}' if prefix else f'{i}'
+                if n['numbering'] != num:
+                    updates.append((num, n['id']))
+                walk(n['children'], num, False)
+    walk(tree, '', False)
     for num, bid in updates:
         cur.execute("UPDATE dissertation_blocks SET numbering = %s WHERE id = %s",
                     (num, bid))
@@ -663,13 +743,15 @@ def project_create():
                 VALUES (%s, %s, %s, %s) RETURNING id
             """, (current_user.id, title, degree, specialty or None))
             pid = cur.fetchone()[0]
-            # boshlang'ich skelet: Kirish / I bob / Xulosa
-            for i, t in enumerate(['Kirish', 'I bob', 'Xulosa, taklif va tavsiyalar']):
+            # boshlang'ich skelet: Kirish (special) / I bob (chapter) / Xulosa (special)
+            skeleton = [('Kirish', 'special'), ('I bob', 'chapter'),
+                        ('Xulosa, taklif va tavsiyalar', 'special')]
+            for i, (t, bt) in enumerate(skeleton):
                 cur.execute("""
                     INSERT INTO dissertation_blocks
-                        (dissertation_id, title, sort_order, depth)
-                    VALUES (%s, %s, %s, 0)
-                """, (pid, t, i))
+                        (dissertation_id, title, sort_order, depth, block_type)
+                    VALUES (%s, %s, %s, 0, %s)
+                """, (pid, t, i, bt))
             _recompute_numbering(cur, pid)
         conn.commit()
         return jsonify({'success': True, 'id': pid})
@@ -796,11 +878,12 @@ def block_create(id):
                 WHERE dissertation_id = %s AND parent_id IS NOT DISTINCT FROM %s
             """, (id, parent_id))
             order = cur.fetchone()[0]
+            btype = 'special' if _is_special_title(title) else 'chapter'
             cur.execute("""
                 INSERT INTO dissertation_blocks
-                    (dissertation_id, parent_id, title, sort_order, depth)
-                VALUES (%s, %s, %s, %s, %s) RETURNING id
-            """, (id, parent_id, title, order, depth))
+                    (dissertation_id, parent_id, title, sort_order, depth, block_type)
+                VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+            """, (id, parent_id, title, order, depth, btype))
             bid = cur.fetchone()[0]
             _recompute_numbering(cur, id)
         conn.commit()
@@ -827,8 +910,15 @@ def block_rename(block_id):
         with conn.cursor() as cur:
             _ensure_schema(cur)
             block, project, role = get_block_or_403(cur, block_id, allow_advisor=False)
-            cur.execute("UPDATE dissertation_blocks SET title = %s, updated_at = NOW() "
-                        "WHERE id = %s", (title, block_id))
+            # "Raqamlanmasin" toggle'i berilgan bo'lsa — undan; aks holda sarlavhadan
+            # avto-aniqlash (masalan "I bob" → "Xulosa" special bo'ladi).
+            if 'is_special' in data:
+                btype = 'special' if data.get('is_special') else 'chapter'
+            else:
+                btype = 'special' if _is_special_title(title) else 'chapter'
+            cur.execute("UPDATE dissertation_blocks SET title = %s, block_type = %s, "
+                        "updated_at = NOW() WHERE id = %s", (title, btype, block_id))
+            _recompute_numbering(cur, project['id'])
         conn.commit()
         return jsonify({'success': True})
     finally:
@@ -1562,11 +1652,15 @@ def _ordered_blocks(cur, diss_id):
     if not ids:
         return []
     cur.execute("""
-        SELECT id, title, numbering, depth, content FROM dissertation_blocks
-        WHERE id = ANY(%s)
+        SELECT id, title, numbering, depth, content, block_type
+        FROM dissertation_blocks WHERE id = ANY(%s)
     """, (ids,))
     by_id = {r[0]: {'id': r[0], 'title': r[1], 'numbering': r[2] or '',
-                    'depth': r[3], 'content': r[4] or ''} for r in cur.fetchall()}
+                    'depth': r[3], 'content': r[4] or '',
+                    'block_type': r[5] or 'chapter',
+                    'is_special': (r[5] or 'chapter') == 'special',
+                    'heading': _heading_label(r[2] or '', r[1])}
+             for r in cur.fetchall()}
     return [by_id[i] for i in ids if i in by_id]
 
 
@@ -1657,13 +1751,13 @@ def _build_docx(project, blocks, owner_name):
     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
     h.add_run('MUNDARIJA').bold = True
     for b in blocks:
-        doc.add_paragraph(f"{b['numbering']}. {b['title']}" if b['numbering'] else b['title'])
+        doc.add_paragraph(b.get('heading') or b['title'])
     doc.add_page_break()
 
     # bo'limlar
     for b in blocks:
         heading = doc.add_heading(level=min(b['depth'] + 1, 3))
-        hr = heading.add_run(f"{b['numbering']}. {b['title']}" if b['numbering'] else b['title'])
+        hr = heading.add_run(b.get('heading') or b['title'])
         hr.font.name = 'Times New Roman'
         _html_to_docx(doc, b['content'])
     buf = io.BytesIO()

@@ -4,8 +4,8 @@
 {% block extra_head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
 <style>
-.ed-layout { display: grid; grid-template-columns: 280px 1fr 320px; gap: 14px; align-items: start; }
-@media (max-width: 1100px) { .ed-layout { grid-template-columns: 240px 1fr; } .ed-right { display: none; }
+.ed-layout { display: grid; grid-template-columns: 300px 1fr 320px; gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .ed-layout { grid-template-columns: 260px 1fr; } .ed-right { display: none; }
   .ed-right.mobile-open { display: block; position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
     z-index: 1100; overflow-y: auto; } }
 @media (max-width: 760px) { .ed-layout { grid-template-columns: 1fr; } .ed-left { display: none; }
@@ -16,20 +16,28 @@
 .ed-left { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
 .ed-right { position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
 
-/* TOC */
+/* TOC — o'qilishi oson, kontrastli mundarija */
 .toc-node { border-radius: 8px; }
-.toc-row { display: flex; align-items: center; gap: 5px; padding: 5px 6px; border-radius: 8px;
-  cursor: pointer; font-size: 0.84rem; }
-.toc-row:hover { background: rgba(59,130,246,0.08); }
-.toc-row.active { background: rgba(59,130,246,0.16); font-weight: 700; }
-.toc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #64748b; }
+.toc-row { display: flex; align-items: flex-start; gap: 7px; padding: 10px 10px; border-radius: 8px;
+  cursor: pointer; font-size: 14.5px; line-height: 1.35; color: rgba(255,255,255,0.92);
+  border-left: 3px solid transparent; }
+[data-bs-theme="light"] .toc-row { color: #1e293b; }
+.toc-row:hover { background: rgba(59,130,246,0.10); }
+.toc-row.active { background: rgba(59,130,246,0.18); border-left-color: #4a9eff; font-weight: 600; }
+.toc-row.depth-0 { font-weight: 600; }
+.toc-title { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.toc-num { flex-shrink: 0; opacity: 0.68; font-variant-numeric: tabular-nums; }
+.toc-row.special .toc-title { font-style: italic; opacity: 0.82; }
+.toc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #64748b;
+  margin-top: 6px; }
 .toc-dot.deficiencies { background: #ef4444; } .toc-dot.task_assigned { background: #fbbf24; }
 .toc-dot.approved { background: #22c55e; }
 .toc-count { background: rgba(251,191,36,0.2); color: #fbbf24; font-size: 0.68rem;
-  border-radius: 50px; padding: 1px 7px; font-weight: 700; }
-.toc-actions { display: none; gap: 3px; margin-left: auto; }
+  border-radius: 50px; padding: 1px 7px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.toc-actions { display: none; gap: 3px; margin-left: auto; flex-shrink: 0; }
 .toc-row:hover .toc-actions { display: flex; }
-.toc-actions button { border: none; background: transparent; cursor: pointer; font-size: 0.75rem;
+.toc-actions button { border: none; background: transparent; cursor: pointer; font-size: 0.8rem;
   padding: 2px; color: inherit; }
 .toc-children { margin-left: 16px; }
 .toc-row.drag-over { outline: 2px dashed #4a9eff; }
@@ -49,6 +57,10 @@
 #editor-container { background: #fff; color: #0f172a; border-radius: 0 0 10px 10px; min-height: 55vh; }
 .ql-toolbar { border-radius: 10px 10px 0 0; background: #f1f5f9; }
 .ed-status { display: flex; justify-content: space-between; color: #94a3b8; font-size: 0.78rem; margin-top: 8px; }
+#save-status.saved { color: #22c55e; }
+#save-status.saving { color: #94a3b8; }
+#save-status.dirty { color: #fbbf24; }
+#save-status.error { color: #ef4444; font-weight: 700; }
 .ed-readonly-note { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);
   color: #60a5fa; border-radius: 10px; padding: 8px 14px; font-size: 0.85rem; margin-bottom: 10px; }
 .annotation-highlight { background: rgba(251,191,36,0.35); cursor: pointer; }
@@ -99,6 +111,7 @@
 {% endblock %}
 
 {% block content %}
+{% set read_only = (role == 'advisor') %}
 <div class="container-xl" style="max-width:1400px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
     <a href="/workspace" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">← Ish stoli</a>
@@ -132,8 +145,11 @@
     <!-- EDITOR -->
     <main>
       <div class="ed-topbar ed-panel" style="padding:10px 14px;">
-        <h1><span id="blk-numbering">{{ block.numbering }}</span>. <span id="blk-title">{{ block.title }}</span></h1>
+        <h1 id="blk-heading">{{ block.heading }}</h1>
         <span class="ed-badge {{ block.review_status }}" id="blk-status">{{ review_labels[block.review_status] }}</span>
+        {% if not read_only %}
+        <button class="ed-btn primary" onclick="forceSave()" title="Darhol saqlash">💾 Saqlash</button>
+        {% endif %}
         <button class="ed-btn" onclick="openVersions()">🕐 Versiyalar</button>
         <button class="ed-btn" onclick="toggleAnnPanel()">💬 Izohlar</button>
       </div>
@@ -210,9 +226,12 @@ window.ED_STATE = {
   dissId: {{ project.id }},
   blockId: {{ block.id }},
   role: '{{ role }}',
-  readOnly: {{ 'true' if role == 'advisor' else 'false' }},
+  readOnly: {{ 'true' if read_only else 'false' }},
   content: {{ block.content | tojson }},
   updatedAt: {{ (block.updated_at | string) | tojson }},
+  blockType: {{ (block.block_type or 'chapter') | tojson }},
+  isSpecial: {{ 'true' if block.is_special else 'false' }},
+  heading: {{ block.heading | tojson }},
   reviewLabels: {{ review_labels | tojson }},
   tree: {{ tree | tojson }}
 };

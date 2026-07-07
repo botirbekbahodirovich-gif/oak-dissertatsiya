@@ -94,6 +94,19 @@
 
   if (!S) return;   // quyidagi hammasi faqat editor sahifasi uchun
 
+  // YAGONA MANBA: joriy blok id. Blok almashtirish/yaratish/yopishdan OLDIN
+  // eski blok saqlanadi, keyingina o'zgaradi (kontent aralashib ketmasligi uchun).
+  var currentBlockId = S.blockId;
+
+  // "I BOB", "1-bob" kabi sarlavhalar allaqachon raqamli — ikki karra
+  // raqamlamaymiz (server _heading_label bilan bir xil qoida).
+  var BOB_RE = /^\s*(?:[ivxlcdm]+|\d+)\s*[-.–\s]*bob\b/i;
+  function blockLabel(numbering, title) {
+    title = title || '';
+    if (numbering && !BOB_RE.test(title)) return numbering + '. ' + title;
+    return title;
+  }
+
   /* ══════════ TOC TREE ══════════ */
   function statusDot(st) { return '<span class="toc-dot ' + st + '"></span>'; }
   function renderTree(nodes, host) {
@@ -103,22 +116,28 @@
         var wrap = document.createElement('div');
         wrap.className = 'toc-node';
         var row = document.createElement('div');
-        row.className = 'toc-row' + (n.id === S.blockId ? ' active' : '');
+        var special = !!n.is_special;
+        row.className = 'toc-row' + (n.id === currentBlockId ? ' active' : '') +
+          (special ? ' special' : '') + (n.depth === 0 ? ' depth-0' : '');
         row.setAttribute('data-block-id', n.id);
         row.setAttribute('draggable', S.role === 'owner' ? 'true' : 'false');
+        var showNum = n.numbering && !special && !BOB_RE.test(n.title || '');
         row.innerHTML = statusDot(n.review_status) +
-          '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">' +
-          esc(n.numbering) + '. ' + esc(n.title) + '</span>' +
+          (showNum ? '<span class="toc-num">' + esc(n.numbering) + '.</span>' : '') +
+          '<span class="toc-title">' + esc(n.title) + '</span>' +
           (n.open_annotations_count ? '<span class="toc-count">' + n.open_annotations_count + '</span>' : '') +
           (S.role === 'owner'
             ? '<span class="toc-actions">' +
               '<button title="Nomini o\'zgartirish" data-act="rename">✏️</button>' +
+              '<button title="' + (special ? 'Raqamlansin' : 'Raqamlanmasin (Kirish, Xulosa kabi)') +
+                '" data-act="toggle-num">' + (special ? '🔢' : '🚫') + '</button>' +
               (n.depth < 3 ? '<button title="Ichki qism" data-act="child">➕</button>' : '') +
               '<button title="O\'chirish" data-act="del">🗑️</button></span>'
             : '');
         row.addEventListener('click', function (e) {
           var act = e.target.getAttribute && e.target.getAttribute('data-act');
           if (act === 'rename') { e.stopPropagation(); renameBlock(n.id, n.title); return; }
+          if (act === 'toggle-num') { e.stopPropagation(); toggleNumbering(n); return; }
           if (act === 'child') { e.stopPropagation(); addBlock(n.id); return; }
           if (act === 'del') { e.stopPropagation(); deleteBlock(n.id); return; }
           navigateToBlock(n.id);
@@ -160,24 +179,50 @@
     fetch('/api/dissertation/' + S.dissId + '/blocks')
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.success) renderTree(d.blocks, document.getElementById('toc-tree'));
+        if (!d.success) return;
+        renderTree(d.blocks, document.getElementById('toc-tree'));
+        updateCurrentHeading(d.blocks);   // raqamlash siljisa sarlavha yangilansin
       }).catch(function () {});
+  }
+  function updateCurrentHeading(nodes) {
+    var found = null;
+    (function scan(items) {
+      (items || []).forEach(function (n) {
+        if (n.id === currentBlockId) found = n;
+        if (n.children) scan(n.children);
+      });
+    })(nodes);
+    var h = document.getElementById('blk-heading');
+    if (found && h) h.textContent = found.is_special ? (found.title || '')
+                                                     : blockLabel(found.numbering, found.title);
+  }
+  function toggleNumbering(n) {
+    postJSON('/api/blocks/' + n.id + '/rename',
+             { title: n.title, is_special: !n.is_special })
+      .then(function (d) { if (d.success) refreshTree(); else alert(d.error || 'Xatolik'); });
   }
   window.addBlock = function (parentId) {
     var title = prompt(parentId ? 'Ichki qism nomi:' : 'Yangi bob nomi:');
+    if (title == null) return;
+    title = title.trim();
     if (!title) return;
-    postJSON('/api/dissertation/' + S.dissId + '/blocks/create',
-             { title: title, parent_id: parentId })
-      .then(function (d) {
-        if (d.success) refreshTree();
-        else alert(d.error || 'Xatolik');
-      });
+    // yangi blok yaratishdan OLDIN joriy blokni saqlaymiz (kontent aralashmasin)
+    flushThen(function () {
+      postJSON('/api/dissertation/' + S.dissId + '/blocks/create',
+               { title: title, parent_id: parentId })
+        .then(function (d) {
+          if (d.success) refreshTree();
+          else alert(d.error || 'Xatolik');
+        });
+    });
   };
   function renameBlock(id, oldTitle) {
     var t = prompt('Yangi nom:', oldTitle);
+    if (t == null) return;
+    t = t.trim();
     if (!t || t === oldTitle) return;
     postJSON('/api/blocks/' + id + '/rename', { title: t }).then(function (d) {
-      if (d.success) { refreshTree(); if (id === S.blockId) document.getElementById('blk-title').textContent = t; }
+      if (d.success) refreshTree();   // sarlavha + raqamlash refreshTree'da yangilanadi
       else alert(d.error || 'Xatolik');
     });
   }
@@ -185,14 +230,20 @@
     if (!confirm("Ushbu qism va uning barcha ichki qismlari o'chiriladi. Davom etasizmi?")) return;
     postJSON('/api/blocks/' + id + '/delete', {}).then(function (d) {
       if (!d.success) { alert(d.error || 'Xatolik'); return; }
-      if (id === S.blockId) window.location.href = '/workspace/' + S.dissId + '/first';
+      if (id === currentBlockId) window.location.href = '/workspace/' + S.dissId + '/first';
       else refreshTree();
     });
   }
   function navigateToBlock(id) {
-    if (id === S.blockId) return;
-    if (dirty && !confirm('Saqlanmagan o\'zgarishlar bor. Baribir o\'tilsinmi?')) return;
-    window.location.href = '/workspace/' + S.dissId + '/edit/' + id;
+    if (id === currentBlockId) return;
+    clearTimeout(typingTimer);
+    var go = function () { window.location.href = '/workspace/' + S.dissId + '/edit/' + id; };
+    if (S.readOnly || !dirty) { go(); return; }
+    // eski blok uchun oxirgi saqlash (manual — rate-limitdan xoli), keyin o'tamiz
+    persist('manual').then(function (ok) {
+      if (ok) { go(); return; }
+      if (confirm('Saqlab bo\'lmadi — o\'zgarishlar lokal nusxada saqlangan. Baribir o\'tilsinmi?')) go();
+    });
   }
 
   /* ══════════ QUILL EDITOR ══════════ */
@@ -240,73 +291,144 @@
 
   /* ══════════ AUTOSAVE + LOCK + LOCALSTORAGE DRAFT ══════════ */
   var dirty = false;
+  var saving = false;
   var typingTimer = null;
-  var draftKey = 'diss-draft-' + S.blockId;
+  var draftKey = 'diss-draft-' + currentBlockId;
   var statusEl = document.getElementById('save-status');
   var wcEl = document.getElementById('word-count');
+
+  function setStatus(kind, text) {
+    if (!statusEl) return;
+    statusEl.className = kind || '';
+    statusEl.textContent = text;
+  }
+  function hm() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function saveDraft() {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({
+        content: quill.root.innerHTML, savedAt: Date.now()
+      }));
+    } catch (e) {}
+  }
 
   // lokal qoralama tiklash taklifi (saqlash uzilib qolgan bo'lsa)
   try {
     var draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
-    if (draft && draft.savedAt > Date.parse(S.updatedAt.replace(' ', 'T')) &&
+    var baseTs = S.updatedAt ? Date.parse(String(S.updatedAt).replace(' ', 'T')) : 0;
+    if (draft && draft.savedAt > (baseTs || 0) &&
         draft.content !== (S.content || '') && !S.readOnly) {
       if (confirm('Saqlashda uzilish bo\'lgan. Lokal nusxani tiklaysizmi?')) {
         quill.root.innerHTML = draft.content;
         dirty = true;
+        setStatus('dirty', '● Saqlanmagan');
       } else {
         localStorage.removeItem(draftKey);
       }
     }
   } catch (e) {}
 
+  /* Saqlash — Promise qaytaradi (true=saqlandi/o'zgarmagan, false=muvaffaqiyatsiz).
+     Faqat 'autosave' 5s rate-limitga tushadi; 'manual' har doim yoziladi.
+     Xato bo'lsa 3 marta eksponensial kutish bilan qayta uriniladi; lokal
+     nusxa saqlanib turadi. */
+  function persist(saveType, attempt) {
+    if (S.readOnly) return Promise.resolve(true);
+    attempt = attempt || 1;
+    saving = true;
+    setStatus('saving', 'Saqlanmoqda…');
+    return postJSON('/api/blocks/' + currentBlockId + '/save',
+             { content: quill.root.innerHTML, save_type: saveType })
+      .then(function (d) {
+        saving = false;
+        if (d._status === 429) {                       // autosave rate-limit — jim
+          setStatus('dirty', '● Saqlanmagan');
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(function () { if (dirty) persist('autosave'); }, 5500);
+          return true;                                 // dirty saqlanadi, keyin yoziladi
+        }
+        if (d._status === 409) {
+          banner('warn', '⚠️ ' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
+          setStatus('error', '⚠ Saqlanmadi — qism qulflangan');
+          return false;
+        }
+        if (!d.success && !d.unchanged) throw new Error(d.error || 'save failed');
+        dirty = false;
+        try { localStorage.removeItem(draftKey); } catch (e) {}
+        if (d.word_count !== undefined && wcEl) wcEl.textContent = d.word_count + " so'z";
+        setStatus('saved', '✓ Saqlandi ' + (d.saved_at || hm()));
+        applyHighlights();
+        return true;
+      })
+      .catch(function () {
+        saving = false;
+        saveDraft();                                   // lokal nusxa kafolatlanadi
+        if (attempt < 3) {
+          setStatus('error', '⚠ Saqlanmadi — qayta urinilmoqda (' + attempt + '/3)');
+          return new Promise(function (res) {
+            setTimeout(function () { res(persist(saveType, attempt + 1)); },
+                       1000 * Math.pow(2, attempt));   // 2s, 4s
+          });
+        }
+        setStatus('error', '⚠ Saqlanmadi — qayta urinilmoqda');
+        return false;
+      });
+  }
+
+  // joriy blokni saqlab, keyin cb() — yangi blok yaratish/almashtirishdan oldin
+  function flushThen(cb) {
+    clearTimeout(typingTimer);
+    if (S.readOnly || !dirty) { cb(); return; }
+    persist('manual').then(function () { cb(); });
+  }
+
+  // qo'lda "💾 Saqlash" — debounce'ni chetlab, darhol yozadi (rate-limitsiz)
+  window.forceSave = function () {
+    clearTimeout(typingTimer);
+    persist('manual');
+  };
+  // Ctrl/Cmd+S — qo'lda saqlash
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      if (!S.readOnly) window.forceSave();
+    }
+  });
+
   if (!S.readOnly) {
     quill.on('text-change', function (d1, d2, source) {
       if (source !== 'user') return;
       dirty = true;
-      statusEl.textContent = '● Saqlanmagan';
+      setStatus('dirty', '● Saqlanmagan');
       clearTimeout(typingTimer);
-      typingTimer = setTimeout(function () { saveBlock('autosave'); }, 3000);
-      // crash xavfsizligi: lokal nusxa
-      try {
-        localStorage.setItem(draftKey, JSON.stringify({
-          content: quill.root.innerHTML, savedAt: Date.now()
-        }));
-      } catch (e) {}
+      typingTimer = setTimeout(function () { persist('autosave'); }, 3000);
+      saveDraft();                                     // crash xavfsizligi
     });
-    setInterval(function () { if (dirty) saveBlock('autosave'); }, 30000);
+    setInterval(function () { if (dirty && !saving) persist('autosave'); }, 30000);
     // edit lock: ochilganda + 60s heartbeat, yopilganda beacon bilan unlock
-    postJSON('/api/blocks/' + S.blockId + '/lock', {}).then(function (d) {
+    postJSON('/api/blocks/' + currentBlockId + '/lock', {}).then(function (d) {
       if (d._status === 409) banner('warn', '⚠️ ' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
     });
-    setInterval(function () { postJSON('/api/blocks/' + S.blockId + '/lock', {}); }, 60000);
-    window.addEventListener('beforeunload', function () {
-      navigator.sendBeacon && navigator.sendBeacon('/api/blocks/' + S.blockId + '/unlock', '{}');
+    setInterval(function () { postJSON('/api/blocks/' + currentBlockId + '/lock', {}); }, 60000);
+    // sahifadan chiqishda: qulfni ochamiz + saqlanmagan bo'lsa beacon bilan
+    // saqlaymiz VA brauzer tasdiq oynasini chiqaramiz
+    window.addEventListener('beforeunload', function (e) {
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/unlock', '{}');
+      if (dirty) {
+        saveDraft();
+        try {
+          var blob = new Blob(
+            [JSON.stringify({ content: quill.root.innerHTML, save_type: 'manual' })],
+            { type: 'application/json' });
+          if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/save', blob);
+        } catch (e2) {}
+        e.preventDefault();
+        e.returnValue = '';                            // brauzer tasdiq oynasi
+        return '';
+      }
     });
-  }
-
-  function saveBlock(saveType) {
-    if (S.readOnly) return;
-    statusEl.textContent = 'Saqlanmoqda…';
-    postJSON('/api/blocks/' + S.blockId + '/save',
-             { content: quill.root.innerHTML, save_type: saveType })
-      .then(function (d) {
-        if (d._status === 429) { return; }             // rate limit — jim
-        if (d._status === 409) { banner('warn', '⚠️ ' + (d.error || 'Lock')); return; }
-        if (!d.success && !d.unchanged) {
-          statusEl.textContent = '⚠️ Saqlanmadi (qayta urinilyapti)';
-          setTimeout(function () { saveBlock(saveType); }, 5000);   // retry
-          return;
-        }
-        dirty = false;
-        try { localStorage.removeItem(draftKey); } catch (e) {}
-        if (d.word_count !== undefined) wcEl.textContent = d.word_count + " so'z";
-        statusEl.textContent = '✓ Saqlandi ' + (d.saved_at || '');
-        applyHighlights();
-      })
-      .catch(function () {
-        statusEl.textContent = '⚠️ Tarmoq xatosi (lokal nusxa saqlanadi)';
-        setTimeout(function () { saveBlock(saveType); }, 8000);
-      });
   }
 
   /* ══════════ VERSIONS ══════════ */

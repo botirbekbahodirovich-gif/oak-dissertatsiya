@@ -171,3 +171,23 @@ CREATE TABLE IF NOT EXISTS ai_review_requests (
     result JSONB,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- ── v0.2.1 patch: RAQAMLANMAYDIGAN maxsus bo'limlar (Kirish, Xulosa, ...) ──
+-- Idempotent. Xuddi shu mantiq blueprint _ensure_schema + _migrate_block_types da.
+ALTER TABLE dissertation_blocks ADD COLUMN IF NOT EXISTS block_type VARCHAR(20) DEFAULT 'chapter';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dissertation_blocks_block_type_chk') THEN
+    ALTER TABLE dissertation_blocks
+      ADD CONSTRAINT dissertation_blocks_block_type_chk CHECK (block_type IN ('chapter', 'special'));
+  END IF;
+END $$;
+-- Mavjud bloklarni sarlavhasi bo'yicha 'special' deb belgilash (apostrof
+-- variantlari normallashtiriladi: `ʻʼ‘’ → ').
+UPDATE dissertation_blocks SET block_type = 'special'
+WHERE block_type <> 'special'
+  AND translate(lower(btrim(title)), $$`ʻʼ‘’$$, $$'''''$$) IN (
+    'kirish', 'annotatsiya', 'xulosa', 'umumiy xulosa', 'xulosa, taklif va tavsiyalar',
+    'foydalanilgan adabiyotlar', 'foydalanilgan adabiyotlar ro''yxati',
+    'adabiyotlar ro''yxati', 'ilova', 'ilovalar', 'mundarija', 'qisqartmalar', 'shartli belgilar');
+-- ESLATMA: numbering (1, 1.1, ...) ilova mantiqida (_recompute_numbering) qayta
+-- hisoblanadi — server birinchi so'rovda _migrate_block_types orqali bajaradi.

@@ -18,6 +18,7 @@
 .pv-toc { page-break-after: always; }
 .pv-toc-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #999;
   padding: 3px 0; font-size: 12pt; }
+.pv-toc-row.pv-special span { font-style: italic; }
 .pv-section { margin-top: 28px; }
 .pv-section h2 { font-size: 15pt; font-weight: 800; }
 .pv-section img { max-width: 100%; }
@@ -53,15 +54,15 @@
     <div class="pv-toc">
       <h2 style="text-align:center;">MUNDARIJA</h2>
       {% for b in blocks %}
-      <div class="pv-toc-row" style="padding-left:{{ b.depth * 18 }}px;">
-        <span>{{ b.numbering }}. {{ b.title }}</span>
+      <div class="pv-toc-row{{ ' pv-special' if b.is_special else '' }}" style="padding-left:{{ b.depth * 18 }}px;">
+        <span>{{ b.heading }}</span>
       </div>
       {% endfor %}
     </div>
 
     {% for b in blocks %}
     <div class="pv-section">
-      <h2 style="font-size:{{ 15 - b.depth }}pt;">{{ b.numbering }}. {{ b.title }}</h2>
+      <h2 style="font-size:{{ 15 - b.depth }}pt;">{{ b.heading }}</h2>
       {# blok kontenti saqlashda bleach bilan sanitizatsiya qilingan — xavfsiz #}
       <div>{{ b.content | safe }}</div>
     </div>
