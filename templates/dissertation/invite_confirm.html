@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Taklif — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="container-xl" style="max-width:520px;">
+  <div style="border:1px solid rgba(148,163,184,0.2);border-radius:16px;padding:30px 26px;
+              background:rgba(30,41,59,0.55);text-align:center;">
+    <div style="font-size:2.6rem;">🤝</div>
+    <h1 style="font-size:1.25rem;margin:12px 0 6px;line-height:1.45;">
+      {% if role == 'advisor' %}
+        <b>{{ inviter }}</b> sizni o'zining <b>ilmiy rahbari</b> sifatida taklif qilmoqda.
+      {% elif role == 'student' %}
+        <b>{{ inviter }}</b> sizni <b>shogird</b> sifatida taklif qilmoqda.
+      {% else %}
+        <b>{{ inviter }}</b> sizni dissertatsiyaga <b>hamkor</b> sifatida taklif qilmoqda.
+      {% endif %}
+    </h1>
+    <p style="color:#94a3b8;margin:0 0 18px;">Taklifni qabul qilasizmi?</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button id="acc-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);
+        color:#fff;font-weight:700;padding:11px 24px;border-radius:10px;cursor:pointer;font-size:0.9rem;">
+        ✓ Qabul qilish</button>
+      <button id="dec-btn" style="background:rgba(148,163,184,0.12);border:1px solid rgba(148,163,184,0.25);
+        color:inherit;padding:11px 24px;border-radius:10px;cursor:pointer;font-size:0.9rem;">
+        Rad etish</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  function respond(action, btn) {
+    document.getElementById('acc-btn').disabled = true;
+    document.getElementById('dec-btn').disabled = true;
+    fetch('/invite/{{ token }}/respond', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: action })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.success) { window.location.href = d.redirect || '/workspace'; }
+        else {
+          alert(d.error || 'Xatolik');
+          document.getElementById('acc-btn').disabled = false;
+          document.getElementById('dec-btn').disabled = false;
+        }
+      }).catch(function () {
+        alert('Tarmoq xatosi');
+        document.getElementById('acc-btn').disabled = false;
+        document.getElementById('dec-btn').disabled = false;
+      });
+  }
+  document.getElementById('acc-btn').addEventListener('click', function () { respond('accept'); });
+  document.getElementById('dec-btn').addEventListener('click', function () { respond('decline'); });
+})();
+</script>
+{% endblock %}

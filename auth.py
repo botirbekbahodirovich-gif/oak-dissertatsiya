@@ -32,12 +32,29 @@ def get_connection():
     return _get_connection()
 
 
+def _safe_next(val):
+    """Faqat xavfsiz nisbiy yo'l (ochiq-redirectni oldini oladi)."""
+    if val and val.startswith('/') and not val.startswith('//'):
+        return val
+    return None
+
+
+def _post_login_dest(default='/'):
+    """Login tugagach yo'naltiriladigan manzil (sessiyadagi next)."""
+    return _safe_next(session.pop('login_next', None)) or default
+
+
 @auth_bp.route('/login')
 def login():
     # Parol/username formasi olib tashlandi — faqat Telegram va Google orqali kirish.
     if current_user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(_post_login_dest(url_for('index')))
     registered = request.args.get('registered')
+    # ?next= ni sessiyaga saqlaymiz — barcha login usullari (Google/Telegram/parol)
+    # tugagach shu manzilga qaytaradi (masalan /invite/<token>).
+    nxt = _safe_next(request.args.get('next'))
+    if nxt:
+        session['login_next'] = nxt
     return render_template('login.html', error=None, registered=registered)
 
 
@@ -63,7 +80,7 @@ def password_login():
                 session.permanent = True
                 login_user(User(row[0], row[1], row[2], row[4]), remember=True)
                 session.modified = True
-                return redirect(url_for('index'))
+                return redirect(_post_login_dest(url_for('index')))
         return render_template('login.html', error='Login yoki parol xato')
     except Exception:
         return render_template('login.html', error='Xatolik yuz berdi')
@@ -129,10 +146,8 @@ def google_login():
     authorization_url, state = google.authorization_url(
         GOOGLE_AUTH_URL, access_type='offline', prompt='select_account')
     session['main_google_state'] = state
-    nxt = request.args.get('next', '/')
-    # Ochiq-redirectni oldini olish uchun faqat xavfsiz nisbiy yo'l.
-    if not (nxt.startswith('/') and not nxt.startswith('//')):
-        nxt = '/'
+    # ?next= to'g'ridan-to'g'ri, bo'lmasa /login da saqlangan sessiya next'i.
+    nxt = _safe_next(request.args.get('next')) or _safe_next(session.get('login_next')) or '/'
     session['main_google_next'] = nxt
     return redirect(authorization_url)
 
@@ -296,4 +311,5 @@ def telegram_login():
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
-    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else '/'})
+    dest = _post_login_dest('/')
+    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})

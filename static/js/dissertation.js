@@ -61,6 +61,38 @@
         else alert(d.error || 'Xatolik');
       });
   };
+  window.createInviteLink = function () {
+    var roleEl = document.getElementById('inv-role');
+    postJSON('/api/advisor/invite-link', { role: roleEl ? roleEl.value : 'advisor' })
+      .then(function (d) {
+        if (!d.success) { alert(d.error || 'Xatolik'); return; }
+        var box = document.getElementById('inv-link-box');
+        document.getElementById('inv-link-url').value = d.url;
+        var text = 'Assalomu alaykum! Sizni Olimlar.uz dissertatsiya ish stolida hamkorlikka taklif qilaman: ';
+        document.getElementById('inv-link-tg').href =
+          'https://t.me/share/url?url=' + encodeURIComponent(d.url) + '&text=' + encodeURIComponent(text);
+        document.getElementById('inv-link-mail').href =
+          'mailto:?subject=' + encodeURIComponent('Olimlar.uz — hamkorlik taklifi') +
+          '&body=' + encodeURIComponent(text + d.url);
+        box.style.display = 'block';
+      });
+  };
+  window.copyInviteLink = function () {
+    var el = document.getElementById('inv-link-url');
+    if (!el) return;
+    el.select();
+    var done = function () { alert('Havola nusxalandi ✓'); };
+    if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, function () { document.execCommand('copy'); done(); });
+    else { document.execCommand('copy'); done(); }
+  };
+  window.messageUser = function (userId) {
+    if (!userId) return;
+    postJSON('/api/messages/start', { user_id: userId })
+      .then(function (d) {
+        if (d.success) window.location.href = '/messages/' + d.conversation_id;
+        else alert(d.error || 'Xatolik');
+      });
+  };
 
   /* ══════════ NOTIFICATION POLL (workspace sahifalarida, 15s) ══════════ */
   var shownNotifs = {};
@@ -72,6 +104,16 @@
           if (shownNotifs[n.id]) return;
           shownNotifs[n.id] = true;
           var p = n.payload || {};
+          var markRead = function () { postJSON('/api/diss-notifications/mark-read', { ids: [n.id] }); };
+          // hamkorlik taklifi — bevosita "Qabul / Rad etish" tugmalari bilan
+          if (n.event_type === 'advisor_invite' && p.link_id) {
+            banner('info',
+              '👥 <b>' + esc(p.from || '') + '</b> sizni hamkorlikka taklif qilmoqda. ' +
+              '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="respondInvite(' + p.link_id + ',\'accept\')">✅ Qabul qilish</button> ' +
+              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="respondInvite(' + p.link_id + ',\'decline\')">❌ Rad etish</button>',
+              markRead);
+            return;
+          }
           var link = n.dissertation_id ? '/workspace/' + n.dissertation_id + '/first' : '/workspace';
           var text = '';
           if (n.event_type === 'advisor_reviewed') text = '📋 ' + (p.message || "Rahbaringiz ishingizni ko'rib chiqdi");
@@ -80,10 +122,11 @@
           else if (n.event_type === 'invite_accepted') text = '🤝 ' + esc(p.by || '') + ' taklifingizni qabul qildi.';
           else if (n.event_type === 'annotation_added') text = '💬 “' + esc(p.block_title || '') + '” qismiga yangi izoh qo\'shildi.';
           else if (n.event_type === 'status_changed') text = '🏷️ “' + esc(p.block_title || '') + '” holati: ' + esc(p.label || '');
+          else if (n.event_type === 'new_message') { text = '✉️ ' + esc(p.from || 'Yangi') + ': ' + esc(p.snippet || 'xabar'); link = p.conversation_id ? '/messages/' + p.conversation_id : '/messages'; }
           else return;
           banner(n.event_type === 'advisor_reviewed' || n.event_type === 'student_submitted' ? 'warn' : 'info',
             text + ' <a href="' + link + '" style="color:#4a9eff;font-weight:700;">Ko\'rish →</a>',
-            function () { postJSON('/api/diss-notifications/mark-read', { ids: [n.id] }); });
+            markRead);
         });
       }).catch(function () {});
   }

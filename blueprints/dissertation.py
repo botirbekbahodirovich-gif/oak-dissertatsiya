@@ -24,13 +24,14 @@ Xavfsizlik invariantlari (har endpointda):
 import json
 import os
 import re
+import secrets
 import time
 import uuid
 import html as html_mod
 from datetime import datetime
 
 from flask import (Blueprint, jsonify, request, render_template, redirect,
-                   abort, send_file, current_app)
+                   abort, send_file, current_app, url_for)
 from flask_login import login_required, current_user
 
 from app import csrf
@@ -243,6 +244,25 @@ def _ensure_schema(cur):
             result JSONB,
             created_at TIMESTAMP DEFAULT NOW()
         )""")
+    # havola orqali taklif (advisor / student / collaborator) — bir martalik token
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS advisor_invite_tokens (
+            id SERIAL PRIMARY KEY,
+            token VARCHAR(64) UNIQUE NOT NULL,
+            created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(15) NOT NULL DEFAULT 'advisor'
+                CHECK (role IN ('advisor', 'student', 'collaborator')),
+            dissertation_id INTEGER REFERENCES diss_projects(id) ON DELETE CASCADE,
+            can_comment BOOLEAN DEFAULT TRUE,
+            can_edit BOOLEAN DEFAULT FALSE,
+            can_review_status BOOLEAN DEFAULT FALSE,
+            expires_at TIMESTAMP DEFAULT (NOW() + INTERVAL '7 days'),
+            used_by INTEGER REFERENCES users(id),
+            used_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_tokens_token "
+                "ON advisor_invite_tokens(token)")
     _migrate_block_types(cur)
     _schema_ready = True
 
@@ -473,6 +493,47 @@ def _store_upload(file_storage, subdir, filename):
     return f'/static/uploads/{subdir}/{filename}'
 
 
+# ── advisor_links qabul qilish + avtomatik chat yoqish ───────────────────────
+
+def _upsert_accepted_link(cur, student_id, advisor_id, inviter_id):
+    """advisor_links juftligini 'accepted' holatiga keltiradi (yo'q bo'lsa
+    yaratadi). UNIQUE(student_id, advisor_id) va CHECK(student<>advisor) hurmat."""
+    if student_id == advisor_id:
+        return
+    cur.execute("SELECT id FROM advisor_links WHERE student_id = %s AND advisor_id = %s",
+                (student_id, advisor_id))
+    ex = cur.fetchone()
+    if ex:
+        cur.execute("""UPDATE advisor_links SET status = 'accepted', invited_by = %s,
+                       responded_at = NOW() WHERE id = %s""", (inviter_id, ex[0]))
+    else:
+        cur.execute("""INSERT INTO advisor_links
+                       (student_id, advisor_id, status, invited_by, responded_at)
+                       VALUES (%s, %s, 'accepted', %s, NOW())""",
+                    (student_id, advisor_id, inviter_id))
+
+
+def _enable_pair_messaging(cur, uid_a, uid_b, welcome_from_id, welcome_text):
+    """Aloqa qabul qilinganda ikki tomon orasidagi direct suhbatni ochadi va
+    bir marta (yangi suhbat bo'lsa) xush kelibsiz xabari yozadi. Chat xatosi
+    qabul jarayonini BUZMAYDI (try/except)."""
+    try:
+        from blueprints.messages import ensure_direct_conversation, post_system_message
+        cid, created = ensure_direct_conversation(cur, uid_a, uid_b)
+        if cid and created and welcome_text:
+            post_system_message(cur, cid, welcome_from_id, welcome_text)
+        return cid
+    except Exception:
+        return None
+
+
+def _accept_collaborator_token(cur, diss_id, created_by, can_comment, can_edit, can_review):
+    """Hamkorlik taklif havolasini qabul qilish (Feature 6 to'liq amalga
+    oshiradi). Hozircha faqat 'collaborator' tokeni bo'lsa chaqiriladi —
+    Feature 4 bosqichida bunday token yaratilmaydi. Xato matnini qaytaradi."""
+    return 'Hamkorlik takliflari hali mavjud emas.'
+
+
 # ═════════════════════════════ ADVISOR LINKING ══════════════════════════════
 
 @dissertation_bp.route('/api/advisor/invite', methods=['POST'])
@@ -570,6 +631,11 @@ def advisor_respond():
             if action == 'accept':
                 _notify(cur, invited_by, 'invite_accepted',
                         payload={'link_id': link_id, 'by': current_user.username})
+                # aloqa qabul qilindi → messaging avtomatik yoqiladi
+                _enable_pair_messaging(
+                    cur, student_id, advisor_id, current_user.id,
+                    f"{current_user.username} taklifni qabul qildi — endi shu yerda "
+                    f"bevosita muloqot qilishingiz mumkin. ✍️")
         conn.commit()
         return jsonify({'success': True, 'status': new_status})
     except Exception as e:
@@ -638,6 +704,127 @@ def advisor_remove(link_id):
             """, (link[0], link[1]))
         conn.commit()
         return jsonify({'success': True})
+    finally:
+        conn.close()
+
+
+# ═════════════════════════ INVITE VIA SHAREABLE LINK ════════════════════════
+
+@dissertation_bp.route('/api/advisor/invite-link', methods=['POST'])
+@csrf.exempt
+@login_required
+def advisor_invite_link():
+    """Bir martalik taklif havolasini yaratadi (advisor/student). 7 kun amal."""
+    data = request.get_json(silent=True) or {}
+    role = data.get('role') if data.get('role') in ('advisor', 'student') else 'advisor'
+    token = secrets.token_urlsafe(32)[:64]
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("""INSERT INTO advisor_invite_tokens (token, created_by, role)
+                           VALUES (%s, %s, %s)""", (token, current_user.id, role))
+        conn.commit()
+        url = request.url_root.rstrip('/') + '/invite/' + token
+        return jsonify({'success': True, 'url': url, 'token': token})
+    finally:
+        conn.close()
+
+
+def _invite_error(message, code):
+    return render_template('dissertation/invite_error.html', message=message), code
+
+
+@dissertation_bp.route('/invite/<token>')
+def invite_landing(token):
+    """Taklif havolasi sahifasi. Login bo'lmasa — login (next bilan)."""
+    if not current_user.is_authenticated:
+        return redirect(url_for('auth.login', next=request.path))
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("""
+                SELECT t.created_by, t.role, t.dissertation_id, t.expires_at,
+                       t.used_by, u.username
+                FROM advisor_invite_tokens t JOIN users u ON u.id = t.created_by
+                WHERE t.token = %s
+            """, (token,))
+            row = cur.fetchone()
+        conn.commit()
+    finally:
+        conn.close()
+    if not row:
+        return _invite_error('Taklif havolasi topilmadi yoki bekor qilingan.', 404)
+    created_by, role, diss_id, expires_at, used_by, inviter = row
+    if used_by:
+        return _invite_error('Bu taklif havolasi allaqachon ishlatilgan.', 410)
+    if expires_at and expires_at < datetime.now():
+        return _invite_error('Taklif havolasi muddati tugagan (havola 7 kun amal qiladi).', 410)
+    if created_by == current_user.id:
+        return _invite_error("Bu sizning taklif havolangiz — o'zingizni qo'sha olmaysiz.", 400)
+    return render_template('dissertation/invite_confirm.html',
+                           token=token, role=role, inviter=inviter)
+
+
+@dissertation_bp.route('/invite/<token>/respond', methods=['POST'])
+@csrf.exempt
+@login_required
+def invite_respond(token):
+    action = (request.get_json(silent=True) or {}).get('action')
+    if action not in ('accept', 'decline'):
+        return jsonify({'success': False, 'error': "Noto'g'ri amal"}), 400
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("""
+                SELECT id, created_by, role, dissertation_id, expires_at, used_by,
+                       can_comment, can_edit, can_review_status
+                FROM advisor_invite_tokens WHERE token = %s FOR UPDATE
+            """, (token,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'success': False, 'error': 'Havola topilmadi'}), 404
+            (tid, created_by, role, diss_id, expires_at, used_by,
+             can_comment, can_edit, can_review) = row
+            if used_by:
+                return jsonify({'success': False, 'error': 'Havola allaqachon ishlatilgan'}), 409
+            if expires_at and expires_at < datetime.now():
+                return jsonify({'success': False, 'error': 'Havola muddati tugagan'}), 410
+            if created_by == current_user.id:
+                return jsonify({'success': False, 'error': "O'zingizni qo'sha olmaysiz"}), 400
+            if action == 'decline':
+                cur.execute("UPDATE advisor_invite_tokens SET used_by = %s, used_at = NOW() "
+                            "WHERE id = %s", (current_user.id, tid))
+                conn.commit()
+                return jsonify({'success': True, 'status': 'declined', 'redirect': '/workspace'})
+            # ── accept ──
+            if role in ('advisor', 'student'):
+                if role == 'advisor':        # yaratgan = shogird, men = rahbar
+                    student_id, advisor_id = created_by, current_user.id
+                else:                        # yaratgan = rahbar, men = shogird
+                    student_id, advisor_id = current_user.id, created_by
+                if student_id == advisor_id:
+                    return jsonify({'success': False, 'error': "O'zingizni qo'sha olmaysiz"}), 400
+                _upsert_accepted_link(cur, student_id, advisor_id, created_by)
+                _notify(cur, created_by, 'invite_accepted',
+                        payload={'by': current_user.username})
+                _enable_pair_messaging(
+                    cur, student_id, advisor_id, created_by,
+                    f"{current_user.username} taklif havolasi orqali aloqani qabul qildi. ✍️")
+            elif role == 'collaborator':
+                err = _accept_collaborator_token(cur, diss_id, created_by,
+                                                 can_comment, can_edit, can_review)
+                if err:
+                    return jsonify({'success': False, 'error': err}), 400
+            cur.execute("UPDATE advisor_invite_tokens SET used_by = %s, used_at = NOW() "
+                        "WHERE id = %s", (current_user.id, tid))
+        conn.commit()
+        return jsonify({'success': True, 'status': 'accepted', 'redirect': '/workspace'})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         conn.close()
 

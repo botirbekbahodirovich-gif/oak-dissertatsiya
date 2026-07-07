@@ -88,6 +88,51 @@ def _conn():
     return get_connection()
 
 
+def ensure_direct_conversation(cur, user_a, user_b):
+    """Ikki foydalanuvchi orasidagi direct suhbatni topadi yoki yaratadi.
+    (conversation_id, created) qaytaradi. current_user'ga BOG'LIQ EMAS —
+    dissertatsiya moduli qabul qilinganda avtomatik chaqirish uchun."""
+    _ensure_schema(cur)
+    if user_a == user_b:
+        return None, False
+    cur.execute("""
+        SELECT c.id FROM conversations c
+        JOIN conversation_participants p1 ON p1.conversation_id = c.id AND p1.user_id = %s
+        JOIN conversation_participants p2 ON p2.conversation_id = c.id AND p2.user_id = %s
+        WHERE c.conversation_type = 'direct' LIMIT 1
+    """, (user_a, user_b))
+    r = cur.fetchone()
+    if r:
+        return r[0], False
+    cur.execute("INSERT INTO conversations (conversation_type) VALUES ('direct') RETURNING id")
+    cid = cur.fetchone()[0]
+    for uid in (user_a, user_b):
+        cur.execute("""INSERT INTO conversation_participants (conversation_id, user_id)
+                       VALUES (%s, %s) ON CONFLICT DO NOTHING""", (cid, uid))
+    return cid, True
+
+
+def post_system_message(cur, conversation_id, sender_id, body, notify=True):
+    """Xush kelibsiz / tizim xabari. sender_id — haqiqiy foydalanuvchi (odatda
+    taklif qilgan tomon). Boshqa ishtirokchilarga new_message bildirishnomasi."""
+    import json as _json
+    cur.execute("""INSERT INTO messages (conversation_id, sender_id, body)
+                   VALUES (%s, %s, %s)""",
+                (conversation_id, sender_id, (body or '')[:MAX_BODY]))
+    cur.execute("UPDATE conversations SET last_message_at = NOW() WHERE id = %s",
+                (conversation_id,))
+    if notify:
+        cur.execute("""SELECT user_id FROM conversation_participants
+                       WHERE conversation_id = %s AND user_id <> %s AND is_muted = FALSE""",
+                    (conversation_id, sender_id))
+        for (uid,) in cur.fetchall():
+            cur.execute("""INSERT INTO diss_notifications (user_id, event_type, actor_id, payload)
+                           VALUES (%s, 'new_message', %s, %s)""",
+                        (uid, sender_id, _json.dumps(
+                            {'conversation_id': conversation_id, 'snippet': (body or '')[:80]},
+                            ensure_ascii=False)))
+
+
 def _require_participant(cur, conversation_id):
     cur.execute("SELECT 1 FROM conversation_participants "
                 "WHERE conversation_id = %s AND user_id = %s",
