@@ -546,6 +546,7 @@ from blueprints.reyting import reyting_bp
 from blueprints.dissertation import dissertation_bp
 from blueprints.messages import messages_bp
 from blueprints.acquisition_survey import acquisition_survey_bp
+from blueprints.map import map_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -561,6 +562,7 @@ app.register_blueprint(reyting_bp)
 app.register_blueprint(dissertation_bp)
 app.register_blueprint(messages_bp)
 app.register_blueprint(acquisition_survey_bp)
+app.register_blueprint(map_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])

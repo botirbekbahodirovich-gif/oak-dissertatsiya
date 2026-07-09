@@ -260,6 +260,13 @@
   });
   els.more.addEventListener('click', function () { load(true); });
 
+  // Preselect region from ?region= (e.g. linked from /tadqiqot-xaritasi).
+  var qsRegion = new URLSearchParams(location.search).get('region');
+  if (qsRegion) {
+    var opt = Array.prototype.some.call(els.region.options, function (o) { return o.value === qsRegion; });
+    if (opt) { els.region.value = qsRegion; state.region = qsRegion; }
+  }
+
   load(false);
 })();
 </script>
