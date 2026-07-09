@@ -12,6 +12,8 @@
 .cab-nav button { display: flex; align-items: center; gap: 9px; background: none; border: none; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left; }
 .cab-nav button:hover { background: #162032; color: #e2e8f0; }
 .cab-nav button.active { background: #3b82f6; color: #fff; }
+.cab-nav a.cab-nav-link { display: flex; align-items: center; gap: 9px; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; text-decoration: none; }
+.cab-nav a.cab-nav-link:hover { background: #162032; color: #e2e8f0; }
 .cab-logout { margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
 .cab-logout a { display: block; color: #fca5a5; font-size: 0.85rem; padding: 8px 12px; }
 .cab-main { min-width: 0; }
@@ -147,6 +149,7 @@
         <button data-panel="rasmlar">📸 Rasmlar</button>
         <button data-panel="linklar">🔗 Linklar</button>
         <button data-panel="bildirish">🔔 Bildirishnomalar</button>
+        <a href="/mavzu/tahlil" class="cab-nav-link">🎯 Mavzu tahlili</a>
       </nav>
       <div class="cab-logout"><a href="/cabinet/api/logout">↩ Chiqish</a></div>
     </aside>

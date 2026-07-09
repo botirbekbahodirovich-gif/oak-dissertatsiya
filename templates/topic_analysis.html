@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Mavzu tahdid tahlili — Olimlar.uz{% endblock %}
+{% block meta_description %}Rejalashtirayotgan dissertatsiya mavzuingizni 29,000+ mavjud ish bilan solishtiring — AI o'xshashlik va takrorlanish tahlili.{% endblock %}
+
+{% block extra_head %}
+<style>
+.ta-wrap { max-width: 880px; margin: 0 auto; }
+.ta-head { margin-bottom: 4px; }
+.ta-sub { color: #94a3b8; margin-bottom: 18px; }
+.ta-box { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; }
+.ta-textarea { width: 100%; min-height: 110px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 10px;
+               padding: 12px 14px; font-size: 0.98rem; font-family: inherit; color: #0f172a; box-sizing: border-box; }
+.ta-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.ta-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.ta-counter { color: #94a3b8; font-size: 0.82rem; }
+.ta-counter.warn { color: #dc2626; }
+.ta-note { color: #64748b; font-size: 0.82rem; }
+.ta-btn { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border: none; padding: 10px 22px;
+          border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+.ta-btn:hover { opacity: 0.92; }
+.ta-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ta-loading { display: none; align-items: center; gap: 10px; margin-top: 18px; color: #475569; font-weight: 600; }
+.ta-loading.show { display: flex; }
+.ta-spin { width: 20px; height: 20px; border: 3px solid #dbeafe; border-top-color: #3b82f6; border-radius: 50%;
+           animation: ta-spin 0.8s linear infinite; }
+@keyframes ta-spin { to { transform: rotate(360deg); } }
+.ta-alert { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; display: none; }
+.ta-alert.show { display: block; }
+.ta-alert.err { background: rgba(239,68,68,0.1); color: #b91c1c; }
+.ta-alert.ok { background: rgba(34,197,94,0.12); color: #15803d; }
+.ta-result { display: none; margin-top: 22px; }
+.ta-result.show { display: block; }
+.ta-card-h { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.ta-analysis { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; line-height: 1.65; color: #1e293b; }
+.ta-analysis h3 { font-size: 1rem; margin: 16px 0 6px; color: #0f172a; }
+.ta-analysis h3:first-child { margin-top: 0; }
+.ta-analysis ul, .ta-analysis ol { margin: 6px 0 10px; padding-left: 22px; }
+.ta-analysis li { margin: 3px 0; }
+.ta-analysis strong { color: #0f172a; }
+.ta-analysis p { margin: 8px 0; }
+.ta-sim-count { color: #64748b; font-size: 0.85rem; font-weight: 500; }
+.ta-acc { margin-top: 6px; }
+.ta-item { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; margin-bottom: 10px; overflow: hidden; }
+.ta-item-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; }
+.ta-item-head:hover { background: #f8fafc; }
+.ta-item-num { flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; background: rgba(59,130,246,0.1);
+               color: #2563eb; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; }
+.ta-item-body { flex: 1; min-width: 0; }
+.ta-item-title { font-weight: 700; color: #0f172a; font-size: 0.95rem; line-height: 1.4; }
+.ta-item-meta { color: #64748b; font-size: 0.82rem; margin-top: 4px; }
+.ta-bookmark { flex-shrink: 0; background: none; border: none; font-size: 1.25rem; cursor: pointer; line-height: 1; color: #cbd5e1; }
+.ta-bookmark.on { color: #f59e0b; }
+.ta-item-more { display: none; padding: 0 16px 14px 54px; }
+.ta-item.open .ta-item-more { display: block; }
+.ta-item-more a { color: #2563eb; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
+.ta-item-more a:hover { text-decoration: underline; }
+.ta-empty { color: #94a3b8; font-size: 0.9rem; padding: 14px 0; }
+.ta-hist { margin-top: 26px; }
+.ta-hist-item { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eef2f7;
+                font-size: 0.87rem; color: #475569; }
+.ta-hist-item:last-child { border-bottom: none; }
+.ta-hist-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ta-hist-m { flex-shrink: 0; color: #94a3b8; }
+
+[data-bs-theme="dark"] .ta-box,
+[data-bs-theme="dark"] .ta-analysis,
+[data-bs-theme="dark"] .ta-item { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .ta-textarea { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+[data-bs-theme="dark"] .ta-card-h,
+[data-bs-theme="dark"] .ta-item-title,
+[data-bs-theme="dark"] .ta-analysis,
+[data-bs-theme="dark"] .ta-analysis h3,
+[data-bs-theme="dark"] .ta-analysis strong { color: #e2e8f0; }
+[data-bs-theme="dark"] .ta-item-head:hover { background: #162032; }
+[data-bs-theme="dark"] .ta-hist-item { border-color: rgba(148,163,184,0.12); color: #94a3b8; }
+@media (max-width: 520px) { .ta-box, .ta-analysis { padding: 14px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ta-wrap">
+  <h1 class="ta-head">Mavzu tahdid tahlili 🎯</h1>
+  <p class="ta-sub">29,012 ta dissertatsiya bilan solishtiring</p>
+
+  <div class="ta-box">
+    <textarea id="ta-topic" class="ta-textarea" maxlength="{{ max_topic_len }}"
+      placeholder="Rejalashtirayotgan dissertatsiya mavzuingizni kiriting…&#10;Masalan: Sun'iy neyron tarmoqlar asosida tibbiy tasvir tasniflash"></textarea>
+    <div class="ta-row">
+      <span class="ta-note">💡 Kuniga {{ daily_limit }} ta bepul tahlil</span>
+      <span id="ta-counter" class="ta-counter">0 / {{ max_topic_len }}</span>
+    </div>
+    <div class="ta-row" style="margin-top:12px;">
+      <button id="ta-run" class="ta-btn">Tahlil qilish</button>
+    </div>
+    <div id="ta-loading" class="ta-loading">
+      <span class="ta-spin"></span><span>🔍 Tekshirilmoqda…</span>
+    </div>
+    <div id="ta-alert" class="ta-alert err"></div>
+  </div>
+
+  <div id="ta-result" class="ta-result">
+    <div style="margin-top:22px;">
+      <div class="ta-card-h">🤖 AI tahlili</div>
+      <div id="ta-analysis" class="ta-analysis"></div>
+    </div>
+
+    <div style="margin-top:22px;">
+      <div class="ta-card-h">📚 O'xshash dissertatsiyalar
+        <span id="ta-sim-count" class="ta-sim-count"></span></div>
+      <div id="ta-acc" class="ta-acc"></div>
+    </div>
+  </div>
+
+  <div class="ta-hist">
+    <div class="ta-card-h">🕘 Oxirgi tahlillar</div>
+    <div id="ta-hist-list">
+      {% if history %}
+        {% for h in history %}
+        <div class="ta-hist-item">
+          <span class="ta-hist-t">{{ h.topic }}</span>
+          <span class="ta-hist-m">{{ h.similar_count }} ta o'xshash</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="ta-empty">Hali tahlil qilinmagan.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var BM_KEY = 'oak_diss_bookmarks';
+  var topicEl = document.getElementById('ta-topic');
+  var counterEl = document.getElementById('ta-counter');
+  var runBtn = document.getElementById('ta-run');
+  var loadingEl = document.getElementById('ta-loading');
+  var alertEl = document.getElementById('ta-alert');
+  var resultEl = document.getElementById('ta-result');
+  var analysisEl = document.getElementById('ta-analysis');
+  var accEl = document.getElementById('ta-acc');
+  var simCountEl = document.getElementById('ta-sim-count');
+  var histListEl = document.getElementById('ta-hist-list');
+  var MAX = {{ max_topic_len }};
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Yengil markdown → HTML (escape'dan keyin): sarlavha, qalin, ro'yxat, xatboshi.
+  function mdToHtml(md) {
+    var lines = esc(md).split(/\r?\n/);
+    var out = [], listType = null;
+    function closeList() { if (listType) { out.push('</' + listType + '>'); listType = null; } }
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      var t = line.trim();
+      if (!t) { closeList(); continue; }
+      var mH = t.match(/^#{1,6}\s+(.*)$/);
+      var mNum = t.match(/^(\d+)[.)]\s+(.*)$/);
+      var mBul = t.match(/^[-*•]\s+(.*)$/);
+      if (mH) { closeList(); out.push('<h3>' + mH[1] + '</h3>'); }
+      else if (mNum) {
+        if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
+        out.push('<li>' + mNum[2] + '</li>');
+      } else if (mBul) {
+        if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
+        out.push('<li>' + mBul[1] + '</li>');
+      } else { closeList(); out.push('<p>' + line + '</p>'); }
+    }
+    closeList();
+    return out.join('');
+  }
+
+  function getBookmarks() {
+    try { return JSON.parse(localStorage.getItem(BM_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function toggleBookmark(id, btn) {
+    var arr = getBookmarks();
+    var idx = arr.indexOf(id);
+    if (idx === -1) { arr.push(id); btn.classList.add('on'); btn.textContent = '★'; btn.title = 'Saqlangan'; }
+    else { arr.splice(idx, 1); btn.classList.remove('on'); btn.textContent = '☆'; btn.title = 'Saqlash'; }
+    try { localStorage.setItem(BM_KEY, JSON.stringify(arr)); } catch (e) {}
+  }
+
+  function updateCounter() {
+    var n = topicEl.value.length;
+    counterEl.textContent = n + ' / ' + MAX;
+    counterEl.classList.toggle('warn', n >= MAX);
+  }
+  topicEl.addEventListener('input', updateCounter);
+  updateCounter();
+
+  function showAlert(msg, ok) {
+    alertEl.textContent = msg;
+    alertEl.classList.toggle('err', !ok);
+    alertEl.classList.toggle('ok', !!ok);
+    alertEl.classList.add('show');
+  }
+  function hideAlert() { alertEl.classList.remove('show'); }
+
+  function renderSimilar(list) {
+    var bm = getBookmarks();
+    if (!list || !list.length) {
+      accEl.innerHTML = '<div class="ta-empty">Korpusda o\'xshash dissertatsiya topilmadi — mavzu yangi bo\'lishi mumkin.</div>';
+      return;
+    }
+    var html = '';
+    list.forEach(function (s, i) {
+      var on = bm.indexOf(s.id) !== -1;
+      var meta = [];
+      if (s.olim) meta.push('👤 ' + esc(s.olim));
+      if (s.sana) meta.push('📅 ' + esc(s.sana));
+      if (s.ixtisoslik) meta.push('🏷 ' + esc(s.ixtisoslik));
+      html += '<div class="ta-item">' +
+        '<div class="ta-item-head">' +
+          '<span class="ta-item-num">' + (i + 1) + '</span>' +
+          '<div class="ta-item-body">' +
+            '<div class="ta-item-title">' + esc(s.mavzu) + '</div>' +
+            '<div class="ta-item-meta">' + meta.join(' · ') + '</div>' +
+          '</div>' +
+          '<button class="ta-bookmark' + (on ? ' on' : '') + '" data-id="' + s.id + '" ' +
+            'title="' + (on ? 'Saqlangan' : 'Saqlash') + '">' + (on ? '★' : '☆') + '</button>' +
+        '</div>' +
+        '<div class="ta-item-more">' +
+          (s.rahbar ? '<div class="ta-item-meta">🎓 Ilmiy rahbar: ' + esc(s.rahbar) + '</div>' : '') +
+          (s.muassasa ? '<div class="ta-item-meta">🏛 ' + esc(s.muassasa) + '</div>' : '') +
+          (s.olim ? '<div style="margin-top:8px;"><a href="/olim/' + encodeURIComponent(s.olim) +
+            '" target="_blank" rel="noopener">🔍 Olim sahifasi →</a></div>' : '') +
+        '</div>' +
+      '</div>';
+    });
+    accEl.innerHTML = html;
+
+    accEl.querySelectorAll('.ta-item-head').forEach(function (h) {
+      h.addEventListener('click', function (e) {
+        if (e.target.classList.contains('ta-bookmark')) return;
+        h.parentNode.classList.toggle('open');
+      });
+    });
+    accEl.querySelectorAll('.ta-bookmark').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleBookmark(parseInt(b.getAttribute('data-id'), 10), b);
+      });
+    });
+  }
+
+  function prependHistory(topic, count) {
+    var empty = histListEl.querySelector('.ta-empty');
+    if (empty) empty.remove();
+    var div = document.createElement('div');
+    div.className = 'ta-hist-item';
+    div.innerHTML = '<span class="ta-hist-t">' + esc(topic) + '</span>' +
+      '<span class="ta-hist-m">' + count + ' ta o\'xshash</span>';
+    histListEl.insertBefore(div, histListEl.firstChild);
+    while (histListEl.children.length > 5) histListEl.removeChild(histListEl.lastChild);
+  }
+
+  function run() {
+    var topic = topicEl.value.trim();
+    hideAlert();
+    if (topic.length < 8) { showAlert('Mavzu juda qisqa. Kamida 8 ta belgi kiriting.'); return; }
+    runBtn.disabled = true;
+    loadingEl.classList.add('show');
+    resultEl.classList.remove('show');
+
+    fetch('/mavzu/tahlil/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: topic })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+    }).then(function (res) {
+      loadingEl.classList.remove('show');
+      runBtn.disabled = false;
+      var d = res.data || {};
+      if (!res.ok) {
+        showAlert(d.message || 'Xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.');
+        return;
+      }
+      analysisEl.innerHTML = mdToHtml(d.analysis || '');
+      simCountEl.textContent = (d.similar_count || 0) + ' ta topildi';
+      renderSimilar(d.similar || []);
+      resultEl.classList.add('show');
+      prependHistory(topic, d.similar_count || 0);
+      if (typeof d.remaining_today === 'number') {
+        showAlert('✅ Tahlil tayyor. Bugun yana ' + d.remaining_today + ' ta tahlil qoldi.', true);
+      }
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }).catch(function () {
+      loadingEl.classList.remove('show');
+      runBtn.disabled = false;
+      showAlert('Tarmoq xatosi. Iltimos, qayta urinib ko\'ring.');
+    });
+  }
+
+  runBtn.addEventListener('click', run);
+})();
+</script>
+{% endblock %}
