@@ -291,6 +291,140 @@ def admin_analytics():
         now=datetime.utcnow(), broadcasts=broadcasts)
 
 
+# ── Acquisition-source survey analytics ("Foydalanuvchi manbalari") ──────────
+# Reference SQL (reused by the queries below):
+#
+#   Overall distribution:
+#     SELECT acquisition_source, COUNT(*)
+#     FROM users
+#     WHERE acquisition_survey_answered_at IS NOT NULL
+#     GROUP BY acquisition_source
+#     ORDER BY 2 DESC;
+#
+#   Weekly cohort:
+#     SELECT DATE_TRUNC('week', created_at) AS signup_week,
+#            acquisition_source,
+#            COUNT(*)
+#     FROM users
+#     WHERE acquisition_survey_answered_at IS NOT NULL
+#     GROUP BY 1, 2
+#     ORDER BY 1 DESC, 3 DESC;
+#
+#   Response rate:
+#     SELECT
+#       COUNT(*) FILTER (WHERE acquisition_survey_answered_at IS NOT NULL) AS answered,
+#       COUNT(*) FILTER (WHERE acquisition_survey_shown_at IS NOT NULL
+#                        AND acquisition_survey_answered_at IS NULL) AS skipped,
+#       COUNT(*) FILTER (WHERE acquisition_survey_shown_at IS NULL) AS pending
+#     FROM users;
+
+# Uzbek labels for the eight allowed sources (matches the modal tiles).
+_ACQ_SOURCE_LABELS = {
+    'telegram': 'Telegram',
+    'youtube': 'YouTube',
+    'instagram': 'Instagram',
+    'friend_colleague': "Do'st / hamkasb",
+    'advisor': 'Ilmiy rahbar',
+    'google_search': 'Google qidiruv',
+    'university': "Universitet e'loni",
+    'other': 'Boshqa',
+}
+# ?range= → number of days back for the distribution + trend (top-line counts
+# are lifetime). 'all' means no lower bound.
+_ACQ_RANGES = {'7': 7, '30': 30, '90': 90, 'all': None}
+
+
+@admin_bp.route('/admin/acquisition')
+@login_required
+def admin_acquisition():
+    if not getattr(current_user, 'is_admin', False):
+        abort(403)
+    from data import get_connection
+
+    rng = request.args.get('range', '30')
+    if rng not in _ACQ_RANGES:
+        rng = '30'
+    days = _ACQ_RANGES[rng]
+    # Safe: `days` is an int drawn from the fixed whitelist above.
+    since_clause = "" if days is None else \
+        " AND acquisition_survey_answered_at >= NOW() - INTERVAL '%d days'" % days
+
+    answered = skipped = pending = 0
+    distribution = []
+    weekly = []
+    others = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                # Response rate — lifetime snapshot across all users.
+                cur.execute("""
+                    SELECT
+                      COUNT(*) FILTER (WHERE acquisition_survey_answered_at IS NOT NULL),
+                      COUNT(*) FILTER (WHERE acquisition_survey_shown_at IS NOT NULL
+                                       AND acquisition_survey_answered_at IS NULL),
+                      COUNT(*) FILTER (WHERE acquisition_survey_shown_at IS NULL)
+                    FROM users
+                """)
+                r = cur.fetchone() or (0, 0, 0)
+                answered, skipped, pending = r[0] or 0, r[1] or 0, r[2] or 0
+
+                # Distribution per source (respects the date filter).
+                cur.execute("""
+                    SELECT acquisition_source, COUNT(*)
+                    FROM users
+                    WHERE acquisition_survey_answered_at IS NOT NULL""" + since_clause + """
+                    GROUP BY acquisition_source
+                    ORDER BY 2 DESC
+                """)
+                rows = cur.fetchall()
+                total_in_range = sum((c or 0) for _, c in rows) or 0
+                for src, cnt in rows:
+                    cnt = cnt or 0
+                    distribution.append({
+                        "source": src or "—",
+                        "label": _ACQ_SOURCE_LABELS.get(src, src or "—"),
+                        "count": cnt,
+                        "pct": round(cnt * 100.0 / total_in_range, 1) if total_in_range else 0.0,
+                    })
+
+                # Weekly trend of answers (respects the date filter).
+                cur.execute("""
+                    SELECT DATE_TRUNC('week', acquisition_survey_answered_at) AS wk, COUNT(*)
+                    FROM users
+                    WHERE acquisition_survey_answered_at IS NOT NULL""" + since_clause + """
+                    GROUP BY wk ORDER BY wk
+                """)
+                weekly = [{"week": str(w)[:10] if w else "", "count": c or 0}
+                          for w, c in cur.fetchall()]
+
+                # Latest 'other' free-text responses — where new channels surface.
+                cur.execute("""
+                    SELECT COALESCE(username, ''), acquisition_source_other,
+                           acquisition_survey_answered_at
+                    FROM users
+                    WHERE acquisition_source = 'other'
+                      AND acquisition_source_other IS NOT NULL
+                      AND TRIM(acquisition_source_other) <> ''
+                    ORDER BY acquisition_survey_answered_at DESC
+                    LIMIT 50
+                """)
+                others = [{"username": o[0] or "—", "text": o[1] or "",
+                           "answered_at": str(o[2])[:16] if o[2] else ""}
+                          for o in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        # Fresh DB before migration → show an empty (but functional) dashboard.
+        pass
+
+    total_users = answered + skipped + pending
+    return render_template('admin_acquisition.html',
+        rng=rng, answered=answered, skipped=skipped, pending=pending,
+        total_users=total_users, distribution=distribution,
+        weekly=weekly, others=others)
+
+
 @admin_bp.route('/admin/api/block-user', methods=['POST'])
 @csrf.exempt
 @login_required

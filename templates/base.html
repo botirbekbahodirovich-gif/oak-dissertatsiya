@@ -821,6 +821,7 @@
             {% if current_user.is_authenticated and current_user.is_admin %}
             <div class="nav-dd-sep"></div>
             <a href="/admin/analytics">Admin panel</a>
+            <a href="/admin/acquisition">Foydalanuvchi manbalari</a>
             <a href="/admin/yangiliklar">Yangiliklar (admin)</a>
             <a href="/admin/blog">Blog (admin)</a>
             <a href="/admin/vacancies">Vakansiyalar (admin)</a>
@@ -1424,11 +1425,14 @@ window.PopupManager = (function () {
     active = true;
     try { next.show(); } catch (e) { active = false; }
   }
-  function request(priority, show) {
+  function request(priority, show, force) {
     // Minimal UI: non-essential popups (region=2, survey=3, PWA=4) are OFF by
     // default. Priority-1 admin notifications always pass through. Admins can
     // re-enable the rest by setting window.OAK_POPUPS_ENABLED = true.
-    if (priority >= 2 && !window.OAK_POPUPS_ENABLED) return;
+    // `force` bypasses the master switch for one-time, explicitly-required
+    // onboarding modals (e.g. the acquisition-source survey) while still
+    // coordinating so only one popup is visible at a time.
+    if (priority >= 2 && !window.OAK_POPUPS_ENABLED && !force) return;
     reqs.push({ priority: priority, show: show });
     if (active || timer) return;
     timer = setTimeout(_run, COLLECT_MS);
@@ -1844,6 +1848,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }, 20000);
 })();
 </script>
+{% endif %}
+
+{% if current_user.is_authenticated and not current_user.is_admin %}
+<!-- One-time post-signup acquisition-source survey (marketing attribution).
+     Server decides visibility via /api/acquisition-survey/should-show; excluded
+     for admins here so the markup/JS never even loads for them. -->
+{% include "components/acquisition_survey_modal.html" %}
 {% endif %}
 
 {% if current_user.is_authenticated %}

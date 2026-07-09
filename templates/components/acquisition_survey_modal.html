@@ -1,0 +1,127 @@
+{# One-time post-signup acquisition-source survey modal.
+   Included from base.html for authenticated non-admin users. Visibility is
+   decided server-side (GET /api/acquisition-survey/should-show); this markup is
+   inert until static/js/acquisition_survey.js reveals it via the PopupManager.
+   All UI text in Uzbek Latin. Icons are inline Heroicons (no external CDN). #}
+<style>
+  #acqSurvey { position: fixed; inset: 0; z-index: 4300; display: none;
+    align-items: center; justify-content: center; padding: 16px;
+    background: rgba(2,6,23,0.78); backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.28s ease; }
+  #acqSurvey.show { display: flex; }
+  #acqSurvey.visible { opacity: 1; }
+  #acqSurvey .acq-card { background: var(--oak-surface, #1a1d23);
+    border: 1px solid var(--oak-border, #334155); border-radius: 20px;
+    max-width: 560px; width: 100%; padding: 26px 26px 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5); color: #e2e8f0;
+    max-height: 92vh; overflow-y: auto; transform: translateY(10px) scale(0.98);
+    transition: transform 0.28s ease; }
+  #acqSurvey.visible .acq-card { transform: translateY(0) scale(1); }
+  .acq-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .acq-emoji { font-size: 1.9rem; line-height: 1; }
+  .acq-close { background: none; border: none; color: #64748b; font-size: 1.35rem;
+    line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
+  .acq-close:hover { color: #e2e8f0; background: rgba(255,255,255,0.06); }
+  #acqSurvey h3 { margin: 10px 0 6px; font-size: 1.28rem; color: #f1f5f9; font-weight: 700; }
+  #acqSurvey .acq-sub { margin: 0 0 18px; color: var(--oak-muted, #94a3b8); font-size: 0.9rem; line-height: 1.5; }
+  .acq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .acq-grid.secondary { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
+  .acq-tile { display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; text-align: center; background: var(--oak-surface-2, #22262f);
+    border: 1px solid var(--oak-border, #334155); border-radius: 14px;
+    padding: 16px 10px; color: #cbd5e1; font-size: 0.86rem; font-weight: 500;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s; }
+  .acq-tile:hover { border-color: var(--oak-accent, #4a9eff); background: rgba(74,158,255,0.06); }
+  .acq-tile:active { transform: scale(0.98); }
+  .acq-tile svg { width: 26px; height: 26px; color: var(--oak-muted, #94a3b8); }
+  .acq-grid.secondary .acq-tile { flex-direction: row; gap: 10px; padding: 12px 14px; font-size: 0.85rem; }
+  .acq-grid.secondary .acq-tile svg { width: 22px; height: 22px; }
+  .acq-tile.sel { border-color: var(--oak-accent, #4a9eff); background: rgba(74,158,255,0.14);
+    color: #fff; box-shadow: 0 0 0 2px var(--oak-accent, #4a9eff) inset; }
+  .acq-tile.sel svg { color: var(--oak-accent, #4a9eff); }
+  .acq-other-wrap { margin-top: 12px; display: none; }
+  .acq-other-wrap.show { display: block; }
+  .acq-other-wrap label { display: block; font-size: 0.82rem; color: var(--oak-muted, #94a3b8); margin-bottom: 6px; }
+  #acqOtherInput { width: 100%; background: var(--oak-surface-2, #0f172a);
+    border: 1px solid var(--oak-border, #334155); color: #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; font-size: 0.9rem; font-family: inherit; }
+  #acqOtherInput:focus { border-color: var(--oak-accent, #4a9eff); outline: none;
+    box-shadow: 0 0 0 3px rgba(74,158,255,0.14); }
+  .acq-footer { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .acq-skip { background: none; border: none; color: var(--oak-muted, #94a3b8);
+    font-size: 0.86rem; text-decoration: underline; cursor: pointer; padding: 6px 2px; }
+  .acq-skip:hover { color: #cbd5e1; }
+  .acq-submit { background: var(--oak-accent, #4a9eff); color: #fff; border: none;
+    border-radius: 11px; padding: 11px 24px; font-weight: 700; font-size: 0.92rem;
+    cursor: pointer; display: none; }
+  .acq-submit:hover { opacity: 0.92; }
+  .acq-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+  .acq-submit.show { display: inline-block; }
+  .acq-err { color: #f87171; font-size: 0.82rem; margin-top: 10px; min-height: 1em; }
+  @media (max-width: 520px) {
+    .acq-grid { grid-template-columns: repeat(2, 1fr); }
+    .acq-grid.secondary { grid-template-columns: repeat(2, 1fr); }
+    #acqSurvey .acq-card { padding: 20px 18px 18px; }
+  }
+</style>
+<div id="acqSurvey" role="dialog" aria-modal="true" aria-labelledby="acqTitle" aria-describedby="acqSub">
+  <div class="acq-card">
+    <div class="acq-head">
+      <span class="acq-emoji" aria-hidden="true">🎉</span>
+      <button type="button" class="acq-close" id="acqClose" aria-label="Yopish">&times;</button>
+    </div>
+    <h3 id="acqTitle">Bizni qayerdan bildingiz?</h3>
+    <p class="acq-sub" id="acqSub">Bu javob platformani yaxshilashga va sizga o'xshash tadqiqotchilarga yetib borishimizga yordam beradi</p>
+
+    <div class="acq-grid" role="group" aria-label="Manba">
+      <button type="button" class="acq-tile" data-source="telegram">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+        Telegram
+      </button>
+      <button type="button" class="acq-tile" data-source="youtube">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 00-2.11-2.13C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.39.52A3 3 0 00.5 6.2 31.4 31.4 0 000 12a31.4 31.4 0 00.5 5.8 3 3 0 002.11 2.13c1.89.52 9.39.52 9.39.52s7.5 0 9.39-.52a3 3 0 002.11-2.13A31.4 31.4 0 0024 12a31.4 31.4 0 00-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
+        YouTube
+      </button>
+      <button type="button" class="acq-tile" data-source="instagram">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        Instagram
+      </button>
+      <button type="button" class="acq-tile" data-source="friend_colleague">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Do'st / hamkasb
+      </button>
+      <button type="button" class="acq-tile" data-source="advisor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5"/></svg>
+        Ilmiy rahbar
+      </button>
+      <button type="button" class="acq-tile" data-source="google_search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+        Google qidiruv
+      </button>
+    </div>
+
+    <div class="acq-grid secondary" role="group" aria-label="Boshqa manba">
+      <button type="button" class="acq-tile" data-source="university">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+        Universitet e'loni
+      </button>
+      <button type="button" class="acq-tile" data-source="other">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        Boshqa
+      </button>
+    </div>
+
+    <div class="acq-other-wrap" id="acqOtherWrap">
+      <label for="acqOtherInput">Qayerdan bildingiz?</label>
+      <input type="text" id="acqOtherInput" maxlength="200" autocomplete="off"
+             placeholder="Masalan: konferensiya, do'stimning maqolasi…">
+    </div>
+
+    <div class="acq-footer">
+      <button type="button" class="acq-skip" id="acqSkip">O'tkazib yuborish &rarr;</button>
+      <button type="button" class="acq-submit" id="acqSubmit" disabled>Yuborish</button>
+    </div>
+    <div class="acq-err" id="acqErr"></div>
+  </div>
+</div>
+<script src="/static/js/acquisition_survey.js" defer></script>

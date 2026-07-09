@@ -545,6 +545,7 @@ from blueprints.reminders import reminders_bp
 from blueprints.reyting import reyting_bp
 from blueprints.dissertation import dissertation_bp
 from blueprints.messages import messages_bp
+from blueprints.acquisition_survey import acquisition_survey_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -559,6 +560,7 @@ app.register_blueprint(reminders_bp)
 app.register_blueprint(reyting_bp)
 app.register_blueprint(dissertation_bp)
 app.register_blueprint(messages_bp)
+app.register_blueprint(acquisition_survey_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -1237,6 +1239,13 @@ def _run_startup_migrations():
             # mandatory post-registration popup for geography analytics.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS visit_count INTEGER DEFAULT 0")
+            # Acquisition-source survey (see migrations/add_acquisition_survey.sql):
+            # one-time post-signup "Bizni qayerdan bildingiz?" attribution modal.
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_source VARCHAR(32)")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_source_other TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_survey_shown_at TIMESTAMP")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_survey_answered_at TIMESTAMP")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_users_acquisition_source ON users(acquisition_source)")
         conn.commit()
         conn.close()
     except Exception:
