@@ -796,7 +796,7 @@
       {# ── Slim navbar (redizayn v2): 6 ta asosiy band + "Boshqa" dropdown.
            Hech bir route o'chirilmagan — qolganlari dropdown ichida. ── #}
       <div class="nav-links" id="nav-links">
-        <a href="{{ '/dashboard' if current_user.is_authenticated else '/data' }}" class="nav-link{% if request.path == '/dashboard' or request.path == '/data' %} active{% endif %}">Dissertatsiyalar</a>
+        <a href="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" class="nav-link{% if request.path in ['/dashboard', '/data', '/dissertatsiyalar'] %} active{% endif %}">Dissertatsiyalar</a>
         <a href="/top-olimlar" class="nav-link{% if request.path.startswith('/top-olimlar') or request.path.startswith('/olim/') %} active{% endif %}">Olimlar</a>
         <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}">Grantlar</a>
         <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}">Konstruktor<span class="nav-pill-new">Yangi</span></a>
@@ -838,7 +838,7 @@
         </div>
       </div>
       <div class="nav-actions">
-        <a href="{{ '/dashboard' if current_user.is_authenticated else '/data' }}" class="nav-icon-btn" id="nav-search-btn" title="Qidiruv" aria-label="Qidiruv"><i class="bi bi-search"></i></a>
+        <a href="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" class="nav-icon-btn" id="nav-search-btn" title="Qidiruv" aria-label="Qidiruv"><i class="bi bi-search"></i></a>
         {% if current_user.is_authenticated %}
         <a href="/messages" class="nav-icon-btn position-relative" title="Xabarlar" aria-label="Xabarlar">
           <i class="bi bi-chat-dots"></i>
@@ -1856,6 +1856,17 @@ document.addEventListener('DOMContentLoaded', function () {
      Server decides visibility via /api/acquisition-survey/should-show; excluded
      for admins here so the markup/JS never even loads for them. -->
 {% include "components/acquisition_survey_modal.html" %}
+{% endif %}
+
+{# ── Freemium acquisition gate (guest only) ── #}
+{% if not current_user.is_authenticated %}
+<script>window.OAK_LOGGED_IN = false;</script>
+{% if request.path not in ['/login', '/register'] %}
+{% include "components/login_required_modal.html" %}
+<script src="/static/js/acquisition_gate.js" defer></script>
+{% endif %}
+{% else %}
+<script>window.OAK_LOGGED_IN = true;</script>
 {% endif %}
 
 {% if current_user.is_authenticated %}

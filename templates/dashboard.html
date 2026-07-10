@@ -504,6 +504,25 @@
   {{ ad_banner('dashboard-bottom', 'horizontal') }}
 {% endblock %}
 {% block scripts %}
+<style>
+  /* ── Freemium guest gate (blur + overlay) ── */
+  .guest-gate { position: relative; padding: 10px 0 4px; }
+  .guest-gate-blur { display: grid; gap: 10px; filter: blur(4px); opacity: 0.30; pointer-events: none; user-select: none; }
+  .guest-gate-blur .gg-card { background: var(--oak-surface-2, #22262f); border: 1px solid var(--oak-border, rgba(255,255,255,0.07)); border-radius: 10px; padding: 14px 18px; }
+  .guest-gate-blur .gg-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #2a3140, #3a4356, #2a3140); margin: 9px 0; }
+  .guest-gate-blur .gg-line.w70 { width: 70%; }
+  .guest-gate-blur .gg-line.w55 { width: 55%; }
+  .guest-gate-blur .gg-line.w40 { width: 40%; }
+  .guest-gate-overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 18px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(15,23,42,0.30) 0%, rgba(15,23,42,0.93) 58%); }
+  .guest-gate-overlay .gg-emoji { font-size: 2rem; margin-bottom: 6px; }
+  .guest-gate-overlay .gg-title { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; }
+  .guest-gate-overlay .gg-sub { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 14px; }
+  .guest-gate-overlay .gg-btn { background: #3b82f6; color: #fff; border-radius: 10px; padding: 11px 22px; font-weight: 700; text-decoration: none; }
+  .guest-gate-overlay .gg-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .guest-gate-overlay .gg-small { margin-top: 8px; font-size: 12px; color: #64748b; }
+</style>
 <script>
   const PER_PAGE = 25;
   let currentPage = 1;
@@ -588,7 +607,7 @@
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
           <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
-          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='/dashboard?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
+          <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
           <td data-col-key="star" class="cell-star ${r.bookmarked ? 'on' : ''}" onclick="event.stopPropagation();toggleBookmark(${num}, this)" title="Saqlash">${r.bookmarked ? '★' : '☆'}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
@@ -620,6 +639,8 @@
         tr.classList.toggle('expanded-row', !open);
       });
     });
+    // Mehmon uchun: 25 natijadan keyin "blur" acquisition gate
+    if (!LOGGED_IN && currentTotal > records.length) _appendGuestGate(currentTotal);
   }
   function renderInfo(page, total) {
     const term = currentFilters.search.trim();
@@ -836,7 +857,7 @@
     const params = buildSearchParams(false);
     if (currentPage > 1) params.set('page', currentPage);
     const qs = params.toString();
-    history.replaceState(null, '', qs ? '/dashboard?' + qs : '/dashboard');
+    history.replaceState(null, '', qs ? location.pathname + '?' + qs : location.pathname);
   }
 
   // ── Daraja toggle buttons ──────────────────────────────────────────────────
@@ -944,8 +965,63 @@
     }).catch(e => { if (e.name !== 'AbortError') console.error(e); });
   }
 
+  // ── Freemium gate: mehmon (guest) faqat filtrsiz 1-sahifani ko'radi ──
+  function _guestGateReason() {
+    if (currentPage > 1) return 'pagination';
+    if ((currentFilters.search || '').trim()) return 'filter';
+    if (currentScope && currentScope !== 'all') return 'filter';
+    const f = facetState;
+    if (f.daraja.length || f.fan.length || f.muassasa.length || f.ixt.length) return 'filter';
+    if (f.yilMin || f.yilMax) return 'filter';
+    if (f.saved) return 'save';
+    if (f.sort && f.sort !== 'sana_desc') return 'filter';
+    if (currentFilters.daraja || currentFilters.ixtisoslik || currentFilters.gender || currentFilters.sana_yil) return 'filter';
+    return null;
+  }
+  function _guestResetToFree() {
+    facetState = { daraja: [], fan: [], muassasa: [], ixt: [], yilMin: '', yilMax: '', saved: false, sort: 'sana_desc' };
+    currentFilters = { search: '', daraja: '', ixtisoslik: '', sana_yil: '', gender: '' };
+    currentScope = 'all';
+    currentPage = 1;
+    if (searchInput) searchInput.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+    document.querySelectorAll('.daraja-btn, .gender-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.scope-btn').forEach(b => b.classList.toggle('active', b.dataset.scope === 'all'));
+    const ss = document.getElementById('sort-select'); if (ss) ss.value = 'sana_desc';
+    const st = document.getElementById('saved-toggle'); if (st) st.classList.remove('on');
+    if (typeof renderIxtChips === 'function') renderIxtChips();
+    if (lastFacets) renderFacets(lastFacets);
+  }
+  function _appendGuestGate(total) {
+    if (!tableBody) return;
+    const tr = document.createElement('tr');
+    tr.className = 'guest-gate-row';
+    const card = '<div class="gg-card"><div class="gg-line w70"></div><div class="gg-line w40"></div><div class="gg-line w55"></div></div>';
+    tr.innerHTML = '<td colspan="8" style="padding:0;border:0;background:transparent;">' +
+      '<div class="guest-gate">' +
+        '<div class="guest-gate-blur" aria-hidden="true">' + card + card + card + '</div>' +
+        '<div class="guest-gate-overlay">' +
+          '<div class="gg-emoji">📚</div>' +
+          '<div class="gg-title">' + (total || 0).toLocaleString('uz') + ' ta dissertatsiya mavjud</div>' +
+          '<div class="gg-sub">Barchasini ko\'rish uchun bepul ro\'yxatdan o\'ting</div>' +
+          '<a href="/register" class="gg-btn" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">Ro\'yxatdan o\'tish →</a>' +
+          '<div class="gg-small">Google yoki Telegram orqali 5 soniyada</div>' +
+        '</div>' +
+      '</div></td>';
+    tableBody.appendChild(tr);
+  }
+
   function updateData(reset=false) {
     if (reset) currentPage = 1;
+    // Mehmon filtr/sort/keyingi sahifani urinsa — modal chiqarib, bepul (filtrsiz
+    // 1-sahifa) holatga qaytaramiz, so'ng aynan shu bepul holatni yuklaymiz.
+    if (!LOGGED_IN) {
+      const reason = _guestGateReason();
+      if (reason) {
+        _guestResetToFree();
+        window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason } }));
+      }
+    }
     if (searchController) searchController.abort();
     searchController = new AbortController();
     // Dim existing rows instead of clearing — keeps context visible while loading
@@ -955,6 +1031,12 @@
     fetch('/api/dashboard/search?' + params, { signal: searchController.signal })
       .then(r => r.json())
       .then(data => {
+        if (data && data.error === 'login_required') {
+          // Backstop: agar gated so'rov baribir serverга yetsa
+          tableBody.style.opacity = '1'; _searchSpinner(false);
+          if (!LOGGED_IN) window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'pagination' } }));
+          return;
+        }
         currentTotal   = data.total;
         currentRecords = data.records;
         renderRows(currentRecords, (data.page - 1) * PER_PAGE);
@@ -1367,8 +1449,7 @@
   document.getElementById('export-btn')?.addEventListener('click', function(e) {
     if (!LOGGED_IN) {
       e.preventDefault();
-      if (confirm("Eksport uchun tizimga kirish kerak. Kirish sahifasiga o'tilsinmi?"))
-        window.location.href = '/login';
+      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save' } }));
     }
   });
 
@@ -1400,12 +1481,7 @@
   // ── bookmark (Google Scholar "Save") ──
   window.toggleBookmark = function(dissId, starEl) {
     if (!LOGGED_IN) {
-      if (starEl) {
-        const old = starEl.title;
-        starEl.title = 'Saqlash uchun tizimga kiring';
-      }
-      if (confirm("Saqlash uchun tizimga kirish kerak. Kirish sahifasiga o'tilsinmi?"))
-        window.location.href = '/login';
+      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save' } }));
       return;
     }
     fetch('/api/bookmarks/toggle', {

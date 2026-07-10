@@ -594,10 +594,36 @@ def _prepare_rows(rows):
 data_bp = Blueprint('data', __name__)
 
 
+# ── Freemium gate ──────────────────────────────────────────────────────────
+# Mehmonlar (guest) faqat filtrsiz BIRINCHI sahifani ko'radi. Sahifa > 1 yoki
+# istalgan filter/sort (yoki 25 dan katta per_page) bo'lsa — 401 login_required.
+GATE_MESSAGE = "Ko'proq natijalarni ko'rish uchun ro'yxatdan o'ting"
+
+
+def _is_guest():
+    from flask_login import current_user
+    return not getattr(current_user, 'is_authenticated', False)
+
+
+def _guest_gate_response():
+    """401 JSON — acquisition overlay uchun haqiqiy (global) jami sonni beradi."""
+    try:
+        total = count_dissertations('', '', '', '')
+    except Exception:
+        total = 0
+    resp = jsonify({'error': 'login_required', 'total': total, 'message': GATE_MESSAGE})
+    resp.status_code = 401
+    return resp
+
+
 def _data_cache_key():
+    # Auth holatini kalitga qo'shamiz — aks holda mehmonga qaytgan 401 javob
+    # keshdan ro'yxatdan o'tgan foydalanuvchiga (yoki teskarisi) sizib chiqardi.
+    from flask_login import current_user
+    auth = 'u' if getattr(current_user, 'is_authenticated', False) else 'g'
     a = request.args
     return (
-        f"data_{a.get('page',1)}_{a.get('per_page',25)}"
+        f"data_{auth}_{a.get('page',1)}_{a.get('per_page',25)}"
         f"_{a.get('search','')}_{a.get('daraja','')}_{a.get('muassasa','')}_{a.get('ixtisoslik','')}"
         f"_{a.get('fan_tarmoqi','')}_{a.get('ilmiy_kengash','')}_{a.get('sana_yil','')}"
         f"_{a.get('scope','all')}_{a.get('gender','')}"
@@ -630,6 +656,15 @@ def data():
     scope    = a.get("scope",    "all").strip()
     if scope not in ('all', 'olim', 'rahbar', 'opponent', 'mavzu'):
         scope = 'all'
+
+    # Freemium gate — mehmonlarga faqat filtrsiz 1-sahifa ochiq.
+    if _is_guest():
+        has_filter = bool(search or daraja or muassasa or ixtisoslik or fan_tarmoqi
+                          or ilmiy_kengash or sana_yil or gender) or scope != 'all' \
+            or bool(a.get('sort_by') or a.get('sort_dir') or a.get('sort'))
+        if page > 1 or has_filter or per_page > 25:
+            return _guest_gate_response()
+
     total = count_dissertations(search, daraja, muassasa, ixtisoslik,
                                 fan_tarmoqi, ilmiy_kengash, sana_yil, scope, gender)
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -648,6 +683,16 @@ def data():
         "per_page": per_page,
         "total_pages": total_pages
     })
+
+
+@data_bp.route('/dissertatsiyalar')
+def dissertatsiyalar_page():
+    """Mehmonlar (guest) uchun OCHIQ dissertatsiyalar ro'yxati sahifasi.
+    /dashboard himoyalangan (app.py require_registration mehmonni /register ga
+    yo'naltiradi), shuning uchun aynan shu UI ochiq manzilda beriladi. Freemium
+    gate (dashboard.html + /api/dashboard/search) mehmonga faqat filtrsiz
+    1-sahifani ko'rsatadi, qolganiga modal chiqaradi."""
+    return render_template('dashboard.html')
 
 
 @data_bp.route('/filters')
@@ -857,6 +902,10 @@ def dashboard_search():
         page = max(1, int(a.get('page', 1)))
     except ValueError:
         page = 1
+    # Freemium gate — mehmon faqat filtrsiz 1-sahifani ko'radi.
+    if uid is None and (page > 1 or not _dashboard_is_default(f)
+                        or f['scope'] != 'all' or f['sort'] != 'sana_desc'):
+        return _guest_gate_response()
     per_page = 25
     order = _DASH_SORTS[f['sort']]
     try:
