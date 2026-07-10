@@ -79,7 +79,8 @@
       <div class="dw-meta">
         {% if p.advisor_name %}🧑‍🏫 Rahbar: <b>{{ p.advisor_name }}</b>
         {% else %}Rahbar biriktirilmagan —
-          <a href="#" style="color:#4a9eff;" onclick="openModal('invite-modal');return false;">taklif qilish</a>{% endif %}
+          <a href="#" style="color:#4a9eff;" onclick="openModal('invite-modal');return false;">taklif qilish</a>
+          · <a href="/rahbar-topish{% if p.specialty_code %}?ixtisoslik={{ p.specialty_code | urlencode }}{% endif %}" style="color:#4a9eff;">Rahbar topish →</a>{% endif %}
       </div>
       <div class="dw-meta">Jarayon: {{ p.approved_blocks }}/{{ p.total_blocks }} qism ma'qullangan ({{ p.progress }}%)</div>
       <div class="dw-progress"><i style="width:{{ p.progress }}%;"></i></div>
@@ -224,4 +225,17 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/dissertation.js') }}?v={{ diss_js_v }}"></script>
+<script>
+/* /rahbar profilidan kelgan taklif: ?invite=<username>&role=advisor → modal prefill */
+(function () {
+  var p = new URLSearchParams(location.search);
+  var ident = p.get('invite');
+  if (!ident) return;
+  var roleEl = document.getElementById('inv-role');
+  var identEl = document.getElementById('inv-ident');
+  if (roleEl) roleEl.value = (p.get('role') === 'student') ? 'student' : 'advisor';
+  if (identEl) identEl.value = ident;
+  if (window.openModal) openModal('invite-modal');
+})();
+</script>
 {% endblock %}

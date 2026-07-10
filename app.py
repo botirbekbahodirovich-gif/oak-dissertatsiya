@@ -552,6 +552,7 @@ from blueprints.xarita import xarita_bp
 from blueprints.saved import saved_bp
 from blueprints.journal_check import journal_check_bp
 from blueprints.roadmap import roadmap_bp
+from blueprints.advisors import advisors_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -573,6 +574,7 @@ app.register_blueprint(xarita_bp)
 app.register_blueprint(saved_bp)
 app.register_blueprint(journal_check_bp)
 app.register_blueprint(roadmap_bp)
+app.register_blueprint(advisors_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])

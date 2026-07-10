@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ a.name }} — ilmiy rahbar | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.rp-wrap { max-width: 900px; margin: 0 auto; }
+.rp-head { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; padding: 22px 24px; margin-bottom: 18px; }
+.rp-head h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.rp-daraja { color: #64748b; font-size: 0.92rem; margin-bottom: 12px; }
+.rp-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.rp-badge { background: rgba(59,130,246,0.1); color: #2563eb; border-radius: 9px; padding: 5px 12px;
+  font-size: 0.85rem; font-weight: 700; }
+.rp-badge.dsc { background: rgba(124,92,252,0.12); color: #7c5cfc; }
+.rp-badge.yr { background: rgba(34,197,94,0.12); color: #15803d; }
+.rp-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.rp-btn { display: inline-block; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff !important;
+  border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.92rem; font-weight: 700;
+  cursor: pointer; text-decoration: none; }
+.rp-btn.ghost { background: none; color: #2563eb !important; border: 1px solid #bfdbfe; }
+.rp-invite-note { margin-top: 12px; padding: 12px 16px; border-radius: 10px; background: rgba(251,191,36,0.1);
+  color: #92400e; font-size: 0.88rem; }
+.rp-invite-note.ok { background: rgba(34,197,94,0.1); color: #15803d; }
+.rp-section { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; margin-bottom: 16px; }
+.rp-section h2 { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
+.rp-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.rp-chip { border: 1px solid #e2e8f0; border-radius: 9px; padding: 6px 12px; font-size: 0.83rem; color: #475569; }
+.rp-chip b { color: #2563eb; }
+.rp-inst { color: #475569; font-size: 0.88rem; padding: 4px 0; }
+.rp-year { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 8px; }
+.rp-year b { font-size: 1rem; color: #0f172a; }
+.rp-year .bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #7c5cfc); }
+.rp-year .cnt { color: #94a3b8; font-size: 0.8rem; }
+.rp-stud { border-bottom: 1px solid #eef2f7; padding: 9px 0; font-size: 0.88rem; }
+.rp-stud:last-child { border-bottom: none; }
+.rp-stud a { color: #2563eb; text-decoration: none; font-weight: 600; }
+.rp-stud a:hover { text-decoration: underline; }
+.rp-stud .mavzu { color: #475569; margin-top: 2px; }
+.rp-stud .meta { color: #94a3b8; font-size: 0.78rem; margin-top: 2px; }
+[data-bs-theme="dark"] .rp-head, [data-bs-theme="dark"] .rp-section
+  { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .rp-head h1, [data-bs-theme="dark"] .rp-section h2,
+[data-bs-theme="dark"] .rp-year b { color: #e2e8f0; }
+[data-bs-theme="dark"] .rp-chip { border-color: rgba(148,163,184,0.2); color: #94a3b8; }
+[data-bs-theme="dark"] .rp-stud { border-color: rgba(148,163,184,0.12); }
+[data-bs-theme="dark"] .rp-stud .mavzu { color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rp-wrap">
+  <div class="rp-head">
+    <h1>{{ a.name }}</h1>
+    <div class="rp-daraja">{{ a.daraja or 'Ilmiy rahbar' }}</div>
+    <div class="rp-badges">
+      <span class="rp-badge">👨‍🎓 {{ a.total }} ta shogird</span>
+      {% if a.phd_count %}<span class="rp-badge">PhD: {{ a.phd_count }}</span>{% endif %}
+      {% if a.dsc_count %}<span class="rp-badge dsc">DSc: {{ a.dsc_count }}</span>{% endif %}
+      {% if a.years %}<span class="rp-badge yr">📅 {{ a.years[0] }}–{{ a.years[-1] }}</span>{% endif %}
+    </div>
+    <div class="rp-actions">
+      {% if registered %}
+      <a class="rp-btn" href="/workspace?invite={{ registered[1] | urlencode }}&role=advisor">📩 Hamkorlik taklifi yuborish</a>
+      {% else %}
+      <button class="rp-btn" id="rp-invite-btn">📩 Hamkorlik taklifi yuborish</button>
+      {% endif %}
+      <a class="rp-btn ghost" href="/genealogy/{{ a.name | urlencode }}">🌳 Ilmiy shajara</a>
+      <a class="rp-btn ghost" href="/supervisor/{{ a.name | urlencode }}">📋 Ishlar jadvali</a>
+    </div>
+    {% if registered %}
+    <div class="rp-invite-note ok">✅ Bu olim platformada ro'yxatdan o'tgan — taklif to'g'ridan-to'g'ri Konstruktorga boradi.</div>
+    {% else %}
+    <div class="rp-invite-note" id="rp-invite-note">Bu olim hali platformada ro'yxatdan o'tmagan. Agar tanisangiz, uni taklif qiling!</div>
+    {% endif %}
+  </div>
+
+  {% if spec_breakdown %}
+  <div class="rp-section">
+    <h2>🏷 Ixtisoslik taqsimoti</h2>
+    <div class="rp-chips">
+      {% for spec, cnt in spec_breakdown %}
+      <span class="rp-chip">{{ spec }} — <b>{{ cnt }} ta</b></span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if a.institutions %}
+  <div class="rp-section">
+    <h2>🏛 Muassasalar</h2>
+    {% for inst in a.institutions %}<div class="rp-inst">• {{ inst }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="rp-section">
+    <h2>👨‍🎓 Shogirdlar timeline</h2>
+    {% for year, group in timeline %}
+    <div class="rp-year">
+      <b>{{ year }}</b>
+      <span class="bar" style="width:{{ (group|length / max_year_count * 120) | round(0, 'ceil') | int }}px;"></span>
+      <span class="cnt">{{ group|length }} ta himoya</span>
+    </div>
+    {% for s in group %}
+    <div class="rp-stud">
+      <a href="/olim/{{ s.olim | urlencode }}">{{ s.olim }}</a>
+      <div class="mavzu">{{ s.mavzu }}</div>
+      <div class="meta">{{ s.daraja }}{% if s.ixtisoslik %} · {{ s.ixtisoslik }}{% endif %}{% if s.sana %} · {{ s.sana }}{% endif %}</div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+    {% if unknown_year %}
+    <div class="rp-year"><b>Sana noma'lum</b><span class="cnt">{{ unknown_year|length }} ta</span></div>
+    {% for s in unknown_year %}
+    <div class="rp-stud">
+      <a href="/olim/{{ s.olim | urlencode }}">{{ s.olim }}</a>
+      <div class="mavzu">{{ s.mavzu }}</div>
+      <div class="meta">{{ s.daraja }}{% if s.ixtisoslik %} · {{ s.ixtisoslik }}{% endif %}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+
+<script type="application/ld+json">
+{{ {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  'name': a.name,
+  'jobTitle': a.daraja or 'Ilmiy rahbar',
+  'affiliation': a.institutions[0] if a.institutions else None,
+  'url': request.url,
+  'description': meta_description
+} | tojson }}
+</script>
+{% endblock %}
+
+{% block scripts %}
+{% if not registered %}
+<script>
+(function () {
+  var btn = document.getElementById('rp-invite-btn');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    {% if is_authenticated %}
+    btn.disabled = true;
+    fetch('/api/advisor/invite-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'advisor' })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      var note = document.getElementById('rp-invite-note');
+      if (d && d.success && d.url) {
+        (navigator.clipboard ? navigator.clipboard.writeText(d.url) : Promise.reject())
+          .then(function () {
+            note.textContent = '✅ Taklif havolasi nusxalandi — uni rahbaringizga yuboring (7 kun amal qiladi): ' + d.url;
+            note.classList.add('ok');
+          })
+          .catch(function () { prompt('Taklif havolasini nusxalang (7 kun amal qiladi):', d.url); });
+      } else {
+        note.textContent = 'Xatolik yuz berdi — qayta urinib ko\'ring.';
+      }
+    }).catch(function () { btn.disabled = false; });
+    {% else %}
+    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+    {% endif %}
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

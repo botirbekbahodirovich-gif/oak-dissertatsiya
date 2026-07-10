@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Rahbar topish — ilmiy rahbarlar katalogi | Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston ilmiy rahbarlari katalogi: {{ total }} ta rahbar — shogirdlar soni, ixtisosliklari, muassasalari va faolligi bo'yicha qidiruv.{% endblock %}
+
+{% block extra_head %}
+<style>
+.rt-wrap { max-width: 1080px; margin: 0 auto; }
+.rt-sub { color: #94a3b8; margin-bottom: 18px; }
+.rt-filter { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.rt-filter input, .rt-filter select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 12px;
+  font-size: 0.92rem; font-family: inherit; color: #0f172a; background: #fff; }
+.rt-filter input { flex: 1; min-width: 200px; }
+.rt-btn { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border: none; padding: 9px 20px;
+  border-radius: 10px; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
+.rt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.rt-card { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 8px; transition: box-shadow 0.15s, transform 0.15s; }
+.rt-card:hover { box-shadow: 0 6px 18px rgba(15,23,42,0.08); transform: translateY(-2px); }
+.rt-name { font-weight: 800; color: #0f172a; font-size: 1.02rem; text-decoration: none; }
+.rt-name:hover { color: #2563eb; }
+.rt-daraja { color: #64748b; font-size: 0.8rem; min-height: 1em; }
+.rt-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.rt-badge { background: rgba(59,130,246,0.1); color: #2563eb; border-radius: 8px; padding: 3px 9px;
+  font-size: 0.78rem; font-weight: 700; }
+.rt-badge.dsc { background: rgba(124,92,252,0.12); color: #7c5cfc; }
+.rt-badge.yr { background: rgba(34,197,94,0.12); color: #15803d; }
+.rt-meta { color: #64748b; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-codes { display: flex; gap: 5px; flex-wrap: wrap; }
+.rt-code { border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 7px; font-size: 0.75rem;
+  color: #475569; font-family: monospace; }
+.rt-pag { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 26px 0 6px; }
+.rt-pag a, .rt-pag span.cur { padding: 8px 16px; border-radius: 10px; border: 1px solid #e2e8f0;
+  color: #2563eb; font-weight: 700; text-decoration: none; font-size: 0.9rem; background: #fff; }
+.rt-pag span.cur { color: #64748b; border: none; background: none; }
+.rt-empty { color: #94a3b8; padding: 30px 0; text-align: center; }
+[data-bs-theme="dark"] .rt-card { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .rt-name { color: #e2e8f0; }
+[data-bs-theme="dark"] .rt-filter input, [data-bs-theme="dark"] .rt-filter select
+  { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+[data-bs-theme="dark"] .rt-code { border-color: rgba(148,163,184,0.2); color: #94a3b8; }
+[data-bs-theme="dark"] .rt-pag a { background: #1e293b; border-color: rgba(148,163,184,0.2); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rt-wrap">
+  <h1>Rahbar topish 🧑‍🏫</h1>
+  <p class="rt-sub">{{ total }} ta ilmiy rahbar — shogirdlari, yo'nalishlari va faolligi bo'yicha</p>
+
+  <form class="rt-filter" method="get" action="/rahbar-topish">
+    <input type="text" name="q" value="{{ q }}" placeholder="Rahbar ismi bo'yicha qidiring…">
+    <select name="ixtisoslik">
+      <option value="">Barcha ixtisosliklar</option>
+      {% for c in top_codes %}
+      <option value="{{ c }}" {% if c == code %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+      {% if code and code not in top_codes %}<option value="{{ code }}" selected>{{ code }}</option>{% endif %}
+    </select>
+    <select name="sort">
+      <option value="recent" {% if sort == 'recent' %}selected{% endif %}>So'nggi faollik</option>
+      <option value="students" {% if sort == 'students' %}selected{% endif %}>Shogirdlar soni</option>
+      <option value="name" {% if sort == 'name' %}selected{% endif %}>Ism (A–Z)</option>
+    </select>
+    <button class="rt-btn" type="submit">Qidirish</button>
+  </form>
+
+  {% if items %}
+  <div class="rt-grid">
+    {% for a in items %}
+    <div class="rt-card">
+      <a class="rt-name" href="/rahbar/{{ a.slug }}">{{ a.name }}</a>
+      <div class="rt-daraja">{{ a.daraja }}</div>
+      <div class="rt-badges">
+        <span class="rt-badge">👨‍🎓 {{ a.total }} shogird</span>
+        {% if a.phd_count %}<span class="rt-badge">PhD {{ a.phd_count }}</span>{% endif %}
+        {% if a.dsc_count %}<span class="rt-badge dsc">DSc {{ a.dsc_count }}</span>{% endif %}
+        {% if a.last_year %}<span class="rt-badge yr">📅 {{ a.last_year }}</span>{% endif %}
+      </div>
+      {% if a.codes %}
+      <div class="rt-codes">
+        {% for c in a.codes[:3] %}<span class="rt-code">{{ c }}</span>{% endfor %}
+        {% if a.codes|length > 3 %}<span class="rt-code">+{{ a.codes|length - 3 }}</span>{% endif %}
+      </div>
+      {% endif %}
+      {% if a.institutions %}<div class="rt-meta" title="{{ a.institutions[0] }}">🏛 {{ a.institutions[0] }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="rt-empty">Hech narsa topilmadi — qidiruv shartlarini o'zgartirib ko'ring.</div>
+  {% endif %}
+
+  {% if pages > 1 %}
+  {% set qs = '&q=' ~ (q | urlencode) ~ '&ixtisoslik=' ~ (code | urlencode) ~ '&sort=' ~ sort %}
+  <div class="rt-pag">
+    {% if page > 1 %}<a href="/rahbar-topish?page={{ page - 1 }}{{ qs }}">← Oldingi</a>{% endif %}
+    <span class="cur">{{ page }} / {{ pages }}</span>
+    {% if page < pages %}<a href="/rahbar-topish?page={{ page + 1 }}{{ qs }}">Keyingi →</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
