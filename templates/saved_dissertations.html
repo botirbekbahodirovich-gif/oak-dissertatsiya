@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Saqlangan dissertatsiyalar — Olimlar.uz{% endblock %}
+{% block extra_head %}
+<meta name="robots" content="noindex">
+<style>
+  .sd-wrap { max-width: 940px; margin: 0 auto; padding: 8px 0 40px; }
+  .sd-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .sd-head h1 { font-size: 1.4rem; font-weight: 800; color: #e8eef8; margin: 0; }
+  .sd-head .sd-count { color: #94a3b8; font-size: 0.9rem; }
+  .sd-back { color: #94a3b8; font-size: 0.86rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .sd-back:hover { color: #60a5fa; }
+
+  .sd-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; }
+  .sd-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .sd-title { font-size: 1rem; font-weight: 700; line-height: 1.5; color: #e8eef8; text-decoration: none; }
+  .sd-title:hover { color: #60a5fa; }
+  .sd-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sd-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #cbd5e1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 20px; }
+  .sd-chip a { color: inherit; text-decoration: none; }
+  .sd-chip a:hover { color: #60a5fa; }
+  .badge-phd { background: rgba(52,211,153,0.14); color: #34d399; border-color: rgba(52,211,153,0.3); font-weight: 700; }
+  .badge-dsc { background: rgba(227,100,3,0.16); color: #f0913f; border-color: rgba(227,100,3,0.3); font-weight: 700; }
+
+  .sd-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .sd-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; padding: 6px 12px; border-radius: 9px; border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; }
+  .sd-btn-primary { background: rgba(74,158,255,0.12); border-color: rgba(74,158,255,0.28); color: #4a9eff; }
+  .sd-btn-primary:hover { background: rgba(74,158,255,0.22); color: #4a9eff; }
+  .sd-btn-danger { background: transparent; border-color: rgba(239,68,68,0.28); color: #f87171; }
+  .sd-btn-danger:hover { background: rgba(239,68,68,0.16); }
+
+  .sd-notes { margin-top: 12px; }
+  .sd-notes summary { list-style: none; cursor: pointer; color: #94a3b8; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+  .sd-notes summary::-webkit-details-marker { display: none; }
+  .sd-notes summary:hover { color: #cbd5e1; }
+  .sd-notes .has-note { color: #fbbf24; }
+  .sd-note-box { margin-top: 8px; }
+  .sd-note-box textarea { width: 100%; min-height: 64px; resize: vertical; background: #0b1220; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #e2e8f0; font: inherit; font-size: 0.86rem; padding: 8px 10px; box-sizing: border-box; }
+  .sd-note-box textarea:focus { outline: none; border-color: rgba(74,158,255,0.5); }
+  .sd-note-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+  .sd-note-foot .cnt { color: #64748b; font-size: 0.74rem; }
+  .sd-note-foot .ok { color: #34d399; font-size: 0.78rem; }
+
+  .sd-empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
+  .sd-empty .em { font-size: 2.6rem; }
+  .sd-empty h2 { color: #e2e8f0; font-size: 1.1rem; margin: 12px 0 6px; }
+  .sd-empty a { color: #60a5fa; text-decoration: none; }
+
+  .sd-pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; }
+  .sd-pager a, .sd-pager span { font-size: 0.86rem; color: #cbd5e1; text-decoration: none; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; }
+  .sd-pager a:hover { border-color: rgba(74,158,255,0.5); color: #60a5fa; }
+  .sd-pager .disabled { opacity: 0.4; pointer-events: none; }
+
+  @media (max-width: 560px) {
+    .sd-card-top { flex-direction: column; }
+    .sd-actions { width: 100%; }
+    .sd-btn { flex: 1; justify-content: center; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="sd-wrap">
+  <div class="mb-2"><a href="/cabinet" class="sd-back"><i class="bi bi-arrow-left"></i> Kabinetga qaytish</a></div>
+  <div class="sd-head">
+    <h1>💾 Saqlangan dissertatsiyalar</h1>
+    <span class="sd-count">Jami: <b id="sd-total">{{ total }}</b></span>
+  </div>
+
+  {% if records %}
+  <div id="sd-list">
+    {% for r in records %}
+    {% set deg = (r.daraja or '')|upper %}
+    <div class="sd-card" id="sd-card-{{ r.id }}" data-id="{{ r.id }}">
+      <div class="sd-card-top">
+        <div style="min-width:0;">
+          <a href="/dissertation/{{ r.id }}" class="sd-title">{{ r.mavzu or '—' }}</a>
+          <div class="sd-meta">
+            {% if deg == 'PHD' %}<span class="sd-chip badge-phd">PhD</span>
+            {% elif deg == 'DSC' %}<span class="sd-chip badge-dsc">DSc</span>
+            {% elif r.daraja %}<span class="sd-chip">{{ r.daraja }}</span>{% endif %}
+            {% if r.olim %}<span class="sd-chip">👤 <a href="/author/{{ r.olim|urlencode }}">{{ r.olim }}</a></span>{% endif %}
+            {% if r.sana %}<span class="sd-chip">📅 {{ r.sana }}</span>{% endif %}
+            {% if r.ixtisoslik %}<span class="sd-chip">🔢 {{ r.ixtisoslik }}</span>{% endif %}
+            {% if r.ilmiy_rahbar %}<span class="sd-chip">🎓 <a href="/supervisor/{{ r.ilmiy_rahbar|urlencode }}">{{ r.ilmiy_rahbar }}</a></span>{% endif %}
+          </div>
+        </div>
+        <div class="sd-actions">
+          <a href="/dissertation/{{ r.id }}" class="sd-btn sd-btn-primary"><i class="bi bi-file-text"></i> Batafsil</a>
+          <button type="button" class="sd-btn sd-btn-danger" onclick="sdRemove({{ r.id }})" title="Ro'yxatdan o'chirish"><i class="bi bi-trash3"></i> O'chirish</button>
+        </div>
+      </div>
+
+      <details class="sd-notes"{% if r.notes %} open{% endif %}>
+        <summary><i class="bi bi-pencil-square"></i> <span class="{{ 'has-note' if r.notes }}">Shaxsiy eslatma{% if r.notes %} ✓{% endif %}</span></summary>
+        <div class="sd-note-box">
+          <textarea maxlength="500" placeholder="Bu dissertatsiya haqida o'zingiz uchun eslatma..." oninput="sdCount(this)" data-id="{{ r.id }}">{{ r.notes or '' }}</textarea>
+          <div class="sd-note-foot">
+            <span class="cnt">{{ (r.notes or '')|length }}/500</span>
+            <span>
+              <span class="ok" style="display:none;">Saqlandi ✓</span>
+              <button type="button" class="sd-btn sd-btn-primary" onclick="sdSaveNote({{ r.id }}, this)">Eslatmani saqlash</button>
+            </span>
+          </div>
+        </div>
+      </details>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="sd-pager">
+    {% if has_prev %}<a href="?page={{ page - 1 }}">← Oldingi</a>{% else %}<span class="disabled">← Oldingi</span>{% endif %}
+    <span>{{ page }} / {{ total_pages }}</span>
+    {% if has_next %}<a href="?page={{ page + 1 }}">Keyingi →</a>{% else %}<span class="disabled">Keyingi →</span>{% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="sd-empty">
+    <div class="em">🔖</div>
+    <h2>Hali saqlangan dissertatsiya yo'q</h2>
+    <p>Dissertatsiya sahifasidagi yoki jadvaldagi <b>🔖 saqlash</b> tugmasi orqali qiziqarli ishlarni shu yerga to'plang.</p>
+    <p><a href="/dashboard">→ Dissertatsiyalar jadvaliga o'tish</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function sdCount(el) {
+    var foot = el.closest('.sd-note-box').querySelector('.cnt');
+    if (foot) foot.textContent = el.value.length + '/500';
+  }
+
+  function sdSaveNote(id, btn) {
+    var box = btn.closest('.sd-note-box');
+    var ta = box.querySelector('textarea');
+    var ok = box.querySelector('.ok');
+    btn.disabled = true;
+    fetch('/api/saved/' + id + '/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: ta.value })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) {
+        if (ok) { ok.style.display = ''; setTimeout(function () { ok.style.display = 'none'; }, 2200); }
+        var flag = btn.closest('.sd-notes').querySelector('summary span');
+        if (flag) flag.classList.toggle('has-note', !!(d.notes && d.notes.length));
+      } else {
+        alert((d && d.error) || "Eslatmani saqlab bo'lmadi");
+      }
+    }).catch(function () { alert("Tarmoq xatosi"); })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  function sdRemove(id) {
+    fetch('/api/saved/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dissertation_id: id })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.success || d.saved) return;   // saved=false => o'chirildi
+      var card = document.getElementById('sd-card-' + id);
+      if (card) card.parentNode.removeChild(card);
+      var t = document.getElementById('sd-total');
+      if (t && typeof d.total_saved === 'number') t.textContent = d.total_saved;
+      if (typeof d.total_saved === 'number' && d.total_saved === 0) location.reload();
+    }).catch(function () {});
+  }
+</script>
+{% endblock %}

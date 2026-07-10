@@ -14,6 +14,7 @@
 .cab-nav button.active { background: #3b82f6; color: #fff; }
 .cab-nav a.cab-nav-link { display: flex; align-items: center; gap: 9px; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; text-decoration: none; }
 .cab-nav a.cab-nav-link:hover { background: #162032; color: #e2e8f0; }
+.cab-nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #3b82f6; color: #fff; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .cab-logout { margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
 .cab-logout a { display: block; color: #fca5a5; font-size: 0.85rem; padding: 8px 12px; }
 .cab-main { min-width: 0; }
@@ -151,6 +152,7 @@
         <button data-panel="bildirish">🔔 Bildirishnomalar</button>
         <a href="/mavzu/tahlil" class="cab-nav-link">🎯 Mavzu tahlili</a>
         <a class="cab-nav-link" href="/xarita/mening">🗺️ Xaritam</a>
+        <a class="cab-nav-link" href="/cabinet/saqlangan">💾 Saqlangan <span id="saved-nav-count" class="cab-nav-badge" style="display:none;"></span></a>
       </nav>
       <div class="cab-logout"><a href="/cabinet/api/logout">↩ Chiqish</a></div>
     </aside>
@@ -928,4 +930,6 @@ function toggleDegreeFields() {
   if (none) none.style.display = deg ? 'none' : 'block';
 }
 </script>
+<script>window.SAVED_LOGGED_IN = true;</script>
+<script src="/static/js/saved.js"></script>
 {% endblock %}

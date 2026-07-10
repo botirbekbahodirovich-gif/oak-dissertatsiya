@@ -25,6 +25,11 @@
   .meta-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--oak-muted); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 20px; }
   .oak-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 6px 14px; border-radius: 10px; background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); color: #4a9eff; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: background 0.15s; }
   .oak-btn:hover { background: rgba(74,158,255,0.2); color: #4a9eff; text-decoration: none; }
+  .oak-btn.js-save-btn { cursor: pointer; }
+  .oak-btn.js-save-btn:disabled { opacity: 0.6; cursor: default; }
+  .oak-btn .save-ico { display: inline-flex; align-items: center; }
+  .oak-btn.js-save-btn.saved { background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.4); color: #fbbf24; }
+  .oak-btn.js-save-btn.saved:hover { background: rgba(251,191,36,0.24); color: #fbbf24; }
 
   /* ── Section cards ── */
   .sec-card { background: var(--oak-surface, #1a1d23); border: 1px solid var(--oak-border, rgba(255,255,255,0.07)); border-radius: 14px; padding: 1.25rem; height: 100%; }
@@ -78,6 +83,10 @@
         <i class="bi bi-box-arrow-up-right"></i>OAK saytida ko'rish
       </a>
     {% endif %}
+    <button type="button" class="oak-btn js-save-btn" data-dissertation-id="{{ id }}"
+            aria-pressed="false" title="Saqlash">
+      <span class="save-ico"></span><span class="save-txt">Saqlash</span>
+    </button>
   </div>
 </div>
 
@@ -225,4 +234,8 @@
 </div>
 {% endif %}
 
+{% endblock %}
+{% block scripts %}
+<script>window.SAVED_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};</script>
+<script src="/static/js/saved.js"></script>
 {% endblock %}
