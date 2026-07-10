@@ -29,6 +29,13 @@ Current features (v0.2+):
   key-value; API in `blueprints/notifications.py`, UI in cabinet)
 - Himoya auto-match: new OAK imports notify scholars with matching ixtisoslik
   (site + Telegram, 3/day cap) — hook in `data.py` import_oak
+- Advisor pages: /rahbar-topish directory + /rahbar/<slug> profiles
+  (`blueprints/advisors.py`, 10-min cached aggregation over dissertations;
+  invite CTA bridges to Konstruktor `?invite=` prefill)
+- Ixtisoslik obunasi: specialty_subscriptions (max 5/user, site+Telegram
+  toggles) — new-defense alerts on OAK import (`blueprints/subscriptions.py`,
+  second hook in import_oak; chat id in users.telegram_chat_id, set at
+  Telegram login, or derived from `<id>@telegram.uz` e-mails)
 - Public /reminders page (filter tabs) + upcoming-deadlines widget
   (`templates/_reminders_widget.html` on home, dashboard, cabinet)
 - Admin Dashboard: user blocking, broadcasts, surveys, full content management
@@ -45,7 +52,8 @@ File structure:
 - `analytics.py` — Analytics API endpoints
 - `upload.py` — Upload endpoints and validation
 - `blueprints/` — admin.py, content.py, notifications.py (alerts + prefs),
-  grants.py, reminders.py (smart reminders + dispatch)
+  grants.py, reminders.py (smart reminders + dispatch), advisors.py (rahbar
+  pages), subscriptions.py (ixtisoslik obunasi + dispatch)
 - `templates/` — Jinja2 templates (50+: home, dashboard, stats, genealogy,
   clustering, heatmap, blog, admin_*, cabinet, reminders, etc.)
 - `static/` — js (genealogy, heatmap, collaboration), PWA assets, uploads;

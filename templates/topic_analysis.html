@@ -170,6 +170,11 @@
         <div class="ta-stat-h">🎓 Shu sohadagi faol ilmiy rahbarlar</div>
         <div id="ta-advisors"></div>
       </div>
+      <div class="ta-stat-card" id="ta-sub-card" style="display:none; margin-top:12px;">
+        <div class="ta-stat-h">🔔 <span id="ta-sub-label"></span> bo'yicha yangi himoyalardan xabardor bo'lasizmi?</div>
+        <button class="ta-btn" id="ta-sub-btn" type="button" style="margin-top:8px;">Obuna bo'lish</button>
+        <div id="ta-sub-msg" class="ta-item-meta" style="margin-top:8px;"></div>
+      </div>
     </div>
 
     <div style="margin-top:22px;">
@@ -330,6 +335,21 @@
       has = true;
     } else { instCardEl.style.display = 'none'; }
 
+    var subCard = document.getElementById('ta-sub-card');
+    if (subCard) {
+      if (d.specialty && d.specialty.code) {
+        subCard.dataset.code = d.specialty.code;
+        subCard.dataset.label = d.specialty.name || '';
+        document.getElementById('ta-sub-label').textContent =
+          d.specialty.code + (d.specialty.name ? ' — ' + d.specialty.name : '');
+        document.getElementById('ta-sub-msg').textContent = '';
+        var sb = document.getElementById('ta-sub-btn');
+        if (sb) { sb.style.display = ''; sb.disabled = false; }
+        subCard.style.display = '';
+        has = true;
+      } else { subCard.style.display = 'none'; }
+    }
+
     if (d.advisors && d.advisors.length) {
       advEl.innerHTML = d.advisors.map(function (a) {
         var meta = a.student_count + ' shogird' +
@@ -337,7 +357,8 @@
         var inst = (a.institutions && a.institutions.length)
           ? '<div class="ta-item-meta">🏛 ' + esc(a.institutions.join('; ')) + '</div>' : '';
         return '<div class="ta-list-row"><span class="ta-list-name">' +
-          '<a href="/olim/' + encodeURIComponent(a.rahbar) + '" target="_blank" rel="noopener">' +
+          '<a href="' + (a.url ? esc(a.url) : '/olim/' + encodeURIComponent(a.rahbar)) +
+          '" target="_blank" rel="noopener">' +
           esc(a.rahbar) + '</a>' + inst + '</span>' +
           '<span class="ta-list-meta">' + esc(meta) + '</span></div>';
       }).join('');
@@ -380,7 +401,10 @@
           (typeof s.sim === 'number' && s.band
             ? '<div class="ta-item-meta">📐 O\'xshashlik: ' + s.sim + '% (' +
               (BAND_LABELS[s.band] || s.band) + ')</div>' : '') +
-          (s.rahbar ? '<div class="ta-item-meta">🎓 Ilmiy rahbar: ' + esc(s.rahbar) + '</div>' : '') +
+          (s.rahbar ? '<div class="ta-item-meta">🎓 Ilmiy rahbar: ' +
+            (s.rahbar_slug
+              ? '<a href="/rahbar/' + esc(s.rahbar_slug) + '" target="_blank" rel="noopener">' + esc(s.rahbar) + '</a>'
+              : esc(s.rahbar)) + '</div>' : '') +
           (s.muassasa ? '<div class="ta-item-meta">🏛 ' + esc(s.muassasa) + '</div>' : '') +
           (s.olim ? '<div style="margin-top:8px;"><a href="/olim/' + encodeURIComponent(s.olim) +
             '" target="_blank" rel="noopener">🔍 Olim sahifasi →</a></div>' : '') +
@@ -452,6 +476,31 @@
       showAlert('Tarmoq xatosi. Iltimos, qayta urinib ko\'ring.');
     });
   }
+
+  // ── ixtisoslik obunasi (tahlil natijasidan bir bosishda) ──
+  var subBtn = document.getElementById('ta-sub-btn');
+  if (subBtn) subBtn.addEventListener('click', function () {
+    var card = document.getElementById('ta-sub-card');
+    var code = card.dataset.code;
+    if (!code) return;
+    subBtn.disabled = true;
+    fetch('/api/v1/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ixtisoslik: code, ixtisoslik_nomi: card.dataset.label || '' })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var m = document.getElementById('ta-sub-msg');
+      if (d && (d.success || d.already)) {
+        m.textContent = d.already
+          ? "✅ Bu ixtisoslikka allaqachon obuna bo'lgansiz."
+          : "✅ Obuna qo'shildi — yangi himoyalar haqida xabar beramiz (Kabinet → Bildirishnomalar).";
+        subBtn.style.display = 'none';
+      } else {
+        m.textContent = '⚠️ ' + ((d && d.error) || "Xatolik — qayta urinib ko'ring.");
+        subBtn.disabled = false;
+      }
+    }).catch(function () { subBtn.disabled = false; });
+  });
 
   runBtn.addEventListener('click', run);
 })();

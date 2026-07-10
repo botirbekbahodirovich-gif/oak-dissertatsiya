@@ -301,6 +301,15 @@ def telegram_login():
                 "UPDATE users SET visit_count = COALESCE(visit_count, 0) + 1 WHERE id = %s",
                 (user_id,))
             conn.commit()
+            # Telegram chat id — obuna/eslatma xabarlarini bot orqali yuborish
+            # uchun (blueprints/subscriptions.py o'qiydi). Xato loginni buzmaydi.
+            try:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT")
+                cur.execute("UPDATE users SET telegram_chat_id = %s WHERE id = %s",
+                            (int(tg_id), user_id))
+                conn.commit()
+            except Exception:
+                conn.rollback()
             cur.close()
         finally:
             conn.close()

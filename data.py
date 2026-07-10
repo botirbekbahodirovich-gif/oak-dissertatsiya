@@ -1843,6 +1843,7 @@ def import_oak():
                         opponent_2 = EXCLUDED.opponent_2,
                         yetakchi_tashkilot = EXCLUDED.yetakchi_tashkilot,
                         link = EXCLUDED.link
+                    RETURNING id
                     """,
                     (
                         oak_id,
@@ -1861,11 +1862,13 @@ def import_oak():
                         str(item.get('Havola', '') or ''),
                     )
                 )
+                row = cur.fetchone()
                 if exists:
                     updated += 1
                 else:
                     inserted += 1
                     new_defenses.append({
+                        'id': row[0] if row else None,
                         'olim': olim, 'mavzu': mavzu, 'ixtisoslik': ixtisoslik,
                         'link': str(item.get('Havola', '') or ''),
                     })
@@ -1881,16 +1884,24 @@ def import_oak():
     # a newly imported announcement (opt-out via himoya_elon pref, 3/day cap).
     # Runs after the import commit on its own connection — never fails the import.
     notified = 0
+    subs_notified = 0
     if new_defenses:
         try:
             from blueprints.reminders import notify_himoya_matches
             notified = notify_himoya_matches(new_defenses)
         except Exception:
             notified = 0
+        # Ixtisoslik obunachilari (specialty_subscriptions) — sayt + Telegram.
+        try:
+            from blueprints.subscriptions import notify_specialty_subscribers
+            subs_notified = notify_specialty_subscribers(new_defenses)
+        except Exception:
+            subs_notified = 0
 
     return jsonify({'success': True, 'inserted': inserted, 'updated': updated,
                     'skipped': skipped, 'total': len(items),
-                    'skip_reasons': skip_reasons, 'himoya_notified': notified})
+                    'skip_reasons': skip_reasons, 'himoya_notified': notified,
+                    'subscribers_notified': subs_notified})
 
 
 # ---------------------------------------------------------------------------

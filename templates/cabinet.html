@@ -655,6 +655,21 @@
             {% endfor %}
           </div>
         </div>
+
+        <!-- ── 🔔 MENING OBUNALARIM (ixtisoslik bo'yicha yangi himoyalar) ── -->
+        <div class="cab-section" style="margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+            <h3 style="margin:0;">🎯 Mening obunalarim <span id="ss-count" style="color:#64748b;font-weight:500;font-size:0.85rem;"></span></h3>
+          </div>
+          <p class="desc">Tanlagan ixtisosliklaringizda yangi dissertatsiya himoyasi e'lon qilinsa xabar beramiz (sayt va Telegram).</p>
+          <div class="np-card" id="ss-list"></div>
+          <div id="ss-msg" style="display:none;color:#94a3b8;font-size:0.85rem;margin:8px 0;"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;" id="ss-add-row">
+            <input class="cab-input" id="ss-input" list="ss-codes" placeholder="Ixtisoslik shifri (masalan 05.01.01)" style="flex:1;min-width:200px;">
+            <datalist id="ss-codes"></datalist>
+            <button class="cab-btn" type="button" onclick="ssAdd()">➕ Obuna qo'shish</button>
+          </div>
+        </div>
       </section>
 
     </main>
@@ -1045,6 +1060,100 @@ function toggleDegreeFields() {
   var none = document.querySelector('#panel-profil .deg-none');
   if (none) none.style.display = deg ? 'none' : 'block';
 }
+// ── ixtisoslik obunalari (Mening obunalarim) ──
+(function () {
+  var listEl = document.getElementById('ss-list');
+  if (!listEl) return;
+  var msgEl = document.getElementById('ss-msg');
+  var countEl = document.getElementById('ss-count');
+  var addRow = document.getElementById('ss-add-row');
+  var MAX = 5, tgLinked = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function msg(text) { msgEl.textContent = text || ''; msgEl.style.display = text ? 'block' : 'none'; }
+
+  function render(items) {
+    countEl.textContent = items.length + ' / ' + MAX;
+    if (addRow) addRow.style.display = items.length >= MAX ? 'none' : 'flex';
+    if (!items.length) {
+      listEl.innerHTML = '<div style="color:#64748b;font-size:0.85rem;padding:10px 0;">Hali obuna yo\'q — quyida ixtisoslik shifrini kiriting.</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(function (it) {
+      return '<div class="np-row" data-id="' + it.id + '">' +
+        '<span class="np-ic">🏷</span>' +
+        '<div class="np-label"><b>' + esc(it.ixtisoslik) + '</b>' +
+          '<small>' + esc(it.ixtisoslik_nomi && it.ixtisoslik_nomi !== it.ixtisoslik ? it.ixtisoslik_nomi : 'Yangi himoyalar haqida xabar') + '</small></div>' +
+        '<label class="np-switch" title="Saytda"><input type="checkbox" data-ch="site"' + (it.notify_site ? ' checked' : '') + '><span class="np-slider"></span></label>' +
+        '<label class="np-switch" title="Telegram orqali' + (tgLinked ? '' : ' (Telegram bog\'lanmagan)') + '"><input type="checkbox" data-ch="telegram"' + (it.notify_telegram ? ' checked' : '') + (tgLinked ? '' : ' disabled') + '><span class="np-slider"></span></label>' +
+        '<button type="button" data-rm style="background:none;border:none;color:#ef4444;font-size:1rem;cursor:pointer;" title="Obunani o\'chirish">✕</button>' +
+      '</div>';
+    }).join('');
+    listEl.querySelectorAll('[data-rm]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = parseInt(b.closest('.np-row').getAttribute('data-id'), 10);
+        fetch('/api/v1/subscriptions/remove', { method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) })
+          .then(function (r) { return r.json(); }).then(load);
+      });
+    });
+    listEl.querySelectorAll('input[data-ch]').forEach(function (c) {
+      c.addEventListener('change', function () {
+        var id = parseInt(c.closest('.np-row').getAttribute('data-id'), 10);
+        fetch('/api/v1/subscriptions/toggle', { method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id, channel: c.getAttribute('data-ch'), enabled: c.checked }) });
+      });
+    });
+  }
+
+  function load() {
+    fetch('/api/v1/subscriptions').then(function (r) {
+      if (r.status === 401 || r.redirected) { throw new Error('auth'); }
+      return r.json();
+    }).then(function (d) {
+      MAX = d.max || 5; tgLinked = !!d.telegram_linked;
+      render(d.items || []);
+      msg(tgLinked ? '' : "Telegram xabarlari uchun saytga Telegram orqali kiring — bot chat'ingiz avtomatik bog'lanadi.");
+    }).catch(function () {
+      listEl.innerHTML = '';
+      if (addRow) addRow.style.display = 'none';
+      msg("Obunalarni boshqarish uchun asosiy saytga kiring (Kirish tugmasi).");
+    });
+  }
+
+  window.ssAdd = function () {
+    var inp = document.getElementById('ss-input');
+    var val = (inp.value || '').trim();
+    if (!val) return;
+    fetch('/api/v1/subscriptions', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ixtisoslik: val }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.error) { msg(d.error); return; }
+        if (d && d.already) { msg(d.message || ''); }
+        inp.value = '';
+        load();
+      })
+      .catch(function () { msg('Xatolik — qayta urinib ko\'ring.'); });
+  };
+
+  // autocomplete uchun mavjud shifrlar
+  fetch('/filters').then(function (r) { return r.json(); }).then(function (d) {
+    var dl = document.getElementById('ss-codes');
+    if (dl && d && d.ixtisoslik) {
+      dl.innerHTML = d.ixtisoslik.slice(0, 400).map(function (c) {
+        return '<option value="' + esc(c) + '">';
+      }).join('');
+    }
+  }).catch(function () {});
+
+  load();
+})();
 </script>
 <script>window.SAVED_LOGGED_IN = true;</script>
 <script src="/static/js/saved.js"></script>

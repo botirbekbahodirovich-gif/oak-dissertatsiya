@@ -275,6 +275,15 @@ def _specialty_advisors(cur, code):
             'last_active': int(r['last_active']) if r['last_active'] else None,
             'institutions': (r['institutions'] or [])[:3],
         })
+    # Modul 2 ko'prigi: har bir rahbar kartasi /rahbar/<slug> profiliga olib boradi.
+    try:
+        from blueprints.advisors import advisor_slug
+        for a in out:
+            slug = advisor_slug(a['rahbar'])
+            if slug:
+                a['url'] = '/rahbar/' + slug
+    except Exception:
+        pass
     return out
 
 
@@ -468,6 +477,18 @@ def tahlil_run():
             (user_id, topic, analysis[:2000], len(similar)))
         created_at = cur.fetchone()['created_at']
         conn.commit()
+
+        # Modul 2 ko'prigi: o'xshash ishlar ro'yxatidagi rahbar ismlari uchun slug.
+        try:
+            from blueprints.advisors import advisor_slug
+            _slugs = {}
+            for s in similar:
+                nm = ' '.join((s.get('rahbar') or '').split())
+                if nm and nm not in _slugs:
+                    _slugs[nm] = advisor_slug(nm)
+                s['rahbar_slug'] = _slugs.get(nm) if nm else None
+        except Exception:
+            pass
 
         remaining = max(0, DAILY_LIMIT - (used + 1))
         return jsonify({
