@@ -97,6 +97,10 @@
   background: rgba(59,130,246,0.35); border: 1px solid rgba(59,130,246,0.5); }
 .rj-tl-seg.past { background: rgba(148,163,184,0.25); border-color: rgba(148,163,184,0.35); }
 .rj-tl-seg.active { background: rgba(34,197,94,0.3); border-color: rgba(34,197,94,0.55); }
+.rj-tl-seg.done { background: rgba(34,197,94,0.55); border-color: #22c55e; }
+.rj-tl-chip { font-size: 0.68rem; font-weight: 700; padding: 1px 8px; border-radius: 50px;
+  margin-left: 6px; background: rgba(148,163,184,0.14); color: #94a3b8; white-space: nowrap; }
+.rj-tl-chip.started { background: rgba(34,197,94,0.15); color: #4ade80; }
 .rj-tl-dates { color: #94a3b8; font-size: 0.74rem; text-align: right; font-variant-numeric: tabular-nums; }
 .rj-tl-today { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fbbf24; }
 
@@ -275,7 +279,15 @@
     {% if timeline %}
       {% for ph in timeline %}
       <div class="rj-tl-row">
-        <div class="rj-tl-label">{{ ph.label }}</div>
+        <div class="rj-tl-label">
+          {% if ph.block_id %}<a href="/workspace/{{ ph.diss_id }}/edit/{{ ph.block_id }}"
+             style="color:inherit;text-decoration:none;">{{ ph.label }}</a>
+          {% else %}{{ ph.label }}{% endif %}
+          {% if ph.words is defined %}
+          <span class="rj-tl-chip {{ 'started' if ph.started }}">
+            {{ '✍' if ph.started else '⬜' }} {{ '{:,}'.format(ph.words).replace(',', ' ') }} so'z</span>
+          {% endif %}
+        </div>
         <div class="rj-tl-track">
           <div class="rj-tl-seg {{ ph.state }}" style="left:{{ ph.left_pct }}%;width:{{ ph.width_pct }}%;"></div>
           {% if today_pct is not none %}<div class="rj-tl-today" style="left:{{ today_pct }}%;"></div>{% endif %}
@@ -283,6 +295,10 @@
         <div class="rj-tl-dates">{{ ph.end }}</div>
       </div>
       {% endfor %}
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;color:#64748b;font-size:0.74rem;">
+        <span>🟩 boshlangan/bajarilgan</span><span>🟦 rejadagi</span>
+        <span>⬜ boshlanmagan</span><span style="color:#fbbf24;">│ bugun</span>
+      </div>
     {% else %}
     <div class="rj-empty">Jadval uchun boshlanish va himoya sanalari kerak.</div>
     {% endif %}

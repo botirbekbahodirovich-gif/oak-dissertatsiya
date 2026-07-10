@@ -246,14 +246,17 @@ def _readiness(pub_pct, diss_pct):
     return round(pub_pct * w['publications'] + diss_pct * w['dissertation_words'])
 
 
-def _timeline(plan, overrides=None):
+def _timeline(plan, overrides=None, chapter_states=None):
     """Reverse-schedule: start→himoya oralig'ini TIMELINE_PHASES ulushlariga
     bo'lib, har bosqichga sana oralig'i beradi. overrides — roadmap_milestones
-    dagi foydalanuvchi tahrirlari {phase_key: (due_date, is_done)}."""
+    dagi foydalanuvchi tahrirlari {phase_key: (due_date, is_done)}.
+    chapter_states — Konstruktordan jonli bob holati (5-bosqich):
+    {'bob1': {'words', 'target', 'pct', 'started', 'block_id'}, ...}"""
     start, end = plan.get('start_date'), plan.get('target_defense_date')
     if not (start and end) or end <= start:
         return []
     overrides = overrides or {}
+    chapter_states = chapter_states or {}
     span = (end - start).days
     today = date.today()
     out = []
@@ -265,13 +268,44 @@ def _timeline(plan, overrides=None):
             p_end = ov[0]
         state = 'done' if (ov and ov[1]) else (
             'past' if p_end < today else 'active' if p_start <= today else 'future')
+        row = {'key': key, 'label': label, 'start': p_start.isoformat(),
+               'end': p_end.isoformat(), 'days_left': (p_end - today).days}
+        # bob bosqichlariga Konstruktor jonli holati: yozilgan/boshlanmagan
+        cs = chapter_states.get(key)
+        if cs:
+            row.update({'words': cs['words'], 'target': cs['target'],
+                        'chapter_pct': cs['pct'], 'started': cs['started'],
+                        'block_id': cs.get('block_id'),
+                        'diss_id': cs.get('diss_id')})
+            if cs['pct'] >= 100:
+                state = 'done'
+            elif cs['started'] and state == 'future':
+                state = 'active'      # muddatidan oldin boshlagan — yashil
         # Gantt segment koordinatalari (%): template hisob-kitob qilmaydi
         left = (p_start - start).days * 100.0 / span
         width = max((p_end - p_start).days * 100.0 / span, 1.0)
-        out.append({'key': key, 'label': label, 'start': p_start.isoformat(),
-                    'end': p_end.isoformat(), 'state': state,
-                    'days_left': (p_end - today).days,
-                    'left_pct': round(left, 1), 'width_pct': round(width, 1)})
+        row.update({'state': state, 'left_pct': round(left, 1),
+                    'width_pct': round(width, 1)})
+        out.append(row)
+    return out
+
+
+def _chapter_states(diss):
+    """_diss_progress natijasidan Jadval uchun bob holatlari:
+    chapter bo'limlar tartib bo'yicha bob1..bob3 kalitlariga."""
+    if not diss:
+        return {}
+    out, i = {}, 0
+    for s in diss['sections']:
+        # faqat bob (chapter) bo'limlar — special'lar Jadvalda alohida bosqich emas
+        if s.get('is_special'):
+            continue
+        i += 1
+        if i > 3:
+            break
+        out[f'bob{i}'] = {'words': s['words'], 'target': s['target'],
+                          'pct': s['pct'], 'started': s['started'],
+                          'block_id': s['block_id'], 'diss_id': diss['diss_id']}
     return out
 
 
@@ -366,7 +400,7 @@ def _diss_progress(cur, plan):
             'block_id': node['id'], 'title': node['heading'] or node['title'],
             'words': words, 'target': target,
             'pct': min(round(words * 100 / target), 100) if target else 0,
-            'started': words > 0,
+            'started': words > 0, 'is_special': node['is_special'],
         })
     total_words = sum(s['words'] for s in sections)
     total_target = sum(s['target'] for s in sections)
@@ -425,7 +459,8 @@ def dashboard():
         readiness=_readiness(pub_pct, diss_pct),
         pub_rows=pub_rows, pub_pct=pub_pct, pubs=pubs,
         meetings=meetings, confs=confs,
-        timeline=_timeline(plan, overrides), today_pct=_today_pct(plan),
+        timeline=_timeline(plan, overrides, _chapter_states(diss)),
+        today_pct=_today_pct(plan),
         oak_structure=OAK_STRUCTURE, diss_progress=diss,
         pub_type_labels=PUB_TYPE_LABELS, pub_status_labels=PUB_STATUS_LABELS,
         conf_status_labels=CONF_STATUS_LABELS, degree_labels=DEGREE_LABELS)
