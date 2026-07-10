@@ -55,6 +55,39 @@
 .ta-item-more a { color: #2563eb; font-size: 0.85rem; font-weight: 600; text-decoration: none; }
 .ta-item-more a:hover { text-decoration: underline; }
 .ta-empty { color: #94a3b8; font-size: 0.9rem; padding: 14px 0; }
+/* O'xshashlik foiz belgisi (band bo'yicha rang; matn + foiz — rang yolg'iz emas) */
+.ta-sim-badge { flex-shrink: 0; font-size: 0.78rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; line-height: 1.2; }
+.ta-sim-badge.exact { background: rgba(239,68,68,0.12); color: #b91c1c; }
+.ta-sim-badge.strong { background: rgba(245,158,11,0.16); color: #b45309; }
+.ta-sim-badge.partial { background: rgba(59,130,246,0.12); color: #1d4ed8; }
+
+/* Ixtisoslik statistikasi (Layer 1) */
+.ta-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .ta-stats-grid { grid-template-columns: 1fr; } }
+.ta-stat-card { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 16px 18px; }
+.ta-stat-h { font-size: 0.92rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;
+             display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ta-chip { font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.ta-chip.up { background: rgba(34,197,94,0.14); color: #15803d; }
+.ta-chip.flat { background: rgba(100,116,139,0.14); color: #475569; }
+.ta-chip.down { background: rgba(245,158,11,0.16); color: #b45309; }
+.ta-chart { display: flex; align-items: flex-end; gap: 2px; height: 110px; padding-top: 14px; }
+.ta-bar { flex: 1 1 0; max-width: 38px; min-width: 8px; display: flex; flex-direction: column;
+          align-items: center; justify-content: flex-end; height: 100%; position: relative; }
+.ta-bar-v { font-size: 0.66rem; font-weight: 700; color: #475569; margin-bottom: 2px; }
+.ta-bar-fill { width: 68%; background: #3b82f6; border-radius: 3px 3px 0 0; min-height: 2px; }
+.ta-bar:hover .ta-bar-fill { background: #2563eb; }
+.ta-chart-x { display: flex; gap: 2px; margin-top: 4px; }
+.ta-chart-x span { flex: 1 1 0; max-width: 38px; min-width: 8px; text-align: center;
+                   font-size: 0.64rem; color: #94a3b8; }
+.ta-list-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+               padding: 7px 0; border-bottom: 1px solid #eef2f7; font-size: 0.87rem; }
+.ta-list-row:last-child { border-bottom: none; }
+.ta-list-name { flex: 1; min-width: 0; color: #1e293b; }
+.ta-list-name a { color: #2563eb; font-weight: 600; text-decoration: none; }
+.ta-list-name a:hover { text-decoration: underline; }
+.ta-list-meta { flex-shrink: 0; color: #94a3b8; font-size: 0.8rem; white-space: nowrap; }
+
 .ta-hist { margin-top: 26px; }
 .ta-hist-item { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eef2f7;
                 font-size: 0.87rem; color: #475569; }
@@ -64,7 +97,21 @@
 
 [data-bs-theme="dark"] .ta-box,
 [data-bs-theme="dark"] .ta-analysis,
+[data-bs-theme="dark"] .ta-stat-card,
 [data-bs-theme="dark"] .ta-item { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .ta-stat-h { color: #e2e8f0; }
+[data-bs-theme="dark"] .ta-sim-badge.exact { background: rgba(239,68,68,0.2); color: #fca5a5; }
+[data-bs-theme="dark"] .ta-sim-badge.strong { background: rgba(245,158,11,0.2); color: #fcd34d; }
+[data-bs-theme="dark"] .ta-sim-badge.partial { background: rgba(59,130,246,0.2); color: #93c5fd; }
+[data-bs-theme="dark"] .ta-chip.up { background: rgba(34,197,94,0.18); color: #4ade80; }
+[data-bs-theme="dark"] .ta-chip.flat { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+[data-bs-theme="dark"] .ta-chip.down { background: rgba(245,158,11,0.2); color: #fcd34d; }
+[data-bs-theme="dark"] .ta-bar-fill { background: #60a5fa; }
+[data-bs-theme="dark"] .ta-bar:hover .ta-bar-fill { background: #93c5fd; }
+[data-bs-theme="dark"] .ta-bar-v { color: #cbd5e1; }
+[data-bs-theme="dark"] .ta-list-row { border-color: rgba(148,163,184,0.12); }
+[data-bs-theme="dark"] .ta-list-name { color: #cbd5e1; }
+[data-bs-theme="dark"] .ta-list-name a { color: #93c5fd; }
 [data-bs-theme="dark"] .ta-textarea { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
 [data-bs-theme="dark"] .ta-card-h,
 [data-bs-theme="dark"] .ta-item-title,
@@ -102,6 +149,27 @@
     <div style="margin-top:22px;">
       <div class="ta-card-h">🤖 AI tahlili</div>
       <div id="ta-analysis" class="ta-analysis"></div>
+    </div>
+
+    <div id="ta-stats" style="display:none; margin-top:22px;">
+      <div class="ta-card-h">📊 Ixtisoslik manzarasi
+        <span id="ta-spec" class="ta-sim-count"></span></div>
+      <div class="ta-stats-grid">
+        <div class="ta-stat-card" id="ta-trend-card" style="display:none;">
+          <div class="ta-stat-h">Yillar bo'yicha himoyalar
+            <span id="ta-trend-chip" class="ta-chip"></span></div>
+          <div id="ta-chart" class="ta-chart"></div>
+          <div id="ta-chart-x" class="ta-chart-x"></div>
+        </div>
+        <div class="ta-stat-card" id="ta-inst-card" style="display:none;">
+          <div class="ta-stat-h">🏛 Yetakchi muassasalar</div>
+          <div id="ta-inst"></div>
+        </div>
+      </div>
+      <div class="ta-stat-card" id="ta-adv-card" style="display:none; margin-top:12px;">
+        <div class="ta-stat-h">🎓 Shu sohadagi faol ilmiy rahbarlar</div>
+        <div id="ta-advisors"></div>
+      </div>
     </div>
 
     <div style="margin-top:22px;">
@@ -143,7 +211,23 @@
   var accEl = document.getElementById('ta-acc');
   var simCountEl = document.getElementById('ta-sim-count');
   var histListEl = document.getElementById('ta-hist-list');
+  var statsEl = document.getElementById('ta-stats');
+  var specEl = document.getElementById('ta-spec');
+  var trendCardEl = document.getElementById('ta-trend-card');
+  var trendChipEl = document.getElementById('ta-trend-chip');
+  var chartEl = document.getElementById('ta-chart');
+  var chartXEl = document.getElementById('ta-chart-x');
+  var instCardEl = document.getElementById('ta-inst-card');
+  var instEl = document.getElementById('ta-inst');
+  var advCardEl = document.getElementById('ta-adv-card');
+  var advEl = document.getElementById('ta-advisors');
   var MAX = {{ max_topic_len }};
+  var BAND_LABELS = { exact: 'deyarli aynan', strong: 'kuchli mos', partial: 'qisman mos' };
+  var TREND = {
+    growing:   { cls: 'up',   label: '↗ o\'sib bormoqda' },
+    stable:    { cls: 'flat', label: '→ barqaror' },
+    declining: { cls: 'down', label: '↘ pasaymoqda' }
+  };
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -203,6 +287,67 @@
   }
   function hideAlert() { alertEl.classList.remove('show'); }
 
+  function renderTrendChart(trend) {
+    var years = trend.years.slice(-14);
+    var counts = trend.counts.slice(-14);
+    var max = Math.max.apply(null, counts.concat([1]));
+    var maxIdx = counts.indexOf(Math.max.apply(null, counts));
+    var bars = '', xs = '';
+    var labelEvery = counts.length > 8 ? 2 : 1;
+    counts.forEach(function (c, i) {
+      var h = Math.max(2, Math.round((c / max) * 88));
+      var showVal = (i === maxIdx || i === counts.length - 1);
+      bars += '<div class="ta-bar" title="' + years[i] + ' — ' + c + ' ta himoya">' +
+        (showVal ? '<span class="ta-bar-v">' + c + '</span>' : '') +
+        '<div class="ta-bar-fill" style="height:' + h + 'px;"></div></div>';
+      xs += '<span>' + ((i % labelEvery === 0 || i === counts.length - 1) ? years[i] % 100 : '') + '</span>';
+    });
+    chartEl.innerHTML = bars;
+    chartXEl.innerHTML = xs;
+  }
+
+  function renderStats(d) {
+    var has = false;
+    specEl.textContent = d.specialty
+      ? d.specialty.code + (d.specialty.name ? ' · ' + d.specialty.name : '')
+      : '';
+    if (d.trend && d.trend.years && d.trend.years.length) {
+      var t = TREND[d.trend.direction] || TREND.stable;
+      trendChipEl.className = 'ta-chip ' + t.cls;
+      trendChipEl.textContent = t.label;
+      renderTrendChart(d.trend);
+      trendCardEl.style.display = '';
+      has = true;
+    } else { trendCardEl.style.display = 'none'; }
+
+    if (d.institutions && d.institutions.length) {
+      instEl.innerHTML = d.institutions.map(function (x) {
+        return '<div class="ta-list-row">' +
+          '<span class="ta-list-name">' + esc(x.muassasa) + '</span>' +
+          '<span class="ta-list-meta">' + x.count + ' ta</span></div>';
+      }).join('');
+      instCardEl.style.display = '';
+      has = true;
+    } else { instCardEl.style.display = 'none'; }
+
+    if (d.advisors && d.advisors.length) {
+      advEl.innerHTML = d.advisors.map(function (a) {
+        var meta = a.student_count + ' shogird' +
+          (a.last_active ? ' · oxirgi: ' + a.last_active : '');
+        var inst = (a.institutions && a.institutions.length)
+          ? '<div class="ta-item-meta">🏛 ' + esc(a.institutions.join('; ')) + '</div>' : '';
+        return '<div class="ta-list-row"><span class="ta-list-name">' +
+          '<a href="/olim/' + encodeURIComponent(a.rahbar) + '" target="_blank" rel="noopener">' +
+          esc(a.rahbar) + '</a>' + inst + '</span>' +
+          '<span class="ta-list-meta">' + esc(meta) + '</span></div>';
+      }).join('');
+      advCardEl.style.display = '';
+      has = true;
+    } else { advCardEl.style.display = 'none'; }
+
+    statsEl.style.display = has ? '' : 'none';
+  }
+
   function renderSimilar(list) {
     var bm = getBookmarks();
     if (!list || !list.length) {
@@ -216,6 +361,10 @@
       if (s.olim) meta.push('👤 ' + esc(s.olim));
       if (s.sana) meta.push('📅 ' + esc(s.sana));
       if (s.ixtisoslik) meta.push('🏷 ' + esc(s.ixtisoslik));
+      var simBadge = (typeof s.sim === 'number' && s.band)
+        ? '<span class="ta-sim-badge ' + esc(s.band) + '" title="' +
+          (BAND_LABELS[s.band] || '') + '">' + s.sim + '%</span>'
+        : '';
       html += '<div class="ta-item">' +
         '<div class="ta-item-head">' +
           '<span class="ta-item-num">' + (i + 1) + '</span>' +
@@ -223,10 +372,14 @@
             '<div class="ta-item-title">' + esc(s.mavzu) + '</div>' +
             '<div class="ta-item-meta">' + meta.join(' · ') + '</div>' +
           '</div>' +
+          simBadge +
           '<button class="ta-bookmark' + (on ? ' on' : '') + '" data-id="' + s.id + '" ' +
             'title="' + (on ? 'Saqlangan' : 'Saqlash') + '">' + (on ? '★' : '☆') + '</button>' +
         '</div>' +
         '<div class="ta-item-more">' +
+          (typeof s.sim === 'number' && s.band
+            ? '<div class="ta-item-meta">📐 O\'xshashlik: ' + s.sim + '% (' +
+              (BAND_LABELS[s.band] || s.band) + ')</div>' : '') +
           (s.rahbar ? '<div class="ta-item-meta">🎓 Ilmiy rahbar: ' + esc(s.rahbar) + '</div>' : '') +
           (s.muassasa ? '<div class="ta-item-meta">🏛 ' + esc(s.muassasa) + '</div>' : '') +
           (s.olim ? '<div style="margin-top:8px;"><a href="/olim/' + encodeURIComponent(s.olim) +
@@ -285,6 +438,7 @@
       }
       analysisEl.innerHTML = mdToHtml(d.analysis || '');
       simCountEl.textContent = (d.similar_count || 0) + ' ta topildi';
+      renderStats(d);
       renderSimilar(d.similar || []);
       resultEl.classList.add('show');
       prependHistory(topic, d.similar_count || 0);
