@@ -167,6 +167,10 @@ def _ensure_schema(cur):
     # block_type: 'special' bo'limlar (Kirish, Xulosa, Adabiyotlar...) RAQAMLANMAYDI
     cur.execute("ALTER TABLE dissertation_blocks "
                 "ADD COLUMN IF NOT EXISTS block_type VARCHAR(20) DEFAULT 'chapter'")
+    # word_target: bo'lim uchun so'z maqsadi (Akademik Reja integratsiyasi —
+    # blueprints/roadmap.py; wizard OAK skeletida to'ldiradi, muharrir ko'rsatadi)
+    cur.execute("ALTER TABLE dissertation_blocks "
+                "ADD COLUMN IF NOT EXISTS word_target INTEGER")
     cur.execute("""
         DO $$ BEGIN
           IF NOT EXISTS (SELECT 1 FROM pg_constraint
@@ -421,7 +425,7 @@ def _fetch_block(cur, block_id):
     cur.execute("""
         SELECT id, dissertation_id, parent_id, title, numbering, sort_order,
                depth, content, content_plain, word_count, review_status,
-               is_locked_by, locked_at, updated_at, block_type
+               is_locked_by, locked_at, updated_at, block_type, word_target
         FROM dissertation_blocks WHERE id = %s
     """, (block_id,))
     row = cur.fetchone()
@@ -429,7 +433,8 @@ def _fetch_block(cur, block_id):
         abort(404)
     cols = ('id', 'dissertation_id', 'parent_id', 'title', 'numbering',
             'sort_order', 'depth', 'content', 'content_plain', 'word_count',
-            'review_status', 'is_locked_by', 'locked_at', 'updated_at', 'block_type')
+            'review_status', 'is_locked_by', 'locked_at', 'updated_at',
+            'block_type', 'word_target')
     block = dict(zip(cols, row))
     block['is_special'] = (block.get('block_type') or 'chapter') == 'special'
     block['heading'] = _heading_label(block.get('numbering') or '', block.get('title'))
@@ -1606,6 +1611,7 @@ def workspace_first(id):
 @login_required
 def editor_page(id, block_id):
     conn = _conn()
+    defense_days_left = None
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
@@ -1613,6 +1619,19 @@ def editor_page(id, block_id):
             if block['dissertation_id'] != id:
                 abort(404)
             tree = _fetch_tree(cur, id)
+            # Akademik Reja ulanmasi: himoya sanasi countdown (jadval hali
+            # yaratilmagan bo'lishi mumkin — SAVEPOINT bilan himoyalangan)
+            cur.execute("SAVEPOINT rj_plan")
+            try:
+                cur.execute("""SELECT target_defense_date FROM roadmap_plans
+                               WHERE diss_project_id = %s AND is_active LIMIT 1""",
+                            (id,))
+                r = cur.fetchone()
+                if r and r[0]:
+                    from datetime import date as _date
+                    defense_days_left = (r[0] - _date.today()).days
+            except Exception:
+                cur.execute("ROLLBACK TO SAVEPOINT rj_plan")
         conn.commit()
     finally:
         conn.close()
@@ -1621,6 +1640,7 @@ def editor_page(id, block_id):
                            read_only=not caps['can_edit'],
                            can_review=caps['can_review_status'],
                            can_comment=caps['can_comment'],
+                           defense_days_left=defense_days_left,
                            review_labels=REVIEW_LABELS, annot_types=ANNOT_TYPES,
                            status_labels=STATUS_LABELS)
 

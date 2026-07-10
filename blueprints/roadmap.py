@@ -289,6 +289,96 @@ def _rows(cur, sql, params, cols):
     return [dict(zip(cols, r)) for r in cur.fetchall()]
 
 
+# ── Konstruktor bilan jonli bog'lanish (2-bosqich) ──────────────────────────
+
+# Maxsus bo'lim sarlavhasi → OAK_STRUCTURE dagi kanonik nom (so'z maqsadi uchun)
+_SPECIAL_MAP = {
+    'kirish': 'Kirish',
+    'xulosa': 'Xulosa', 'umumiy xulosa': 'Xulosa',
+    'xulosa, taklif va tavsiyalar': 'Xulosa',
+    'foydalanilgan adabiyotlar': "Foydalanilgan adabiyotlar ro'yxati",
+    "foydalanilgan adabiyotlar ro'yxati": "Foydalanilgan adabiyotlar ro'yxati",
+    "adabiyotlar ro'yxati": "Foydalanilgan adabiyotlar ro'yxati",
+    'avtoreferat': 'Avtoreferat',
+}
+_STRUCTURE_TARGETS = {name: target for name, _bt, target in OAK_STRUCTURE}
+_CHAPTER_NAMES = [name for name, bt, _t in OAK_STRUCTURE if bt == 'chapter']
+_DEFAULT_CHAPTER_TARGET = _STRUCTURE_TARGETS.get('I bob', 6000)
+
+
+def _subtree_words(node):
+    return (node.get('word_count') or 0) + sum(_subtree_words(c)
+                                               for c in node.get('children', ()))
+
+
+def _link_diss_project(cur, plan):
+    """Reja hali Konstruktorga ulanmagan bo'lsa — foydalanuvchining faol
+    loyihasini owner_id bo'yicha topib bog'laydi (dublikat yaratmaydi).
+    Ulangan loyiha arxivlangan/o'chirilgan bo'lsa — uzadi. plan dict yangilanadi."""
+    pid = plan.get('diss_project_id')
+    if pid:
+        cur.execute("SELECT 1 FROM diss_projects WHERE id = %s AND status <> 'archived'",
+                    (pid,))
+        if cur.fetchone():
+            return
+        pid = None  # arxivlangan — qayta topamiz
+    cur.execute("""SELECT id FROM diss_projects
+                   WHERE owner_id = %s AND status <> 'archived'
+                   ORDER BY updated_at DESC LIMIT 1""", (plan['user_id'],))
+    r = cur.fetchone()
+    pid = r[0] if r else None
+    if pid != plan.get('diss_project_id'):
+        cur.execute("UPDATE roadmap_plans SET diss_project_id = %s, updated_at = NOW() "
+                    "WHERE id = %s", (pid, plan['id']))
+    plan['diss_project_id'] = pid
+
+
+def _diss_progress(cur, plan):
+    """Konstruktor bloklaridan JONLI bo'lim-progress:
+    {sections: [...], total_words, total_target, pct, continue_block_id}
+    yoki None (loyiha ulanmagan). So'z sanog'i blok + uning bolalari yig'indisi."""
+    pid = plan.get('diss_project_id')
+    if not pid:
+        return None
+    from blueprints.dissertation import _fetch_tree, _norm_title
+    tree = _fetch_tree(cur, pid)      # bitta so'rov, N+1 yo'q
+    if not tree:
+        return None
+    # blokda word_target bo'lsa (3-bosqich) — shu; aks holda OAK_STRUCTURE dan
+    cur.execute("""SELECT id, COALESCE(word_target, 0) FROM dissertation_blocks
+                   WHERE dissertation_id = %s""", (pid,))
+    targets_db = dict(cur.fetchall())
+    sections, chapter_i = [], 0
+    for node in tree:                 # faqat ildiz bloklar — bo'limlar
+        words = _subtree_words(node)
+        if node['is_special']:
+            canon = _SPECIAL_MAP.get(_norm_title(node['title']))
+            target = _STRUCTURE_TARGETS.get(canon, 1000) if canon else 1000
+        else:
+            canon = (_CHAPTER_NAMES[chapter_i]
+                     if chapter_i < len(_CHAPTER_NAMES) else None)
+            target = (_STRUCTURE_TARGETS.get(canon, _DEFAULT_CHAPTER_TARGET)
+                      if canon else _DEFAULT_CHAPTER_TARGET)
+            chapter_i += 1
+        if targets_db.get(node['id']):
+            target = targets_db[node['id']]
+        sections.append({
+            'block_id': node['id'], 'title': node['heading'] or node['title'],
+            'words': words, 'target': target,
+            'pct': min(round(words * 100 / target), 100) if target else 0,
+            'started': words > 0,
+        })
+    total_words = sum(s['words'] for s in sections)
+    total_target = sum(s['target'] for s in sections)
+    pct = min(round(total_words * 100 / total_target), 100) if total_target else 0
+    # "Yozishni davom ettirish" — birinchi tugallanmagan bo'lim (yoki birinchisi)
+    cont = next((s['block_id'] for s in sections if s['pct'] < 100),
+                sections[0]['block_id'])
+    return {'sections': sections, 'total_words': total_words,
+            'total_target': total_target, 'pct': pct,
+            'continue_block_id': cont, 'diss_id': pid}
+
+
 # ── sahifalar ────────────────────────────────────────────────────────────────
 
 @roadmap_bp.route('/reja')
@@ -321,11 +411,14 @@ def dashboard():
             cur.execute("SELECT phase_key, due_date, is_done FROM roadmap_milestones "
                         "WHERE plan_id = %s", (plan['id'],))
             overrides = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+            # Konstruktor bilan jonli bog'lanish: loyihani owner bo'yicha
+            # bog'laydi (bo'lsa) va bo'lim so'z sanog'ini o'qiydi
+            _link_diss_project(cur, plan)
+            diss = _diss_progress(cur, plan)
         conn.commit()
     finally:
         conn.close()
-    # 2-bosqichda diss_pct Konstruktordan jonli hisoblanadi; hozircha None
-    diss_pct = None
+    diss_pct = diss['pct'] if diss else None
     return render_template(
         'roadmap/dashboard.html', plan=plan,
         days_left=_days_left(plan['target_defense_date']),
@@ -333,7 +426,7 @@ def dashboard():
         pub_rows=pub_rows, pub_pct=pub_pct, pubs=pubs,
         meetings=meetings, confs=confs,
         timeline=_timeline(plan, overrides), today_pct=_today_pct(plan),
-        oak_structure=OAK_STRUCTURE, diss_progress=None,
+        oak_structure=OAK_STRUCTURE, diss_progress=diss,
         pub_type_labels=PUB_TYPE_LABELS, pub_status_labels=PUB_STATUS_LABELS,
         conf_status_labels=CONF_STATUS_LABELS, degree_labels=DEGREE_LABELS)
 
@@ -355,6 +448,58 @@ def wizard():
 
 
 # ── API: reja yaratish / yangilash ───────────────────────────────────────────
+
+def _scaffold_constructor(cur, user_id, title, degree, specialty):
+    """Wizard yakunida Konstruktor loyihasini tayyorlaydi (3-bosqich):
+      - foydalanuvchining faol loyihasi BOR bo'lsa → o'shanga ulanadi
+        (dublikat yaratmaydi); yo'q bo'lsa OAK skeleti bilan yangi yaratadi.
+      - Yangi loyiha bloklariga word_target qo'yiladi (OAK_STRUCTURE).
+    Qaytaradi: diss_projects.id"""
+    cur.execute("""SELECT id FROM diss_projects
+                   WHERE owner_id = %s AND status <> 'archived'
+                   ORDER BY updated_at DESC LIMIT 1""", (user_id,))
+    r = cur.fetchone()
+    if r:
+        # mavjud loyiha — reja ma'lumotlari bilan to'ldiramiz (bo'sh joylarni)
+        cur.execute("""UPDATE diss_projects
+                       SET specialty_code = COALESCE(NULLIF(specialty_code, ''), %s),
+                           updated_at = NOW()
+                       WHERE id = %s""", (specialty or None, r[0]))
+        # mavjud bloklarga word_target'ni faqat bo'sh bo'lsa taklif qilamiz
+        from blueprints.dissertation import _norm_title
+        cur.execute("""SELECT id, title, block_type FROM dissertation_blocks
+                       WHERE dissertation_id = %s AND parent_id IS NULL
+                       ORDER BY sort_order, id""", (r[0],))
+        chapter_i = 0
+        for bid, btitle, btype in cur.fetchall():
+            if (btype or 'chapter') == 'special':
+                canon = _SPECIAL_MAP.get(_norm_title(btitle))
+                target = _STRUCTURE_TARGETS.get(canon) if canon else None
+            else:
+                canon = (_CHAPTER_NAMES[chapter_i]
+                         if chapter_i < len(_CHAPTER_NAMES) else None)
+                target = _STRUCTURE_TARGETS.get(canon, _DEFAULT_CHAPTER_TARGET)
+                chapter_i += 1
+            if target:
+                cur.execute("""UPDATE dissertation_blocks SET word_target = %s
+                               WHERE id = %s AND word_target IS NULL""", (target, bid))
+        return r[0]
+    # yangi loyiha + to'liq OAK skeleti
+    cur.execute("""
+        INSERT INTO diss_projects (owner_id, title, degree_type, specialty_code)
+        VALUES (%s, %s, %s, %s) RETURNING id
+    """, (user_id, title or 'Dissertatsiya', degree, specialty or None))
+    pid = cur.fetchone()[0]
+    for i, (btitle, btype, target) in enumerate(OAK_STRUCTURE):
+        cur.execute("""
+            INSERT INTO dissertation_blocks
+                (dissertation_id, title, sort_order, depth, block_type, word_target)
+            VALUES (%s, %s, %s, 0, %s, %s)
+        """, (pid, btitle, i, btype, target))
+    from blueprints.dissertation import _recompute_numbering
+    _recompute_numbering(cur, pid)
+    return pid
+
 
 @roadmap_bp.route('/api/reja/create', methods=['POST'])
 @csrf.exempt
@@ -379,15 +524,20 @@ def plan_create():
             if _fetch_plan(cur, current_user.id):
                 return jsonify({'success': False,
                                 'error': 'Sizda allaqachon faol reja bor'}), 400
+            # Konstruktor loyihasi: mavjudga ulanish yoki OAK skeleti bilan yangi
+            diss_id = _scaffold_constructor(cur, current_user.id, title, degree,
+                                            specialty)
             cur.execute("""
                 INSERT INTO roadmap_plans (user_id, degree_type, field_name,
-                    specialty_code, title, start_date, target_defense_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+                    specialty_code, title, start_date, target_defense_date,
+                    diss_project_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
             """, (current_user.id, degree, field or None, specialty or None,
-                  title or None, start, defense))
+                  title or None, start, defense, diss_id))
             plan_id = cur.fetchone()[0]
         conn.commit()
-        return jsonify({'success': True, 'id': plan_id, 'redirect': '/reja'})
+        return jsonify({'success': True, 'id': plan_id, 'diss_id': diss_id,
+                        'redirect': '/reja'})
     except Exception as e:
         conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

@@ -114,7 +114,14 @@
 {% set read_only = read_only if read_only is defined else (role == 'advisor') %}
 <div class="container-xl" style="max-width:1400px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-    <a href="/workspace" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">← Ish stoli</a>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <a href="/workspace" style="color:#94a3b8;text-decoration:none;font-size:0.85rem;">← Ish stoli</a>
+      {% if defense_days_left is not none %}
+      <span class="ed-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24;"
+            title="Akademik rejadagi mo'ljallangan himoya sanasigacha">
+        ⏳ Himoyagacha {{ defense_days_left }} kun</span>
+      {% endif %}
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a class="ed-btn" href="/workspace/{{ project.id }}/preview">👁️ Master Preview</a>
       {% if role == 'owner' %}
@@ -156,7 +163,7 @@
       <div id="editor-container"></div>
       <div class="ed-status">
         <span id="save-status">✓ Yuklandi</span>
-        <span id="word-count">{{ block.word_count }} so'z</span>
+        <span id="word-count">{% if block.word_target %}{{ '{:,}'.format(block.word_count or 0).replace(',', ' ') }} / {{ '{:,}'.format(block.word_target).replace(',', ' ') }} so'z{% else %}{{ block.word_count }} so'z{% endif %}</span>
       </div>
     </main>
 
@@ -230,6 +237,7 @@ window.ED_STATE = {
   content: {{ block.content | tojson }},
   updatedAt: {{ (block.updated_at | string) | tojson }},
   blockType: {{ (block.block_type or 'chapter') | tojson }},
+  wordTarget: {{ (block.word_target or 0) | tojson }},
   isSpecial: {{ 'true' if block.is_special else 'false' }},
   heading: {{ block.heading | tojson }},
   reviewLabels: {{ review_labels | tojson }},

@@ -426,6 +426,12 @@
   var statusEl = document.getElementById('save-status');
   var wcEl = document.getElementById('word-count');
 
+  // "1 240 / 6 000 so'z" — word_target bo'lsa (Akademik Reja OAK skeleti)
+  function fmtWords(n) {
+    var f = function (x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+    return S.wordTarget ? f(n) + ' / ' + f(S.wordTarget) + " so'z" : n + " so'z";
+  }
+
   function setStatus(kind, text) {
     if (!statusEl) return;
     statusEl.className = kind || '';
@@ -486,7 +492,7 @@
         if (!d.success && !d.unchanged) throw new Error(d.error || 'save failed');
         dirty = false;
         try { localStorage.removeItem(draftKey); } catch (e) {}
-        if (d.word_count !== undefined && wcEl) wcEl.textContent = d.word_count + " so'z";
+        if (d.word_count !== undefined && wcEl) wcEl.textContent = fmtWords(d.word_count);
         setStatus('saved', '✓ Saqlandi ' + (d.saved_at || hm()));
         applyHighlights();
         return true;

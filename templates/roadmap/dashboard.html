@@ -159,6 +159,13 @@
       <div class="rj-bar"><i style="width:{{ r.pct }}%;"></i></div>
     </div>
     {% endfor %}
+    {% if diss_progress %}
+    <div class="rj-prow" style="margin-top:18px;">
+      <div class="top"><b>📝 Dissertatsiya matni (Konstruktordan jonli)</b>
+        <span>{{ diss_progress.pct }}%</span></div>
+      <div class="rj-bar"><i style="width:{{ diss_progress.pct }}%;"></i></div>
+    </div>
+    {% endif %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
       <button class="rj-btn ghost" onclick="rjGoto('nashrlar')">📚 Nashr qo'shish</button>
       <button class="rj-btn ghost" onclick="rjGoto('jadval')">📅 Jadvalni ko'rish</button>
@@ -209,9 +216,39 @@
 
   <!-- DISSERTATSIYA -->
   <div class="rj-pane rj-panel" id="pane-dissertatsiya">
-    <div class="rj-sec-head"><h2>📝 Dissertatsiya bo'limlari</h2></div>
+    <div class="rj-sec-head"><h2>📝 Dissertatsiya bo'limlari</h2>
+      {% if diss_progress %}
+      <span style="color:#94a3b8;font-size:0.82rem;">Jami:
+        <b style="color:#60a5fa;">{{ '{:,}'.format(diss_progress.total_words).replace(',', ' ') }}</b>
+        / {{ '{:,}'.format(diss_progress.total_target).replace(',', ' ') }} so'z
+        · <b style="color:#60a5fa;">{{ diss_progress.pct }}%</b></span>
+      {% endif %}
+    </div>
     {% if diss_progress %}
-      {# 2-bosqich: Konstruktordan jonli so'z sanog'i shu yerda chiziladi #}
+    <div class="rj-prow">
+      <div class="rj-bar" style="height:10px;"><i style="width:{{ diss_progress.pct }}%;"></i></div>
+    </div>
+    <p style="color:#64748b;font-size:0.78rem;margin:0 0 14px;">
+      🔄 So'z sanog'i Konstruktordagi matndan jonli hisoblanadi — bo'limni bosib yozishni davom ettiring.</p>
+    {% for s in diss_progress.sections %}
+    <a href="/workspace/{{ diss_progress.diss_id }}/edit/{{ s.block_id }}"
+       style="display:block;text-decoration:none;color:inherit;border:1px solid rgba(148,163,184,0.14);
+              border-radius:12px;padding:12px 14px;margin-bottom:8px;transition:border-color 0.2s;"
+       onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'"
+       onmouseout="this.style.borderColor='rgba(148,163,184,0.14)'">
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.88rem;margin-bottom:6px;">
+        <b style="color:#cbd5e1;">{{ '✍️' if s.started else '⬜' }} {{ s.title }}</b>
+        <span style="color:#94a3b8;font-variant-numeric:tabular-nums;">
+          {{ '{:,}'.format(s.words).replace(',', ' ') }} / {{ '{:,}'.format(s.target).replace(',', ' ') }} so'z</span>
+      </div>
+      <div class="rj-bar"><i style="width:{{ s.pct }}%;{% if not s.started %}background:rgba(148,163,184,0.3);{% endif %}"></i></div>
+    </a>
+    {% endfor %}
+    <div style="text-align:center;margin-top:16px;">
+      <a class="rj-btn" style="text-decoration:none;"
+         href="/workspace/{{ diss_progress.diss_id }}/edit/{{ diss_progress.continue_block_id }}">
+        ✍️ Yozishni davom ettirish →</a>
+    </div>
     {% else %}
     <div style="border:1px solid rgba(148,163,184,0.14);border-radius:12px;padding:6px 14px;margin-bottom:14px;">
       {% for name, btype, target in oak_structure %}
