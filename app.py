@@ -550,6 +550,8 @@ from blueprints.map import map_bp
 from blueprints.topic_analysis import topic_bp
 from blueprints.xarita import xarita_bp
 from blueprints.saved import saved_bp
+from blueprints.journal_check import journal_check_bp
+from blueprints.roadmap import roadmap_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -569,6 +571,8 @@ app.register_blueprint(map_bp)
 app.register_blueprint(topic_bp)
 app.register_blueprint(xarita_bp)
 app.register_blueprint(saved_bp)
+app.register_blueprint(journal_check_bp)
+app.register_blueprint(roadmap_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -1186,6 +1190,10 @@ def _run_startup_migrations():
                     f"CREATE INDEX IF NOT EXISTS {idx_name} "
                     f"ON dissertations USING gin(({expr}) gin_trgm_ops)"
                 )
+            # Journal verification: registry columns, suspect publisher list,
+            # search log (journals + olim_maqolalar must already exist).
+            from blueprints.journal_check import ensure_schema as _jv_ensure_schema
+            _jv_ensure_schema(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS blog_posts (
                     id SERIAL PRIMARY KEY,
@@ -3426,6 +3434,7 @@ def _build_sitemap_xml():
         ("/vacancies", "weekly", "0.5"), ("/yangiliklar", "daily", "0.6"),
         ("/about", "monthly", "0.4"), ("/heatmap", "weekly", "0.6"),
         ("/universities", "weekly", "0.7"), ("/journals", "weekly", "0.7"),
+        ("/jurnal-tekshirish", "weekly", "0.7"),
         ("/grants", "daily", "0.7"), ("/reminders", "daily", "0.6"),
         ("/reyting", "daily", "0.8"),
     ]
@@ -3872,6 +3881,7 @@ _JOURNAL_COLS = [
     'indexing', 'website', 'description', 'requirements', 'publish_fee',
     'review_period', 'frequency', 'registered_number', 'registered_date',
     'article_requirements', 'accepts_languages', 'publish_format', 'impact_factor',
+    'quartile', 'sjr', 'h_index', 'suspect_reason', 'source',
     'is_predatory', 'is_active', 'oak_approved', 'scopus_indexed', 'wos_indexed',
     'scholar_indexed',
 ]
@@ -3916,6 +3926,20 @@ def _journal_form_values():
             vals['impact_factor'] = float(vals['impact_factor'])
         except (TypeError, ValueError):
             vals['impact_factor'] = None
+    if vals.get('sjr'):
+        try:
+            vals['sjr'] = float(vals['sjr'])
+        except (TypeError, ValueError):
+            vals['sjr'] = None
+    if vals.get('h_index'):
+        try:
+            vals['h_index'] = int(vals['h_index'])
+        except (TypeError, ValueError):
+            vals['h_index'] = None
+    if vals.get('quartile'):
+        vals['quartile'] = vals['quartile'].upper()[:5]
+    if not vals.get('source'):
+        vals['source'] = 'manual'
     return vals
 
 

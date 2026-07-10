@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Akademik reja — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.rj-wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+.rj-panel { border: 1px solid rgba(148,163,184,0.18); border-radius: 16px; padding: 18px;
+  background: rgba(30,41,59,0.55); backdrop-filter: blur(8px); }
+[data-bs-theme="light"] .rj-panel { background: #fff; }
+
+/* hero */
+.rj-hero { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; margin-bottom: 16px; }
+.rj-hero-main { flex: 1; min-width: 240px; }
+.rj-hero h1 { font-size: 1.35rem; margin: 0 0 4px; }
+.rj-hero .sub { color: #94a3b8; font-size: 0.86rem; }
+.rj-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 3px 10px;
+  border-radius: 50px; background: rgba(59,130,246,0.14); color: #60a5fa; margin-right: 6px; }
+.rj-count { text-align: center; padding: 10px 18px; border-radius: 14px;
+  background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); }
+.rj-count b { display: block; font-size: 1.7rem; color: #60a5fa; font-variant-numeric: tabular-nums; }
+.rj-count.warn { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.35); }
+.rj-count.warn b { color: #fbbf24; }
+.rj-count.danger { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.35); }
+.rj-count.danger b { color: #f87171; }
+.rj-count span { font-size: 0.72rem; color: #94a3b8; font-weight: 600; }
+
+/* tayyorgarlik ring */
+.rj-ready { display: flex; align-items: center; gap: 14px; }
+.rj-ring { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(#3b82f6 calc(var(--pct) * 1%), rgba(148,163,184,0.15) 0); }
+.rj-ring i { width: 66px; height: 66px; border-radius: 50%; background: #0f172a; display: grid;
+  place-items: center; font-style: normal; font-weight: 800; font-size: 1.05rem; color: #60a5fa; }
+[data-bs-theme="light"] .rj-ring i { background: #fff; }
+
+/* tabs */
+.rj-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 18px 0 14px; }
+.rj-tab { border: 1px solid rgba(148,163,184,0.2); background: transparent; color: #94a3b8;
+  padding: 8px 16px; border-radius: 50px; cursor: pointer; font-size: 0.85rem; font-weight: 700; }
+.rj-tab.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border-color: transparent; }
+.rj-pane { display: none; }
+.rj-pane.active { display: block; animation: rjFade 0.2s ease; }
+@keyframes rjFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* progress satrlari */
+.rj-prow { margin-bottom: 14px; }
+.rj-prow .top { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
+.rj-prow .top b { color: #cbd5e1; font-weight: 600; }
+[data-bs-theme="light"] .rj-prow .top b { color: #334155; }
+.rj-prow .top span { color: #94a3b8; font-variant-numeric: tabular-nums; }
+.rj-bar { height: 8px; border-radius: 8px; background: rgba(148,163,184,0.15); overflow: hidden; }
+.rj-bar i { display: block; height: 100%; border-radius: 8px;
+  background: linear-gradient(90deg, #3b82f6, #22c55e); transition: width 0.35s; }
+
+/* ro'yxat kartalari */
+.rj-item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  border: 1px solid rgba(148,163,184,0.14); border-radius: 12px; padding: 12px 14px;
+  margin-bottom: 8px; flex-wrap: wrap; }
+.rj-item .ttl { font-weight: 600; font-size: 0.9rem; }
+.rj-item .meta { color: #94a3b8; font-size: 0.78rem; margin-top: 2px; }
+.rj-item.done .ttl { text-decoration: line-through; opacity: 0.6; }
+.rj-chip { font-size: 0.7rem; font-weight: 700; padding: 2px 9px; border-radius: 50px;
+  background: rgba(148,163,184,0.14); color: #94a3b8; }
+.rj-chip.chop_etilgan, .rj-chip.qatnashgan { background: rgba(34,197,94,0.15); color: #4ade80; }
+.rj-chip.yuborilgan, .rj-chip.qabul { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.rj-btn { border: none; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff;
+  font-weight: 700; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 0.84rem; }
+.rj-btn.ghost { background: rgba(148,163,184,0.12); color: inherit;
+  border: 1px solid rgba(148,163,184,0.25); }
+.rj-btn.sm { padding: 4px 10px; font-size: 0.74rem; }
+.rj-btn.red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.rj-empty { text-align: center; color: #64748b; padding: 26px 0; font-size: 0.88rem; }
+.rj-sec-head { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 14px; }
+.rj-sec-head h2 { font-size: 1.02rem; margin: 0; }
+
+/* forma (inline qo'shish) */
+.rj-form { border: 1px dashed rgba(148,163,184,0.3); border-radius: 12px; padding: 14px;
+  margin-bottom: 12px; display: none; }
+.rj-form.open { display: block; }
+.rj-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .rj-form .row2 { grid-template-columns: 1fr; } }
+.rj-input, .rj-select { width: 100%; border: 1px solid rgba(148,163,184,0.25); border-radius: 10px;
+  padding: 9px 12px; background: rgba(15,23,42,0.5); color: inherit; font-size: 0.88rem;
+  margin-bottom: 10px; }
+[data-bs-theme="light"] .rj-input, [data-bs-theme="light"] .rj-select { background: #f8fafc; }
+.rj-select option { background: #1e293b; color: #e2e8f0; }
+[data-bs-theme="light"] .rj-select option { background: #fff; color: #0f172a; }
+
+/* jadval (timeline) */
+.rj-tl-row { display: grid; grid-template-columns: 210px 1fr 90px; gap: 10px; align-items: center;
+  margin-bottom: 10px; font-size: 0.84rem; }
+@media (max-width: 640px) { .rj-tl-row { grid-template-columns: 1fr; gap: 4px; } }
+.rj-tl-label { color: #cbd5e1; font-weight: 600; }
+[data-bs-theme="light"] .rj-tl-label { color: #334155; }
+.rj-tl-track { position: relative; height: 22px; border-radius: 8px; background: rgba(148,163,184,0.08); }
+.rj-tl-seg { position: absolute; top: 0; bottom: 0; border-radius: 8px;
+  background: rgba(59,130,246,0.35); border: 1px solid rgba(59,130,246,0.5); }
+.rj-tl-seg.past { background: rgba(148,163,184,0.25); border-color: rgba(148,163,184,0.35); }
+.rj-tl-seg.active { background: rgba(34,197,94,0.3); border-color: rgba(34,197,94,0.55); }
+.rj-tl-dates { color: #94a3b8; font-size: 0.74rem; text-align: right; font-variant-numeric: tabular-nums; }
+.rj-tl-today { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fbbf24; }
+
+/* dissertatsiya tab */
+.rj-diss-cta { text-align: center; padding: 30px 16px; }
+.rj-diss-cta .big { font-size: 2rem; margin-bottom: 8px; }
+.rj-target-row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 4px;
+  border-bottom: 1px dashed rgba(148,163,184,0.15); font-size: 0.88rem; }
+.rj-target-row:last-child { border-bottom: none; }
+.rj-target-row .nm { color: #cbd5e1; font-weight: 600; }
+[data-bs-theme="light"] .rj-target-row .nm { color: #334155; }
+.rj-target-row .tg { color: #94a3b8; font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rj-wrap">
+
+  <!-- HERO -->
+  <div class="rj-panel rj-hero">
+    <div class="rj-hero-main">
+      <div style="margin-bottom:6px;">
+        <span class="rj-badge">{{ plan.degree_label }}</span>
+        {% if plan.specialty_code %}<span class="rj-badge">{{ plan.specialty_code }}</span>{% endif %}
+      </div>
+      <h1>🗺️ {{ plan.title or 'Akademik reja' }}</h1>
+      <div class="sub">{{ plan.field_name or '' }}
+        {% if plan.target_defense_date %} · Himoya: <b>{{ plan.target_defense_date }}</b>{% endif %}
+      </div>
+    </div>
+    <div class="rj-ready">
+      <div class="rj-ring" style="--pct:{{ readiness }};"><i>{{ readiness }}%</i></div>
+      <div style="font-size:0.8rem;color:#94a3b8;max-width:130px;">Himoya<br>tayyorgarligi</div>
+    </div>
+    {% if days_left is not none %}
+    <div class="rj-count {{ 'danger' if days_left < 90 else 'warn' if days_left < 365 else '' }}">
+      <b>{{ days_left }}</b><span>kun qoldi</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- TABS -->
+  <div class="rj-tabs">
+    <button class="rj-tab active" data-tab="boshqaruv">📊 Boshqaruv</button>
+    <button class="rj-tab" data-tab="nashrlar">📚 Nashrlar</button>
+    <button class="rj-tab" data-tab="dissertatsiya">📝 Dissertatsiya</button>
+    <button class="rj-tab" data-tab="jadval">📅 Jadval</button>
+    <button class="rj-tab" data-tab="uchrashuvlar">🤝 Uchrashuvlar</button>
+    <button class="rj-tab" data-tab="konferensiyalar">🎤 Konferensiyalar</button>
+  </div>
+
+  <!-- BOSHQARUV -->
+  <div class="rj-pane active rj-panel" id="pane-boshqaruv">
+    <div class="rj-sec-head"><h2>OAK nashr talablari</h2>
+      <span style="color:#94a3b8;font-size:0.82rem;">Umumiy: <b style="color:#60a5fa;">{{ pub_pct }}%</b></span>
+    </div>
+    {% for r in pub_rows %}
+    <div class="rj-prow">
+      <div class="top"><b>{{ r.label }}</b><span>{{ r.done }} / {{ r.required }}</span></div>
+      <div class="rj-bar"><i style="width:{{ r.pct }}%;"></i></div>
+    </div>
+    {% endfor %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+      <button class="rj-btn ghost" onclick="rjGoto('nashrlar')">📚 Nashr qo'shish</button>
+      <button class="rj-btn ghost" onclick="rjGoto('jadval')">📅 Jadvalni ko'rish</button>
+      <a class="rj-btn" href="/workspace" style="text-decoration:none;">📝 Konstruktorda yozish</a>
+    </div>
+  </div>
+
+  <!-- NASHRLAR -->
+  <div class="rj-pane rj-panel" id="pane-nashrlar">
+    <div class="rj-sec-head"><h2>📚 Nashrlarim</h2>
+      <button class="rj-btn" onclick="rjToggleForm('pub-form')">＋ Qo'shish</button>
+    </div>
+    <div class="rj-form" id="pub-form">
+      <input class="rj-input" id="pub-title" placeholder="Maqola / tezis sarlavhasi" maxlength="600">
+      <div class="row2">
+        <select class="rj-select" id="pub-type">
+          {% for k, v in pub_type_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+        <select class="rj-select" id="pub-status">
+          {% for k, v in pub_status_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="row2">
+        <input class="rj-input" id="pub-venue" placeholder="Jurnal / konferensiya nomi" maxlength="500">
+        <input class="rj-input" id="pub-year" type="number" placeholder="Yil" min="2000" max="2100">
+      </div>
+      <input class="rj-input" id="pub-url" placeholder="Havola (ixtiyoriy)" maxlength="600">
+      <button class="rj-btn" onclick="rjAddPub()">Saqlash</button>
+    </div>
+    {% for p in pubs %}
+    <div class="rj-item" id="pub-{{ p.id }}">
+      <div style="flex:1;min-width:200px;">
+        <div class="ttl">{{ p.title }}</div>
+        <div class="meta">{{ pub_type_labels[p.pub_type] }}{% if p.venue %} · {{ p.venue }}{% endif %}{% if p.year %} · {{ p.year }}{% endif %}
+          {% if p.url %} · <a href="{{ p.url }}" target="_blank" rel="noopener">havola ↗</a>{% endif %}</div>
+      </div>
+      <select class="rj-select" style="width:auto;margin:0;" onchange="rjPubStatus({{ p.id }}, this.value)">
+        {% for k, v in pub_status_labels.items() %}
+        <option value="{{ k }}" {{ 'selected' if p.status == k }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+      <button class="rj-btn sm red" onclick="rjDel('pub', {{ p.id }})">🗑</button>
+    </div>
+    {% else %}
+    <div class="rj-empty">Hali nashr kiritilmagan — "＋ Qo'shish" tugmasidan boshlang.</div>
+    {% endfor %}
+  </div>
+
+  <!-- DISSERTATSIYA -->
+  <div class="rj-pane rj-panel" id="pane-dissertatsiya">
+    <div class="rj-sec-head"><h2>📝 Dissertatsiya bo'limlari</h2></div>
+    {% if diss_progress %}
+      {# 2-bosqich: Konstruktordan jonli so'z sanog'i shu yerda chiziladi #}
+    {% else %}
+    <div style="border:1px solid rgba(148,163,184,0.14);border-radius:12px;padding:6px 14px;margin-bottom:14px;">
+      {% for name, btype, target in oak_structure %}
+      <div class="rj-target-row">
+        <span class="nm">{{ name }}</span>
+        <span class="tg">maqsad: {{ '{:,}'.format(target).replace(',', ' ') }} so'z</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="rj-diss-cta">
+      <div class="big">✍️</div>
+      <p style="color:#94a3b8;max-width:420px;margin:0 auto 14px;font-size:0.9rem;">
+        Konstruktorda yozishni boshlang — bob so'z sanog'i va progress shu yerda avtomatik hisoblanadi.</p>
+      <a class="rj-btn" href="/workspace" style="text-decoration:none;">📝 Konstruktorda yozishni boshlash</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- JADVAL -->
+  <div class="rj-pane rj-panel" id="pane-jadval">
+    <div class="rj-sec-head"><h2>📅 Bosqichlar jadvali</h2>
+      <span style="color:#94a3b8;font-size:0.8rem;">{{ plan.start_date }} → {{ plan.target_defense_date }}</span>
+    </div>
+    {% if timeline %}
+      {% for ph in timeline %}
+      <div class="rj-tl-row">
+        <div class="rj-tl-label">{{ ph.label }}</div>
+        <div class="rj-tl-track">
+          <div class="rj-tl-seg {{ ph.state }}" style="left:{{ ph.left_pct }}%;width:{{ ph.width_pct }}%;"></div>
+          {% if today_pct is not none %}<div class="rj-tl-today" style="left:{{ today_pct }}%;"></div>{% endif %}
+        </div>
+        <div class="rj-tl-dates">{{ ph.end }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="rj-empty">Jadval uchun boshlanish va himoya sanalari kerak.</div>
+    {% endif %}
+  </div>
+
+  <!-- UCHRASHUVLAR -->
+  <div class="rj-pane rj-panel" id="pane-uchrashuvlar">
+    <div class="rj-sec-head"><h2>🤝 Rahbar bilan uchrashuvlar</h2>
+      <button class="rj-btn" onclick="rjToggleForm('meet-form')">＋ Qo'shish</button>
+    </div>
+    <div class="rj-form" id="meet-form">
+      <input class="rj-input" id="meet-title" placeholder="Mavzu (masalan: 2-bob muhokamasi)" maxlength="500">
+      <div class="row2">
+        <input class="rj-input" id="meet-date" type="date">
+        <input class="rj-input" id="meet-notes" placeholder="Izoh (ixtiyoriy)" maxlength="2000">
+      </div>
+      <button class="rj-btn" onclick="rjAddMeeting()">Saqlash</button>
+    </div>
+    {% for m in meetings %}
+    <div class="rj-item {{ 'done' if m.is_done }}">
+      <div style="flex:1;min-width:200px;">
+        <div class="ttl">{{ m.title }}</div>
+        <div class="meta">{% if m.meeting_date %}📅 {{ m.meeting_date }}{% endif %}{% if m.notes %} · {{ m.notes }}{% endif %}</div>
+      </div>
+      <button class="rj-btn sm ghost" onclick="rjPost('/api/reja/meeting/{{ m.id }}/toggle')">
+        {{ '↩ Bekor' if m.is_done else '✓ Bo\'ldi' }}</button>
+      <button class="rj-btn sm red" onclick="rjDel('meeting', {{ m.id }})">🗑</button>
+    </div>
+    {% else %}
+    <div class="rj-empty">Hali uchrashuv rejalashtirilmagan.</div>
+    {% endfor %}
+  </div>
+
+  <!-- KONFERENSIYALAR -->
+  <div class="rj-pane rj-panel" id="pane-konferensiyalar">
+    <div class="rj-sec-head"><h2>🎤 Konferensiyalar</h2>
+      <button class="rj-btn" onclick="rjToggleForm('conf-form')">＋ Qo'shish</button>
+    </div>
+    <div class="rj-form" id="conf-form">
+      <input class="rj-input" id="conf-name" placeholder="Konferensiya nomi" maxlength="500">
+      <div class="row2">
+        <input class="rj-input" id="conf-location" placeholder="Joyi (shahar, davlat)" maxlength="300">
+        <input class="rj-input" id="conf-url" placeholder="Sayt havolasi" maxlength="600">
+      </div>
+      <div class="row2">
+        <div><label style="font-size:0.75rem;color:#94a3b8;">O'tkazilish sanasi</label>
+          <input class="rj-input" id="conf-date" type="date"></div>
+        <div><label style="font-size:0.75rem;color:#94a3b8;">Tezis muddati</label>
+          <input class="rj-input" id="conf-deadline" type="date"></div>
+      </div>
+      <button class="rj-btn" onclick="rjAddConf()">Saqlash</button>
+    </div>
+    {% for c in confs %}
+    <div class="rj-item">
+      <div style="flex:1;min-width:200px;">
+        <div class="ttl">{{ c.name }}</div>
+        <div class="meta">{% if c.location %}📍 {{ c.location }} · {% endif %}
+          {% if c.event_date %}📅 {{ c.event_date }}{% endif %}
+          {% if c.deadline %} · ⏰ tezis: {{ c.deadline }}{% endif %}
+          {% if c.url %} · <a href="{{ c.url }}" target="_blank" rel="noopener">sayt ↗</a>{% endif %}</div>
+      </div>
+      <select class="rj-select" style="width:auto;margin:0;" onchange="rjConfStatus({{ c.id }}, this.value)">
+        {% for k, v in conf_status_labels.items() %}
+        <option value="{{ k }}" {{ 'selected' if c.status == k }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+      <button class="rj-btn sm red" onclick="rjDel('conf', {{ c.id }})">🗑</button>
+    </div>
+    {% else %}
+    <div class="rj-empty">Hali konferensiya qo'shilmagan.</div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/roadmap.js') }}"></script>
+{% endblock %}
