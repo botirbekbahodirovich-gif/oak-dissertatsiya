@@ -123,6 +123,7 @@
       {% endif %}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% if role == 'owner' %}<a class="ed-btn" href="/reja#dissertatsiya" title="Akademik reja — progress, nashrlar, jadval">📊 Reja</a>{% endif %}
       <a class="ed-btn" href="/workspace/{{ project.id }}/preview">👁️ Master Preview</a>
       {% if role == 'owner' %}
       <button class="ed-btn primary" onclick="submitForReview()">📤 Ko'rib chiqishga yuborish</button>
