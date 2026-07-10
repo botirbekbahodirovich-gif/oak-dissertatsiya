@@ -236,7 +236,7 @@ window.ED_STATE = {
   role: '{{ role }}',
   readOnly: {{ 'true' if read_only else 'false' }},
   content: {{ block.content | tojson }},
-  updatedAt: {{ (block.updated_at | string) | tojson }},
+  updatedAtMs: {{ updated_at_ms or 0 }},
   blockType: {{ (block.block_type or 'chapter') | tojson }},
   wordTarget: {{ (block.word_target or 0) | tojson }},
   isSpecial: {{ 'true' if block.is_special else 'false' }},
@@ -245,5 +245,5 @@ window.ED_STATE = {
   tree: {{ tree | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/dissertation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dissertation.js') }}?v={{ diss_js_v }}"></script>
 {% endblock %}

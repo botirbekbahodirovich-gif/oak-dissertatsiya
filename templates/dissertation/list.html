@@ -223,5 +223,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dissertation.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dissertation.js') }}?v={{ diss_js_v }}"></script>
 {% endblock %}

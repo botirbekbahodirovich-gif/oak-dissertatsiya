@@ -16,7 +16,13 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {})
-    }).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+    }).then(function (r) {
+      return r.json().then(
+        function (j) { j._status = r.status; j._redirected = r.redirected; return j; },
+        // JSON emas (login sahifasiga redirect, proxy xato sahifasi va h.k.)
+        function () { return { _status: r.status, _redirected: r.redirected, _nonjson: true }; }
+      );
+    });
   }
   function banner(kind, html, onclose) {
     var host = document.getElementById('dw-banners');
@@ -393,8 +399,39 @@
       }
     }
   });
-  quill.root.innerHTML = S.content || '';
-  applyHighlights();
+  /* Vizual annotatsiya-highlight spanlari KONTENT EMAS — saqlashdan oldin
+     olib tashlanadi. Aks holda ular bazaga yozilib qoladi va DOM mutatsiyasi
+     Quill'da source='user' text-change chiqarib, cheksiz autosave halqasi +
+     20 talik versiya tarixini yuvib yuborishga olib keladi. */
+  function unwrapHighlights(root) {
+    root.querySelectorAll('span.annotation-highlight').forEach(function (el) {
+      var parent = el.parentNode;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      parent.removeChild(el);
+      parent.normalize();
+    });
+  }
+  function stripHighlightsHTML(html) {
+    html = html || '';
+    if (html.indexOf('annotation-highlight') === -1) return html;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    unwrapHighlights(tmp);
+    return tmp.innerHTML;
+  }
+  // saqlanadigan "toza" kontent — highlight spanlarisiz
+  function getCleanContent() {
+    if (!quill.root.querySelector('.annotation-highlight')) return quill.root.innerHTML;
+    var tmp = quill.root.cloneNode(true);
+    unwrapHighlights(tmp);
+    return tmp.innerHTML;
+  }
+
+  // Kontent yuklash: eski saqlashlarda qolib ketgan highlight spanlarini
+  // tozalaymiz; 'silent' update — Quill normalizatsiyasi darhol o'tsin va
+  // text-change ('user') chiqmasin (aks holda ochilgan zahoti "dirty").
+  quill.root.innerHTML = stripHighlightsHTML(S.content || '');
+  quill.update('silent');
 
   /* custom image handler → server upload */
   function imageHandler() {
@@ -426,6 +463,11 @@
   var statusEl = document.getElementById('save-status');
   var wcEl = document.getElementById('word-count');
 
+  // Quill normalizatsiyasidan KEYINGI "serverdagi holat" nusxasi — dirty va
+  // qoralama solishtiruvlari S.content xom satriga emas, SHU nusxaga
+  // nisbatan (normalizatsiya farqlari soxta "dirty" bermasligi uchun).
+  var lastSavedContent = getCleanContent();
+
   // "1 240 / 6 000 so'z" — word_target bo'lsa (Akademik Reja OAK skeleti)
   function fmtWords(n) {
     var f = function (x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
@@ -441,41 +483,99 @@
     var d = new Date();
     return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
+  // qisqa kontent-barmoq izi (djb2) — qoralama qaysi server holatidan
+  // tarmoqlanganini aniqlash uchun (soat/timezone farqlariga bog'liq EMAS:
+  // eski usul naive UTC satrini lokal vaqt deb o'qib, O'zbekistonda 5 soatlik
+  // siljish bilan ESKI qoralamani yangi server matni ustiga taklif qilardi)
+  function hashStr(s) {
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return h + ':' + s.length;
+  }
   function saveDraft() {
     try {
       localStorage.setItem(draftKey, JSON.stringify({
-        content: quill.root.innerHTML, savedAt: Date.now()
+        content: getCleanContent(), savedAt: Date.now(),
+        base: hashStr(lastSavedContent)
       }));
     } catch (e) {}
   }
 
-  // lokal qoralama tiklash taklifi (saqlash uzilib qolgan bo'lsa)
+  // 14 kundan eski qoralamalar tozalanadi (localStorage to'lib qolmasin)
+  try {
+    var cutoff = Date.now() - 14 * 864e5;
+    Object.keys(localStorage).forEach(function (k) {
+      if (k.indexOf('diss-draft-') !== 0) return;
+      var v = JSON.parse(localStorage.getItem(k) || 'null');
+      if (!v || !v.savedAt || v.savedAt < cutoff) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+
+  // Lokal qoralama tiklash taklifi (saqlash uzilib qolgan bo'lsa).
+  // Ishonchli belgi — base hash: qoralama AYNAN hozirgi server holatidan
+  // tarmoqlangan bo'lsa, u serverdagidan yangi. Server holati boshqacha
+  // bo'lsa (boshqa qurilma/tab saqlagan) — qoralama eskirgan, o'chiriladi.
+  // savedAt vs updatedAtMs (epoch, server beradi) — eski formatdagi
+  // qoralamalar uchun zaxira yo'l.
   try {
     var draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
-    var baseTs = S.updatedAt ? Date.parse(String(S.updatedAt).replace(' ', 'T')) : 0;
-    if (draft && draft.savedAt > (baseTs || 0) &&
-        draft.content !== (S.content || '') && !S.readOnly) {
-      if (confirm('Saqlashda uzilish bo\'lgan. Lokal nusxani tiklaysizmi?')) {
-        quill.root.innerHTML = draft.content;
-        dirty = true;
-        setStatus('dirty', '● Saqlanmagan');
+    if (draft && !S.readOnly && typeof draft.content === 'string' &&
+        draft.content !== lastSavedContent) {
+      var sameBase = draft.base != null && draft.base === hashStr(lastSavedContent);
+      var legacyNewer = draft.base == null && draft.savedAt &&
+                        draft.savedAt > (S.updatedAtMs || 0) + 5000;
+      if (sameBase || legacyNewer) {
+        if (confirm('Saqlashda uzilish bo\'lgan. Lokal nusxani tiklaysizmi?')) {
+          quill.root.innerHTML = draft.content;
+          quill.update('silent');
+          dirty = true;
+          setStatus('dirty', '● Saqlanmagan');
+          typingTimer = setTimeout(function () { persist('autosave'); }, 1500);
+        } else {
+          localStorage.removeItem(draftKey);
+        }
       } else {
-        localStorage.removeItem(draftKey);
+        localStorage.removeItem(draftKey);   // eskirgan/boshqa holatdan qolgan
       }
     }
   } catch (e) {}
 
+  var failWarned = false;
+  function warnSaveFailed() {
+    if (failWarned) return;
+    failWarned = true;
+    banner('warn', '⚠️ Server bilan aloqa uzildi — matningiz brauzerda lokal ' +
+      'saqlanmoqda. Internet tiklangach 💾 Saqlash tugmasini bosing.');
+  }
+  var sessionWarned = false;
+  function sessionExpired() {
+    saveDraft();
+    setStatus('error', '⚠ Saqlanmadi — sessiya tugagan');
+    if (sessionWarned) return;
+    sessionWarned = true;
+    banner('warn', '⚠️ Sessiya muddati tugagan — matningiz brauzerda lokal saqlanmoqda. ' +
+      '<a href="/login" target="_blank" style="color:#4a9eff;font-weight:700;">Yangi oynada qayta kiring</a>, ' +
+      "so'ng bu yerda 💾 Saqlash tugmasini bosing.");
+  }
+
   /* Saqlash — Promise qaytaradi (true=saqlandi/o'zgarmagan, false=muvaffaqiyatsiz).
-     Faqat 'autosave' 5s rate-limitga tushadi; 'manual' har doim yoziladi.
-     Xato bo'lsa 3 marta eksponensial kutish bilan qayta uriniladi; lokal
-     nusxa saqlanib turadi. */
+     Kontent oxirgi saqlanganidek bo'lsa tarmoqqa chiqmaydi. Faqat 'autosave'
+     5s rate-limitga tushadi; 'manual' har doim yoziladi. Xato bo'lsa 3 marta
+     eksponensial kutish bilan qayta uriniladi; lokal nusxa saqlanib turadi. */
   function persist(saveType, attempt) {
     if (S.readOnly) return Promise.resolve(true);
+    var content = getCleanContent();
+    if (content === lastSavedContent) {                // o'zgarish yo'q
+      dirty = false;
+      try { localStorage.removeItem(draftKey); } catch (e) {}
+      if (saveType === 'manual') setStatus('saved', '✓ Saqlandi ' + hm());
+      return Promise.resolve(true);
+    }
     attempt = attempt || 1;
     saving = true;
     setStatus('saving', 'Saqlanmoqda…');
     return postJSON('/api/blocks/' + currentBlockId + '/save',
-             { content: quill.root.innerHTML, save_type: saveType })
+             { content: content, save_type: saveType })
       .then(function (d) {
         saving = false;
         if (d._status === 429) {                       // autosave rate-limit — jim
@@ -489,11 +589,22 @@
           setStatus('error', '⚠ Saqlanmadi — qism qulflangan');
           return false;
         }
+        if (d._nonjson) {                              // JSON o'rniga sahifa keldi
+          if (d._redirected || d._status === 401) { sessionExpired(); return false; }
+          throw new Error('non-json response');
+        }
         if (!d.success && !d.unchanged) throw new Error(d.error || 'save failed');
-        dirty = false;
-        try { localStorage.removeItem(draftKey); } catch (e) {}
+        lastSavedContent = content;
+        // so'rov uchayotgan paytda terilgan matn yo'qolmasin — qayta tekshiruv
+        dirty = getCleanContent() !== lastSavedContent;
+        if (dirty) {
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(function () { persist('autosave'); }, 3000);
+        } else {
+          try { localStorage.removeItem(draftKey); } catch (e) {}
+        }
         if (d.word_count !== undefined && wcEl) wcEl.textContent = fmtWords(d.word_count);
-        setStatus('saved', '✓ Saqlandi ' + (d.saved_at || hm()));
+        setStatus('saved', '✓ Saqlandi ' + hm());      // mijoz vaqti (server UTC'da)
         applyHighlights();
         return true;
       })
@@ -507,7 +618,8 @@
                        1000 * Math.pow(2, attempt));   // 2s, 4s
           });
         }
-        setStatus('error', '⚠ Saqlanmadi — qayta urinilmoqda');
+        setStatus('error', '⚠ Saqlanmadi — matn lokal nusxada');
+        warnSaveFailed();
         return false;
       });
   }
@@ -532,9 +644,74 @@
     }
   });
 
+  /* Word/skrinshotdan qo'yilgan rasmlar data: URI bo'lib keladi — server
+     sanitizatsiyasi (bleach, protokol http/https) ularni OLIB TASHLAYDI:
+     muharrirda ko'rinadi, refresh'dan keyin "yo'qoladi". Shu sabab ularni
+     darhol serverga yuklab, URL bilan almashtiramiz. */
+  function dataURItoBlob(uri) {
+    var m = uri.match(/^data:([^;,]+)?((?:;[^;,]*)*),([\s\S]*)$/);
+    if (!m) return null;
+    try {
+      var bytes;
+      if (/;base64/i.test(m[2] || '')) {
+        var bin = atob(m[3]);
+        bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      } else {
+        bytes = new TextEncoder().encode(decodeURIComponent(m[3]));
+      }
+      return new Blob([bytes], { type: m[1] || 'image/png' });
+    } catch (e) { return null; }
+  }
+  var imgWarned = false;
+  function dropDataImage(src, msg) {
+    quill.root.querySelectorAll('img[src^="data:"]').forEach(function (el) {
+      if (el.getAttribute('src') === src) el.remove();
+    });
+    quill.update('silent');
+    if (!imgWarned) {
+      imgWarned = true;
+      banner('warn', '⚠️ ' + (msg ||
+        "Qo'yilgan rasmni serverga yuklab bo'lmadi, shu sabab u matnga qo'shilmadi. " +
+        'Faqat JPG/PNG/WEBP (5MB gacha) qabul qilinadi — rasmni panel ustidagi 🖼 tugmasi orqali yuklang.'));
+    }
+  }
+  var imgUploading = false;
+  function uploadDataImages() {
+    if (imgUploading || S.readOnly) return;
+    var img = quill.root.querySelector('img[src^="data:"]');
+    if (!img) return;
+    var src = img.getAttribute('src');
+    var blob = dataURItoBlob(src);
+    if (!blob) { dropDataImage(src); return; }
+    if (blob.size > 5 * 1024 * 1024) { dropDataImage(src, 'Rasm hajmi 5MB dan oshmasligi kerak'); return; }
+    imgUploading = true;
+    var fd = new FormData();
+    var ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    fd.append('image', blob, 'paste.' + ext);
+    fetch('/api/blocks/' + currentBlockId + '/upload-image', { method: 'POST', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.success) { dropDataImage(src, d.error); return; }
+        quill.root.querySelectorAll('img[src^="data:"]').forEach(function (el) {
+          if (el.getAttribute('src') === src) el.setAttribute('src', d.url);
+        });
+        quill.update('silent');
+        dirty = true;                                  // URL'li holat saqlansin
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function () { persist('autosave'); }, 1200);
+      })
+      .catch(function () { dropDataImage(src); })
+      .then(function () { imgUploading = false; uploadDataImages(); });
+  }
+
   if (!S.readOnly) {
     quill.on('text-change', function (d1, d2, source) {
       if (source !== 'user') return;
+      uploadDataImages();
+      // applyHighlights kabi programmatik DOM mutatsiyalarini Quill 'user'
+      // deb belgilaydi — haqiqiy o'zgarishni kontent bo'yicha tekshiramiz
+      if (getCleanContent() === lastSavedContent) return;
       dirty = true;
       setStatus('dirty', '● Saqlanmagan');
       clearTimeout(typingTimer);
@@ -547,23 +724,29 @@
       if (d._status === 409) banner('warn', '⚠️ ' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
     });
     setInterval(function () { postJSON('/api/blocks/' + currentBlockId + '/lock', {}); }, 60000);
-    // sahifadan chiqishda: qulfni ochamiz + saqlanmagan bo'lsa beacon bilan
-    // saqlaymiz VA brauzer tasdiq oynasini chiqaramiz
+    // sahifadan chiqishda: saqlanmagan bo'lsa AVVAL beacon bilan saqlaymiz,
+    // KEYIN qulfni ochamiz (saqlash qulfni yangilaydi) va brauzer tasdiq
+    // oynasini chiqaramiz
     window.addEventListener('beforeunload', function (e) {
-      if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/unlock', '{}');
-      if (dirty) {
+      var content = getCleanContent();
+      var isDirty = content !== lastSavedContent;
+      if (isDirty) {
         saveDraft();
         try {
           var blob = new Blob(
-            [JSON.stringify({ content: quill.root.innerHTML, save_type: 'manual' })],
+            [JSON.stringify({ content: content, save_type: 'manual' })],
             { type: 'application/json' });
           if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/save', blob);
         } catch (e2) {}
+      }
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/unlock', '{}');
+      if (isDirty) {
         e.preventDefault();
         e.returnValue = '';                            // brauzer tasdiq oynasi
         return '';
       }
     });
+    uploadDataImages();   // tiklangan qoralamada data: rasm bo'lishi mumkin
   }
 
   /* ══════════ VERSIONS ══════════ */

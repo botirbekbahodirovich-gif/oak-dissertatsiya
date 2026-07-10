@@ -28,7 +28,7 @@ import secrets
 import time
 import uuid
 import html as html_mod
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import (Blueprint, jsonify, request, render_template, redirect,
                    abort, send_file, current_app, url_for)
@@ -39,6 +39,34 @@ from app import csrf
 dissertation_bp = Blueprint('dissertation', __name__)
 
 _schema_ready = False
+
+
+@dissertation_bp.after_request
+def _no_store(response):
+    """Muharrir sahifalari va API — shaxsiy kontent, hech qachon keshlanmasin:
+    eski keshdan qaytgan HTML/JSON foydalanuvchiga "matnim yo'qoldi" bo'lib
+    ko'rinadi (ED_STATE.content sahifaga bikilgan)."""
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+_diss_js_version = None
+
+
+@dissertation_bp.context_processor
+def _inject_asset_version():
+    """dissertation.js uchun mtime asosidagi cache-buster. nginx /static/ ni
+    7 kun (Flask 1 kun) keshlaydi — versiyasiz URL'da tuzatilgan JS
+    foydalanuvchi brauzerlariga bir haftagacha yetib bormaydi (b686522
+    tuzatishi shu sabab "ishlamay" ko'ringan)."""
+    global _diss_js_version
+    if _diss_js_version is None:
+        try:
+            p = os.path.join(current_app.static_folder, 'js', 'dissertation.js')
+            _diss_js_version = str(int(os.stat(p).st_mtime))
+        except OSError:
+            _diss_js_version = '1'
+    return {'diss_js_v': _diss_js_version}
 
 MAX_DEPTH = 3
 MAX_CONTENT_BYTES = 2 * 1024 * 1024   # 2MB per save
@@ -287,7 +315,23 @@ def _ensure_schema(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_diss_collab_diss "
                 "ON diss_collaborators(dissertation_id)")
     _migrate_block_types(cur)
+    _repair_highlight_pollution(cur)
     _schema_ready = True
+
+
+def _repair_highlight_pollution(cur):
+    """Bir martalik tozalash (worker boshiga): eski JS annotatsiya highlight
+    spanlarini kontent bilan birga saqlab yuborgan — ularni zararsiz <span>ga
+    aylantiramiz (bleach data-annotation-id ni allaqachon olib tashlagan,
+    shuning uchun saqlangan shakl aynan shu satr). Xato bo'lsa initni buzmaydi."""
+    try:
+        cur.execute("""
+            UPDATE dissertation_blocks
+            SET content = replace(content, '<span class="annotation-highlight">', '<span>')
+            WHERE content LIKE '%annotation-highlight%'
+        """)
+    except Exception:
+        pass
 
 
 def _migrate_block_types(cur):
@@ -464,8 +508,18 @@ _ALLOWED_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'b', 'strong', 'i', 'em', 'u',
                  'pre', 'code']
 # style atributi butunlay olib tashlanadi (CSS sanitizer dependensiyasisiz
 # xavfsizlik); Quill hizalamani class orqali beradi (ql-align-*), class xavfsiz.
+
+
+def _class_attr_ok(tag, name, value):
+    """class ruxsat, LEKIN vizual annotation-highlight spanlari kontent emas —
+    ular bazaga yozilsa, mijozda "o'zgardi" ko'rinib autosave halqasi va
+    kontent ifloslanishini keltiradi (JS ham saqlashdan oldin ularni olib
+    tashlaydi; bu server tomondagi ikkinchi to'siq)."""
+    return name == 'class' and 'annotation-highlight' not in value
+
+
 _ALLOWED_ATTRS = {
-    '*': ['class'],
+    '*': _class_attr_ok,
     'img': ['src', 'alt', 'width', 'height'],
     'a': ['href', 'title', 'target', 'rel'],
     'td': ['colspan', 'rowspan'], 'th': ['colspan', 'rowspan'],
@@ -1635,12 +1689,20 @@ def editor_page(id, block_id):
         conn.commit()
     finally:
         conn.close()
+    # naive DB timestamp (Neon/VPS — UTC) → epoch ms: mijoz qoralama
+    # solishtiruvi timezone'ga bog'liq bo'lmasin
+    u = block.get('updated_at')
+    try:
+        updated_at_ms = int(u.replace(tzinfo=timezone.utc).timestamp() * 1000) if u else 0
+    except (TypeError, AttributeError):
+        updated_at_ms = 0
     return render_template('dissertation/editor.html', project=project,
                            block=block, tree=tree, role=caps['role'],
                            read_only=not caps['can_edit'],
                            can_review=caps['can_review_status'],
                            can_comment=caps['can_comment'],
                            defense_days_left=defense_days_left,
+                           updated_at_ms=updated_at_ms,
                            review_labels=REVIEW_LABELS, annot_types=ANNOT_TYPES,
                            status_labels=STATUS_LABELS)
 
@@ -1707,7 +1769,10 @@ def block_save(block_id):
         conn.rollback()
         if getattr(e, 'code', None) in (403, 404):
             raise
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.exception('block save failed: block=%s user=%s',
+                                     block_id, current_user.id)
+        return jsonify({'success': False,
+                        'error': "Serverda xatolik — qayta urinib ko'ring"}), 500
     finally:
         conn.close()
 
