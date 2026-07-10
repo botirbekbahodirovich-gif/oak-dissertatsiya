@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Mening dissertatsiya xaritam — Olimlar.uz{% endblock %}
+{% block meta_description %}Ilmiy rahbaringizni tanlang — uning barcha shogirdlari, tadqiqot yo'nalishlari, band va bo'sh ilmiy nishalar hamda AI tahlili bir sahifada.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .xr-hero p { color: var(--oak-muted); margin-bottom: 0; }
+
+  /* ── supervisor input form ── */
+  .xr-form-card { border-radius: 16px; border: 1px solid var(--oak-border);
+    background: var(--oak-surface); padding: 1.5rem; max-width: 640px; }
+  .xr-form-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: .3rem; }
+  .xr-form-card .hint { color: var(--oak-muted); font-size: .85rem; margin-bottom: 1rem; }
+  .xr-input-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .xr-input-row input { flex: 1 1 220px; border-radius: 10px; border: 1px solid var(--oak-border);
+    background: var(--oak-surface-2); color: inherit; padding: .7rem .9rem; font-size: .95rem; }
+  .xr-input-row input:focus { outline: none; border-color: var(--oak-accent); }
+
+  /* ── stat cards ── */
+  .xr-stat { border-radius: 14px; background: var(--oak-surface); border: 1px solid var(--oak-border);
+    padding: 1.15rem 1.25rem; height: 100%; }
+  .xr-stat .lbl { font-size: .72rem; color: var(--oak-muted); text-transform: uppercase;
+    letter-spacing: .5px; font-weight: 700; }
+  .xr-stat .val { font-size: 1.65rem; font-weight: 800; line-height: 1.25; margin-top: .35rem;
+    word-break: break-word; }
+  .xr-stat .sub { font-size: .82rem; color: var(--oak-muted); margin-top: .2rem; }
+
+  /* ── AI card ── */
+  .xr-ai-card { border-radius: 16px; border: 1px solid var(--oak-border);
+    background: linear-gradient(160deg, rgba(59,130,246,.10), rgba(34,197,94,.06)); padding: 1.4rem; }
+  .xr-ai-card h5 { display: flex; align-items: center; gap: .5rem; font-weight: 700;
+    font-size: 1rem; margin-bottom: .9rem; }
+  .xr-ai-body { line-height: 1.65; white-space: pre-wrap; font-size: .95rem; }
+  .xr-ai-cached { font-size: .72rem; color: var(--oak-muted); margin-top: .8rem; }
+  .xr-skel { height: 12px; border-radius: 6px; margin: 9px 0;
+    background: linear-gradient(90deg, rgba(148,163,184,.14), rgba(148,163,184,.28), rgba(148,163,184,.14));
+    background-size: 200% 100%; animation: xr-shimmer 1.3s infinite; }
+  @keyframes xr-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ── students table ── */
+  .xr-table-card { border-radius: 16px; border: 1px solid var(--oak-border);
+    background: var(--oak-surface); padding: 1.25rem; }
+  .xr-table-wrap { overflow-x: auto; }
+  table.xr-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.xr-table th { text-align: left; font-size: .72rem; text-transform: uppercase;
+    letter-spacing: .4px; color: var(--oak-muted); font-weight: 700; padding: .6rem .7rem;
+    border-bottom: 1px solid var(--oak-border); white-space: nowrap; }
+  table.xr-table td { padding: .7rem .7rem; border-bottom: 1px solid var(--oak-border);
+    vertical-align: top; }
+  table.xr-table tr:last-child td { border-bottom: none; }
+  .xr-mavzu { max-width: 460px; }
+  .xr-badge { display: inline-block; font-size: .72rem; font-weight: 700; padding: .18rem .5rem;
+    border-radius: 50px; background: rgba(59,130,246,.16); color: #60a5fa; white-space: nowrap; }
+  .xr-badge.dsc { background: rgba(168,85,247,.16); color: #c084fc; }
+  .xr-bm { background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1;
+    color: #fbbf24; padding: 2px 4px; }
+  .xr-pager { display: flex; gap: .35rem; flex-wrap: wrap; align-items: center;
+    justify-content: center; margin-top: 1rem; }
+  .xr-pager button { border: 1px solid var(--oak-border); background: var(--oak-surface-2);
+    color: inherit; border-radius: 8px; min-width: 36px; height: 34px; cursor: pointer; font-size: .85rem; }
+  .xr-pager button.active { background: var(--oak-accent); border-color: var(--oak-accent); color: #fff; }
+  .xr-pager button:disabled { opacity: .45; cursor: default; }
+
+  .xr-confirm { border-radius: 14px; border: 1px solid rgba(34,197,94,.35);
+    background: rgba(34,197,94,.10); padding: 1rem 1.25rem; display: flex; gap: 1rem;
+    align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .xr-empty { color: var(--oak-muted); text-align: center; padding: 2.5rem 1rem; }
+  .hidden { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading xr-hero">
+  <div>
+    <h1>Mening dissertatsiya xaritam 🗺️</h1>
+    <p>Ilmiy rahbaringizni tanlang — uning shogirdlari, yo'nalishlari va bo'sh nishalarni ko'ring</p>
+  </div>
+</div>
+
+<div id="xarita-root" data-supervisor="{{ supervisor }}">
+
+  <!-- ── supervisor input / change form ── -->
+  <div id="xr-form" class="xr-form-card mb-4 {% if supervisor %}hidden{% endif %}">
+    <h3>Ilmiy rahbaringiz ismini kiriting</h3>
+    <p class="hint">Masalan: <em>Karimov Alisher</em>. Nomni kiritib, xaritangizni ko'ring.</p>
+    <div class="xr-input-row">
+      <input type="text" id="supervisor-input" maxlength="100"
+             placeholder="Rahbar F.I.Sh." autocomplete="off"
+             value="{{ supervisor }}">
+      <button class="btn btn-action" id="search-btn">🔍 Qidirish</button>
+    </div>
+    <div id="xr-form-msg" class="hint mt-2"></div>
+  </div>
+
+  <!-- ── loading ── -->
+  <div id="xr-loading" class="loading-state hidden">
+    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+    <p class="mt-2 mb-0">Xarita yuklanmoqda...</p>
+  </div>
+
+  <!-- ── results ── -->
+  <div id="xr-results" class="hidden">
+
+    <!-- confirm bar (preview of an unsaved supervisor) -->
+    <div id="xr-confirm" class="xr-confirm mb-4 hidden">
+      <div>Ushbu ilmiy rahbarni o'zingizniki sifatida saqlaymizmi?
+        <strong id="xr-confirm-name"></strong></div>
+      <button class="btn btn-action" id="confirm-btn">✓ Tasdiqlash</button>
+    </div>
+
+    <!-- stat cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="xr-stat">
+          <div class="lbl">Ilmiy rahbar</div>
+          <div class="val" id="stat-name" style="font-size:1.15rem;">—</div>
+          <div class="sub"><span id="stat-total">0</span> ta shogird</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="xr-stat">
+          <div class="lbl">Faol yillar</div>
+          <div class="val" id="stat-years">—</div>
+          <div class="sub">himoyalar oralig'i</div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="xr-stat">
+          <div class="lbl">Top ixtisoslik</div>
+          <div class="val" id="stat-top-ixt" style="font-size:1.15rem;">—</div>
+          <div class="sub">eng ko'p tadqiq etilgan</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- timeline chart -->
+    <div class="chart-card mb-4">
+      <div class="chart-title"><i>📊</i> Himoyalar dinamikasi (yillar bo'yicha)</div>
+      <div class="chart-container"><canvas id="xarita-chart"></canvas></div>
+    </div>
+
+    <!-- AI analysis -->
+    <div class="xr-ai-card mb-4">
+      <h5>🤖 AI tahlili — Band va bo'sh nishalar</h5>
+      <div id="xr-ai-body" class="xr-ai-body">
+        <div class="xr-skel" style="width:92%"></div>
+        <div class="xr-skel" style="width:100%"></div>
+        <div class="xr-skel" style="width:85%"></div>
+        <div class="xr-skel" style="width:96%"></div>
+        <div class="xr-skel" style="width:60%"></div>
+      </div>
+      <div id="xr-ai-cached" class="xr-ai-cached hidden">♻️ Keshdan olindi</div>
+    </div>
+
+    <!-- students table -->
+    <div class="xr-table-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">
+        <h5 style="font-weight:700;margin:0;">👥 Shogirdlar ro'yxati</h5>
+        <button class="btn btn-outline-secondary btn-sm" id="change-supervisor-btn">🔄 Rahbarni o'zgartirish</button>
+      </div>
+      <div class="xr-table-wrap">
+        <table class="xr-table">
+          <thead>
+            <tr>
+              <th>Mavzu</th><th>Muallif</th><th>Yil</th><th>Daraja</th><th>Ixtisoslik</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="shogirdlar-tbody"></tbody>
+        </table>
+      </div>
+      <div id="xr-empty" class="xr-empty hidden">
+        Bu ilmiy rahbar bo'yicha dissertatsiyalar topilmadi.<br>Ismni tekshirib qayta urinib ko'ring.
+      </div>
+      <div id="xarita-pagination" class="xr-pager"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/xarita.js') }}"></script>
+{% endblock %}
