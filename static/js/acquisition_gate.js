@@ -57,7 +57,6 @@
     if (!modal) return;
 
     var closeBtn = el('lm-close'); if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    var skipBtn = el('lm-skip');   if (skipBtn) skipBtn.addEventListener('click', closeModal);
     // backdrop bosilganda yopiladi (kartaning o'zi emas)
     modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', function (e) {
