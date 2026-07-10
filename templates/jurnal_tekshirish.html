@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Jurnal tekshiruvi — OAK va Scopus roʻyxatida bormi? | Olimlar.uz{% endblock %}
+{% block meta_description %}Jurnal nomini yoki ISSN raqamini kiriting — OAK tan olgan, Scopus va Web of Science indekslagan jurnallar bazasidan bepul tekshiring. Shubhali nashriyotlardan ehtiyot bo'ling.{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Jurnal tekshiruvi",
+  "url": "https://olimlar.uz/jurnal-tekshirish",
+  "applicationCategory": "ReferenceApplication",
+  "operatingSystem": "Web",
+  "description": "Ilmiy jurnalni OAK, Scopus va Web of Science ro'yxatlarida tekshirish vositasi",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "UZS"}
+}
+</script>
+<style>
+  .jv-wrap { max-width: 860px; margin: 0 auto; padding: 8px 16px 56px; }
+  .jv-head { text-align: center; margin-bottom: 1.6rem; }
+  .jv-head h1 { font-size: 1.65rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
+  .jv-head p { color: #94a3b8; margin: 0; font-size: 0.95rem; line-height: 1.55; }
+
+  .jv-search-card { background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 24px; margin-bottom: 20px; }
+  .jv-input-row { display: flex; gap: 10px; }
+  .jv-input { flex: 1; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 12px; padding: 15px 18px; font-size: 1.02rem; min-width: 0; }
+  .jv-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+  .jv-btn { background: #3b82f6; color: #fff; border: none; border-radius: 12px; padding: 0 24px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+  .jv-btn:hover { background: #2563eb; }
+  .jv-issn-err { display: none; color: #f87171; font-size: 0.84rem; margin-top: 8px; }
+  .jv-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .jv-pill { background: #0f172a; border: 1px solid #334155; color: #cbd5e1; padding: 7px 16px; border-radius: 999px; cursor: pointer; font-size: 0.84rem; font-weight: 600; }
+  .jv-pill.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .jv-hint { color: #64748b; font-size: 0.8rem; margin-top: 12px; }
+
+  .jv-status { color: #94a3b8; text-align: center; padding: 1.4rem; font-size: 0.92rem; }
+  .jv-cards { display: flex; flex-direction: column; gap: 14px; }
+  .jv-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; }
+  .jv-card.trusted { border-left: 4px solid #059669; }
+  .jv-card.unknown { border-left: 4px solid #f59e0b; }
+  .jv-card.suspect { border-left: 4px solid #ef4444; background: rgba(239,68,68,0.06); }
+  .jv-card-top { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+  .jv-title { color: #f1f5f9; font-weight: 700; font-size: 1.02rem; text-decoration: none; flex: 1; min-width: 200px; line-height: 1.35; }
+  .jv-title:hover { color: #60a5fa; }
+  .jv-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .jv-badge { font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; white-space: nowrap; }
+  .jv-badge.oak { background: #059669; }
+  .jv-badge.scopus { background: #ff8608; }
+  .jv-badge.wos { background: #fbbc05; color: #1f2937; }
+  .jv-badge.scholar { background: #4285f4; }
+  .jv-badge.warn { background: #ef4444; }
+  .jv-msg { margin-top: 8px; font-size: 0.86rem; font-weight: 600; }
+  .jv-msg.trusted { color: #34d399; } .jv-msg.unknown { color: #fbbf24; } .jv-msg.suspect { color: #f87171; }
+  .jv-meta { display: flex; gap: 14px; flex-wrap: wrap; color: #94a3b8; font-size: 0.8rem; margin-top: 10px; }
+  .jv-meta b { color: #cbd5e1; font-weight: 600; }
+  .jv-warnbox { border-radius: 14px; padding: 16px 18px; font-size: 0.9rem; line-height: 1.55; }
+  .jv-warnbox.amber { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.4); color: #fbbf24; }
+  .jv-warnbox.red { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+  .jv-seo { margin-top: 36px; color: #94a3b8; font-size: 0.88rem; line-height: 1.7; }
+  .jv-seo h2 { color: #e2e8f0; font-size: 1.05rem; margin: 0 0 8px; }
+  @media (max-width: 560px) {
+    .jv-input-row { flex-direction: column; }
+    .jv-btn { padding: 13px 24px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jv-wrap">
+  <div class="jv-head">
+    <h1>🔍 Jurnal tekshiruvi — OAK va Scopus roʻyxatida bormi?</h1>
+    <p>Maqola yuborishdan oldin jurnalni tekshiring: OAK tan olganmi, Scopus yoki
+       Web of Science indekslaganmi, nashriyoti ishonchlimi.</p>
+  </div>
+
+  <div class="jv-search-card">
+    <div class="jv-input-row">
+      <input type="text" class="jv-input" id="jvQuery" autocomplete="off"
+             placeholder="Jurnal nomini yoki ISSN raqamini kiriting">
+      <button class="jv-btn" id="jvGo">Tekshirish</button>
+    </div>
+    <div class="jv-issn-err" id="jvIssnErr">ISSN formati noto'g'ri (masalan: 1234-5678)</div>
+    <div class="jv-pills">
+      <button class="jv-pill active" data-f="all">Hammasi</button>
+      <button class="jv-pill" data-f="oak">OAK</button>
+      <button class="jv-pill" data-f="scopus">Scopus</button>
+    </div>
+    <div class="jv-hint">Masalan: <em>O'zbekiston tibbiyot jurnali</em> yoki <em>2181-1234</em></div>
+  </div>
+
+  <div id="jvStatus" class="jv-status">Qidirish uchun jurnal nomini yoki ISSN raqamini yozing.</div>
+  <div id="jvWarnings" class="jv-cards" style="margin-bottom:14px;"></div>
+  <div id="jvResults" class="jv-cards"></div>
+
+  <div class="jv-seo">
+    <h2>Nima uchun jurnalni tekshirish kerak?</h2>
+    <p>Dissertatsiya himoyasi uchun maqolalar OAK tomonidan tan olingan yoki xalqaro
+       (Scopus, Web of Science) bazalarda indekslangan jurnallarda chop etilishi talab
+       qilinadi. Ayrim nashriyotlar sifat nazorati va haqiqiy taqrizsiz, pul evaziga
+       maqola chop etadi — bunday nashrlar himoyada inobatga olinmasligi mumkin.
+       Ushbu vosita jurnal nomi yoki ISSN raqami bo'yicha bazamizni tekshiradi va
+       shubhali nashriyotlar haqida ogohlantiradi. Natijalar tavsiya xarakteriga ega —
+       yakuniy qaror uchun OAK rasmiy ro'yxatiga murojaat qiling.</p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById('jvQuery');
+  var btn = document.getElementById('jvGo');
+  var issnErr = document.getElementById('jvIssnErr');
+  var statusEl = document.getElementById('jvStatus');
+  var warnEl = document.getElementById('jvWarnings');
+  var resEl = document.getElementById('jvResults');
+  var filter = 'all', lastResults = [], timer = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function issnLike(q) { return /^\d{4}-?\d{3}[\dXx]$/.test(q); }
+  function issnValid(q) {
+    var s = q.replace('-', '').toUpperCase();
+    if (!/^\d{7}[\dX]$/.test(s)) return false;
+    var total = 0;
+    for (var i = 0; i < 7; i++) total += parseInt(s[i], 10) * (8 - i);
+    var check = (11 - total % 11) % 11;
+    return s[7] === (check === 10 ? 'X' : String(check));
+  }
+
+  function badgeHtml(b) {
+    if (b === 'oak') return '<span class="jv-badge oak">OAK ✓</span>';
+    if (b.indexOf('scopus') === 0) {
+      var q = b.split('_')[1];
+      return '<span class="jv-badge scopus">Scopus' + (q ? ' ' + q.toUpperCase() : '') + '</span>';
+    }
+    if (b === 'wos') return '<span class="jv-badge wos">WoS</span>';
+    if (b === 'scholar') return '<span class="jv-badge scholar">Google Scholar</span>';
+    return '';
+  }
+
+  function passesFilter(r) {
+    if (filter === 'oak') return r.badges.indexOf('oak') !== -1;
+    if (filter === 'scopus') return r.badges.some(function (b) { return b.indexOf('scopus') === 0; });
+    return true;
+  }
+
+  function render() {
+    var shown = lastResults.filter(passesFilter);
+    resEl.innerHTML = shown.map(function (r) {
+      var meta = [];
+      if (r.issn) meta.push('<span>ISSN: <b>' + esc(r.issn) + '</b></span>');
+      if (r.eissn) meta.push('<span>E-ISSN: <b>' + esc(r.eissn) + '</b></span>');
+      if (r.publisher) meta.push('<span>Nashriyot: <b>' + esc(r.publisher) + '</b></span>');
+      if (r.country) meta.push('<span>🌍 <b>' + esc(r.country) + '</b></span>');
+      if (r.quartile) meta.push('<span>Kvartil: <b>' + esc(r.quartile) + '</b></span>');
+      if (r.h_index != null) meta.push('<span>h-indeks: <b>' + esc(r.h_index) + '</b></span>');
+      if (r.impact_factor != null) meta.push('<span>IF: <b>' + esc(r.impact_factor) + '</b></span>');
+      var badges = r.badges.map(badgeHtml).join('');
+      if (r.status === 'suspect') badges += '<span class="jv-badge warn">⚠️ Ehtiyot bo\'ling</span>';
+      var icon = r.status === 'trusted' ? '✅ ' : (r.status === 'suspect' ? '🔴 ' : '⚠️ ');
+      return '<div class="jv-card ' + r.status + '">' +
+        '<div class="jv-card-top">' +
+          '<a class="jv-title" href="' + esc(r.url) + '">' + esc(r.title) + '</a>' +
+          '<div class="jv-badges">' + badges + '</div>' +
+        '</div>' +
+        '<div class="jv-msg ' + r.status + '">' + icon + esc(r.message) + '</div>' +
+        (meta.length ? '<div class="jv-meta">' + meta.join('') + '</div>' : '') +
+      '</div>';
+    }).join('');
+    if (lastResults.length && !shown.length) {
+      statusEl.style.display = '';
+      statusEl.textContent = 'Tanlangan filtr bo\'yicha natija yo\'q.';
+    }
+  }
+
+  function search() {
+    var q = (input.value || '').trim();
+    issnErr.style.display = 'none';
+    warnEl.innerHTML = '';
+    if (q.length < 2) {
+      lastResults = []; resEl.innerHTML = '';
+      statusEl.style.display = '';
+      statusEl.textContent = 'Qidirish uchun jurnal nomini yoki ISSN raqamini yozing.';
+      return;
+    }
+    if (issnLike(q) && !issnValid(q)) {
+      issnErr.style.display = 'block';
+      lastResults = []; resEl.innerHTML = '';
+      statusEl.style.display = 'none';
+      return;
+    }
+    statusEl.style.display = '';
+    statusEl.textContent = 'Qidirilmoqda…';
+    fetch('/api/journals/verify?q=' + encodeURIComponent(q))
+      .then(function (r) {
+        if (r.status === 429) throw new Error('rl');
+        return r.json();
+      })
+      .then(function (d) {
+        if ((input.value || '').trim() !== q) return;   // stale response
+        lastResults = d.results || [];
+        statusEl.style.display = lastResults.length ? 'none' : '';
+        if (!lastResults.length) statusEl.textContent = '';
+        warnEl.innerHTML = (d.warnings || []).map(function (w) {
+          var red = !!w.suspect_match;
+          var html = esc(w.message);
+          if (w.suspect_match) html += '<br><b>' + esc(w.suspect_match) + '</b>';
+          return '<div class="jv-warnbox ' + (red ? 'red' : 'amber') + '">' +
+                 (red ? '🔴 ' : '⚠️ ') + html + '</div>';
+        }).join('');
+        render();
+      })
+      .catch(function (e) {
+        statusEl.style.display = '';
+        statusEl.textContent = e.message === 'rl'
+          ? "So'rovlar ko'payib ketdi — bir daqiqadan so'ng qayta urinib ko'ring."
+          : 'Xatolik yuz berdi. Qayta urinib ko\'ring.';
+      });
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(search, 400);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { clearTimeout(timer); search(); }
+  });
+  btn.addEventListener('click', function () { clearTimeout(timer); search(); });
+
+  document.querySelectorAll('.jv-pill').forEach(function (p) {
+    p.addEventListener('click', function () {
+      document.querySelectorAll('.jv-pill').forEach(function (x) { x.classList.remove('active'); });
+      p.classList.add('active');
+      filter = p.getAttribute('data-f');
+      if (lastResults.length) { statusEl.style.display = 'none'; render(); }
+    });
+  });
+})();
+</script>
+{% endblock %}

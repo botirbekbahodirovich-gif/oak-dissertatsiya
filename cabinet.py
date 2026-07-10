@@ -933,8 +933,9 @@ def _form():
     return request.get_json(silent=True) or request.form
 
 
-# maqolalar
-_MAQOLA = ['title', 'authors', 'journal', 'year', 'citations', 'url']
+# maqolalar — journal_flag: jurnal tekshiruvi natijasi ('trusted'/'unknown'/
+# 'suspect'), tavsiya xarakterida — saqlashni hech qachon bloklamaydi.
+_MAQOLA = ['title', 'authors', 'journal', 'year', 'citations', 'url', 'journal_flag']
 
 
 @cabinet_bp.route('/cabinet/api/maqola/add', methods=['POST'])

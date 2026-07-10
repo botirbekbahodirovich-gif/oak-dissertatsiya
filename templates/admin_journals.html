@@ -22,6 +22,26 @@
   .adm-btn { font-size: 0.95rem; padding: 5px 11px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; line-height: 1; }
   .adm-edit { background: rgba(59,130,246,0.15); color: #60a5fa; } .adm-del { background: rgba(239,68,68,0.15); color: #f87171; }
   .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+  .adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .adm-stat { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px 16px; }
+  .adm-stat b { display: block; font-size: 1.35rem; color: #f1f5f9; }
+  .adm-stat span { font-size: 0.74rem; color: #94a3b8; }
+  .adm-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  @media (max-width: 760px) { .adm-tools { grid-template-columns: 1fr; } }
+  .adm-tool { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; }
+  .adm-tool h3 { margin: 0 0 4px; font-size: 0.92rem; color: #e2e8f0; }
+  .adm-tool p { margin: 0 0 10px; font-size: 0.76rem; color: #94a3b8; }
+  .adm-tool form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .adm-tool input[type=file] { flex: 1; min-width: 160px; font-size: 0.78rem; color: #94a3b8; }
+  .adm-tool button { background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+  .adm-search { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 14px; }
+  .adm-analytics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+  @media (max-width: 760px) { .adm-analytics { grid-template-columns: 1fr; } }
+  .adm-panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+  .adm-panel h3 { margin: 0 0 10px; font-size: 0.95rem; color: #e2e8f0; }
+  .adm-panel table { width: 100%; font-size: 0.82rem; color: #cbd5e1; border-collapse: collapse; }
+  .adm-panel td, .adm-panel th { padding: 5px 8px; border-top: 1px solid #28344a; text-align: left; }
+  .adm-panel th { color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
 </style>
 {% endblock %}
 
@@ -35,22 +55,65 @@
   {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
 {% endwith %}
 
+<div class="adm-stats">
+  <div class="adm-stat"><b>{{ stats.total }}</b><span>Jami jurnal</span></div>
+  <div class="adm-stat"><b>{{ stats.oak }}</b><span>OAK tan olgan</span></div>
+  <div class="adm-stat"><b>{{ stats.scopus }}</b><span>Scopus</span></div>
+  <div class="adm-stat"><b>{{ stats.suspect }}</b><span>Shubhali jurnal</span></div>
+  <div class="adm-stat"><b>{{ stats.suspect_publishers }}</b><span>Shubhali nashriyot</span></div>
+  <div class="adm-stat"><b>{{ stats.total_searches }}</b><span>Tekshiruv so'rovlari</span></div>
+</div>
+
+<div class="adm-tools">
+  <div class="adm-tool">
+    <h3>📥 CSV orqali yuklash</h3>
+    <p>Ustunlar: <code>title, issn, source (oak/scopus/wos/manual), is_suspect</code> — ixtiyoriy: eissn, publisher, country, quartile, reason. Mavjud jurnallar yangilanadi.</p>
+    <form method="POST" action="/admin/journals/csv" enctype="multipart/form-data">
+      {{ csrf_token()|safe }}
+      <input type="file" name="csv_file" accept=".csv" required>
+      <button type="submit">Yuklash</button>
+    </form>
+  </div>
+  <div class="adm-tool">
+    <h3>🛡️ Suspect ro'yxatini yangilash</h3>
+    <p>JSON fayl: <code>[{"publisher": "...", "reason": "..."}]</code> — eski ro'yxat to'liq almashtiriladi.</p>
+    <form method="POST" action="/admin/journals/suspects" enctype="multipart/form-data">
+      {{ csrf_token()|safe }}
+      <input type="file" name="suspects_file" accept=".json" required>
+      <button type="submit">Yangilash</button>
+    </form>
+  </div>
+</div>
+
+<input type="text" class="adm-search" id="admJrSearch" placeholder="🔍 Jurnal nomi yoki ISSN bo'yicha qidirish...">
+
 {% if items %}
 <div class="adm-table-wrap">
   <table class="adm-table">
     <thead>
-      <tr><th>#</th><th>Logo</th><th>Nomi</th><th>Ixtisosliklar</th><th>OAK</th><th>Scopus</th><th>WoS</th><th>Amallar</th></tr>
+      <tr><th>#</th><th>Logo</th><th>Nomi</th><th>ISSN</th><th>Ixtisosliklar</th><th>OAK</th><th>Scopus</th><th>WoS</th><th>Shubhali</th><th>Amallar</th></tr>
     </thead>
     <tbody>
       {% for j in items %}
-      <tr>
+      <tr class="adm-jr-row" data-search="{{ (j.name ~ ' ' ~ j.issn)|lower }}">
         <td>{{ j.id }}</td>
         <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;">{% else %}📚{% endif %}</td>
         <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️</span>{% endif %}</td>
+        <td style="font-size:0.78rem;color:#94a3b8;">{{ j.issn or '—' }}</td>
         <td style="color:#93bbfc;font-size:0.78rem;">{{ j.codes or '—' }}</td>
         <td>{% if j.oak_approved %}✅{% else %}—{% endif %}</td>
         <td>{% if j.scopus_indexed %}✅{% else %}—{% endif %}</td>
         <td>{% if j.wos_indexed %}✅{% else %}—{% endif %}</td>
+        <td>
+          <form method="POST" action="/admin/journals/toggle-suspect/{{ j.id }}" style="display:inline;"
+                {% if not j.is_predatory %}onsubmit="return confirm('Jurnal shubhali deb belgilansinmi?')"{% endif %}>
+            {{ csrf_token()|safe }}
+            <button type="submit" class="adm-btn" title="{% if j.is_predatory %}Belgini olib tashlash{% else %}Shubhali deb belgilash{% endif %}"
+                    style="background:{% if j.is_predatory %}rgba(239,68,68,0.25){% else %}rgba(148,163,184,0.12){% endif %};color:{% if j.is_predatory %}#f87171{% else %}#64748b{% endif %};">
+              {% if j.is_predatory %}🔴{% else %}○{% endif %}
+            </button>
+          </form>
+        </td>
         <td>
           <div class="adm-actions">
             <a href="/admin/journals/edit/{{ j.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
@@ -68,4 +131,41 @@
 {% else %}
 <div class="adm-table-wrap"><div class="adm-empty">Hali jurnal yo'q.</div></div>
 {% endif %}
+
+<div class="adm-analytics">
+  <div class="adm-panel">
+    <h3>🔍 Eng ko'p qidirilgan jurnallar (top 10)</h3>
+    {% if top_searches %}
+    <table>
+      <tr><th>So'rov</th><th>Soni</th><th>Ogohlantirish</th></tr>
+      {% for s in top_searches %}
+      <tr><td>{{ s.query[:45] }}</td><td>{{ s.count }}</td><td>{% if s.warned %}⚠️ {{ s.warned }}{% else %}—{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p style="color:#64748b;font-size:0.82rem;margin:0;">Hali qidiruv yo'q.</p>{% endif %}
+  </div>
+  <div class="adm-panel">
+    <h3>⚠️ Ogohlantirishlar statistikasi</h3>
+    <table>
+      <tr><th>Nashr holati</th><th>Soni</th></tr>
+      <tr><td>✅ Ishonchli jurnal bilan saqlangan</td><td>{{ warn_saves.get('trusted', 0) }}</td></tr>
+      <tr><td>⚠️ Ro'yxatlarda topilmagan jurnal bilan</td><td>{{ warn_saves.get('unknown', 0) }}</td></tr>
+      <tr><td>🔴 Shubhali nashriyot ogohlantirishi bilan</td><td>{{ warn_saves.get('suspect', 0) }}</td></tr>
+    </table>
+    <p style="color:#64748b;font-size:0.74rem;margin:10px 0 0;">Foydalanuvchilar kabinetda maqola qo'shganda jurnal tekshiruvi natijasi saqlanadi. Ogohlantirishlar tavsiya xarakterida — saqlash bloklanmaydi.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var s = document.getElementById('admJrSearch');
+  if (!s) return;
+  s.addEventListener('input', function () {
+    var q = (s.value || '').toLowerCase().trim();
+    document.querySelectorAll('.adm-jr-row').forEach(function (r) {
+      r.style.display = (!q || (r.getAttribute('data-search') || '').indexOf(q) !== -1) ? '' : 'none';
+    });
+  });
+})();
+</script>
 {% endblock %}

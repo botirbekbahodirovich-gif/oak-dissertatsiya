@@ -1671,7 +1671,7 @@ def admin_journals():
     from app import _require_admin
     _require_admin()
     from data import get_connection
-    items = []
+    items, stats, top_searches, warn_saves = [], {}, [], {}
     try:
         conn = get_connection()
         try:
@@ -1679,6 +1679,7 @@ def admin_journals():
                 cur.execute("""
                     SELECT j.id, j.name, j.indexing, j.country, j.is_active, j.is_predatory,
                            j.logo_url, j.oak_approved, j.scopus_indexed, j.wos_indexed,
+                           j.issn,
                            COALESCE(string_agg(DISTINCT js.specialty_code, ', ' ORDER BY js.specialty_code), '')
                     FROM journals j
                     LEFT JOIN journal_specialties js ON js.journal_id = j.id
@@ -1687,12 +1688,37 @@ def admin_journals():
                 items = [{"id": r[0], "name": r[1] or "", "indexing": r[2] or "",
                           "country": r[3] or "", "is_active": r[4], "is_predatory": r[5],
                           "logo_url": r[6] or "", "oak_approved": r[7], "scopus_indexed": r[8],
-                          "wos_indexed": r[9], "codes": r[10] or ""} for r in cur.fetchall()]
+                          "wos_indexed": r[9], "issn": r[10] or "",
+                          "codes": r[11] or ""} for r in cur.fetchall()]
+                # verification analytics (registry counts, top searches, flagged saves)
+                cur.execute("SELECT COUNT(*) FROM suspect_publishers")
+                stats['suspect_publishers'] = cur.fetchone()[0] or 0
+                cur.execute("""
+                    SELECT LOWER(query), COUNT(*) AS n,
+                           SUM(CASE WHEN had_warning THEN 1 ELSE 0 END)
+                    FROM journal_search_log
+                    GROUP BY LOWER(query) ORDER BY n DESC LIMIT 10
+                """)
+                top_searches = [{"query": r[0], "count": r[1], "warned": r[2] or 0}
+                                for r in cur.fetchall()]
+                cur.execute("SELECT COUNT(*) FROM journal_search_log")
+                stats['total_searches'] = cur.fetchone()[0] or 0
+                cur.execute("""
+                    SELECT journal_flag, COUNT(*) FROM olim_maqolalar
+                    WHERE journal_flag IS NOT NULL AND journal_flag <> ''
+                    GROUP BY journal_flag
+                """)
+                warn_saves = {r[0]: r[1] for r in cur.fetchall()}
         finally:
             conn.close()
     except Exception:
         items = []
-    return render_template('admin_journals.html', items=items)
+    stats['total'] = len(items)
+    stats['oak'] = sum(1 for j in items if j['oak_approved'])
+    stats['scopus'] = sum(1 for j in items if j['scopus_indexed'])
+    stats['suspect'] = sum(1 for j in items if j['is_predatory'])
+    return render_template('admin_journals.html', items=items, stats=stats,
+                           top_searches=top_searches, warn_saves=warn_saves)
 
 
 @admin_bp.route('/admin/journals/add', methods=['GET', 'POST'])
@@ -1728,6 +1754,9 @@ def admin_journal_add():
                         jid = (cur.fetchone() or [None])[0]
                     if jid:
                         _save_journal_specialties(cur, jid)
+                        from blueprints.journal_check import normalize_title
+                        cur.execute("UPDATE journals SET name_normalized = %s WHERE id = %s",
+                                    (normalize_title(vals['name']), jid))
                 conn.commit()
             finally:
                 conn.close()
@@ -1801,6 +1830,9 @@ def admin_journal_edit(id):
                     set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = NOW()"
                     cur.execute(f"UPDATE journals SET {set_clause} WHERE id = %s", args + [id])
                     _save_journal_specialties(cur, id)
+                    from blueprints.journal_check import normalize_title
+                    cur.execute("UPDATE journals SET name_normalized = %s WHERE id = %s",
+                                (normalize_title(vals['name']), id))
                 conn.commit()
             finally:
                 conn.close()
@@ -1854,4 +1886,155 @@ def admin_journal_delete(id):
         flash("Jurnal o'chirildi.", "success")
     except Exception:
         flash("O'chirishda xatolik.", "error")
+    return redirect(url_for('admin.admin_journals'))
+
+
+@admin_bp.route('/admin/journals/toggle-suspect/<int:id>', methods=['POST'])
+@login_required
+def admin_journal_toggle_suspect(id):
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    reason = (request.form.get('reason') or '').strip()[:200] or None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE journals
+                    SET is_predatory = NOT COALESCE(is_predatory, FALSE),
+                        suspect_reason = CASE WHEN COALESCE(is_predatory, FALSE)
+                                              THEN NULL ELSE COALESCE(%s, suspect_reason) END,
+                        updated_at = NOW()
+                    WHERE id = %s RETURNING is_predatory
+                """, (reason, id))
+                row = cur.fetchone()
+            conn.commit()
+        finally:
+            conn.close()
+        if row is None:
+            flash("Jurnal topilmadi.", "error")
+        elif row[0]:
+            flash("Jurnal shubhali deb belgilandi.", "success")
+        else:
+            flash("Shubhali belgisi olib tashlandi.", "success")
+    except Exception:
+        flash("Belgini o'zgartirishda xatolik.", "error")
+    return redirect(url_for('admin.admin_journals'))
+
+
+@admin_bp.route('/admin/journals/csv', methods=['POST'])
+@login_required
+def admin_journals_csv():
+    """Batch upsert: CSV with title,issn,source,is_suspect (+ optional eissn,
+    publisher,country,quartile,reason columns). Advisory flags only."""
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    from blueprints.journal_check import normalize_title, issn_normalize
+    import csv as _csv
+    import io
+    f = request.files.get('csv_file')
+    if not f or not f.filename:
+        flash("CSV fayl tanlanmadi.", "error")
+        return redirect(url_for('admin.admin_journals'))
+    try:
+        text = f.read().decode('utf-8-sig', errors='replace')
+        reader = _csv.DictReader(io.StringIO(text))
+        rows = [r for r in reader if (r.get('title') or '').strip()]
+    except Exception:
+        flash("CSV faylni o'qib bo'lmadi.", "error")
+        return redirect(url_for('admin.admin_journals'))
+    if not rows:
+        flash("CSV faylda 'title' ustunli qatorlar topilmadi.", "error")
+        return redirect(url_for('admin.admin_journals'))
+    n = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                for r in rows:
+                    title = r['title'].strip()[:500]
+                    source = (r.get('source') or 'manual').strip().lower()
+                    if source not in ('oak', 'scopus', 'wos', 'manual'):
+                        source = 'manual'
+                    suspect = (r.get('is_suspect') or '').strip().lower() in (
+                        '1', 'true', 'yes', 'ha')
+                    cur.execute("""
+                        INSERT INTO journals (name, name_normalized, issn, eissn,
+                            publisher, country, quartile, source, is_predatory,
+                            suspect_reason, oak_approved, scopus_indexed, wos_indexed)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (name) DO UPDATE SET
+                            issn = COALESCE(EXCLUDED.issn, journals.issn),
+                            eissn = COALESCE(EXCLUDED.eissn, journals.eissn),
+                            publisher = COALESCE(EXCLUDED.publisher, journals.publisher),
+                            country = COALESCE(EXCLUDED.country, journals.country),
+                            quartile = COALESCE(EXCLUDED.quartile, journals.quartile),
+                            source = EXCLUDED.source,
+                            is_predatory = EXCLUDED.is_predatory,
+                            suspect_reason = COALESCE(EXCLUDED.suspect_reason,
+                                                      journals.suspect_reason),
+                            oak_approved = journals.oak_approved OR EXCLUDED.oak_approved,
+                            scopus_indexed = journals.scopus_indexed OR EXCLUDED.scopus_indexed,
+                            wos_indexed = journals.wos_indexed OR EXCLUDED.wos_indexed,
+                            name_normalized = EXCLUDED.name_normalized,
+                            updated_at = NOW()
+                    """, (title, normalize_title(title),
+                          issn_normalize(r.get('issn') or ''),
+                          issn_normalize(r.get('eissn') or ''),
+                          (r.get('publisher') or '').strip()[:500] or None,
+                          (r.get('country') or '').strip()[:100] or None,
+                          (r.get('quartile') or '').strip().upper()[:5] or None,
+                          source, suspect,
+                          (r.get('reason') or '').strip()[:200] or None,
+                          source == 'oak', source == 'scopus', source == 'wos'))
+                    n += 1
+            conn.commit()
+        finally:
+            conn.close()
+        flash(f"{n} ta jurnal yuklandi/yangilandi.", "success")
+    except Exception:
+        flash("CSV yuklashda xatolik yuz berdi.", "error")
+    return redirect(url_for('admin.admin_journals'))
+
+
+@admin_bp.route('/admin/journals/suspects', methods=['POST'])
+@login_required
+def admin_journals_suspects():
+    """Replace static/data/suspect_publishers.json with the uploaded file and
+    re-seed the suspect_publishers table from it."""
+    from app import _require_admin
+    _require_admin()
+    from data import get_connection
+    from blueprints.journal_check import SUSPECT_JSON_PATH, seed_suspects
+    import json as _json
+    f = request.files.get('suspects_file')
+    if not f or not f.filename:
+        flash("JSON fayl tanlanmadi.", "error")
+        return redirect(url_for('admin.admin_journals'))
+    try:
+        entries = _json.loads(f.read().decode('utf-8-sig'))
+        assert isinstance(entries, list)
+        valid = [e for e in entries
+                 if isinstance(e, dict) and (e.get('publisher') or '').strip()]
+        if not valid:
+            raise ValueError('empty')
+    except Exception:
+        flash("JSON format noto'g'ri — [{\"publisher\": ..., \"reason\": ...}] "
+              "ko'rinishida bo'lishi kerak.", "error")
+        return redirect(url_for('admin.admin_journals'))
+    try:
+        with open(SUSPECT_JSON_PATH, 'w', encoding='utf-8') as out:
+            _json.dump(valid, out, ensure_ascii=False, indent=2)
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                n = seed_suspects(cur, replace=True)
+            conn.commit()
+        finally:
+            conn.close()
+        flash(f"Shubhali nashriyotlar ro'yxati yangilandi ({n} ta).", "success")
+    except Exception:
+        flash("Ro'yxatni yangilashda xatolik yuz berdi.", "error")
     return redirect(url_for('admin.admin_journals'))

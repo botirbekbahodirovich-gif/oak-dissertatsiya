@@ -87,6 +87,26 @@
       <div class="yf-group"><label>Ro'yxat raqami</label><input class="yf-input" type="text" name="registered_number" value="{{ item.registered_number if item and item.registered_number else '' }}"></div>
       <div class="yf-group"><label>Ro'yxat sanasi</label><input class="yf-input" type="text" name="registered_date" value="{{ item.registered_date if item and item.registered_date else '' }}"></div>
     </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>Kvartil (Scopus)</label>
+        <select class="yf-select" name="quartile">
+          {% set qv = (item.quartile if item and item.quartile else '') %}
+          <option value="" {% if not qv %}selected{% endif %}>—</option>
+          {% for opt in ['Q1','Q2','Q3','Q4'] %}<option value="{{ opt }}" {% if qv == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="yf-group"><label>SJR</label><input class="yf-input" type="number" step="0.001" name="sjr" value="{{ item.sjr if item and item.sjr else '' }}"></div>
+    </div>
+    <div class="yf-row">
+      <div class="yf-group"><label>h-indeks</label><input class="yf-input" type="number" name="h_index" value="{{ item.h_index if item and item.h_index else '' }}"></div>
+      <div class="yf-group"><label>Manba</label>
+        <select class="yf-select" name="source">
+          {% set sv = (item.source if item and item.source else 'manual') %}
+          {% for opt in ['manual','oak','scopus','wos'] %}<option value="{{ opt }}" {% if sv == opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="yf-group full"><label>Shubhali deb belgilash sababi (agar belgilangan bo'lsa)</label><input class="yf-input" type="text" name="suspect_reason" placeholder="masalan: Beall ro'yxatida qayd etilgan" value="{{ item.suspect_reason if item and item.suspect_reason else '' }}"></div>
     <div class="yf-checks">
       <label class="yf-check"><input type="checkbox" name="oak_approved" {% if (item and item.oak_approved) or not item %}checked{% endif %}> OAK tasdiqlagan</label>
       <label class="yf-check"><input type="checkbox" name="scopus_indexed" {% if item and item.scopus_indexed %}checked{% endif %}> Scopus</label>

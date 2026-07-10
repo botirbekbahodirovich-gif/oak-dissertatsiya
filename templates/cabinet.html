@@ -181,6 +181,21 @@
             {% else %}
             <span style="color:#64748b;font-size:0.9rem;">Hali hech qanday profil biriktirilmagan.</span>
             {% endif %}
+            <div style="margin-top:10px;">
+              {% if profile.orcid_url %}
+              <a href="{{ profile.orcid_url }}" target="_blank" rel="noopener"
+                 style="display:inline-flex;align-items:center;gap:6px;background:rgba(166,206,57,0.15);border:1px solid rgba(166,206,57,0.4);color:#A6CE39;padding:5px 14px;border-radius:50px;font-size:0.82rem;text-decoration:none;font-weight:600;"
+                 title="ORCID profili">
+                <i class="bi bi-person-badge-fill"></i> ORCID
+              </a>
+              {% else %}
+              <button onclick="gotoPanel('linklar')"
+                style="display:inline-flex;align-items:center;gap:6px;background:rgba(166,206,57,0.12);border:1px dashed rgba(166,206,57,0.5);color:#A6CE39;padding:5px 14px;border-radius:50px;font-size:0.82rem;cursor:pointer;font-weight:600;"
+                title="ORCID IDingizni biriktiring">
+                + ORCID IDni biriktirish
+              </button>
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -190,7 +205,7 @@
       <section class="cab-panel active" id="panel-korinish">
         {% set rw_dark = true %}
         {% include '_reminders_widget.html' %}
-        {% set _checks = [olim_name, (profile.first_name and profile.last_name), profile.academic_degree, profile.region, profile.institution, profile.bio] %}
+        {% set _checks = [olim_name, (profile.first_name and profile.last_name), profile.academic_degree, profile.region, profile.institution, profile.bio, profile.orcid_url] %}
         {% set _done = _checks|select|list|length %}
         {% set _pct = (_done * 100) // (_checks|length) %}
         <div class="cab-section" style="padding:16px 20px;">
@@ -381,6 +396,27 @@
       </section>
 
       <!-- ── MAQOLALAR (D) ── -->
+      <style>
+        /* jurnal tekshiruvi dropdown (maqola formasi) */
+        .jvc-drop { display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 40;
+                    background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+                    margin-top: 4px; max-height: 240px; overflow-y: auto;
+                    box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
+        .jvc-drop.open { display: block; }
+        .jvc-row { padding: 9px 12px; cursor: pointer; font-size: 0.84rem; line-height: 1.4;
+                   border-bottom: 1px solid #1e293b; }
+        .jvc-row:last-child { border-bottom: none; }
+        .jvc-row:hover { background: #1e293b; }
+        .jvc-row .jvc-t { color: #e2e8f0; font-weight: 600; display: block; }
+        .jvc-row .jvc-s { font-size: 0.74rem; }
+        .jvc-row.trusted .jvc-s { color: #34d399; }
+        .jvc-row.unknown .jvc-s { color: #fbbf24; }
+        .jvc-row.suspect .jvc-s { color: #f87171; }
+        .jvc-note { font-size: 0.76rem; margin-top: 5px; line-height: 1.45; display: none; }
+        .jvc-note.trusted { display: block; color: #34d399; }
+        .jvc-note.unknown { display: block; color: #fbbf24; }
+        .jvc-note.suspect { display: block; color: #f87171; }
+      </style>
       <section class="cab-panel" id="panel-maqolalar">
         <div class="cab-section">
           <h3>Maqolalar</h3>
@@ -390,7 +426,13 @@
             <div class="cab-grid">
               <div class="cab-group full"><label>Maqola nomi *</label><input class="cab-input" id="maqola-title" type="text"></div>
               <div class="cab-group"><label>Mualliflar</label><input class="cab-input" id="maqola-authors" type="text"></div>
-              <div class="cab-group"><label>Jurnal nomi</label><input class="cab-input" id="maqola-journal" type="text"></div>
+              <div class="cab-group" style="position:relative;">
+                <label>Jurnal nomi</label>
+                <input class="cab-input" id="maqola-journal" type="text" autocomplete="off" placeholder="Yozing — OAK/Scopus bo'yicha tekshiramiz">
+                <input type="hidden" id="maqola-journal_flag">
+                <div class="jvc-drop" id="jvc-drop"></div>
+                <div class="jvc-note" id="jvc-note"></div>
+              </div>
               <div class="cab-group"><label>Yil</label><input class="cab-input" id="maqola-year" type="number"></div>
               <div class="cab-group"><label>Sitata soni</label><input class="cab-input" id="maqola-citations" type="number" value="0"></div>
               <div class="cab-group full"><label>URL / DOI</label><input class="cab-input" id="maqola-url" type="text"></div>
@@ -401,7 +443,7 @@
             {% for m in maqolalar %}
             <div class="item-card">
               <div class="it-title">{{ m.title }}</div>
-              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
+              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.journal_flag == 'trusted' %} ✅{% elif m.journal_flag == 'suspect' %} <span style="color:#f87171;" title="Ehtiyot bo'ling — nashriyot shubhali deb belgilangan">🔴</span>{% elif m.journal_flag == 'unknown' %} <span style="color:#fbbf24;" title="OAK/Scopus ro'yxatlarida topilmadi">⚠️</span>{% endif %}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
               <div class="it-actions">
                 <button class="it-btn it-edit" onclick='editMaqola({{ m|tojson }})'>Tahrirlash ✏️</button>
                 <button class="it-btn it-del" onclick="delItem('maqola', {{ m.id }})">O'chirish 🗑️</button>
@@ -869,9 +911,11 @@ function clearForm(t) {
     if (el.type === 'checkbox') el.checked = false; else if (el.type === 'hidden') el.value = ''; else if (el.id !== '' && el.id.indexOf('-citations') === -1) el.value = '';
   });
   var cit = document.getElementById(t + '-citations'); if (cit) cit.value = '0';
+  f.querySelectorAll('.jvc-note').forEach(function (n) { n.className = 'jvc-note'; n.innerHTML = ''; });
+  f.querySelectorAll('.jvc-drop').forEach(function (d) { d.classList.remove('open'); d.innerHTML = ''; });
 }
 var FIELDS = {
-  maqola: ['title', 'authors', 'journal', 'year', 'citations', 'url'],
+  maqola: ['title', 'authors', 'journal', 'year', 'citations', 'url', 'journal_flag'],
   konf: ['title', 'conference_name', 'location', 'date', 'url'],
   ish: ['position', 'organization', 'start_date', 'end_date', 'is_current'],
   rasm: ['image_url', 'caption'],
@@ -914,6 +958,78 @@ function fill(t, obj) {
   var idEl = document.getElementById(t + '-id'); if (idEl) idEl.value = obj.id || '';
 }
 function editMaqola(o) { fill('maqola', o); }
+
+// ── jurnal tekshiruvi (maqola formasi) — tavsiya, saqlashni bloklamaydi ──
+(function () {
+  var inp = document.getElementById('maqola-journal');
+  var flag = document.getElementById('maqola-journal_flag');
+  var drop = document.getElementById('jvc-drop');
+  var note = document.getElementById('jvc-note');
+  if (!inp || !drop) return;
+  var timer = null;
+
+  function escq(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function setNote(status, text) {
+    note.className = 'jvc-note' + (status ? ' ' + status : '');
+    note.innerHTML = text || '';
+    flag.value = status || '';
+  }
+  function rowLabel(r) {
+    if (r.status === 'trusted') return '✅ ' + r.message;
+    if (r.status === 'suspect') return "🔴 Ehtiyot bo'ling — bu nashriyot shubhali deb belgilangan";
+    return "⚠️ OAK/Scopus ro'yxatlarida tasdiqlanmagan";
+  }
+  function closeDrop() { drop.classList.remove('open'); drop.innerHTML = ''; }
+
+  inp.addEventListener('input', function () {
+    clearTimeout(timer);
+    setNote('', '');
+    var q = (inp.value || '').trim();
+    if (q.length < 3) { closeDrop(); return; }
+    timer = setTimeout(function () {
+      fetch('/api/journals/verify?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.ok ? r.json() : { results: [], warnings: [] }; })
+        .then(function (d) {
+          if ((inp.value || '').trim() !== q) return;
+          var results = d.results || [], warnings = d.warnings || [];
+          if (results.length) {
+            drop.innerHTML = results.map(function (r, i) {
+              var extra = [r.issn && ('ISSN: ' + r.issn), r.quartile].filter(Boolean).join(' · ');
+              return '<div class="jvc-row ' + r.status + '" data-i="' + i + '">' +
+                '<span class="jvc-t">' + escq(r.title) + '</span>' +
+                '<span class="jvc-s">' + escq(rowLabel(r)) + (extra ? ' · ' + escq(extra) : '') + '</span></div>';
+            }).join('');
+            drop.classList.add('open');
+            drop.querySelectorAll('.jvc-row').forEach(function (el) {
+              el.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                var r = results[parseInt(el.getAttribute('data-i'), 10)];
+                inp.value = r.title;
+                closeDrop();
+                setNote(r.status, escq(rowLabel(r)) +
+                  (r.issn ? ' · ISSN: ' + escq(r.issn) : '') +
+                  (r.quartile ? ' · ' + escq(r.quartile) : ''));
+              });
+            });
+          } else {
+            closeDrop();
+            var w = warnings[0];
+            if (w && w.suspect_match) {
+              setNote('suspect', '🔴 ' + escq(w.message) + '<br>' + escq(w.suspect_match));
+            } else if (w && w.type === 'not_found') {
+              setNote('unknown', '⚠️ ' + escq(w.message));
+            }
+          }
+        })
+        .catch(function () { closeDrop(); });
+    }, 300);
+  });
+  inp.addEventListener('blur', function () { setTimeout(closeDrop, 150); });
+})();
 function editKonf(o) { fill('konf', o); }
 function editIsh(o) { fill('ish', o); toggleCurrent(); }
 function editShogird(o) { fill('shogird', o); }
