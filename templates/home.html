@@ -79,24 +79,66 @@
 .hx-welcome-links a:hover { background: var(--hx-blue-soft); color: #bfdbfe; }
 .hx-welcome-links .hx-dot { color: #475569; }
 
-/* ═══ 3. hero ═══ */
-.hx-hero { padding: 96px 0 88px; overflow: hidden; }
+/* ═══ 3. hero (v3 — ikki ustunli: chapda matn+qidiruv, o'ngda jonli vizual) ═══ */
+.hx-hero { padding: 84px 0 80px; overflow: hidden; }
 .hx-hero::before {
   content: ""; position: absolute; inset: -20% -10% auto; height: 130%;
-  background: radial-gradient(ellipse 60% 55% at 50% 32%, rgba(59,130,246,0.08), transparent 70%);
+  background:
+    radial-gradient(ellipse 55% 60% at 28% 30%, rgba(59,130,246,0.1), transparent 70%),
+    radial-gradient(ellipse 42% 46% at 84% 62%, rgba(124,92,252,0.08), transparent 72%);
   pointer-events: none;
 }
 #hx-net { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.hx-hero-inner { position: relative; max-width: 780px; margin: 0 auto; text-align: center; }
-.hx-h1 {
-  font-size: clamp(1.9rem, 5vw, 3.15rem); font-weight: 800; letter-spacing: -0.025em;
-  line-height: 1.15; color: #f8fafc; margin: 0 0 18px;
+.hx-hero-grid { position: relative; display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 56px; align-items: center; }
+.hx-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px;
+  padding: 6px 14px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  color: var(--hx-blue-text); background: var(--hx-blue-soft); border: 1px solid rgba(59,130,246,0.3);
 }
-.hx-hero-sub { font-size: clamp(1rem, 2vw, 1.18rem); color: var(--hx-muted); line-height: 1.6; margin: 0 auto 36px; max-width: 620px; }
+.hx-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--hx-green);
+               box-shadow: 0 0 8px rgba(52,211,153,0.9); animation: hx-pulse 2.2s ease infinite; }
+@keyframes hx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.hx-h1 {
+  font-size: clamp(1.9rem, 4.6vw, 3.05rem); font-weight: 800; letter-spacing: -0.025em;
+  line-height: 1.13; color: #f8fafc; margin: 0 0 18px;
+}
+.hx-h1-accent {
+  background: linear-gradient(92deg, #60a5fa 10%, #a78bfa 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hx-hero-sub { font-size: clamp(1rem, 1.9vw, 1.13rem); color: var(--hx-muted); line-height: 1.65; margin: 0 0 28px; max-width: 560px; }
+.hx-quick { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; margin-top: 18px; font-size: 0.86rem; }
+.hx-quick > span { color: #475569; }
+.hx-quick a { color: var(--hx-blue-text); font-weight: 600; padding: 4px 2px; border-radius: 6px; transition: color 0.2s ease; }
+.hx-quick a:hover { color: #bfdbfe; }
+
+/* o'ng ustun — suzuvchi mahsulot kartalari (sof CSS, skrinshot emas) */
+.hx-hero-visual { position: relative; min-height: 400px; }
+.hx-hv-card {
+  position: absolute; background: #111a2c; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px; box-shadow: 0 24px 60px rgba(2,6,23,0.55);
+}
+@keyframes hx-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.hx-hv-toast { top: 0; right: 2%; width: 58%; padding: 12px 14px; display: flex; align-items: center; gap: 10px;
+               animation: hx-float 8s ease-in-out 0.8s infinite; z-index: 2; }
+.hx-hv-toast-ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+                  background: var(--hx-green-soft); color: var(--hx-green); }
+.hx-hv-toast-ic svg { width: 15px; height: 15px; }
+.hx-hv-toast b { display: block; font-size: 0.78rem; color: var(--hx-text); font-weight: 700; }
+.hx-hv-toast i { display: block; height: 6px; border-radius: 3px; background: rgba(148,163,184,0.28); width: 110px; margin-top: 6px; }
+.hx-hv-profile { top: 16%; left: 0; width: 60%; padding: 18px; animation: hx-float 7s ease-in-out infinite; }
+.hx-hv-trend { bottom: 4%; right: 0; width: 56%; padding: 14px 16px; animation: hx-float 9s ease-in-out 1.6s infinite; z-index: 2; }
+.hx-hv-trend-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                    font-size: 0.74rem; color: var(--hx-muted); font-weight: 600; }
+.hx-hv-trend-up { font-size: 0.72rem; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+                  background: var(--hx-green-soft); color: var(--hx-green); white-space: nowrap; }
+.hx-hv-bars { display: flex; align-items: flex-end; gap: 5px; height: 58px; margin-top: 12px; }
+.hx-hv-bars i { flex: 1; border-radius: 3px 3px 0 0;
+                background: linear-gradient(180deg, #60a5fa, rgba(59,130,246,0.3)); }
 
 /* qidiruv — sahifaning yagona bosh elementi */
 .hx-search {
-  display: flex; align-items: stretch; height: 56px; max-width: 640px; margin: 0 auto;
+  display: flex; align-items: stretch; height: 56px; max-width: 640px; margin: 0;
   background: rgba(15,23,42,0.75); border: 1px solid rgba(255,255,255,0.14);
   border-radius: 14px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -114,7 +156,7 @@
   transition: background 0.2s ease, transform 0.2s ease;
 }
 .hx-search button:hover { background: #2f74e8; transform: scale(1.02); }
-.hx-scopes { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.hx-scopes { display: flex; justify-content: flex-start; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .hx-scope {
   min-height: 36px; padding: 7px 16px; border-radius: 999px; cursor: pointer;
   background: transparent; border: 1px solid rgba(255,255,255,0.12);
@@ -303,10 +345,12 @@
   .hx-spot-grid, .hx-show-grid { grid-template-columns: 1fr; gap: 48px; }
   .hx-mock-wrap, .hx-pcard { max-width: 480px; margin: 0 auto; }
   .hx-pulse-grid { grid-template-columns: 1fr; gap: 40px; }
+  .hx-hero-grid { grid-template-columns: 1fr; gap: 0; }
+  .hx-hero-visual { display: none; } /* planshet/mobilda vizual yashirin — hero yengil qoladi */
 }
 @media (max-width: 767px) {
   .hx section { padding: 64px 0; }
-  .hx-hero { padding: 56px 0 60px; }
+  .hx-hero { padding: 48px 0 56px; }
   .hx-stats { grid-template-columns: repeat(2, 1fr); gap: 26px 14px; margin-top: 44px; }
   .hx-caps { grid-template-columns: 1fr; }
   .hx-search { height: 52px; }
@@ -344,29 +388,69 @@
 <section class="hx-hero">
   <canvas id="hx-net" aria-hidden="true"></canvas>
   <div class="hx-container">
-    <div class="hx-hero-inner">
-      <h1 class="hx-h1">Oʻzbekiston ilmiy hamjamiyati — bitta platformada</h1>
-      <p class="hx-hero-sub">27 000+ dissertatsiya, olimlar portfoliosi, grantlar va ustoz-shogird hamkorligi.</p>
+    <div class="hx-hero-grid">
+      <div class="hx-hero-left">
+        <span class="hx-eyebrow"><span class="hx-live-dot" aria-hidden="true"></span>Oʻzbekiston ilmiy hamjamiyati platformasi</span>
+        <h1 class="hx-h1">Mavzu tanlashdan himoyagacha — <span class="hx-h1-accent">bitta platformada</span></h1>
+        <p class="hx-hero-sub">27 000+ OAK dissertatsiyasi, AI mavzu tahlili, ilmiy rahbar topish, grantlar va onlayn dissertatsiya konstruktori.</p>
 
-      {# Kirganlar — /dashboard?q=…; mehmonlar — /data?search=… (dashboard
-         login-gate ortida, mehmon so'rovi register devorida yo'qolmasin) #}
-      <form class="hx-search" action="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" method="get" role="search" id="hx-search-form">
-        <span class="hx-search-ic" aria-hidden="true">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        </span>
-        <input type="search" name="{{ 'q' if current_user.is_authenticated else 'search' }}" id="hx-search-input" placeholder="Masalan: sunʼiy intellekt, Karimov A., 05.01.01…" aria-label="Dissertatsiyalar boʻyicha qidiruv" autocomplete="off">
-        <input type="hidden" name="scope" id="hx-scope" value="" disabled>
-        <button type="submit">Qidirish</button>
-      </form>
-      <div class="hx-scopes" role="group" aria-label="Qidiruv doirasi">
-        <button type="button" class="hx-scope" data-scope="" aria-pressed="true">Hammasi</button>
-        <button type="button" class="hx-scope" data-scope="olim" aria-pressed="false">Olim</button>
-        <button type="button" class="hx-scope" data-scope="mavzu" aria-pressed="false">Mavzu</button>
-        <button type="button" class="hx-scope" data-scope="rahbar" aria-pressed="false">Ilmiy rahbar</button>
+        {# Kirganlar — /dashboard?q=…; mehmonlar — /dissertatsiyalar?search=… (dashboard
+           login-gate ortida, mehmon so'rovi register devorida yo'qolmasin) #}
+        <form class="hx-search" action="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" method="get" role="search" id="hx-search-form">
+          <span class="hx-search-ic" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </span>
+          <input type="search" name="{{ 'q' if current_user.is_authenticated else 'search' }}" id="hx-search-input" placeholder="Masalan: sunʼiy intellekt, Karimov A., 05.01.01…" aria-label="Dissertatsiyalar boʻyicha qidiruv" autocomplete="off">
+          <input type="hidden" name="scope" id="hx-scope" value="" disabled>
+          <button type="submit">Qidirish</button>
+        </form>
+        <div class="hx-scopes" role="group" aria-label="Qidiruv doirasi">
+          <button type="button" class="hx-scope" data-scope="" aria-pressed="true">Hammasi</button>
+          <button type="button" class="hx-scope" data-scope="olim" aria-pressed="false">Olim</button>
+          <button type="button" class="hx-scope" data-scope="mavzu" aria-pressed="false">Mavzu</button>
+          <button type="button" class="hx-scope" data-scope="rahbar" aria-pressed="false">Ilmiy rahbar</button>
+        </div>
+        <div class="hx-quick">
+          <span>Tez oʻtish:</span>
+          <a href="/mavzu/tahlil" data-goal="hero_quick_tahlil">🎯 AI mavzu tahlili</a>
+          <a href="/grants" data-goal="hero_quick_grants">🏆 Grantlar</a>
+          <a href="/workspace" data-goal="hero_quick_constructor">✍️ Konstruktor</a>
+        </div>
       </div>
 
-      {# statistika — REAL sonlar server tomondan (get_homepage_stats, 10 daqiqalik kesh) #}
-      <div class="hx-stats">
+      {# o'ng ustun — jonli mahsulot vizuali (sof CSS maketlar, dekorativ) #}
+      <div class="hx-hero-visual" aria-hidden="true">
+        <div class="hx-hv-card hx-hv-toast">
+          <span class="hx-hv-toast-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span><b>Yangi himoya eʼloni</b><i></i></span>
+        </div>
+        <div class="hx-hv-card hx-hv-profile">
+          <div class="hx-pcard-top" style="margin-bottom:12px;">
+            <span class="hx-pcard-av" style="width:44px;height:44px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            <span class="hx-pcard-id"><i></i><i></i></span>
+            <span class="hx-pcard-deg">PhD</span>
+          </div>
+          <svg class="hx-tree" viewBox="0 0 300 96" fill="none">
+            <path d="M150 18v22M150 40H70v20M150 40h80v20M150 40v38" stroke="rgba(147,197,253,0.35)" stroke-width="1.5"/>
+            <circle cx="150" cy="12" r="9" fill="rgba(59,130,246,0.9)"/>
+            <circle cx="70" cy="68" r="7" fill="rgba(147,197,253,0.55)"/>
+            <circle cx="150" cy="84" r="7" fill="rgba(147,197,253,0.55)"/>
+            <circle cx="230" cy="68" r="7" fill="rgba(147,197,253,0.55)"/>
+          </svg>
+          <div class="hx-pcard-chips"><span>24 ilmiy ish</span><span>3 shogird</span></div>
+        </div>
+        <div class="hx-hv-card hx-hv-trend">
+          <div class="hx-hv-trend-head"><span>05.01.01 · himoyalar</span><span class="hx-hv-trend-up">↗ oʻsmoqda</span></div>
+          <div class="hx-hv-bars">
+            <i style="height:26%"></i><i style="height:38%"></i><i style="height:32%"></i>
+            <i style="height:52%"></i><i style="height:47%"></i><i style="height:72%"></i><i style="height:100%"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# statistika — REAL sonlar server tomondan (get_homepage_stats, 10 daqiqalik kesh) #}
+    <div class="hx-stats">
         <div class="hx-stat">
           <div class="hx-stat-num" data-count="{{ hstats.dissertations }}">{{ '{:,}'.format(hstats.dissertations).replace(',', ' ') }}</div>
           <div class="hx-stat-label">Dissertatsiyalar</div>
@@ -384,7 +468,6 @@
           <div class="hx-stat-label">Grantlar</div>
         </div>
       </div>
-    </div>
   </div>
 </section>
 
@@ -611,6 +694,9 @@
        card_constructor_click  — konstruktor imkoniyat kartasi
        card_grants_click       — grantlar kartasi
        card_profile_click      — profil kartasi
+       hero_quick_tahlil       — hero "AI mavzu tahlili" tezkor havolasi
+       hero_quick_grants       — hero "Grantlar" tezkor havolasi
+       hero_quick_constructor  — hero "Konstruktor" tezkor havolasi
        scroll_75               — sahifaning 75% dan pasti ko'rildi (bir marta)
      ym yo'q bo'lsa helper indamay o'tib ketadi (no-op). */
   function goal(name) {
@@ -649,6 +735,23 @@
   /* autofocus — faqat desktop (mobil klaviatura sakrashining oldini olish) */
   if (window.innerWidth >= 1024 && window.matchMedia('(pointer: fine)').matches) {
     try { searchInput.focus({ preventScroll: true }); } catch (e) {}
+  }
+
+  /* ── placeholder rotatsiyasi: 3.5s da bir misol; yozish/fokusda to'xtaydi ── */
+  if (searchInput && !reduced) {
+    var phList = [
+      'sunʼiy intellekt asosida tasniflash…',
+      'Karimov A. — olim boʻyicha…',
+      '05.01.01 — ixtisoslik kodi boʻyicha…',
+      'iqtisodiyotni raqamlashtirish…',
+      'ilmiy rahbar familiyasi boʻyicha…'
+    ];
+    var phIdx = 0, phTimer = setInterval(function () {
+      if (document.activeElement === searchInput || searchInput.value) return;
+      phIdx = (phIdx + 1) % phList.length;
+      searchInput.setAttribute('placeholder', 'Masalan: ' + phList[phIdx]);
+    }, 3500);
+    searchInput.addEventListener('focus', function () { clearInterval(phTimer); }, { once: true });
   }
 
   /* ── count-up statistika: 30% ko'rinishda bir marta, 1.6s easeOutExpo ── */
