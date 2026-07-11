@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}{{ muassasa or 'Ilmiy kengash' }} — ilmiy kengash | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.cd-wrap { max-width: 1080px; margin: 0 auto; }
+.cd-back { display: inline-block; color: #2563eb; font-size: 0.86rem; font-weight: 600; text-decoration: none; margin-bottom: 14px; }
+.cd-back:hover { text-decoration: underline; }
+.cd-h1 { font-size: clamp(1.35rem, 3vw, 1.8rem); font-weight: 800; color: #0f172a; margin: 0 0 6px; line-height: 1.25; }
+.cd-raqam { font-family: ui-monospace, monospace; font-size: 0.88rem; color: #475569; margin-bottom: 18px; }
+
+/* statistika kartalari */
+.cd-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 26px; }
+.cd-stat { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 14px 16px; }
+.cd-stat-n { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cd-stat-l { color: #64748b; font-size: 0.8rem; margin-top: 4px; }
+.cd-stat.phd .cd-stat-n { color: #15803d; }
+.cd-stat.dsc .cd-stat-n { color: #6d28d9; }
+
+.cd-sec-h { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.cd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
+.cd-panel { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; }
+
+/* ixtisosliklar */
+.cd-spec { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef2f7; }
+.cd-spec:last-child { border-bottom: none; }
+.cd-spec-code { font-family: ui-monospace, monospace; font-weight: 700; color: #2563eb; font-size: 0.86rem; flex-shrink: 0; }
+.cd-spec-name { color: #475569; font-size: 0.85rem; flex: 1; min-width: 0; }
+.cd-spec-cnt { color: #94a3b8; font-size: 0.8rem; flex-shrink: 0; }
+
+/* yillik bar chart */
+.cd-chart { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 18px; }
+.cd-bar { flex: 1 1 0; min-width: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.cd-bar-v { font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 3px; }
+.cd-bar-fill { width: 66%; background: #3b82f6; border-radius: 3px 3px 0 0; min-height: 3px; transition: background 0.15s; }
+.cd-bar:hover .cd-bar-fill { background: #2563eb; }
+.cd-chart-x { display: flex; gap: 4px; margin-top: 5px; }
+.cd-chart-x span { flex: 1 1 0; min-width: 10px; text-align: center; font-size: 0.7rem; color: #94a3b8; }
+
+/* olimlar jadvali */
+.cd-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+.cd-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 640px; }
+.cd-table thead th { text-align: left; padding: 12px 14px; font-size: 0.76rem; font-weight: 800; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e2e8f0; background: #f8fafc; white-space: nowrap; }
+.cd-table tbody td { padding: 12px 14px; border-bottom: 1px solid #eef2f7; color: #1e293b; vertical-align: top; }
+.cd-table tbody tr:last-child td { border-bottom: none; }
+.cd-table tbody tr:hover td { background: #f8fafc; }
+.cd-olim { font-weight: 700; color: #2563eb; text-decoration: none; }
+.cd-olim:hover { text-decoration: underline; }
+.cd-mavzu { color: #1e293b; max-width: 380px; }
+.cd-pill { font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.cd-pill.phd { background: rgba(34,197,94,0.12); color: #15803d; }
+.cd-pill.dsc { background: rgba(124,92,252,0.12); color: #6d28d9; }
+.cd-pill.other { background: rgba(148,163,184,0.14); color: #475569; }
+.cd-muted { color: #94a3b8; font-size: 0.84rem; white-space: nowrap; }
+
+[data-bs-theme="dark"] .cd-h1, [data-bs-theme="dark"] .cd-stat-n,
+[data-bs-theme="dark"] .cd-sec-h { color: #e2e8f0; }
+[data-bs-theme="dark"] .cd-stat, [data-bs-theme="dark"] .cd-panel,
+[data-bs-theme="dark"] .cd-table-wrap { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .cd-table thead th { background: #172032; color: #94a3b8; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .cd-table tbody td { color: #cbd5e1; border-color: rgba(148,163,184,0.1); }
+[data-bs-theme="dark"] .cd-table tbody tr:hover td { background: #172032; }
+[data-bs-theme="dark"] .cd-spec { border-color: rgba(148,163,184,0.12); }
+[data-bs-theme="dark"] .cd-raqam, [data-bs-theme="dark"] .cd-spec-name { color: #94a3b8; }
+[data-bs-theme="dark"] .cd-bar-fill { background: #60a5fa; }
+[data-bs-theme="dark"] .cd-mavzu { color: #cbd5e1; }
+
+@media (max-width: 767px) {
+  .cd-stats { grid-template-columns: repeat(2, 1fr); }
+  .cd-grid { grid-template-columns: 1fr; gap: 18px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cd-wrap">
+  <a class="cd-back" href="/councils">← Ilmiy kengashlar katalogi</a>
+  <h1 class="cd-h1">{{ muassasa or 'Ilmiy kengash' }}</h1>
+  <div class="cd-raqam">{{ raqam }}</div>
+
+  <div class="cd-stats">
+    <div class="cd-stat"><div class="cd-stat-n">{{ total }}</div><div class="cd-stat-l">Jami himoyalar</div></div>
+    <div class="cd-stat phd"><div class="cd-stat-n">{{ phd }}</div><div class="cd-stat-l">PhD</div></div>
+    <div class="cd-stat dsc"><div class="cd-stat-n">{{ dsc }}</div><div class="cd-stat-l">DSc</div></div>
+    <div class="cd-stat"><div class="cd-stat-n">{{ specialties|length }}</div><div class="cd-stat-l">Ixtisoslik</div></div>
+  </div>
+
+  <div class="cd-grid">
+    <div class="cd-panel">
+      <div class="cd-sec-h">🏷️ Qabul qiladigan ixtisosliklar</div>
+      {% for s in specialties %}
+      <div class="cd-spec">
+        <span class="cd-spec-code">{{ s.code }}</span>
+        <span class="cd-spec-name">{{ s.name or '—' }}</span>
+        <span class="cd-spec-cnt">{{ s.count }} ta</span>
+      </div>
+      {% else %}
+      <div class="cd-muted">Ixtisoslik ma'lumoti yo'q.</div>
+      {% endfor %}
+    </div>
+
+    <div class="cd-panel">
+      <div class="cd-sec-h">📈 Yillar bo'yicha himoyalar</div>
+      {% if timeline %}
+      <div class="cd-chart">
+        {% for t in timeline %}
+        <div class="cd-bar" title="{{ t.year }} — {{ t.count }} ta himoya">
+          <span class="cd-bar-v">{{ t.count }}</span>
+          <div class="cd-bar-fill" style="height: {{ ((t.count / max_year_count) * 118) | round(0, 'ceil') | int if max_year_count else 3 }}px;"></div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="cd-chart-x">
+        {% for t in timeline %}<span>{{ t.year }}</span>{% endfor %}
+      </div>
+      {% else %}
+      <div class="cd-muted">Yil ma'lumoti yo'q.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="cd-sec-h">🎓 Himoya qilgan olimlar <span class="cd-muted">({{ total }})</span></div>
+  <div class="cd-table-wrap">
+    <table class="cd-table">
+      <thead>
+        <tr>
+          <th>Olim</th>
+          <th>Mavzu</th>
+          <th>Daraja</th>
+          <th>Sana</th>
+          <th>Ilmiy rahbar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        {% set du = (s.daraja or '')|upper %}
+        <tr>
+          <td>{% if s.olim %}<a class="cd-olim" href="/olim/{{ s.olim | urlencode }}">{{ s.olim }}</a>{% else %}<span class="cd-muted">—</span>{% endif %}</td>
+          <td><span class="cd-mavzu">{{ s.mavzu }}</span></td>
+          <td>
+            {% if 'PHD' in du or 'FALSAFA' in du %}<span class="cd-pill phd">PhD</span>
+            {% elif 'DSC' in du or 'DOKTORI' in du %}<span class="cd-pill dsc">DSc</span>
+            {% elif s.daraja %}<span class="cd-pill other">{{ s.daraja }}</span>
+            {% else %}<span class="cd-muted">—</span>{% endif %}
+          </td>
+          <td><span class="cd-muted">{{ s.sana or '—' }}</span></td>
+          <td>{{ s.rahbar or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

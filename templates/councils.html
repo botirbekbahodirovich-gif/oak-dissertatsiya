@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Ilmiy kengashlar katalogi | Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston ilmiy kengashlari katalogi — {{ council_count }} ta kengash. Ixtisoslik shifri bo'yicha qaysi kengash himoyani qabul qilishini toping: raqami, ixtisosliklari, PhD/DSc statistikasi.{% endblock %}
+
+{% block extra_head %}
+<style>
+.cl-wrap { max-width: 1160px; margin: 0 auto; }
+.cl-sub { color: #94a3b8; margin-bottom: 20px; }
+
+/* qidiruv paneli */
+.cl-filter { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.cl-field { display: flex; flex-direction: column; gap: 4px; }
+.cl-field.grow { flex: 1; min-width: 220px; }
+.cl-lbl { font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+.cl-filter input, .cl-filter select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px;
+  font-size: 0.92rem; font-family: inherit; color: #0f172a; background: #fff; width: 100%; box-sizing: border-box; }
+.cl-filter input:focus, .cl-filter select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.cl-btn { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border: none; padding: 10px 22px;
+  border-radius: 10px; font-size: 0.92rem; font-weight: 700; cursor: pointer; height: 42px; align-self: flex-end; }
+.cl-btn:hover { opacity: 0.92; }
+.cl-clear { background: none; border: none; color: #64748b; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  align-self: flex-end; height: 42px; padding: 0 6px; }
+.cl-clear:hover { color: #dc2626; }
+.cl-count { color: #64748b; font-size: 0.86rem; margin: 6px 2px 16px; min-height: 1.1em; }
+
+/* jadval */
+.cl-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+.cl-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 720px; }
+.cl-table thead th { text-align: left; padding: 13px 14px; font-size: 0.76rem; font-weight: 800; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; background: #f8fafc; }
+.cl-table thead th.num { text-align: right; }
+.cl-table tbody td { padding: 13px 14px; border-bottom: 1px solid #eef2f7; color: #1e293b; vertical-align: top; }
+.cl-table tbody tr:last-child td { border-bottom: none; }
+.cl-table tbody tr:hover td { background: #f8fafc; }
+.cl-muassasa { font-weight: 700; color: #0f172a; }
+.cl-raqam { font-family: 'SFMono-Regular', ui-monospace, monospace; font-size: 0.8rem; color: #475569; white-space: nowrap; }
+.cl-codes { display: flex; gap: 4px; flex-wrap: wrap; max-width: 240px; }
+.cl-code { border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 7px; font-size: 0.74rem;
+  color: #475569; font-family: ui-monospace, monospace; white-space: nowrap; }
+.cl-num { text-align: right; font-variant-numeric: tabular-nums; }
+.cl-total { font-weight: 800; color: #0f172a; }
+.cl-deg { display: inline-flex; gap: 4px; }
+.cl-pill { font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.cl-pill.phd { background: rgba(34,197,94,0.12); color: #15803d; }
+.cl-pill.dsc { background: rgba(124,92,252,0.12); color: #6d28d9; }
+.cl-date { color: #64748b; font-size: 0.84rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cl-more { color: #2563eb; font-weight: 700; font-size: 0.84rem; text-decoration: none; white-space: nowrap; }
+.cl-more:hover { text-decoration: underline; }
+.cl-none { color: #94a3b8; font-size: 0.72rem; }
+.cl-state { padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 0.92rem; }
+.cl-spin { display: inline-block; width: 18px; height: 18px; border: 3px solid #dbeafe; border-top-color: #3b82f6;
+  border-radius: 50%; animation: cl-spin 0.8s linear infinite; vertical-align: -4px; margin-right: 8px; }
+@keyframes cl-spin { to { transform: rotate(360deg); } }
+
+[data-bs-theme="dark"] .cl-table-wrap { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .cl-table thead th { background: #172032; color: #94a3b8; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .cl-table tbody td { color: #cbd5e1; border-color: rgba(148,163,184,0.1); }
+[data-bs-theme="dark"] .cl-table tbody tr:hover td { background: #172032; }
+[data-bs-theme="dark"] .cl-muassasa, [data-bs-theme="dark"] .cl-total { color: #e2e8f0; }
+[data-bs-theme="dark"] .cl-code { border-color: rgba(148,163,184,0.2); color: #94a3b8; }
+[data-bs-theme="dark"] .cl-filter input, [data-bs-theme="dark"] .cl-filter select
+  { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+[data-bs-theme="dark"] .cl-raqam { color: #94a3b8; }
+
+@media (max-width: 560px) {
+  .cl-field.grow { min-width: 100%; }
+  .cl-btn, .cl-clear { align-self: stretch; width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cl-wrap">
+  <h1>Ilmiy kengashlar katalogi 🏛️</h1>
+  <p class="cl-sub">{{ council_count }} ta ilmiy kengash — ixtisoslik shifringizni kiriting va qaysi kengash himoyani qabul qilishini toping.</p>
+
+  <form class="cl-filter" id="cl-form" onsubmit="return false;">
+    <div class="cl-field grow">
+      <label class="cl-lbl" for="cl-spec">Ixtisoslik shifri</label>
+      <input type="text" id="cl-spec" list="cl-codes" placeholder="Masalan: 05.01.01" autocomplete="off">
+      <datalist id="cl-codes">
+        {% for c in top_codes %}<option value="{{ c }}">{% endfor %}
+      </datalist>
+    </div>
+    <div class="cl-field">
+      <label class="cl-lbl" for="cl-daraja">Daraja</label>
+      <select id="cl-daraja">
+        <option value="">Hammasi</option>
+        <option value="PhD">PhD</option>
+        <option value="DSc">DSc</option>
+      </select>
+    </div>
+    <div class="cl-field grow">
+      <label class="cl-lbl" for="cl-search">Muassasa nomi</label>
+      <input type="text" id="cl-search" placeholder="Masalan: Toshkent" autocomplete="off">
+    </div>
+    <button type="button" class="cl-btn" id="cl-go">Qidirish</button>
+    <button type="button" class="cl-clear" id="cl-clear">Tozalash</button>
+  </form>
+
+  <div class="cl-count" id="cl-count"></div>
+
+  <div class="cl-table-wrap">
+    <table class="cl-table">
+      <thead>
+        <tr>
+          <th>Muassasa</th>
+          <th>Kengash raqami</th>
+          <th>Ixtisosliklar</th>
+          <th class="num">Jami</th>
+          <th class="num">PhD / DSc</th>
+          <th>Oxirgi himoya</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="cl-rows">
+        <tr><td colspan="7" class="cl-state"><span class="cl-spin"></span>Yuklanmoqda…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var specEl = document.getElementById('cl-spec');
+  var darajaEl = document.getElementById('cl-daraja');
+  var searchEl = document.getElementById('cl-search');
+  var goBtn = document.getElementById('cl-go');
+  var clearBtn = document.getElementById('cl-clear');
+  var rowsEl = document.getElementById('cl-rows');
+  var countEl = document.getElementById('cl-count');
+  var timer = null, seq = 0;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function state(msg, spin) {
+    rowsEl.innerHTML = '<tr><td colspan="7" class="cl-state">' +
+      (spin ? '<span class="cl-spin"></span>' : '') + esc(msg) + '</td></tr>';
+  }
+
+  function render(list) {
+    if (!list.length) { state('Mos kengash topilmadi. Filtrlarni oʻzgartiring.', false); return; }
+    var html = '';
+    list.forEach(function (c) {
+      var codes = (c.shifrlar || []).map(function (s) {
+        return '<span class="cl-code">' + esc(s) + '</span>';
+      }).join('');
+      var deg = '';
+      if (c.phd_count) deg += '<span class="cl-pill phd">' + c.phd_count + ' PhD</span>';
+      if (c.dsc_count) deg += '<span class="cl-pill dsc">' + c.dsc_count + ' DSc</span>';
+      if (!deg) deg = '<span class="cl-none">—</span>';
+      var more = c.raqam
+        ? '<a class="cl-more" href="/councils/' + encodeURI(c.raqam) + '">Batafsil →</a>'
+        : '<span class="cl-none">raqamsiz</span>';
+      html += '<tr>' +
+        '<td><span class="cl-muassasa">' + esc(c.muassasa) + '</span></td>' +
+        '<td>' + (c.raqam ? '<span class="cl-raqam">' + esc(c.raqam) + '</span>' : '<span class="cl-none">—</span>') + '</td>' +
+        '<td><div class="cl-codes">' + (codes || '<span class="cl-none">—</span>') + '</div></td>' +
+        '<td class="cl-num"><span class="cl-total">' + c.total + '</span></td>' +
+        '<td class="cl-num"><span class="cl-deg">' + deg + '</span></td>' +
+        '<td><span class="cl-date">' + (esc(c.oxirgi) || '—') + '</span></td>' +
+        '<td>' + more + '</td>' +
+      '</tr>';
+    });
+    rowsEl.innerHTML = html;
+  }
+
+  function load() {
+    var params = new URLSearchParams();
+    if (specEl.value.trim()) params.set('spec', specEl.value.trim());
+    if (darajaEl.value) params.set('daraja', darajaEl.value);
+    if (searchEl.value.trim()) params.set('search', searchEl.value.trim());
+    var mySeq = ++seq;
+    state('Yuklanmoqda…', true);
+    fetch('/api/v1/councils?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (mySeq !== seq) return; /* eskirgan javob — e'tibormaydi */
+        if (!d || !d.ok) { state('Xatolik yuz berdi.', false); countEl.textContent = ''; return; }
+        var shown = d.shown || (d.councils || []).length;
+        countEl.textContent = d.count + ' ta kengash' +
+          (d.count > shown ? ' (birinchi ' + shown + ' ta koʻrsatildi)' : '');
+        render(d.councils || []);
+      })
+      .catch(function () {
+        if (mySeq !== seq) return;
+        state('Tarmoq xatosi. Qayta urinib koʻring.', false);
+        countEl.textContent = '';
+      });
+  }
+
+  function debounced() {
+    clearTimeout(timer);
+    timer = setTimeout(load, 300);
+  }
+  [specEl, searchEl].forEach(function (el) { el.addEventListener('input', debounced); });
+  darajaEl.addEventListener('change', load);
+  goBtn.addEventListener('click', function () { clearTimeout(timer); load(); });
+  clearBtn.addEventListener('click', function () {
+    specEl.value = ''; darajaEl.value = ''; searchEl.value = '';
+    clearTimeout(timer); load();
+  });
+
+  /* URL'da ?spec= bo'lsa — oldindan to'ldirish (mavzu tahlilidan chuqur havola) */
+  var q = new URLSearchParams(location.search);
+  if (q.get('spec')) specEl.value = q.get('spec');
+  if (q.get('daraja')) darajaEl.value = q.get('daraja');
+  load();
+})();
+</script>
+{% endblock %}
