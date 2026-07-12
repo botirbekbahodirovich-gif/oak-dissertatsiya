@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% set is_local = scope == 'local' %}
+{% block title %}{{ 'Mahalliy' if is_local else 'Xalqaro' }} konferensiyalar — katalog | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ 'O\'zbekiston mahalliy ilmiy konferensiyalari — vazirlik rasmiy rejasi: soha, mintaqa va sana bo\'yicha filtr, eslatma va Roadmap integratsiyasi.' if is_local else 'Xalqaro ilmiy konferensiyalar: maqola topshirish muddatlari, format va nashriyot filtrlari, bookmark va Roadmap integratsiyasi.' }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.kf-layout { display: grid; grid-template-columns: 250px 1fr; gap: 22px; max-width: 1220px; margin: 0 auto; }
+@media (max-width: 900px) { .kf-layout { grid-template-columns: 1fr; } }
+
+/* hero */
+.kf-hero { grid-column: 1 / -1; text-align: center; padding: 4px 0 2px; }
+.kf-hero h1 { font-size: 1.6rem; margin-bottom: 6px; }
+.kf-hero .src { color: #64748b; font-size: 0.82rem; margin-top: 4px; }
+.kf-stats { display: flex; gap: 8px 22px; justify-content: center; flex-wrap: wrap; color: #64748b; font-size: 0.88rem; }
+.kf-stats b { color: var(--oak-accent, #4a9eff); font-variant-numeric: tabular-nums; }
+.kf-search { max-width: 560px; margin: 14px auto 4px; position: relative; }
+.kf-search input { width: 100%; padding: 11px 16px 11px 42px; border-radius: 50px; border: 1px solid rgba(148,163,184,0.25);
+  background: rgba(148,163,184,0.06); color: inherit; font-size: 0.95rem; }
+.kf-search::before { content: "🔍"; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); }
+
+/* sidebar facets */
+.kf-side { align-self: start; position: sticky; top: 12px; border: 1px solid rgba(148,163,184,0.15);
+  border-radius: 16px; padding: 14px 16px; background: rgba(30,41,59,0.4); }
+[data-bs-theme="light"] .kf-side { background: #f8fafc; }
+.kf-side-toggle { display: none; }
+.kf-fgroup { margin-bottom: 14px; }
+.kf-fgroup:last-child { margin-bottom: 0; }
+.kf-fgroup h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin: 0 0 8px; }
+.kf-fopt { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.86rem; cursor: pointer; }
+.kf-fopt input { accent-color: #3b82f6; cursor: pointer; }
+.kf-fopt .n { margin-left: auto; color: #64748b; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+.kf-fopt span.lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kf-time-group, .kf-saved-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.kf-toggle { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  padding: 5px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.kf-toggle.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+.kf-select { width: 100%; border: 1px solid rgba(148,163,184,0.25); border-radius: 10px; padding: 7px 10px;
+  background: transparent; color: inherit; font-size: 0.85rem; }
+.kf-select option { color: #0f172a; }
+.kf-clear { width: 100%; border: none; background: rgba(239,68,68,0.1); color: #f87171; border-radius: 10px;
+  padding: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-top: 10px; display: none; }
+
+/* results */
+.kf-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.kf-count { color: #94a3b8; font-size: 0.86rem; }
+.kf-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .kf-grid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .kf-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .kf-grid { grid-template-columns: 1fr; } }
+
+.kf-card { border: 1px solid rgba(148,163,184,0.15); border-radius: 16px; background: rgba(30,41,59,0.55);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; position: relative;
+  transition: transform 0.15s, box-shadow 0.15s; }
+[data-bs-theme="light"] .kf-card { background: #fff; box-shadow: 0 1px 8px rgba(15,23,42,0.06); }
+.kf-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(15,23,42,0.28); }
+.kf-card.expired { opacity: 0.55; filter: grayscale(0.4); }
+.kf-card-title { font-weight: 700; font-size: 0.96rem; line-height: 1.4; padding-right: 34px; }
+.kf-card-title a { color: inherit; text-decoration: none; }
+.kf-card-title a:hover { color: var(--oak-accent, #4a9eff); }
+.kf-org { color: #94a3b8; font-size: 0.78rem; }
+.kf-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.kf-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 50px;
+  background: rgba(59,130,246,0.12); color: #93c5fd; }
+[data-bs-theme="light"] .kf-badge { color: #1d4ed8; }
+.kf-badge.type { background: rgba(148,163,184,0.14); color: #94a3b8; }
+[data-bs-theme="light"] .kf-badge.type { color: #475569; }
+.kf-badge.pub { background: rgba(124,92,252,0.14); color: #c4b5fd; }
+[data-bs-theme="light"] .kf-badge.pub { color: #6d28d9; }
+.kf-badge.scopus { background: rgba(34,197,94,0.14); color: #4ade80; }
+[data-bs-theme="light"] .kf-badge.scopus { color: #15803d; }
+.kf-meta { color: #94a3b8; font-size: 0.82rem; display: flex; gap: 5px 14px; flex-wrap: wrap; }
+.kf-chip { font-size: 0.76rem; font-weight: 700; padding: 3px 10px; border-radius: 50px; white-space: nowrap; }
+.kf-chip.g { background: rgba(34,197,94,0.14); color: #4ade80; }
+.kf-chip.y { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.kf-chip.r { background: rgba(239,68,68,0.14); color: #f87171; }
+.kf-chip.gray { background: rgba(148,163,184,0.14); color: #94a3b8; }
+[data-bs-theme="light"] .kf-chip.g { color: #15803d; } [data-bs-theme="light"] .kf-chip.y { color: #b45309; }
+[data-bs-theme="light"] .kf-chip.r { color: #b91c1c; } [data-bs-theme="light"] .kf-chip.gray { color: #475569; }
+.kf-bm { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 1.25rem;
+  cursor: pointer; line-height: 1; color: #64748b; }
+.kf-bm.on { color: #fbbf24; }
+.kf-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 4px; }
+.kf-more { color: var(--oak-accent, #4a9eff); font-weight: 700; font-size: 0.84rem; text-decoration: none; }
+.kf-more:hover { text-decoration: underline; }
+
+.kf-empty, .kf-loading { text-align: center; padding: 48px 0; color: #94a3b8; }
+.kf-spin { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(59,130,246,0.25);
+  border-top-color: #3b82f6; border-radius: 50%; animation: kf-spin 0.8s linear infinite; vertical-align: -5px; margin-right: 8px; }
+@keyframes kf-spin { to { transform: rotate(360deg); } }
+.kf-pagination { display: flex; gap: 6px; justify-content: center; margin: 22px 0 4px; flex-wrap: wrap; }
+.kf-page-btn { border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  min-width: 36px; padding: 7px 10px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+.kf-page-btn.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
+
+@media (max-width: 900px) {
+  .kf-side { position: static; display: none; }
+  .kf-side.open { display: block; }
+  .kf-side-toggle { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(148,163,184,0.25);
+    background: transparent; color: inherit; padding: 8px 16px; border-radius: 10px; font-weight: 700;
+    font-size: 0.86rem; cursor: pointer; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kf-layout">
+  <div class="kf-hero">
+    <h1>{{ '🇺🇿 Mahalliy konferensiyalar' if is_local else '🌍 Xalqaro konferensiyalar' }}</h1>
+    <div class="kf-stats">
+      <span><b data-count="{{ stats.total }}">{{ stats.total }}</b> ta konferensiya</span>
+      {% if is_local %}<span><b data-count="{{ stats.regions }}">{{ stats.regions }}</b> mintaqa</span>
+      {% else %}<span><b data-count="{{ stats.countries }}">{{ stats.countries }}</b> davlat</span>{% endif %}
+      <span><b data-count="{{ stats.fields }}">{{ stats.fields }}</b> soha</span>
+      <span><b data-count="{{ stats.upcoming }}">{{ stats.upcoming }}</b> kelayotgan</span>
+    </div>
+    {% if is_local %}<div class="src">Manba: Oliy ta'lim, fan va innovatsiyalar vazirligi rasmiy rejasi, {{ year }}</div>
+    {% else %}<div class="src">Manba: ochiq confs.tech dataseti — haftalik yangilanadi. Scopus belgisi faqat tasdiqlangan yozuvlarda.</div>{% endif %}
+    <div class="kf-search"><input id="kf-search" type="search"
+      placeholder="Mavzu, tashkilotchi yoki shahar bo'yicha qidirish…"></div>
+  </div>
+
+  <button class="kf-side-toggle" id="kf-side-toggle">⚙️ Filtrlar</button>
+
+  <aside class="kf-side" id="kf-side">
+    <div class="kf-fgroup">
+      <h4>Vaqt</h4>
+      <div class="kf-time-group" id="kf-time">
+        <button class="kf-toggle active" data-value="upcoming">Kelayotganlar</button>
+        <button class="kf-toggle" data-value="past">O'tganlar</button>
+        <button class="kf-toggle" data-value="all">Barchasi</button>
+      </div>
+    </div>
+    {% if is_authenticated %}
+    <div class="kf-fgroup">
+      <div class="kf-saved-row">
+        <button class="kf-toggle" id="kf-saved">⭐ Saqlanganlar</button>
+      </div>
+    </div>
+    {% endif %}
+    <div class="kf-fgroup"><h4>Soha</h4><div id="kf-f-field"></div></div>
+    {% if is_local %}
+    <div class="kf-fgroup"><h4>Mintaqa</h4><div id="kf-f-region"></div></div>
+    {% endif %}
+    <div class="kf-fgroup"><h4>Tadbir turi</h4><div id="kf-f-type"></div></div>
+    {% if not is_local %}
+    <div class="kf-fgroup"><h4>Nashriyot</h4><div id="kf-f-publisher"></div></div>
+    <div class="kf-fgroup"><h4>Format</h4><div id="kf-f-format"></div></div>
+    <div class="kf-fgroup">
+      <label class="kf-fopt"><input type="checkbox" id="kf-scopus">
+        <span class="lbl">Scopus indeksli</span></label>
+    </div>
+    {% endif %}
+    <div class="kf-fgroup">
+      <h4>Oy</h4>
+      <select class="kf-select" id="kf-month">
+        <option value="">Barcha oylar</option>
+        {% for m in months %}<option value="{{ loop.index }}">{{ m }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="kf-clear" id="kf-clear">✕ Filtrlarni tozalash</button>
+  </aside>
+
+  <main>
+    <div class="kf-head"><span class="kf-count" id="kf-count"></span></div>
+    <div class="kf-loading" id="kf-loading"><span class="kf-spin"></span>Yuklanmoqda…</div>
+    <div class="kf-grid" id="kf-grid" style="display:none;"></div>
+    <div class="kf-empty" id="kf-empty" style="display:none;">
+      🔭 Bu parametrlarga mos konferensiya topilmadi.<br>Filtrlarni o'zgartirib ko'ring.
+    </div>
+    <div class="kf-pagination" id="kf-pagination"></div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.KF_CFG = {
+  scope: {{ scope | tojson }},
+  loggedIn: {{ 'true' if is_authenticated else 'false' }},
+  months: {{ months | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/conferences.js') }}?v=1"></script>
+{% endblock %}

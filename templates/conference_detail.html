@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}{{ c.title }} | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ meta_description }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.kd-wrap { max-width: 900px; margin: 0 auto; }
+.kd-back { display: inline-block; color: var(--oak-accent, #4a9eff); font-size: 0.86rem; font-weight: 600;
+  text-decoration: none; margin-bottom: 14px; }
+.kd-back:hover { text-decoration: underline; }
+.kd-card { border: 1px solid rgba(148,163,184,0.15); border-radius: 16px; background: rgba(30,41,59,0.55);
+  padding: 24px 26px; }
+[data-bs-theme="light"] .kd-card { background: #fff; box-shadow: 0 1px 8px rgba(15,23,42,0.06); }
+.kd-h1 { font-size: clamp(1.2rem, 2.6vw, 1.55rem); font-weight: 800; line-height: 1.3; margin: 0 0 10px; padding-right: 40px; }
+.kd-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.kd-badge { font-size: 0.74rem; font-weight: 700; padding: 3px 11px; border-radius: 50px;
+  background: rgba(59,130,246,0.12); color: #93c5fd; }
+[data-bs-theme="light"] .kd-badge { color: #1d4ed8; }
+.kd-badge.type { background: rgba(148,163,184,0.14); color: #94a3b8; }
+.kd-badge.pub { background: rgba(124,92,252,0.14); color: #c4b5fd; }
+.kd-badge.scopus { background: rgba(34,197,94,0.14); color: #4ade80; }
+.kd-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 20px; margin-bottom: 16px; }
+.kd-row { display: flex; gap: 8px; align-items: baseline; font-size: 0.92rem; }
+.kd-row .k { color: #64748b; font-size: 0.8rem; flex-shrink: 0; }
+.kd-desc { color: #94a3b8; font-size: 0.92rem; line-height: 1.65; margin: 10px 0 4px; white-space: pre-line; }
+.kd-bm { position: absolute; background: none; border: none; font-size: 1.5rem; cursor: pointer;
+  line-height: 1; color: #64748b; right: 22px; top: 20px; }
+.kd-bm.on { color: #fbbf24; }
+.kd-card { position: relative; }
+
+/* maqola topshirish countdown — xalqaro sahifaning eng qimmat bloki */
+.kd-cfp { display: flex; align-items: center; gap: 16px; border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 14px; padding: 16px 20px; margin: 16px 0 4px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(124,92,252,0.1)); }
+.kd-cfp.closed { border-color: rgba(148,163,184,0.25); background: rgba(148,163,184,0.07); }
+.kd-cfp-n { font-size: 1.9rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.kd-cfp-n.g { color: #4ade80; } .kd-cfp-n.y { color: #fbbf24; } .kd-cfp-n.r { color: #f87171; }
+.kd-cfp-l b { display: block; font-size: 0.95rem; }
+.kd-cfp-l span { color: #94a3b8; font-size: 0.82rem; }
+
+.kd-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.kd-btn { border-radius: 10px; padding: 10px 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  text-decoration: none; border: 1px solid rgba(148,163,184,0.25); background: transparent; color: inherit;
+  display: inline-flex; align-items: center; gap: 7px; }
+.kd-btn.primary { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border-color: transparent; }
+.kd-btn.done { background: rgba(34,197,94,0.14); color: #4ade80; border-color: rgba(34,197,94,0.4); cursor: default; }
+.kd-btn:hover:not(.done) { border-color: rgba(74,158,255,0.5); }
+.kd-note { color: #64748b; font-size: 0.8rem; margin-top: 8px; }
+
+.kd-sec { font-size: 1.02rem; font-weight: 800; margin: 26px 0 12px; }
+.kd-sim-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 640px) { .kd-sim-grid { grid-template-columns: 1fr; } }
+.kd-sim { border: 1px solid rgba(148,163,184,0.15); border-radius: 14px; padding: 13px 15px;
+  background: rgba(30,41,59,0.45); color: inherit; text-decoration: none; display: block;
+  transition: transform 0.15s, border-color 0.15s; }
+[data-bs-theme="light"] .kd-sim { background: #fff; }
+.kd-sim:hover { transform: translateY(-2px); border-color: rgba(74,158,255,0.45); color: inherit; }
+.kd-sim b { font-size: 0.88rem; line-height: 1.35; display: block; }
+.kd-sim span { color: #94a3b8; font-size: 0.78rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kd-wrap">
+  <a class="kd-back" href="/konferensiyalar/{{ 'mahalliy' if c.scope == 'local' else 'xalqaro' }}">← Konferensiyalar katalogi</a>
+
+  <div class="kd-card">
+    <button class="kd-bm {{ 'on' if saved }}" id="kd-bm"
+      title="{{ 'Saqlangan' if saved else ('Saqlash' if is_authenticated else 'Saqlash uchun tizimga kiring') }}">{{ '★' if saved else '☆' }}</button>
+    <h1 class="kd-h1">{{ c.title }}</h1>
+    <div class="kd-badges">
+      <span class="kd-badge type">{{ '🇺🇿 Mahalliy' if c.scope == 'local' else '🌍 Xalqaro' }}</span>
+      {% if c.field %}<span class="kd-badge">{{ c.field }}</span>{% endif %}
+      {% if c.event_type %}<span class="kd-badge type">{{ c.event_type }}</span>{% endif %}
+      {% if c.format_uz %}<span class="kd-badge type">{{ c.format_uz }}</span>{% endif %}
+      {% if c.publisher %}<span class="kd-badge pub">{{ c.publisher }}</span>{% endif %}
+      {% if c.is_scopus_indexed %}<span class="kd-badge scopus">✓ Scopus</span>{% endif %}
+    </div>
+
+    <div class="kd-rows">
+      {% if c.start_uz %}
+      <div class="kd-row"><span class="k">📅 Sana:</span>
+        <span>{{ c.start_uz }}{% if c.is_multiday and c.end_uz %} – {{ c.end_uz }}{% endif %}
+        {% if c.days_remaining is not none and not c.expired %}
+          <b style="color:{{ '#4ade80' if c.days_remaining > 14 else ('#fbbf24' if c.days_remaining >= 7 else '#f87171') }};">
+            ({{ c.days_remaining }} kun qoldi)</b>
+        {% elif c.expired %}<span style="color:#94a3b8;">(o'tgan)</span>{% endif %}</span></div>
+      {% endif %}
+      {% if c.city or c.region or c.country %}
+      <div class="kd-row"><span class="k">📍 Joy:</span>
+        <span>{{ [c.city, c.region if c.scope == 'local' else c.country] | select | unique | join(', ') }}</span></div>
+      {% endif %}
+      {% if c.organizer %}
+      <div class="kd-row"><span class="k">🏛️ Tashkilotchi:</span><span>{{ c.organizer }}</span></div>
+      {% endif %}
+      {% if c.source_url %}
+      <div class="kd-row"><span class="k">🔗 Manba:</span>
+        <a href="{{ c.source_url }}" target="_blank" rel="noopener nofollow"
+           style="color:var(--oak-accent,#4a9eff);word-break:break-all;">rasmiy sahifa ↗</a></div>
+      {% endif %}
+    </div>
+
+    {% if c.scope == 'international' and c.submission_deadline %}
+    {# Maqola topshirish muddati — tadbir sanasidan ALOHIDA ko'zga tashlanadigan blok #}
+    {% set sd = c.submission_days %}
+    <div class="kd-cfp {{ 'closed' if sd is none or sd < 0 }}">
+      {% if sd is not none and sd >= 0 %}
+      <span class="kd-cfp-n {{ 'g' if sd > 14 else ('y' if sd >= 7 else 'r') }}">{{ sd }}</span>
+      <span class="kd-cfp-l"><b>kun qoldi — maqola (tezis) topshirishga</b>
+        <span>Muddat: {{ c.submission_uz }}</span></span>
+      {% else %}
+      <span class="kd-cfp-n" style="color:#94a3b8;">✕</span>
+      <span class="kd-cfp-l"><b>Maqola topshirish yopilgan</b>
+        <span>Muddat edi: {{ c.submission_uz }}</span></span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if c.description %}<div class="kd-desc">{{ c.description }}</div>{% endif %}
+
+    <div class="kd-actions">
+      {% if in_roadmap %}
+      <span class="kd-btn done">✅ Roadmap'ingizda</span>
+      {% elif is_authenticated and has_plan %}
+      <button class="kd-btn primary" id="kd-roadmap" data-id="{{ c.id }}">📋 Roadmap'ga qo'shish</button>
+      {% elif is_authenticated %}
+      <a class="kd-btn primary" href="/reja">📋 Roadmap yarating</a>
+      {% else %}
+      <a class="kd-btn primary" href="/login?next=/konferensiya/{{ c.slug }}">📋 Roadmap'ga qo'shish</a>
+      {% endif %}
+      <button class="kd-btn" id="kd-share">🔗 Ulashish</button>
+    </div>
+    {% if is_authenticated and has_plan and not in_roadmap %}
+    <div class="kd-note">Roadmap'ingizning Konferensiyalar bo'limiga "Rejalashtirilgan" holatida qo'shiladi.</div>
+    {% endif %}
+  </div>
+
+  {% if similar %}
+  <div class="kd-sec">O'xshash konferensiyalar</div>
+  <div class="kd-sim-grid">
+    {% for s in similar %}
+    <a class="kd-sim" href="/konferensiya/{{ s.slug }}">
+      <b>{{ s.title }}</b>
+      <span>{{ s.start_uz }}{% if s.city %} · {{ s.city }}{% endif %}{% if s.field %} · {{ s.field }}{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var LOGGED_IN = {{ 'true' if is_authenticated else 'false' }};
+  var CONF_ID = {{ c.id }};
+
+  var bm = document.getElementById('kd-bm');
+  bm.addEventListener('click', function () {
+    if (!LOGGED_IN) { window.location.href = '/login?next=' + encodeURIComponent(location.pathname); return; }
+    fetch('/api/v1/conferences/bookmark', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conference_id: CONF_ID })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) return;
+      bm.classList.toggle('on', d.saved);
+      bm.textContent = d.saved ? '★' : '☆';
+      bm.title = d.saved ? 'Saqlangan' : 'Saqlash';
+    }).catch(function () {});
+  });
+
+  var rm = document.getElementById('kd-roadmap');
+  if (rm) rm.addEventListener('click', function () {
+    rm.disabled = true;
+    fetch('/api/v1/conferences/roadmap', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conference_id: CONF_ID })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        rm.outerHTML = '<span class="kd-btn done">✅ Roadmap\'ingizda</span>';
+      } else if (d.need_plan) {
+        window.location.href = '/reja';
+      } else {
+        rm.disabled = false;
+        alert(d.error || 'Xatolik yuz berdi.');
+      }
+    }).catch(function () { rm.disabled = false; });
+  });
+
+  document.getElementById('kd-share').addEventListener('click', function () {
+    var url = location.href, title = {{ c.title | tojson }};
+    if (navigator.share) { navigator.share({ title: title, url: url }).catch(function () {}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+      .then(function () { alert('Havola nusxalandi!'); })
+      .catch(function () { prompt('Havolani nusxalang:', url); });
+  });
+})();
+</script>
+{% endblock %}
