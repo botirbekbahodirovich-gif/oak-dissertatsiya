@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Konferensiyani tahrirlash' if edit_mode else 'Yangi konferensiya' }} (admin) — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:760px;margin:0 auto;">
+  <h1 style="margin:0 0 6px;">{{ '✏️ Konferensiyani tahrirlash' if edit_mode else '➕ Yangi konferensiya' }}</h1>
+  <p style="color:#94a3b8;font-size:0.86rem;margin-bottom:18px;">
+    <a href="/admin/conferences" style="color:#4a9eff;">← Ro'yxatga qaytish</a></p>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% set v = item or {} %}
+  
+  <form method="POST" style="display:grid;gap:12px;">
+    {{ csrf_token()|safe }}
+    <style>
+      .cf-lbl { font-size:0.78rem;color:#94a3b8;font-weight:700;display:block;margin-bottom:4px; }
+      .cf-in { width:100%;border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:9px 12px;
+               background:transparent;color:inherit;font-size:0.9rem;box-sizing:border-box; }
+      .cf-in option { color:#0f172a; }
+      .cf-row2 { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+      @media (max-width:600px) { .cf-row2 { grid-template-columns:1fr; } }
+    </style>
+
+    <div><label class="cf-lbl">Nomi *</label>
+      <input class="cf-in" name="title" required maxlength="600" value="{{ v.get('title') or '' }}"></div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Turi (scope)</label>
+        <select class="cf-in" name="scope">
+          <option value="local" {{ 'selected' if v.get('scope') == 'local' }}>🇺🇿 Mahalliy</option>
+          <option value="international" {{ 'selected' if v.get('scope') == 'international' }}>🌍 Xalqaro</option>
+        </select></div>
+      <div><label class="cf-lbl">Tadbir turi</label>
+        <input class="cf-in" name="event_type" maxlength="50" value="{{ v.get('event_type') or '' }}"
+          placeholder="Anjuman / Forum / Conference…"></div>
+    </div>
+
+    <div><label class="cf-lbl">Tashkilotchi</label>
+      <input class="cf-in" name="organizer" maxlength="400" value="{{ v.get('organizer') or '' }}"></div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Soha</label>
+        <input class="cf-in" name="field" maxlength="200" value="{{ v.get('field') or '' }}"></div>
+      <div><label class="cf-lbl">Mintaqa (mahalliy)</label>
+        <input class="cf-in" name="region" maxlength="100" value="{{ v.get('region') or '' }}"
+          placeholder="Toshkent / Samarqand…"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Shahar</label>
+        <input class="cf-in" name="city" maxlength="150" value="{{ v.get('city') or '' }}"></div>
+      <div><label class="cf-lbl">Davlat (xalqaro)</label>
+        <input class="cf-in" name="country" maxlength="100" value="{{ v.get('country') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Boshlanish sanasi</label>
+        <input class="cf-in" name="start_date" type="date" value="{{ v.get('start_date') or '' }}"></div>
+      <div><label class="cf-lbl">Tugash sanasi (ko'p kunlik bo'lsa)</label>
+        <input class="cf-in" name="end_date" type="date" value="{{ v.get('end_date') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Format</label>
+        <select class="cf-in" name="format">
+          <option value="">—</option>
+          {% for k, lbl in formats.items() %}
+          <option value="{{ k }}" {{ 'selected' if v.get('format') == k }}>{{ lbl }}</option>
+          {% endfor %}
+        </select></div>
+      <div><label class="cf-lbl">Maqola topshirish muddati (xalqaro)</label>
+        <input class="cf-in" name="submission_deadline" type="date"
+          value="{{ v.get('submission_deadline') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Nashriyot (xalqaro)</label>
+        <input class="cf-in" name="publisher" maxlength="200" value="{{ v.get('publisher') or '' }}"
+          placeholder="Springer / IEEE / ACM…"></div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;cursor:pointer;">
+          <input type="checkbox" name="is_scopus_indexed" style="accent-color:#3b82f6;"
+            {{ 'checked' if v.get('is_scopus_indexed') }}>
+          Scopus indeksli (faqat tasdiqlangan manba asosida!)</label></div>
+    </div>
+
+    <div><label class="cf-lbl">Manba havolasi</label>
+      <input class="cf-in" name="source_url" maxlength="500" value="{{ v.get('source_url') or '' }}"></div>
+
+    <div><label class="cf-lbl">Tavsif</label>
+      <textarea class="cf-in" name="description" rows="4">{{ v.get('description') or '' }}</textarea></div>
+
+    <div style="display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">{{ 'Saqlash' if edit_mode else "Qo'shish" }}</button>
+      <a href="/admin/conferences" class="btn btn-action">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

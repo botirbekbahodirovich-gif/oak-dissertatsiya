@@ -164,6 +164,11 @@ def _ensure_schema(cur):
         )""")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_roadmap_conf_plan "
                 "ON roadmap_conferences(plan_id)")
+    # Konferensiyalar katalogidan qo'shilgan yozuv belgisi (qo'lda kiritilganlar
+    # NULL — mavjud oqim o'zgarmaydi). conferences blueprint ham shu ALTER'ni
+    # o'z tomonida bajaradi; ikkalasi ham IF NOT EXISTS, ziddiyatsiz.
+    cur.execute("ALTER TABLE roadmap_conferences "
+                "ADD COLUMN IF NOT EXISTS source_conference_id INTEGER")
     # foydalanuvchi o'zgartirgan bosqich muddatlari (default dinamik hisoblanadi)
     cur.execute("""
         CREATE TABLE IF NOT EXISTS roadmap_milestones (
@@ -438,10 +443,28 @@ def dashboard():
                 "ORDER BY meeting_date DESC NULLS LAST, id DESC", (plan['id'],),
                 ('id', 'title', 'meeting_date', 'notes', 'is_done'))
             confs = _rows(cur,
-                "SELECT id, name, location, event_date, deadline, url, status "
+                "SELECT id, name, location, event_date, deadline, url, status, "
+                "source_conference_id "
                 "FROM roadmap_conferences WHERE plan_id = %s "
                 "ORDER BY event_date ASC NULLS LAST, id DESC", (plan['id'],),
-                ('id', 'name', 'location', 'event_date', 'deadline', 'url', 'status'))
+                ('id', 'name', 'location', 'event_date', 'deadline', 'url',
+                 'status', 'source_conference_id'))
+            # Katalogdan qo'shilganlarga /konferensiya/<slug> havolasi
+            # (conferences jadvali hali yo'q muhitda jimgina o'tib ketadi)
+            src_ids = [c['source_conference_id'] for c in confs
+                       if c.get('source_conference_id')]
+            slug_map = {}
+            if src_ids:
+                try:
+                    cur.execute("SAVEPOINT conf_slugs")
+                    cur.execute("SELECT id, title_slug FROM conferences "
+                                "WHERE id = ANY(%s)", (src_ids,))
+                    slug_map = {r[0]: r[1] for r in cur.fetchall()}
+                    cur.execute("RELEASE SAVEPOINT conf_slugs")
+                except Exception:
+                    cur.execute("ROLLBACK TO SAVEPOINT conf_slugs")
+            for c in confs:
+                c['catalog_slug'] = slug_map.get(c.get('source_conference_id'))
             cur.execute("SELECT phase_key, due_date, is_done FROM roadmap_milestones "
                         "WHERE plan_id = %s", (plan['id'],))
             overrides = {r[0]: (r[1], r[2]) for r in cur.fetchall()}

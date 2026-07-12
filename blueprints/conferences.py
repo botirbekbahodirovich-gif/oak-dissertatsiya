@@ -834,7 +834,8 @@ def admin_conferences_toggle(cid):
                         "RETURNING is_active", (cid,))
             row = cur.fetchone()
         conn.commit()
-        return jsonify({'success': row is not None,
-                        'is_active': bool(row and row[0])})
+        flash('Faollik o\'zgartirildi.' if row else 'Topilmadi.',
+              'success' if row else 'error')
     finally:
         conn.close()
+    return redirect('/admin/conferences')

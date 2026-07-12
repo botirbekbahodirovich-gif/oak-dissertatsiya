@@ -354,7 +354,12 @@
     {% for c in confs %}
     <div class="rj-item">
       <div style="flex:1;min-width:200px;">
-        <div class="ttl">{{ c.name }}</div>
+        <div class="ttl">{{ c.name }}
+          {% if c.catalog_slug %}
+          <a href="/konferensiya/{{ c.catalog_slug }}"
+             style="font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:50px;background:rgba(59,130,246,0.14);color:#93c5fd;text-decoration:none;vertical-align:middle;white-space:nowrap;"
+             title="Konferensiyalar katalogidan qo'shilgan">Manba: Katalog ↗</a>
+          {% endif %}</div>
         <div class="meta">{% if c.location %}📍 {{ c.location }} · {% endif %}
           {% if c.event_date %}📅 {{ c.event_date }}{% endif %}
           {% if c.deadline %} · ⏰ tezis: {{ c.deadline }}{% endif %}

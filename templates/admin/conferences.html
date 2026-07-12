@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Konferensiyalar (admin) — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1150px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h1 style="margin:0;">🎤 Konferensiyalarni boshqarish</h1>
+    <a href="/admin/conferences/add" class="btn btn-primary">➕ Yangi qo'shish</a>
+  </div>
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="get" action="/admin/conferences"
+        style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Nomi yoki tashkilotchi…"
+      style="flex:1;min-width:220px;border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 12px;background:transparent;color:inherit;">
+    <select name="scope" style="border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 10px;background:transparent;color:inherit;">
+      <option value="">Barchasi</option>
+      <option value="local" {{ 'selected' if scope == 'local' }}>Mahalliy</option>
+      <option value="international" {{ 'selected' if scope == 'international' }}>Xalqaro</option>
+    </select>
+    <button type="submit" class="btn btn-action">Qidirish</button>
+  </form>
+
+  <div style="overflow-x:auto;">
+  <table class="table" style="width:100%;">
+    <thead><tr>
+      <th>ID</th><th>Nomi</th><th>Turi</th><th>Sana</th><th>Joy</th>
+      <th>Scopus</th><th>Holat</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for c in items %}
+      <tr {% if not c.is_active %}style="opacity:0.5;"{% endif %}>
+        <td>{{ c.id }}</td>
+        <td><a href="/konferensiya/{{ c.slug }}" target="_blank">{{ c.title[:56] }}</a>
+          {% if c.organizer %}<br><small style="color:#94a3b8;">{{ c.organizer[:44] }}</small>{% endif %}</td>
+        <td>{{ '🇺🇿' if c.scope == 'local' else '🌍' }} {{ c.event_type or '—' }}</td>
+        <td style="white-space:nowrap;">{{ c.start_date or '—' }}
+          {% if c.submission_deadline %}<br><small style="color:#94a3b8;">CFP: {{ c.submission_deadline }}</small>{% endif %}</td>
+        <td style="font-size:0.82rem;">{{ c.city or c.region or c.country or '—' }}</td>
+        <td>{{ '✓' if c.is_scopus_indexed else '—' }}</td>
+        <td>{{ '🟢' if c.is_active else '⚪' }}</td>
+        <td style="white-space:nowrap;">
+          <a href="/admin/conferences/edit/{{ c.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
+          <form method="POST" action="/admin/conferences/toggle/{{ c.id }}" style="display:inline;">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm"
+              style="color:{{ '#f87171' if c.is_active else '#4ade80' }};">
+              {{ 'Nofaol qilish' if c.is_active else 'Faollashtirish' }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" style="color:#94a3b8;text-align:center;padding:24px;">Hech narsa topilmadi.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div style="color:#64748b;font-size:0.8rem;margin-top:10px;">
+    Import: xalqaro — haftalik GitHub Actions (confs.tech); mahalliy —
+    <code>python3 scripts/scrape_conferences_local.py --pdf &lt;reja.pdf&gt; --year YYYY</code>.
+    Scopus belgisi faqat shu yerda qo'lda qo'yiladi — scraper hech qachon taxmin qilmaydi.
+  </div>
+</div>
+{% endblock %}
