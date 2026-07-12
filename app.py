@@ -3421,77 +3421,264 @@ def survey_submit_api():
 
 
 # ════════════════════════════════════════════════════════════════════
-#  SEO: sitemap.xml, robots.txt, OG default image
+#  SEO: Sitemap Index arxitekturasi, robots.txt, OG default image
+#
+#  /sitemap.xml            — bosh index (bo'lim sitemaplariga havolalar)
+#  /sitemap-<bo'lim>.xml   — bo'lim sitemapi (static, universities, ...)
+#  /sitemap-<bo'lim>-<n>.xml — sahifalangan bo'lim (olimlar, dissertations):
+#                            40k URL dan oshsa avtomatik -2, -3... bo'linadi.
+#  Hammasi 6 soat keshlanadi; DB xatosida bo'sh urlset qaytadi (500 emas).
 # ════════════════════════════════════════════════════════════════════
-SITE_BASE = "https://www.olimlar.uz"
+SITE_BASE = os.environ.get("SITE_BASE", "https://olimlar.uz").rstrip("/")
+SITEMAP_MAX_URLS = 40000    # bitta sitemap faylidagi maksimum URL (protokol limiti 50k)
+SITEMAP_CACHE_TTL = 21600   # 6 soat
+SITEMAP_MAX_PAGES = 50      # sahifalangan bo'lim uchun yuqori chegara (50 × 40k = 2 mln)
 
 
-def _build_sitemap_xml():
-    """Build the sitemap XML string. Cached 6 hours."""
-    cached = cache.get("sitemap_xml_v1")
-    if cached is not None:
-        return cached
-    from xml.sax.saxutils import escape
-    from urllib.parse import quote
-    static_pages = [
-        ("/", "daily", "1.0"), ("/data", "daily", "0.9"),
-        ("/compare", "weekly", "0.8"), ("/stats", "weekly", "0.7"),
-        ("/trends", "weekly", "0.7"), ("/clustering", "weekly", "0.7"),
-        ("/collaboration", "weekly", "0.7"), ("/top-olimlar", "weekly", "0.7"),
-        ("/blog", "weekly", "0.6"), ("/courses", "monthly", "0.5"),
-        ("/vacancies", "weekly", "0.5"), ("/yangiliklar", "daily", "0.6"),
-        ("/about", "monthly", "0.4"), ("/heatmap", "weekly", "0.6"),
-        ("/universities", "weekly", "0.7"), ("/journals", "weekly", "0.7"),
-        ("/jurnal-tekshirish", "weekly", "0.7"),
-        ("/grants", "daily", "0.7"), ("/reminders", "daily", "0.6"),
-        ("/reyting", "daily", "0.8"),
-    ]
-    top_olimlar, blog_posts = [], []
+def _sitemap_rows(sql, params=None):
+    """Sitemap uchun DB so'rovi — har qanday xatoda bo'sh ro'yxat."""
+    from data import get_connection
     try:
-        from data import get_connection
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT DISTINCT olim FROM dissertations "
-                    "WHERE olim IS NOT NULL AND TRIM(olim) <> '' ORDER BY olim LIMIT 500")
-                top_olimlar = [r[0] for r in cur.fetchall()]
-                try:
-                    cur.execute("SELECT slug FROM blog_posts WHERE is_published = TRUE")
-                    blog_posts = [r[0] for r in cur.fetchall() if r[0]]
-                except Exception:
-                    blog_posts = []
+                cur.execute(sql, params)
+                return cur.fetchall()
         finally:
             conn.close()
     except Exception:
-        top_olimlar, blog_posts = [], []
+        return []
 
+
+def _sitemap_lastmod(value):
+    """Erkin sana ('27.12.2024', '2024-12-27…', datetime) → 'YYYY-MM-DD' yoki None."""
+    import re
+    if value is None:
+        return None
+    s = str(value).strip()
+    m = re.match(r"^(\d{2})\.(\d{2})\.(\d{4})$", s)
+    if m:
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", s)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _sitemap_urlset(entries):
+    """(loc, lastmod, changefreq, priority) ro'yxati → <urlset> XML. 40k limit qat'iy."""
+    from xml.sax.saxutils import escape
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for loc, freq, pri in static_pages:
-        parts.append(
-            f"  <url><loc>{SITE_BASE}{loc}</loc>"
-            f"<changefreq>{freq}</changefreq><priority>{pri}</priority></url>")
-    for name in top_olimlar:
-        loc = f"{SITE_BASE}/olim/{quote(str(name), safe='')}"
-        parts.append(
-            f"  <url><loc>{escape(loc)}</loc>"
-            f"<changefreq>monthly</changefreq><priority>0.5</priority></url>")
-    for slug in blog_posts:
-        loc = f"{SITE_BASE}/blog/{quote(str(slug), safe='')}"
-        parts.append(
-            f"  <url><loc>{escape(loc)}</loc>"
-            f"<changefreq>monthly</changefreq><priority>0.5</priority></url>")
+    for loc, lastmod, freq, pri in entries[:SITEMAP_MAX_URLS]:
+        row = f"  <url><loc>{escape(loc)}</loc>"
+        if lastmod:
+            row += f"<lastmod>{lastmod}</lastmod>"
+        if freq:
+            row += f"<changefreq>{freq}</changefreq>"
+        if pri:
+            row += f"<priority>{pri}</priority>"
+        parts.append(row + "</url>")
     parts.append("</urlset>")
+    return "\n".join(parts)
+
+
+# ── Bo'lim generatorlari — har biri (loc, lastmod, freq, pri) ro'yxatini qaytaradi ──
+
+def _sm_static(page=1):
+    pages = [
+        ("/", "daily", "1.0"),
+        ("/dissertatsiyalar", "daily", "0.9"),   # mehmonlarga ochiq katalog (/dashboard login-walled)
+        ("/data", "daily", "0.8"),
+        ("/reyting", "daily", "0.8"),
+        ("/compare", "weekly", "0.8"),
+        ("/stats", "weekly", "0.7"), ("/trends", "weekly", "0.7"),
+        ("/clustering", "weekly", "0.7"), ("/collaboration", "weekly", "0.7"),
+        ("/heatmap", "weekly", "0.6"), ("/top-olimlar", "weekly", "0.7"),
+        ("/universities", "weekly", "0.7"), ("/journals", "weekly", "0.7"),
+        ("/jurnal-tekshirish", "weekly", "0.7"),
+        ("/councils", "weekly", "0.7"),
+        ("/rahbar-topish", "weekly", "0.7"),
+        ("/konferensiyalar", "weekly", "0.7"),
+        ("/konferensiyalar/mahalliy", "weekly", "0.6"),
+        ("/konferensiyalar/xalqaro", "weekly", "0.6"),
+        ("/grants", "daily", "0.7"), ("/reminders", "daily", "0.6"),
+        ("/yangiliklar", "daily", "0.6"), ("/blog", "weekly", "0.6"),
+        ("/vacancies", "weekly", "0.5"), ("/courses", "monthly", "0.5"),
+        ("/preparation", "monthly", "0.5"),
+        ("/about", "monthly", "0.4"), ("/team", "monthly", "0.4"),
+        ("/contact", "monthly", "0.4"),
+    ]
+    return [(SITE_BASE + p, None, freq, pri) for p, freq, pri in pages]
+
+
+def _sm_olimlar(page=1):
+    from urllib.parse import quote
+    rows = _sitemap_rows(
+        "SELECT DISTINCT TRIM(olim) FROM dissertations "
+        "WHERE olim IS NOT NULL AND TRIM(olim) <> '' "
+        "ORDER BY 1 LIMIT %s OFFSET %s",
+        (SITEMAP_MAX_URLS, (page - 1) * SITEMAP_MAX_URLS))
+    return [(f"{SITE_BASE}/olim/{quote(str(r[0]), safe='')}", None, "weekly", "0.8")
+            for r in rows]
+
+
+def _sm_dissertations(page=1):
+    rows = _sitemap_rows(
+        "SELECT id, sana FROM dissertations ORDER BY id LIMIT %s OFFSET %s",
+        (SITEMAP_MAX_URLS, (page - 1) * SITEMAP_MAX_URLS))
+    return [(f"{SITE_BASE}/dissertation/{r[0]}", _sitemap_lastmod(r[1]), "monthly", "0.6")
+            for r in rows]
+
+
+def _sm_universities(page=1):
+    from urllib.parse import quote
+    names, seen = [], set()
+    # institution_map'dagi kanonik nomlar (haqiqiy himoya muassasalari, 30 daqiqa kesh)
+    try:
+        for d in get_institution_directory():
+            n = (d.get("name") or "").strip()
+            if n and n.lower() not in seen:
+                seen.add(n.lower())
+                names.append(n)
+    except Exception:
+        pass
+    # qo'lda kiritilgan OTMlar (xorijiy va h.k.) — universities jadvali
+    for r in _sitemap_rows("SELECT name FROM universities WHERE is_active = TRUE"):
+        n = (str(r[0] or "")).strip()
+        if n and n.lower() not in seen:
+            seen.add(n.lower())
+            names.append(n)
+    return [(f"{SITE_BASE}/university/{quote(n, safe='')}", None, "weekly", "1.0")
+            for n in names]
+
+
+def _sm_journals(page=1):
+    rows = _sitemap_rows("SELECT id FROM journals WHERE is_active = TRUE ORDER BY id")
+    return [(f"{SITE_BASE}/journals/{r[0]}", None, "weekly", "0.7") for r in rows]
+
+
+def _sm_grants(page=1):
+    from urllib.parse import quote
+    # Kanonik URL — slug (/grants/<int:id> slug'ga redirect qiladi); slug bo'sh bo'lsa id
+    rows = _sitemap_rows(
+        "SELECT COALESCE(NULLIF(TRIM(slug), ''), id::text), created_at "
+        "FROM grants WHERE is_active IS NOT FALSE ORDER BY id")
+    return [(f"{SITE_BASE}/grants/{quote(str(r[0]), safe='')}",
+             _sitemap_lastmod(r[1]), "daily", "0.9") for r in rows]
+
+
+def _sm_councils(page=1):
+    from urllib.parse import quote
+    rows = _sitemap_rows(
+        "SELECT DISTINCT TRIM(ilmiy_kengash_raqami) FROM dissertations "
+        "WHERE ilmiy_kengash_raqami IS NOT NULL AND TRIM(ilmiy_kengash_raqami) <> '' "
+        "ORDER BY 1")
+    # raqamda '/' bor — route <path:raqam>, shuning uchun '/' quote qilinmaydi
+    return [(f"{SITE_BASE}/councils/{quote(str(r[0]), safe='/')}", None, "weekly", "0.7")
+            for r in rows]
+
+
+def _sm_conferences(page=1):
+    from urllib.parse import quote
+    rows = _sitemap_rows(
+        "SELECT title_slug FROM conferences "
+        "WHERE is_active = TRUE AND COALESCE(TRIM(title_slug), '') <> '' ORDER BY id")
+    return [(f"{SITE_BASE}/konferensiya/{quote(str(r[0]), safe='')}", None, "weekly", "0.6")
+            for r in rows]
+
+
+def _sm_content(page=1):
+    from urllib.parse import quote
+    entries = []
+    for r in _sitemap_rows("SELECT slug FROM blog_posts WHERE is_published = TRUE"):
+        if r[0]:
+            entries.append((f"{SITE_BASE}/blog/{quote(str(r[0]), safe='')}",
+                            None, "monthly", "0.5"))
+    for r in _sitemap_rows("SELECT id, created_at FROM yangiliklar "
+                           "WHERE is_published = TRUE ORDER BY id"):
+        entries.append((f"{SITE_BASE}/yangiliklar/{r[0]}",
+                        _sitemap_lastmod(r[1]), "monthly", "0.5"))
+    return entries
+
+
+# nom → (generator, sahifalanadimi). Sahifalanadiganlar indexda sitemap-<nom>-<n>.xml
+# bo'lib chiqadi (COUNT bo'yicha avtomatik bo'linish), qolganlari sitemap-<nom>.xml.
+_SITEMAP_SECTIONS = {
+    "static":        (_sm_static, False),
+    "olimlar":       (_sm_olimlar, True),
+    "dissertations": (_sm_dissertations, True),
+    "universities":  (_sm_universities, False),
+    "journals":      (_sm_journals, False),
+    "grants":        (_sm_grants, False),
+    "councils":      (_sm_councils, False),
+    "conferences":   (_sm_conferences, False),
+    "content":       (_sm_content, False),
+}
+
+
+def _sitemap_index_xml():
+    """Bosh sitemap index — bo'lim sitemaplariga havolalar. 6 soat kesh."""
+    cached = cache.get("sitemap_index_v2")
+    if cached is not None:
+        return cached
+    from datetime import date
+    # Sahifalanadigan bo'limlar sonini bitta so'rovda olamiz (auto-splitting uchun)
+    counts = {"olimlar": 0, "dissertations": 0}
+    rows = _sitemap_rows(
+        "SELECT COUNT(DISTINCT TRIM(olim)) FILTER "
+        "(WHERE olim IS NOT NULL AND TRIM(olim) <> ''), COUNT(*) FROM dissertations")
+    if rows:
+        counts["olimlar"] = rows[0][0] or 0
+        counts["dissertations"] = rows[0][1] or 0
+    today = date.today().isoformat()
+    parts = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for name, (_builder, paged) in _SITEMAP_SECTIONS.items():
+        if paged:
+            total = counts.get(name, 0)
+            n_pages = min(SITEMAP_MAX_PAGES,
+                          max(1, -(-total // SITEMAP_MAX_URLS)))  # ceil(total/40k)
+            for n in range(1, n_pages + 1):
+                parts.append(
+                    f"  <sitemap><loc>{SITE_BASE}/sitemap-{name}-{n}.xml</loc>"
+                    f"<lastmod>{today}</lastmod></sitemap>")
+        else:
+            parts.append(
+                f"  <sitemap><loc>{SITE_BASE}/sitemap-{name}.xml</loc>"
+                f"<lastmod>{today}</lastmod></sitemap>")
+    parts.append("</sitemapindex>")
     xml = "\n".join(parts)
-    cache.set("sitemap_xml_v1", xml, timeout=21600)
+    cache.set("sitemap_index_v2", xml, timeout=SITEMAP_CACHE_TTL)
     return xml
 
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
     from flask import Response
-    return Response(_build_sitemap_xml(), mimetype="application/xml")
+    return Response(_sitemap_index_xml(), mimetype="application/xml")
+
+
+@app.route("/sitemap-<section>.xml")
+def sitemap_section(section):
+    """Bo'lim sitemapi: sitemap-static.xml, sitemap-olimlar-2.xml va h.k."""
+    from flask import Response
+    import re
+    m = re.match(r"^([a-z]+)-(\d+)$", section)
+    if m and m.group(1) in _SITEMAP_SECTIONS and _SITEMAP_SECTIONS[m.group(1)][1]:
+        name, page = m.group(1), int(m.group(2))       # sahifalangan: olimlar-2
+    elif section in _SITEMAP_SECTIONS and not _SITEMAP_SECTIONS[section][1]:
+        name, page = section, 1                        # oddiy: universities
+    else:
+        abort(404)
+    if not (1 <= page <= SITEMAP_MAX_PAGES):
+        abort(404)
+    cache_key = f"sitemap_{name}_{page}_v2"
+    xml = cache.get(cache_key)
+    if xml is None:
+        xml = _sitemap_urlset(_SITEMAP_SECTIONS[name][0](page))
+        cache.set(cache_key, xml, timeout=SITEMAP_CACHE_TTL)
+    return Response(xml, mimetype="application/xml")
 
 
 @app.route("/robots.txt")

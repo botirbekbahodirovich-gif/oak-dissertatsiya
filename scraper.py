@@ -478,5 +478,19 @@ def _build_record(item, parsed, yonalish=None):
     }
 
 
+def ping_google():
+    """Sitemap yangilanganini Google'ga bildirish (best-effort, xato yutiladi)."""
+    try:
+        requests.get(
+            "https://www.google.com/ping?sitemap=https://olimlar.uz/sitemap.xml",
+            timeout=10,
+        )
+        print("Google sitemap ping yuborildi.")
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
     items = main()
+    if items:
+        ping_google()
