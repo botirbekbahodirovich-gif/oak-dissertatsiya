@@ -555,6 +555,7 @@ from blueprints.roadmap import roadmap_bp
 from blueprints.advisors import advisors_bp
 from blueprints.subscriptions import subs_bp
 from blueprints.councils import councils_bp
+from blueprints.conferences import conferences_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -579,6 +580,7 @@ app.register_blueprint(roadmap_bp)
 app.register_blueprint(advisors_bp)
 app.register_blueprint(subs_bp)
 app.register_blueprint(councils_bp)
+app.register_blueprint(conferences_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])

@@ -1,0 +1,33 @@
+name: Konferensiyalar sync
+# Har dushanba 03:00 UTC (08:00 Toshkent): xalqaro konferensiyalar confs.tech
+# datasetidan yangilanadi (source_id dedup — qayta ishga tushirish xavfsiz),
+# so'ng yangi qo'shilganlar obunachilarga tarqatiladi (idempotent endpoint).
+# Mahalliy (vazirlik) reja yiliga bir marta admin tomonidan qo'lda yuklanadi:
+#   python3 scripts/scrape_conferences_local.py --pdf <reja.pdf> --year YYYY
+# Kerakli secrets: DATABASE_URL, REMINDERS_API_KEY (reminders bilan bir xil).
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Kutubxonalar
+        run: pip install --quiet requests psycopg2-binary python-dotenv
+      - name: Xalqaro konferensiyalarni import qilish
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/scrape_conferences_intl.py
+      - name: Obunachilarga yangi konferensiya alertlari
+        env:
+          REMINDERS_API_KEY: ${{ secrets.REMINDERS_API_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-API-Key: ${REMINDERS_API_KEY}" \
+            https://www.olimlar.uz/api/v1/conferences/dispatch-alerts
