@@ -22,6 +22,8 @@
   .up-badge.institut { background: #059669; }
   .up-badge.markaz { background: #e36403; }
   .up-badge.loc { background: rgba(255,255,255,0.2); }
+  .up-badge.hidx { background: linear-gradient(135deg,#f59e0b,#d97706); text-decoration: none; }
+  .up-badge.hidx:hover { filter: brightness(1.08); color: #fff; }
   .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
   .up-stat b { font-size: 1.4rem; font-weight: 800; display: block; }
   .up-stat span { font-size: 0.8rem; opacity: 0.9; }
@@ -102,6 +104,7 @@
         {% if uni.im_category %}<span class="up-badge {{ uni.im_category }}">{{ {'universitet':'Universitet','akademiya':'Akademiya','institut':'Institut','markaz':'Markaz'}.get(uni.im_category, uni.im_category) }}</span>{% endif %}
         {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
         {% if uni.city or uni.region %}<span class="up-badge loc">📍 {{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
+        {% if h_index and h_index.rank %}<a class="up-badge hidx" href="/reyting/tashkilotlar" title="H-index milliy reyting — uz.h-index.com">🏆 Milliy H-index: {{ h_index.rank }}-o'rin{% if h_index.category %} · {{ h_index.category }}{% endif %}</a>{% endif %}
       </div>
       <div class="up-stats-row">
         <div class="up-stat"><b>{{ stats.total }}</b><span>dissertatsiya</span></div>

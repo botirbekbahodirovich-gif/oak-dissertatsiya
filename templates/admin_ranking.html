@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}H-index reyting — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 12px; }
+  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .adm-flash.warning { background: rgba(234,179,8,0.13); border: 1px solid #ca8a04; color: #fbbf24; }
+
+  .rk-grid { display: grid; grid-template-columns: minmax(0, 380px) 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .rk-grid { grid-template-columns: 1fr; } }
+
+  .rk-card { border: 1px solid #334155; background: #1e293b; border-radius: 14px; padding: 20px; }
+  .rk-card h2 { font-size: 1.05rem; font-weight: 800; color: #e2e8f0; margin: 0 0 14px; }
+  .rk-card .hint { font-size: 0.8rem; color: #94a3b8; margin: -6px 0 14px; line-height: 1.5; }
+  .rk-field { margin-bottom: 14px; }
+  .rk-field label { display: block; font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 5px; }
+  .rk-field input[type=text], .rk-field input[type=date], .rk-field input[type=file], .rk-field select, .rk-field textarea {
+    width: 100%; box-sizing: border-box; background: #0f172a; border: 1px solid rgba(148,163,184,0.28);
+    border-radius: 9px; padding: 10px 12px; color: #e2e8f0; font-size: 0.9rem; font-family: inherit; }
+  .rk-field input:focus, .rk-field select:focus, .rk-field textarea:focus {
+    outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  .rk-seg { display: flex; gap: 8px; }
+  .rk-seg label { flex: 1; cursor: pointer; margin: 0; }
+  .rk-seg input { position: absolute; opacity: 0; }
+  .rk-seg span { display: block; text-align: center; padding: 10px; border: 1px solid rgba(148,163,184,0.28);
+    border-radius: 9px; font-size: 0.88rem; font-weight: 700; color: #cbd5e1; text-transform: none; letter-spacing: 0; }
+  .rk-seg input:checked + span { border-color: #3b82f6; background: rgba(59,130,246,0.18); color: #93c5fd; }
+  .rk-submit { width: 100%; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border: none;
+    padding: 12px; border-radius: 10px; font-size: 0.95rem; font-weight: 800; cursor: pointer; }
+  .rk-submit:hover { opacity: 0.93; }
+  .rk-cols { font-size: 0.78rem; color: #7c8aa0; margin-top: 10px; line-height: 1.6; }
+  .rk-cols code { background: #0f172a; border: 1px solid rgba(148,163,184,0.2); border-radius: 5px;
+    padding: 1px 6px; color: #cbd5e1; font-size: 0.76rem; }
+
+  .adm-table-panel { border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.7rem 0.8rem; text-align: left; white-space: nowrap; }
+  .adm-table td { padding: 0.65rem 0.8rem; font-size: 0.86rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .kind-chip { font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .kind-sch { background: rgba(59,130,246,0.16); color: #60a5fa; }
+  .kind-inst { background: rgba(168,85,247,0.16); color: #c084fc; }
+  .match-b { font-size: 0.74rem; color: #94a3b8; }
+  .match-b b { color: #34d399; }
+  .adm-del { background: rgba(239,68,68,0.15); color: #f87171; border: none; cursor: pointer;
+    font-size: 0.9rem; padding: 5px 11px; border-radius: 8px; }
+  .adm-del:hover { background: rgba(239,68,68,0.28); }
+  .adm-empty { padding: 2rem; text-align: center; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1>🏆 H-index reyting boshqaruvi</h1>
+  <a href="/reyting" target="_blank" rel="noopener" style="color:#93c5fd;font-weight:700;text-decoration:none;">Public sahifani ko'rish →</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+{% endwith %}
+
+<div class="rk-grid">
+  <!-- ── Yuklash formasi ── -->
+  <div class="rk-card">
+    <h2>📤 Excel yuklash</h2>
+    <p class="hint">Manba: uz.h-index.com. Har yuklash yangi "snapshot" (sana) yaratadi — eski snapshotlar saqlanadi, dinamikani solishtirish mumkin.</p>
+    <form method="POST" action="/admin/reyting" enctype="multipart/form-data">
+      {{ csrf_token()|safe }}
+      <div class="rk-field">
+        <label>Yuklash turi</label>
+        <div class="rk-seg">
+          <label><input type="radio" name="kind" value="scholars" checked onchange="rkCols()"><span>👤 Olimlar</span></label>
+          <label><input type="radio" name="kind" value="institutions" onchange="rkCols()"><span>🏛️ Tashkilotlar</span></label>
+        </div>
+      </div>
+      <div class="rk-field">
+        <label for="rk-date">Snapshot sanasi *</label>
+        <input type="date" id="rk-date" name="snapshot_date" required>
+      </div>
+      <div class="rk-field">
+        <label for="rk-file">Excel fayl (.xlsx) *</label>
+        <input type="file" id="rk-file" name="file" accept=".xlsx,.xlsm" required>
+      </div>
+      <div class="rk-field">
+        <label for="rk-notes">Izoh (ixtiyoriy)</label>
+        <input type="text" id="rk-notes" name="notes" placeholder="Masalan: 2026-yil 1-chorak yangilanishi">
+      </div>
+      <button type="submit" class="rk-submit">Yuklash va bog'lash</button>
+      <div class="rk-cols" id="rk-cols-scholars">
+        <b style="color:#94a3b8;">Olimlar ustunlari:</b><br>
+        <code>rank</code> <code>scholar_name</code> <code>institution</code>
+        <code>h_scopus</code> <code>h_wos</code> <code>h_scholar</code> <code>orcid</code>
+      </div>
+      <div class="rk-cols" id="rk-cols-institutions" style="display:none;">
+        <b style="color:#94a3b8;">Tashkilotlar ustunlari:</b><br>
+        <code>rank</code> <code>institution_name</code> <code>category</code>
+        <code>h_scopus</code> <code>h_wos</code> <code>h_scholar</code> <code>national_h_index</code>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Snapshotlar ro'yxati ── -->
+  <div>
+    <div class="adm-table-panel">
+      {% if snapshots %}
+      <table class="adm-table">
+        <thead>
+          <tr><th>Sana</th><th>Tur</th><th>Qatorlar</th><th>Bog'langan</th><th>Izoh</th><th>Yuklangan</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for s in snapshots %}
+          <tr>
+            <td style="font-weight:700;white-space:nowrap;">{{ s.date }}</td>
+            <td>
+              {% if s.n_scholars %}<span class="kind-chip kind-sch">👤 Olimlar</span>{% endif %}
+              {% if s.n_institutions %}<span class="kind-chip kind-inst">🏛️ Tashkilot</span>{% endif %}
+              {% if not s.n_scholars and not s.n_institutions %}<span class="match-b">—</span>{% endif %}
+            </td>
+            <td>{% if s.n_scholars %}{{ s.n_scholars }} olim{% endif %}{% if s.n_institutions %}{% if s.n_scholars %}, {% endif %}{{ s.n_institutions }} tashkilot{% endif %}</td>
+            <td class="match-b">
+              {% if s.n_scholars %}<b>{{ s.n_scholars_matched }}</b>/{{ s.n_scholars }}{% endif %}
+              {% if s.n_institutions %}{% if s.n_scholars %} · {% endif %}<b>{{ s.n_institutions_matched }}</b>/{{ s.n_institutions }}{% endif %}
+            </td>
+            <td class="match-b">{{ s.notes or '—' }}</td>
+            <td class="match-b" style="white-space:nowrap;">{{ s.created_at }}</td>
+            <td>
+              <form method="POST" action="/admin/reyting/delete/{{ s.id }}"
+                    onsubmit="return confirm('{{ s.date }} snapshot va unga bog\'liq barcha qatorlar o\'chirilsinmi?')" style="display:inline;">
+                {{ csrf_token()|safe }}
+                <button type="submit" class="adm-del" title="O'chirish">🗑️</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="adm-empty">Hali hech qanday snapshot yuklanmagan. Chapdagi formadan birinchi Excel faylni yuklang.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function rkCols() {
+    var kind = document.querySelector('input[name=kind]:checked').value;
+    document.getElementById('rk-cols-scholars').style.display = (kind === 'scholars') ? '' : 'none';
+    document.getElementById('rk-cols-institutions').style.display = (kind === 'institutions') ? '' : 'none';
+  }
+</script>
+{% endblock %}

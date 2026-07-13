@@ -556,6 +556,7 @@ from blueprints.advisors import advisors_bp
 from blueprints.subscriptions import subs_bp
 from blueprints.councils import councils_bp
 from blueprints.conferences import conferences_bp
+from blueprints.ranking import ranking_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -581,6 +582,7 @@ app.register_blueprint(advisors_bp)
 app.register_blueprint(subs_bp)
 app.register_blueprint(councils_bp)
 app.register_blueprint(conferences_bp)
+app.register_blueprint(ranking_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -1505,8 +1507,17 @@ def home():
     except Exception:
         deadline_grants = []
 
+    # TOP olimlar (H-index) — bosh sahifa vidjeti (uz.h-index.com)
+    top_hindex = {'date': '', 'items': []}
+    try:
+        from blueprints.ranking import get_top_scholars
+        top_hindex = get_top_scholars(limit=10)
+    except Exception:
+        top_hindex = {'date': '', 'items': []}
+
     return render_template("home.html", recent=recent,
                            deadline_grants=deadline_grants,
+                           top_hindex=top_hindex,
                            hstats=get_homepage_stats())
 
 

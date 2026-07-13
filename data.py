@@ -1365,6 +1365,14 @@ def olim_profile(name):
     except Exception:
         message_target_id = None
 
+    # H-index reyting badge'i (uz.h-index.com) — mos kelsa, aks holda None
+    h_index = None
+    try:
+        from blueprints.ranking import get_scholar_h_index
+        h_index = get_scholar_h_index(term)
+    except Exception:
+        h_index = None
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
                            message_target_id=message_target_id,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
@@ -1372,7 +1380,7 @@ def olim_profile(name):
                            stats=stats, profile=profile, maqolalar=maqolalar,
                            konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
                            tree_parents=tree_parents, tree_children=tree_children,
-                           journal_map=journal_map)
+                           journal_map=journal_map, h_index=h_index)
 
 
 def _summary_stats(rows):

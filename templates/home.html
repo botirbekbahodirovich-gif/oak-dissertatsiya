@@ -626,6 +626,58 @@
   </div>
 </section>
 
+{# ═══ 7b. TOP OLIMLAR — H-index (uz.h-index.com) ═══ #}
+{% if top_hindex and top_hindex['items'] %}
+<section>
+  <style>
+    .hxr-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .hxr-src { font-size: 0.8rem; color: #94a3b8; }
+    .hxr-tbl-wrap { overflow-x: auto; border: 1px solid rgba(148,163,184,0.18); border-radius: 14px; background: rgba(255,255,255,0.02); }
+    .hxr-tbl { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 560px; }
+    .hxr-tbl th { text-align: left; padding: 11px 14px; font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid rgba(148,163,184,0.18); white-space: nowrap; }
+    .hxr-tbl th.num, .hxr-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .hxr-tbl td { padding: 10px 14px; border-bottom: 1px solid rgba(148,163,184,0.1); color: #cbd5e1; }
+    .hxr-tbl tr:last-child td { border-bottom: none; }
+    .hxr-tbl tr:hover td { background: rgba(148,163,184,0.06); }
+    .hxr-rank { font-weight: 800; color: #94a3b8; width: 48px; }
+    .hxr-name { font-weight: 700; color: #f1f5f9; }
+    .hxr-name a { color: #93c5fd; text-decoration: none; }
+    .hxr-name a:hover { text-decoration: underline; }
+    .hxr-inst { font-size: 0.8rem; color: #94a3b8; }
+    .hxr-h { font-weight: 800; color: #f1f5f9; }
+    .hxr-h.zero { color: #475569; font-weight: 500; }
+  </style>
+  <div class="hx-container">
+    <div class="hxr-head">
+      <h2 class="hx-h2" style="margin:0;">🏆 TOP olimlar — H-index bo'yicha</h2>
+      <a class="hx-all" href="/reyting">Barchasini koʻrish →</a>
+    </div>
+    <div class="hxr-tbl-wrap">
+      <table class="hxr-tbl">
+        <thead>
+          <tr><th class="num">#</th><th>Olim</th><th class="num">Scopus</th><th class="num">WoS</th><th class="num">Scholar</th></tr>
+        </thead>
+        <tbody>
+          {% for s in top_hindex['items'] %}
+          <tr>
+            <td class="hxr-rank">{% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ s.rank or loop.index }}{% endif %}</td>
+            <td class="hxr-name">
+              {% if s.olim_match %}<a href="/olim/{{ s.olim_match|urlencode }}">{{ s.scholar_name }}</a>{% else %}{{ s.scholar_name }}{% endif %}
+              {% if s.institution %}<div class="hxr-inst">{{ s.institution }}</div>{% endif %}
+            </td>
+            <td class="num hxr-h{% if not s.h_scopus %} zero{% endif %}">{{ s.h_scopus or '—' }}</td>
+            <td class="num hxr-h{% if not s.h_wos %} zero{% endif %}">{{ s.h_wos or '—' }}</td>
+            <td class="num hxr-h{% if not s.h_scholar %} zero{% endif %}">{{ s.h_scholar or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="hxr-src" style="margin-top:10px;">Ma'lumot manbasi: uz.h-index.com{% if top_hindex['date'] %} ({{ top_hindex['date'] }} holatiga ko'ra){% endif %}</div>
+  </div>
+</section>
+{% endif %}
+
 {# ═══ 8. SCHOLAR PROFILE SHOWCASE ═══ #}
 <section class="hx-show">
   <div class="hx-container">

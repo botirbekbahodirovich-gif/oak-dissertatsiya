@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}H-index reyting — O'zbekiston olimlari va tashkilotlari | Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston olimlari va tashkilotlarining H-index reytingi (Scopus, Web of Science, Google Scholar). Manba: uz.h-index.com{% if latest_date %}, holat: {{ latest_date }}{% endif %}.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .rk-wrap { max-width: 1160px; margin: 0 auto; padding: 0 4px; }
+  .rk-title { font-size: 1.7rem; font-weight: 800; margin: 0 0 6px; }
+  .rk-title .em { font-size: 1.5rem; }
+
+  /* manba attribution — majburiy */
+  .rk-source { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 10px; padding: 9px 14px; font-size: 0.86rem; color: #64748b; margin: 12px 0 20px; }
+  .rk-source b { color: #334155; }
+  .rk-source a { color: #2563eb; font-weight: 700; text-decoration: none; }
+  .rk-source a:hover { text-decoration: underline; }
+  .rk-source .rk-snap { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .rk-source select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 9px;
+    font-size: 0.84rem; font-family: inherit; color: #0f172a; background: #fff; }
+
+  /* tablar */
+  .rk-tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
+  .rk-tab { background: none; border: none; padding: 11px 18px; font-size: 0.96rem; font-weight: 700;
+    color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  .rk-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+  .rk-tab:hover { color: #2563eb; }
+
+  /* filtrlar */
+  .rk-filter { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .rk-fld { display: flex; flex-direction: column; gap: 4px; }
+  .rk-fld.grow { flex: 1; min-width: 200px; }
+  .rk-lbl { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+  .rk-filter input, .rk-filter select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 12px;
+    font-size: 0.9rem; font-family: inherit; color: #0f172a; background: #fff; width: 100%; box-sizing: border-box; }
+  .rk-filter input:focus, .rk-filter select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+  .rk-count { color: #64748b; font-size: 0.85rem; margin: 4px 2px 12px; min-height: 1.1em; }
+
+  /* jadval */
+  .rk-tbl-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
+  .rk-tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 720px; }
+  .rk-tbl thead th { text-align: left; padding: 12px 14px; font-size: 0.74rem; font-weight: 800; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; background: #f8fafc; }
+  .rk-tbl thead th.num { text-align: right; }
+  .rk-tbl thead th.sortable { cursor: pointer; user-select: none; }
+  .rk-tbl thead th.sortable:hover { color: #2563eb; }
+  .rk-tbl thead th .arr { opacity: 0.4; font-size: 0.7rem; }
+  .rk-tbl thead th.sorted .arr { opacity: 1; color: #2563eb; }
+  .rk-tbl tbody td { padding: 11px 14px; border-bottom: 1px solid #eef2f7; color: #1e293b; vertical-align: middle; }
+  .rk-tbl tbody tr:last-child td { border-bottom: none; }
+  .rk-tbl tbody tr:hover td { background: #f8fafc; }
+  .rk-rank { font-weight: 800; color: #64748b; white-space: nowrap; font-variant-numeric: tabular-nums; width: 56px; }
+  .rk-rank .medal { font-size: 1.15rem; }
+  .rk-name { font-weight: 700; color: #0f172a; }
+  .rk-name a { color: #2563eb; text-decoration: none; }
+  .rk-name a:hover { text-decoration: underline; }
+  .rk-name .link-ic { font-size: 0.72rem; opacity: 0.6; }
+  .rk-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-top: 2px; }
+  .rk-h { text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1.02rem; color: #0f172a; }
+  .rk-h.zero { color: #cbd5e1; font-weight: 500; }
+  .rk-cat { font-size: 0.76rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    background: rgba(124,92,252,0.12); color: #6d28d9; white-space: nowrap; }
+  .rk-orcid { color: #A6CE39; font-size: 0.95rem; text-decoration: none; }
+  .rk-state { padding: 44px 20px; text-align: center; color: #94a3b8; font-size: 0.92rem; }
+  .rk-spin { display: inline-block; width: 18px; height: 18px; border: 3px solid #dbeafe; border-top-color: #3b82f6;
+    border-radius: 50%; animation: rk-spin 0.8s linear infinite; vertical-align: -4px; margin-right: 8px; }
+  @keyframes rk-spin { to { transform: rotate(360deg); } }
+
+  .rk-empty { border: 1px dashed #cbd5e1; border-radius: 14px; padding: 48px 20px; text-align: center; color: #94a3b8; }
+  .rk-empty h3 { color: #475569; margin: 0 0 8px; }
+
+  /* dark theme */
+  [data-bs-theme="dark"] .rk-title { color: #f1f5f9; }
+  [data-bs-theme="dark"] .rk-source { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.25); color: #94a3b8; }
+  [data-bs-theme="dark"] .rk-source b { color: #e2e8f0; }
+  [data-bs-theme="dark"] .rk-source a { color: #93c5fd; }
+  [data-bs-theme="dark"] .rk-source select,
+  [data-bs-theme="dark"] .rk-filter input, [data-bs-theme="dark"] .rk-filter select
+    { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+  [data-bs-theme="dark"] .rk-tabs { border-color: rgba(148,163,184,0.18); }
+  [data-bs-theme="dark"] .rk-tbl-wrap { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+  [data-bs-theme="dark"] .rk-tbl thead th { background: #172032; color: #94a3b8; border-color: rgba(148,163,184,0.15); }
+  [data-bs-theme="dark"] .rk-tbl tbody td { color: #cbd5e1; border-color: rgba(148,163,184,0.1); }
+  [data-bs-theme="dark"] .rk-tbl tbody tr:hover td { background: #172032; }
+  [data-bs-theme="dark"] .rk-name, [data-bs-theme="dark"] .rk-h { color: #e2e8f0; }
+  [data-bs-theme="dark"] .rk-name a { color: #93c5fd; }
+  [data-bs-theme="dark"] .rk-h.zero { color: #475569; }
+  [data-bs-theme="dark"] .rk-empty { border-color: rgba(148,163,184,0.25); }
+  [data-bs-theme="dark"] .rk-empty h3 { color: #cbd5e1; }
+
+  @media (max-width: 560px) {
+    .rk-fld.grow { min-width: 100%; }
+    .rk-source .rk-snap { margin-left: 0; width: 100%; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rk-wrap">
+  <h1 class="rk-title"><span class="em">🏆</span> H-index reyting</h1>
+
+  <div class="rk-source">
+    <span>Ma'lumot manbasi: <a href="https://uz.h-index.com" target="_blank" rel="noopener nofollow">{{ source_name }}</a></span>
+    {% if latest_date %}<span>· holat: <b id="rk-snap-label">{{ latest_date }}</b></span>{% endif %}
+    <span class="rk-snap" id="rk-snap-box" style="{% if not has_data %}display:none;{% endif %}">
+      <label class="rk-lbl" for="rk-snap-sel" style="margin:0;">Snapshot:</label>
+      <select id="rk-snap-sel"></select>
+    </span>
+  </div>
+
+  {% if not has_data %}
+  <div class="rk-empty">
+    <h3>Reyting hali yuklanmagan</h3>
+    <p>H-index ma'lumotlari admin tomonidan tez orada yuklanadi. Manba: {{ source_name }}.</p>
+  </div>
+  {% else %}
+
+  <div class="rk-tabs">
+    <button class="rk-tab" id="tab-scholars" onclick="rkSwitch('scholars')">👤 TOP Olimlar</button>
+    <button class="rk-tab" id="tab-institutions" onclick="rkSwitch('institutions')">🏛️ Tashkilotlar reytingi</button>
+  </div>
+
+  <!-- ── OLIMLAR ── -->
+  <section id="pane-scholars">
+    <div class="rk-filter">
+      <div class="rk-fld grow">
+        <label class="rk-lbl" for="sch-search">Qidiruv (ism / tashkilot)</label>
+        <input type="text" id="sch-search" placeholder="Masalan: Karimov yoki universitet" autocomplete="off">
+      </div>
+      <div class="rk-fld grow">
+        <label class="rk-lbl" for="sch-inst">Tashkilot bo'yicha</label>
+        <input type="text" id="sch-inst" placeholder="Tashkilot nomi" autocomplete="off">
+      </div>
+      <div class="rk-fld">
+        <label class="rk-lbl" for="sch-minh">Min H-index</label>
+        <input type="number" id="sch-minh" min="0" placeholder="0" style="width:110px;">
+      </div>
+    </div>
+    <div class="rk-count" id="sch-count"></div>
+    <div class="rk-tbl-wrap">
+      <table class="rk-tbl" id="sch-tbl">
+        <thead>
+          <tr>
+            <th class="num">O'rin</th>
+            <th>Olim</th>
+            <th>Tashkilot</th>
+            <th class="num sortable" data-sort="h_scopus">H-Scopus <span class="arr">▾</span></th>
+            <th class="num sortable" data-sort="h_wos">H-WoS <span class="arr">▾</span></th>
+            <th class="num sortable" data-sort="h_scholar">H-Scholar <span class="arr">▾</span></th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="6" class="rk-state"><span class="rk-spin"></span>Yuklanmoqda…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── TASHKILOTLAR ── -->
+  <section id="pane-institutions" style="display:none;">
+    <div class="rk-filter">
+      <div class="rk-fld grow">
+        <label class="rk-lbl" for="inst-search">Qidiruv (tashkilot nomi)</label>
+        <input type="text" id="inst-search" placeholder="Tashkilot nomi" autocomplete="off">
+      </div>
+      {% if categories %}
+      <div class="rk-fld grow">
+        <label class="rk-lbl" for="inst-cat">Kategoriya</label>
+        <select id="inst-cat">
+          <option value="">Barchasi</option>
+          {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </div>
+    <div class="rk-count" id="inst-count"></div>
+    <div class="rk-tbl-wrap">
+      <table class="rk-tbl" id="inst-tbl">
+        <thead>
+          <tr>
+            <th class="num">O'rin</th>
+            <th>Tashkilot</th>
+            <th>Kategoriya</th>
+            <th class="num sortable" data-sort="h_scopus">H-Scopus <span class="arr">▾</span></th>
+            <th class="num sortable" data-sort="h_wos">H-WoS <span class="arr">▾</span></th>
+            <th class="num sortable" data-sort="h_scholar">H-Scholar <span class="arr">▾</span></th>
+            <th class="num sortable" data-sort="national_h_index">Milliy H <span class="arr">▾</span></th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="7" class="rk-state"><span class="rk-spin"></span>Yuklanmoqda…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if has_data %}
+<script>
+(function () {
+  var INITIAL_TAB = {{ active_tab|tojson }};
+  var SNAPS = {
+    scholars: {{ scholar_snapshots|tojson }},
+    institutions: {{ institution_snapshots|tojson }}
+  };
+  var state = {
+    tab: 'scholars',
+    scholars: { data: [], snapshot: 'latest', sort: null, dir: -1 },
+    institutions: { data: [], snapshot: 'latest', sort: null, dir: -1 }
+  };
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+  function medal(rank, i) {
+    if (rank === 1 || (rank == null && i === 0)) return '<span class="medal">🥇</span>';
+    if (rank === 2 || (rank == null && i === 1)) return '<span class="medal">🥈</span>';
+    if (rank === 3 || (rank == null && i === 2)) return '<span class="medal">🥉</span>';
+    return '#' + (rank != null ? rank : (i + 1));
+  }
+  function hcell(v) {
+    return v ? '<td class="rk-h">' + v + '</td>' : '<td class="rk-h zero">—</td>';
+  }
+
+  // ── snapshot dropdown ──
+  function fillSnap() {
+    var sel = document.getElementById('rk-snap-sel');
+    var list = SNAPS[state.tab] || [];
+    sel.innerHTML = '';
+    if (!list.length) { document.getElementById('rk-snap-box').style.display = 'none'; return; }
+    document.getElementById('rk-snap-box').style.display = '';
+    list.forEach(function (s, i) {
+      var o = document.createElement('option');
+      o.value = s.id; o.textContent = s.date + (i === 0 ? ' (so\'nggi)' : '');
+      sel.appendChild(o);
+    });
+    var cur = state[state.tab].snapshot;
+    sel.value = (cur === 'latest') ? String(list[0].id) : String(cur);
+  }
+  document.getElementById('rk-snap-sel').addEventListener('change', function () {
+    state[state.tab].snapshot = this.value;
+    load(state.tab);
+  });
+
+  // ── render ──
+  function applyView(tab) {
+    var st = state[tab];
+    var items = st.data.slice();
+    // client filtrlari
+    if (tab === 'scholars') {
+      var q = document.getElementById('sch-search').value.trim().toLowerCase();
+      var inst = document.getElementById('sch-inst').value.trim().toLowerCase();
+      var minh = parseInt(document.getElementById('sch-minh').value, 10);
+      if (q) items = items.filter(function (s) {
+        return (s.scholar_name || '').toLowerCase().indexOf(q) >= 0
+            || (s.institution || '').toLowerCase().indexOf(q) >= 0; });
+      if (inst) items = items.filter(function (s) { return (s.institution || '').toLowerCase().indexOf(inst) >= 0; });
+      if (!isNaN(minh)) items = items.filter(function (s) {
+        return Math.max(s.h_scopus || 0, s.h_wos || 0, s.h_scholar || 0) >= minh; });
+    } else {
+      var iq = document.getElementById('inst-search').value.trim().toLowerCase();
+      var cat = document.getElementById('inst-cat') ? document.getElementById('inst-cat').value.toLowerCase() : '';
+      if (iq) items = items.filter(function (s) { return (s.institution_name || '').toLowerCase().indexOf(iq) >= 0; });
+      if (cat) items = items.filter(function (s) { return (s.category || '').toLowerCase().indexOf(cat) >= 0; });
+    }
+    // sort (agar ustun tanlangan bo'lsa)
+    if (st.sort) {
+      items.sort(function (a, b) { return ((b[st.sort] || 0) - (a[st.sort] || 0)) * (st.dir === -1 ? 1 : -1); });
+    }
+    if (tab === 'scholars') renderScholars(items); else renderInstitutions(items);
+  }
+
+  function renderScholars(items) {
+    var tb = document.querySelector('#sch-tbl tbody');
+    document.getElementById('sch-count').textContent = items.length + ' ta olim';
+    if (!items.length) { tb.innerHTML = '<tr><td colspan="6" class="rk-state">Mos olim topilmadi</td></tr>'; return; }
+    var html = '';
+    items.forEach(function (s, i) {
+      var name = s.olim_match
+        ? '<a href="/olim/' + encodeURIComponent(s.olim_match) + '">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
+        : esc(s.scholar_name);
+      var orcid = s.orcid ? ' <a class="rk-orcid" href="https://orcid.org/' + encodeURIComponent(s.orcid.replace(/^https?:\/\/orcid\.org\//, '')) + '" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill"></i></a>' : '';
+      html += '<tr>' +
+        '<td class="rk-rank">' + medal(s.rank, i) + '</td>' +
+        '<td class="rk-name">' + name + orcid + '</td>' +
+        '<td>' + esc(s.institution || '—') + '</td>' +
+        hcell(s.h_scopus) + hcell(s.h_wos) + hcell(s.h_scholar) + '</tr>';
+    });
+    tb.innerHTML = html;
+  }
+
+  function renderInstitutions(items) {
+    var tb = document.querySelector('#inst-tbl tbody');
+    document.getElementById('inst-count').textContent = items.length + ' ta tashkilot';
+    if (!items.length) { tb.innerHTML = '<tr><td colspan="7" class="rk-state">Mos tashkilot topilmadi</td></tr>'; return; }
+    var html = '';
+    items.forEach(function (s, i) {
+      var name = s.university_match
+        ? '<a href="/university/' + encodeURIComponent(s.university_match) + '">' + esc(s.institution_name) + ' <span class="link-ic">↗</span></a>'
+        : esc(s.institution_name);
+      html += '<tr>' +
+        '<td class="rk-rank">' + medal(s.rank, i) + '</td>' +
+        '<td class="rk-name">' + name + '</td>' +
+        '<td>' + (s.category ? '<span class="rk-cat">' + esc(s.category) + '</span>' : '—') + '</td>' +
+        hcell(s.h_scopus) + hcell(s.h_wos) + hcell(s.h_scholar) +
+        (s.national_h_index ? '<td class="rk-h">' + s.national_h_index + '</td>' : '<td class="rk-h zero">—</td>') + '</tr>';
+    });
+    tb.innerHTML = html;
+  }
+
+  // ── fetch ──
+  var seq = 0;
+  function load(tab) {
+    var mySeq = ++seq;
+    var st = state[tab];
+    var url = '/api/v1/ranking/' + tab + '?snapshot=' + encodeURIComponent(st.snapshot);
+    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (mySeq !== seq) return;
+      if (!d.ok) return;
+      st.data = d.items || [];
+      if (d.snapshot_date) document.getElementById('rk-snap-label').textContent = d.snapshot_date;
+      applyView(tab);
+    }).catch(function () {});
+  }
+
+  // ── tab switch ──
+  window.rkSwitch = function (tab) {
+    state.tab = tab;
+    document.getElementById('tab-scholars').classList.toggle('active', tab === 'scholars');
+    document.getElementById('tab-institutions').classList.toggle('active', tab === 'institutions');
+    document.getElementById('pane-scholars').style.display = (tab === 'scholars') ? '' : 'none';
+    document.getElementById('pane-institutions').style.display = (tab === 'institutions') ? '' : 'none';
+    fillSnap();
+    if (!state[tab].data.length) load(tab); else applyView(tab);
+    try { history.replaceState(null, '', tab === 'institutions' ? '/reyting/tashkilotlar' : '/reyting'); } catch (e) {}
+  };
+
+  // ── sort headers ──
+  function bindSort(tblId, tab) {
+    document.querySelectorAll('#' + tblId + ' th.sortable').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var col = th.getAttribute('data-sort');
+        var st = state[tab];
+        if (st.sort === col) st.dir = -st.dir; else { st.sort = col; st.dir = -1; }
+        document.querySelectorAll('#' + tblId + ' th.sortable').forEach(function (h) { h.classList.remove('sorted'); });
+        th.classList.add('sorted');
+        th.querySelector('.arr').textContent = st.dir === -1 ? '▾' : '▴';
+        applyView(tab);
+      });
+    });
+  }
+  bindSort('sch-tbl', 'scholars');
+  bindSort('inst-tbl', 'institutions');
+
+  // ── filter inputlar (debounce) ──
+  var dbt;
+  function onFilter(tab) { clearTimeout(dbt); dbt = setTimeout(function () { applyView(tab); }, 180); }
+  ['sch-search', 'sch-inst', 'sch-minh'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.addEventListener('input', function () { onFilter('scholars'); });
+  });
+  ['inst-search'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.addEventListener('input', function () { onFilter('institutions'); });
+  });
+  var catEl = document.getElementById('inst-cat');
+  if (catEl) catEl.addEventListener('change', function () { applyView('institutions'); });
+
+  // ── init ──
+  rkSwitch(INITIAL_TAB === 'institutions' ? 'institutions' : 'scholars');
+})();
+</script>
+{% endif %}
+{% endblock %}

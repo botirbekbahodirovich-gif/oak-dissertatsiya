@@ -53,6 +53,15 @@
 .role-student a { color: #60a5fa; }
 .op-stats { display: flex; gap: 8px 22px; flex-wrap: wrap; font-size: 0.95rem; color: rgba(255,255,255,0.92); }
 .op-stats b { color: #fff; font-size: 1.05rem; }
+.op-hidx { display: inline-flex; flex-direction: column; gap: 3px; margin-top: 12px; text-decoration: none;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px;
+  padding: 9px 14px; max-width: max-content; transition: background 0.15s; }
+.op-hidx:hover { background: rgba(255,255,255,0.2); }
+.op-hidx-ttl { font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.95); }
+.op-hidx-ttl b { color: #fde047; }
+.op-hidx-nums { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.92rem; color: rgba(255,255,255,0.9); }
+.op-hidx-nums b { color: #fff; font-size: 1.05rem; }
+.op-hidx-src { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
 .op-side { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
 .op-socials { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 240px; }
 .op-soc {
@@ -207,6 +216,17 @@
         <span><b>{{ stats.opponent_count }}</b> opponentlik</span>
         <span><b>{{ stats.supervisor_count or 0 }}</b> shogird</span>
       </div>
+      {% if h_index %}
+      <a href="/reyting" class="op-hidx" title="H-index reyting — uz.h-index.com">
+        <span class="op-hidx-ttl">📊 H-index{% if h_index.rank %} · <b>{{ h_index.rank }}-o'rin</b>{% endif %}</span>
+        <span class="op-hidx-nums">
+          {% if h_index.h_scopus %}<span>Scopus <b>{{ h_index.h_scopus }}</b></span>{% endif %}
+          {% if h_index.h_wos %}<span>WoS <b>{{ h_index.h_wos }}</b></span>{% endif %}
+          {% if h_index.h_scholar %}<span>Scholar <b>{{ h_index.h_scholar }}</b></span>{% endif %}
+        </span>
+        <span class="op-hidx-src">Manba: uz.h-index.com{% if h_index.snapshot_date %} ({{ h_index.snapshot_date }}){% endif %}</span>
+      </a>
+      {% endif %}
       {% if message_target_id and not is_owner %}
       <button onclick="startConversation({{ message_target_id }})"
               style="margin-top:10px;border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:8px 18px;border-radius:50px;cursor:pointer;font-size:0.86rem;">

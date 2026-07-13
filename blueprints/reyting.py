@@ -199,8 +199,11 @@ def _apply_filters(orgs, region, category, code, q):
 
 # ── Page ─────────────────────────────────────────────────────────────────────
 
-@reyting_bp.route('/reyting')
+@reyting_bp.route('/reyting/ball')
 def reyting_page():
+    # NOTE: /reyting endi H-index reytingi (blueprints/ranking.py). Bizning
+    # dissertatsiya ma'lumotlaridan hisoblangan ichki ball reyting shu yerga
+    # ko'chirildi. API'lar (/api/v1/reyting/*) o'zgarmadi.
     from institutions import INSTITUTION_CATEGORIES
     regions, totals = [], {}
     try:

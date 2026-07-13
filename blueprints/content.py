@@ -441,11 +441,20 @@ def university_profile(name):
         else (by_year[0]['year'] if by_year else '')
 
     is_admin = (current_user.is_authenticated and getattr(current_user, 'is_admin', False))
+
+    # H-index milliy reyting bloki (uz.h-index.com) — mos kelsa, aks holda None
+    h_index = None
+    try:
+        from blueprints.ranking import get_institution_h_index
+        h_index = get_institution_h_index(uni.get('name'), uni.get('latin_name'))
+    except Exception:
+        h_index = None
+
     return render_template('university_profile.html', uni=uni, stats=stats,
                            top_olimlar=top_olimlar, top_rahbarlar=top_rahbarlar,
                            recent=recent, by_year=by_year, top_ixtisos=top_ixtisos,
                            gallery=gallery, rector_olim=rector_olim,
-                           is_admin=is_admin)
+                           is_admin=is_admin, h_index=h_index)
 
 
 @content_bp.route('/journals')
