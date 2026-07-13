@@ -557,6 +557,7 @@ from blueprints.subscriptions import subs_bp
 from blueprints.councils import councils_bp
 from blueprints.conferences import conferences_bp
 from blueprints.ranking import ranking_bp
+from blueprints.olimlar_catalog import olimlar_catalog_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -583,6 +584,7 @@ app.register_blueprint(subs_bp)
 app.register_blueprint(councils_bp)
 app.register_blueprint(conferences_bp)
 app.register_blueprint(ranking_bp)
+app.register_blueprint(olimlar_catalog_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -3501,6 +3503,7 @@ def _sm_static(page=1):
         ("/", "daily", "1.0"),
         ("/dissertatsiyalar", "daily", "0.9"),   # mehmonlarga ochiq katalog (/dashboard login-walled)
         ("/data", "daily", "0.8"),
+        ("/olimlar", "daily", "0.9"),
         ("/reyting", "daily", "0.8"),
         ("/compare", "weekly", "0.8"),
         ("/stats", "weekly", "0.7"), ("/trends", "weekly", "0.7"),

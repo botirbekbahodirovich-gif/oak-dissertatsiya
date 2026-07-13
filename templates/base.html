@@ -797,7 +797,7 @@
            Hech bir route o'chirilmagan — qolganlari dropdown ichida. ── #}
       <div class="nav-links" id="nav-links">
         <a href="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" class="nav-link{% if request.path in ['/dashboard', '/data', '/dissertatsiyalar'] %} active{% endif %}">Dissertatsiyalar</a>
-        <a href="/top-olimlar" class="nav-link{% if request.path.startswith('/top-olimlar') or request.path.startswith('/olim/') %} active{% endif %}">Olimlar</a>
+        <a href="/olimlar" class="nav-link{% if request.path.startswith('/olimlar') or request.path.startswith('/top-olimlar') or request.path.startswith('/olim/') %} active{% endif %}">Olimlar</a>
         <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}">Grantlar</a>
         <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}">Konstruktor<span class="nav-pill-new">Yangi</span></a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') or request.path.startswith('/trends') %} active{% endif %}">Analitika</a>
