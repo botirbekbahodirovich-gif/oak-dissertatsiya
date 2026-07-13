@@ -505,6 +505,11 @@ def profile_save():
                 vals[_yf] = None
     if 'profile_completed' in vals:
         vals['profile_completed'] = str(data.get('profile_completed')).lower() in ('1', 'true', 'yes', 'on')
+    # Google Scholar havolasi — bo'sh yoki rasmiy domen bilan boshlanishi shart
+    # (client'dagi saveLinksForm tekshiruvining server tomondagi jufti).
+    if vals.get('scholar_url') and not vals['scholar_url'].startswith('https://scholar.google.com/'):
+        return jsonify({"ok": False, "error": "Google Scholar havolasi "
+                        "https://scholar.google.com/ bilan boshlanishi kerak"}), 200
     olim_name = user.get('olim_name') or (vals.get('last_name') or vals.get('first_name') or '').strip()
     if not olim_name:
         olim_name = f"cabinet_{user['id']}"

@@ -585,7 +585,7 @@
           {% set links = [
             ('scopus_url','🔬','Scopus','https://www.scopus.com/authid/...'),
             ('wos_url','📚','Web of Science','https://www.webofscience.com/...'),
-            ('scholar_url','🎓','Google Scholar','https://scholar.google.com/...'),
+            ('scholar_url','🎓','Google Scholar profil havolasi','https://scholar.google.com/citations?user=...'),
             ('orcid_url','🆔','ORCID','https://orcid.org/0000-...'),
             ('website_url','🌐','Shaxsiy veb-sayt','https://...'),
             ('telegram_url','✈️','Telegram','https://t.me/...')
@@ -756,7 +756,16 @@ function saveForm(formId) {
   }).catch(function () { toast('Tarmoq xatosi', false); });
 }
 function saveProfileForm() { saveForm('profileForm'); }
-function saveLinksForm() { saveForm('linksForm'); }
+function saveLinksForm() {
+  // Google Scholar havolasi validatsiyasi — bo'sh yoki rasmiy domen bilan boshlanishi shart
+  var gs = document.querySelector('#linksForm [data-pf="scholar_url"]');
+  if (gs && gs.value.trim() && gs.value.trim().indexOf('https://scholar.google.com/') !== 0) {
+    toast('Google Scholar havolasi https://scholar.google.com/ bilan boshlanishi kerak', false);
+    gs.focus();
+    return;
+  }
+  saveForm('linksForm');
+}
 
 // ── notification preferences (Bildirishnomalar) — debounced auto-save ──
 (function () {
