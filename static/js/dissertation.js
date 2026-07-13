@@ -215,6 +215,7 @@
           else if (n.event_type === 'annotation_added') text = '💬 “' + esc(p.block_title || '') + '” qismiga yangi izoh qo\'shildi.';
           else if (n.event_type === 'status_changed') text = '🏷️ “' + esc(p.block_title || '') + '” holati: ' + esc(p.label || '');
           else if (n.event_type === 'new_message') { text = '✉️ ' + esc(p.from || 'Yangi') + ': ' + esc(p.snippet || 'xabar'); link = p.conversation_id ? '/messages/' + p.conversation_id : '/messages'; }
+          else if (n.event_type === 'followed_scholar_new_student') { text = '👥 ' + esc(p.scholar_name || '') + 'ning yangi shogirdi: ' + esc(p.student_name || '') + (p.mavzu ? ' — ' + esc(p.mavzu) : ''); link = '/olim/' + encodeURIComponent(p.scholar_name || ''); }
           else return;
           banner(n.event_type === 'advisor_reviewed' || n.event_type === 'student_submitted' ? 'warn' : 'info',
             text + ' <a href="' + link + '" style="color:#4a9eff;font-weight:700;">Ko\'rish →</a>',

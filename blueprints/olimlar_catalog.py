@@ -613,6 +613,68 @@ def api_follow(slug):
     return jsonify({'ok': True, 'following': following, 'scholar': target})
 
 
+# ── Follow bildirishnoma hook (Part 5) — import_oak'dan chaqiriladi ─────────
+
+def notify_scholar_follows(new_defenses):
+    """Yangi himoyalar ichida kuzatilayotgan ilmiy rahbar bo'lsa, uni kuzatuvchi
+    foydalanuvchilarga bell bildirishnomasi. Import'ni hech qachon yiqitmaydi;
+    dissertation_id bo'yicha takrorlanmaydi. Qaytaradi: yaratilgan bildirishnomalar
+    soni."""
+    if not new_defenses:
+        return 0
+    # rahbar (lower) → shu rahbarli yangi himoyalar
+    by_advisor = {}
+    for d in new_defenses:
+        adv = (d.get('ilmiy_rahbar') or '').strip()
+        if adv:
+            by_advisor.setdefault(adv.lower(), []).append((adv, d))
+    if not by_advisor:
+        return 0
+    created = 0
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                # faqat kuzatilayotgan rahbarlar
+                cur.execute(
+                    "SELECT LOWER(scholar_name), user_id FROM scholar_follows "
+                    "WHERE LOWER(scholar_name) = ANY(%s)", (list(by_advisor.keys()),))
+                follows = cur.fetchall()
+                for adv_low, user_id in follows:
+                    for adv_name, d in by_advisor.get(adv_low, []):
+                        # NB: diss_notifications.dissertation_id → diss_projects FK
+                        # (Konstruktor), dissertations EMAS. Shuning uchun himoya
+                        # id'sini payload ichida saqlaymiz, ustunni NULL qoldiramiz.
+                        diss_id = d.get('id')
+                        # takrorlanmaslik: shu user + event + shu himoya (payload'dan)
+                        cur.execute(
+                            "SELECT 1 FROM diss_notifications WHERE user_id = %s "
+                            "AND event_type = 'followed_scholar_new_student' "
+                            "AND payload->>'diss_id' = %s LIMIT 1",
+                            (user_id, str(diss_id)))
+                        if cur.fetchone():
+                            continue
+                        payload = json.dumps({
+                            'scholar_name': adv_name,
+                            'student_name': clean_olim_name(d.get('olim') or ''),
+                            'mavzu': (d.get('mavzu') or '')[:160],
+                            'diss_id': diss_id,
+                        }, ensure_ascii=False)
+                        cur.execute(
+                            "INSERT INTO diss_notifications "
+                            "(user_id, event_type, payload) "
+                            "VALUES (%s, 'followed_scholar_new_student', %s)",
+                            (user_id, payload))
+                        created += 1
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        return created
+    return created
+
+
 # ── Profil boyitish helper'i (Part 4 backend) ───────────────────────────────
 
 def get_scholar_reputation(name):

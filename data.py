@@ -1373,6 +1373,14 @@ def olim_profile(name):
     except Exception:
         h_index = None
 
+    # Obro' metrikalari (Olimlar katalogi 2.0): avlod, nashr, sparkline, o'xshash
+    reputation = None
+    try:
+        from blueprints.olimlar_catalog import get_scholar_reputation
+        reputation = get_scholar_reputation(term)
+    except Exception:
+        reputation = None
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
                            message_target_id=message_target_id,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
@@ -1380,7 +1388,8 @@ def olim_profile(name):
                            stats=stats, profile=profile, maqolalar=maqolalar,
                            konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
                            tree_parents=tree_parents, tree_children=tree_children,
-                           journal_map=journal_map, h_index=h_index)
+                           journal_map=journal_map, h_index=h_index,
+                           reputation=reputation)
 
 
 def _summary_stats(rows):
@@ -1878,6 +1887,7 @@ def import_oak():
                     new_defenses.append({
                         'id': row[0] if row else None,
                         'olim': olim, 'mavzu': mavzu, 'ixtisoslik': ixtisoslik,
+                        'ilmiy_rahbar': str(item.get('Ilmiy rahbar', '') or '').strip(),
                         'link': str(item.get('Havola', '') or ''),
                     })
 
@@ -1905,6 +1915,13 @@ def import_oak():
             subs_notified = notify_specialty_subscribers(new_defenses)
         except Exception:
             subs_notified = 0
+        # Kuzatilayotgan olimlar (scholar_follows): yangi shogird → kuzatuvchilarga
+        # sayt bildirishnomasi (bell). Import'ni hech qachon yiqitmaydi.
+        try:
+            from blueprints.olimlar_catalog import notify_scholar_follows
+            notify_scholar_follows(new_defenses)
+        except Exception:
+            pass
 
     return jsonify({'success': True, 'inserted': inserted, 'updated': updated,
                     'skipped': skipped, 'total': len(items),

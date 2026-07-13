@@ -276,6 +276,60 @@
 
     {{ ad_banner('profile-top', 'horizontal') }}
 
+    {% if reputation %}
+    <!-- ═══ Obro' metrikalari (Olimlar katalogi 2.0) ═══ -->
+    <style>
+      .op-rep { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px 22px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+      .op-rep-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      .op-rep-stat { background: #f8fafc; border-radius: 12px; padding: 14px 10px; text-align: center; }
+      .op-rep-stat b { display: block; font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+      .op-rep-stat span { font-size: 0.78rem; color: #64748b; }
+      .op-rep-stat small { display: block; font-size: 0.68rem; color: #94a3b8; margin-top: 2px; }
+      .op-rep-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+      .op-rep-spark { flex: 1; min-width: 180px; }
+      .op-rep-spark .lbl { font-size: 0.74rem; color: #64748b; margin-bottom: 4px; }
+      .op-rep-gs { display: inline-flex; align-items: center; gap: 7px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 700; font-size: 0.86rem; padding: 9px 16px; border-radius: 10px; text-decoration: none; }
+      .op-rep-gs:hover { background: #dbeafe; color: #2563eb; text-decoration: none; }
+      .op-sim { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
+      .op-sim a { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; text-decoration: none; }
+      .op-sim a:hover { border-color: #93c5fd; }
+      .op-sim .nm { font-weight: 700; color: #0f172a; font-size: 0.88rem; }
+      .op-sim .mt { font-size: 0.76rem; color: #64748b; }
+      @media (max-width: 560px) { .op-rep-stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+    <div class="op-rep">
+      <div class="op-rep-stats">
+        <div class="op-rep-stat"><b>{{ reputation.total_students }}</b><span>👥 Shogirdlar</span>
+          <small>PhD: {{ reputation.phd_students }} · DSc: {{ reputation.dsc_students }}</small></div>
+        <div class="op-rep-stat"><b>{{ reputation.opponent_count }}</b><span>⚖️ Opponentlik</span></div>
+        <div class="op-rep-stat"><b>{{ reputation.next_gen_advisors }}</b><span>🌳 Ilmiy avlod</span>
+          <small>rahbar bo'lgan shogirdlar</small></div>
+        <div class="op-rep-stat"><b>{{ reputation.publications_count }}</b><span>📄 Nashrlar</span></div>
+      </div>
+      {% if reputation.sparkline or reputation.has_google_scholar %}
+      <div class="op-rep-foot">
+        {% if reputation.sparkline %}
+        <div class="op-rep-spark"><div class="lbl">Yillik faollik</div>{{ reputation.sparkline|safe }}</div>
+        {% endif %}
+        {% if reputation.has_google_scholar %}
+        <a class="op-rep-gs" href="{{ reputation.google_scholar_url }}" target="_blank" rel="noopener">🎓 Google Scholar profili →</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {% if reputation.similar %}
+    <div class="op-sec-title" style="margin-bottom:14px;"><i class="bi bi-people" style="color:#2563eb;"></i>Shu sohada yana</div>
+    <div class="op-sim">
+      {% for s in reputation.similar %}
+      <a href="/olim/{{ s.name|urlencode }}">
+        <div><div class="nm">{{ s.display }}</div><div class="mt">👥 {{ s.total_students }} shogird{% if s.dsc_students %} · DSc{% endif %}</div></div>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+
     <div class="op-sec-title"><i class="bi bi-journal-text" style="color:#3b82f6;"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
     {% if not dissertations %}
     <div class="op-empty role-empty"><div class="ico">🎓</div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
