@@ -196,9 +196,26 @@ def uni_link(name):
 def _inject_cabinet():
     """Expose cabinet (portfolio) session state to all templates."""
     from flask import session
+    cab_uid = session.get('cabinet_user_id')
+    slug = ''
+    if cab_uid:
+        try:
+            from data import get_connection
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT slug FROM olim_profiles WHERE cabinet_user_id = %s "
+                                "AND slug IS NOT NULL LIMIT 1", (cab_uid,))
+                    r = cur.fetchone()
+                    slug = r[0] if r else ''
+            finally:
+                conn.close()
+        except Exception:
+            slug = ''
     return dict(
-        cabinet_logged_in=bool(session.get('cabinet_user_id')),
+        cabinet_logged_in=bool(cab_uid),
         cabinet_olim_name=session.get('cabinet_olim_name') or '',
+        cabinet_slug=slug,
     )
 
 
@@ -466,6 +483,163 @@ app.jinja_env.globals["avatar_url"] = avatar_url
 app.jinja_env.filters["avatar_url"] = avatar_url
 app.jinja_env.globals["DEFAULT_AVATAR"] = DEFAULT_AVATAR
 app.jinja_env.filters["normalize_patronymic"] = normalize_patronymic
+
+
+def olim_url(olim_name, slug=None):
+    """Olimga kanonik havola: slug bo'lsa /@slug, aks holda /olim/<name>.
+    Templatelarda global sifatida ishlatiladi (slug ma'lum joylarda /@slug)."""
+    from urllib.parse import quote
+    if slug:
+        return '/@' + str(slug)
+    return '/olim/' + quote(str(olim_name or ''), safe='')
+
+
+app.jinja_env.globals["olim_url"] = olim_url
+
+
+# ── Username (vanity URL) API — validatsiya + bandlik + takliflar ───────────
+_username_check_hits = {}
+
+
+def _username_rate_limited(ip, limit=30, window=60):
+    """IP boshiga daqiqada `limit` so'rov (oddiy xotira-ichi cheklov)."""
+    import time
+    now = time.time()
+    hits = [t for t in _username_check_hits.get(ip, []) if now - t < window]
+    hits.append(now)
+    _username_check_hits[ip] = hits
+    if len(_username_check_hits) > 5000:      # xotira o'sishini cheklash
+        for k in [k for k, v in _username_check_hits.items()
+                  if not v or now - v[-1] > window]:
+            _username_check_hits.pop(k, None)
+    return len(hits) > limit
+
+
+def _current_profile_id():
+    """Joriy cabinet foydalanuvchisining olim_profiles.id si (o'z slugini qayta
+    tekshirishda o'zini istisno qilish uchun) yoki None."""
+    from flask import session
+    cab_uid = session.get('cabinet_user_id')
+    if not cab_uid:
+        return None
+    try:
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM olim_profiles WHERE cabinet_user_id = %s "
+                            "LIMIT 1", (cab_uid,))
+                r = cur.fetchone()
+                return r[0] if r else None
+        finally:
+            conn.close()
+    except Exception:
+        return None
+
+
+@app.route('/api/username/check')
+def api_username_check():
+    from flask import jsonify, request
+    ip = get_real_ip() or 'unknown'
+    if _username_rate_limited(ip):
+        return jsonify({'available': False,
+                        'error': "Juda ko'p so'rov — birozdan keyin urinib ko'ring"}), 429
+    from utils.username import validate_username, is_username_available, normalize_username
+    slug = normalize_username(request.args.get('slug'))
+    ok, msg = validate_username(slug)
+    if not ok:
+        return jsonify({'available': False, 'error': msg})
+    avail = is_username_available(slug, exclude_profile_id=_current_profile_id())
+    return jsonify({'available': avail, 'slug': slug,
+                    'error': '' if avail else 'Bu nom allaqachon band'})
+
+
+@app.route('/api/username/suggestions')
+def api_username_suggestions():
+    from flask import jsonify, request
+    from utils.username import generate_username_suggestion
+    first = (request.args.get('first') or '').strip()
+    last = (request.args.get('last') or '').strip()
+    return jsonify({'suggestions': generate_username_suggestion(first, last)})
+
+
+@app.route('/admin/usernames')
+@login_required
+def admin_usernames():
+    """Username (slug) boshqaruvi — squatting/impersonationga tezkor javob."""
+    _require_admin()
+    from data import get_connection
+    q = (request.args.get('q') or '').strip()
+    items = []
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                if q:
+                    cur.execute(
+                        "SELECT id, olim_name, slug FROM olim_profiles "
+                        "WHERE olim_name ILIKE %s OR slug ILIKE %s "
+                        "ORDER BY (slug IS NULL), olim_name LIMIT 300",
+                        (f'%{q}%', f'%{q}%'))
+                else:
+                    cur.execute(
+                        "SELECT id, olim_name, slug FROM olim_profiles "
+                        "WHERE slug IS NOT NULL ORDER BY slug LIMIT 300")
+                items = [{'id': r[0], 'olim_name': r[1] or '', 'slug': r[2] or ''}
+                         for r in cur.fetchall()]
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template('admin/usernames.html', items=items, q=q)
+
+
+@app.route('/admin/usernames/<int:pid>/set', methods=['POST'])
+@login_required
+def admin_username_set(pid):
+    """Admin har qanday olimning slug'ini o'rnatadi/o'chiradi (chastota limitisiz)."""
+    _require_admin()
+    from data import get_connection
+    from utils.username import (validate_username, is_username_available,
+                                normalize_username)
+    slug = normalize_username(request.form.get('slug'))
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT slug FROM olim_profiles WHERE id = %s", (pid,))
+                row = cur.fetchone()
+                if not row:
+                    flash('Profil topilmadi.', 'error')
+                    return redirect('/admin/usernames')
+                old_slug = row[0]
+                if slug == '':
+                    cur.execute("UPDATE olim_profiles SET slug = NULL WHERE id = %s", (pid,))
+                    if old_slug:
+                        cur.execute("INSERT INTO username_history "
+                                    "(profile_id, old_slug, new_slug) VALUES (%s, %s, NULL)",
+                                    (pid, old_slug))
+                    flash('Username olib tashlandi.', 'success')
+                else:
+                    ok, msg = validate_username(slug)
+                    if not ok:
+                        flash('Xato: ' + msg, 'error')
+                        return redirect('/admin/usernames')
+                    if not is_username_available(slug, exclude_profile_id=pid, cur=cur):
+                        flash('Bu username band.', 'error')
+                        return redirect('/admin/usernames')
+                    cur.execute("UPDATE olim_profiles SET slug = %s WHERE id = %s", (slug, pid))
+                    if old_slug and old_slug != slug:
+                        cur.execute("INSERT INTO username_history "
+                                    "(profile_id, old_slug, new_slug) VALUES (%s, %s, %s)",
+                                    (pid, old_slug, slug))
+                    flash(f'Username o\'rnatildi: @{slug}', 'success')
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        flash('Xatolik: ' + str(e), 'error')
+    return redirect('/admin/usernames')
 
 
 # ── Fix 5.1 (soft / public-friendly): protected-route gate ──────────────────
@@ -1151,6 +1325,23 @@ def _run_startup_migrations():
                 cur.execute(f"ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS {_col} {_typ}")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_profiles_olim_name_lower "
                         "ON olim_profiles (LOWER(TRIM(olim_name)))")
+            # ── Username (vanity URL) tizimi: slug + tarix ──
+            cur.execute("ALTER TABLE olim_profiles ADD COLUMN IF NOT EXISTS slug VARCHAR(30)")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_olim_slug "
+                        "ON olim_profiles(slug) WHERE slug IS NOT NULL")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS slug VARCHAR(30)")
+            cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_slug "
+                        "ON users(slug) WHERE slug IS NOT NULL")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS username_history (
+                    id SERIAL PRIMARY KEY,
+                    profile_id INTEGER REFERENCES olim_profiles(id) ON DELETE CASCADE,
+                    old_slug VARCHAR(30),
+                    new_slug VARCHAR(30),
+                    changed_at TIMESTAMP DEFAULT NOW()
+                )""")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_username_history_old "
+                        "ON username_history(old_slug)")
             # Shogirdlar (students) — per-scholar list, keyed by olim_name like the
             # other olim_* portfolio tables. CRUD lives in cabinet.py.
             cur.execute("""
@@ -3537,13 +3728,21 @@ def _sm_static(page=1):
 
 def _sm_olimlar(page=1):
     from urllib.parse import quote
+    # slug bor olimlar uchun kanonik /@slug, aks holda /olim/<name>
     rows = _sitemap_rows(
-        "SELECT DISTINCT TRIM(olim) FROM dissertations "
-        "WHERE olim IS NOT NULL AND TRIM(olim) <> '' "
-        "ORDER BY 1 LIMIT %s OFFSET %s",
+        "SELECT d.olim, MAX(p.slug) AS slug FROM "
+        "(SELECT DISTINCT TRIM(olim) AS olim FROM dissertations "
+        " WHERE olim IS NOT NULL AND TRIM(olim) <> '') d "
+        "LEFT JOIN olim_profiles p "
+        "  ON LOWER(TRIM(p.olim_name)) = LOWER(d.olim) AND p.slug IS NOT NULL "
+        "GROUP BY d.olim ORDER BY d.olim LIMIT %s OFFSET %s",
         (SITEMAP_MAX_URLS, (page - 1) * SITEMAP_MAX_URLS))
-    return [(f"{SITE_BASE}/olim/{quote(str(r[0]), safe='')}", None, "weekly", "0.8")
-            for r in rows]
+    out = []
+    for r in rows:
+        loc = (f"{SITE_BASE}/@{r[1]}" if r[1]
+               else f"{SITE_BASE}/olim/{quote(str(r[0]), safe='')}")
+        out.append((loc, None, "weekly", "0.8"))
+    return out
 
 
 def _sm_dissertations(page=1):

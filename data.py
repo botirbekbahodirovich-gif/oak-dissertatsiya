@@ -1248,9 +1248,70 @@ _SANA_ORDER_PLAIN = (
 )
 
 
+def _slug_for_olim(term):
+    """olim_name uchun tasdiqlangan slug (olim_profiles.slug) yoki None."""
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT slug FROM olim_profiles "
+                            "WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s)) "
+                            "AND slug IS NOT NULL LIMIT 1", (term,))
+                r = cur.fetchone()
+                return r[0] if r else None
+        finally:
+            conn.close()
+    except Exception:
+        return None
+
+
 @data_bp.route('/olim/<path:name>')
 def olim_profile(name):
-    term = name.strip()
+    """Eski (indekslangan) URL. Slug bo'lsa — kanonik /@slug ga 301 (SEO)."""
+    from flask import redirect
+    term = (name or '').strip()
+    slug = _slug_for_olim(term)
+    if slug:
+        return redirect('/@' + slug, code=301)
+    return _render_olim_profile(term)
+
+
+@data_bp.route('/@<slug>')
+def profile_by_username(slug):
+    """Vanity URL. slug → olim_name; topilmasa username_history'da eski slugni
+    qidiradi (301 yangi slugga); hech joyda bo'lmasa 404."""
+    from flask import redirect
+    slug = (slug or '').strip().lower()
+    olim_name = None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT olim_name FROM olim_profiles WHERE slug = %s LIMIT 1",
+                            (slug,))
+                r = cur.fetchone()
+                if r:
+                    olim_name = r[0]
+                else:
+                    cur.execute("""
+                        SELECT p.slug FROM username_history h
+                        JOIN olim_profiles p ON p.id = h.profile_id
+                        WHERE h.old_slug = %s AND p.slug IS NOT NULL
+                        ORDER BY h.changed_at DESC LIMIT 1""", (slug,))
+                    hr = cur.fetchone()
+                    if hr and hr[0]:
+                        return redirect('/@' + hr[0], code=301)
+        finally:
+            conn.close()
+    except Exception:
+        olim_name = None
+    if not olim_name:
+        abort(404)
+    return _render_olim_profile(olim_name)
+
+
+def _render_olim_profile(term):
+    term = (term or '').strip()
     # Exact (case-insensitive) match so links resolve to the correct person in each role.
     own = _query_full_diss('LOWER(TRIM(olim)) = LOWER(TRIM(%s))', (term,), order=_SANA_ORDER_PLAIN)
     as_supervisor = _query_full_diss(

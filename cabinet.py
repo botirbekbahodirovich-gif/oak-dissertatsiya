@@ -495,7 +495,7 @@ def profile_save():
         raw = data.get(f)
         v = raw.strip() if isinstance(raw, str) else raw
         vals[f] = v if v not in ('', None) else None
-    if not vals:
+    if not vals and 'slug' not in data:
         return jsonify({"ok": True})
     for _yf in ('birth_year', 'magistratura_year', 'defense_year'):
         if vals.get(_yf):
@@ -517,19 +517,60 @@ def profile_save():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT id FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1", (user['id'],))
+                cur.execute("SELECT id, slug FROM olim_profiles "
+                            "WHERE cabinet_user_id = %s LIMIT 1", (user['id'],))
                 existing = cur.fetchone()
+                existing_id = existing[0] if existing else None
+                existing_slug = existing[1] if existing else None
+
+                # ── Username (slug) — validatsiya, bandlik, chastota, tarix ──
+                slug_change = None      # (old, new) — tarixga yozish uchun
+                if 'slug' in data:
+                    from utils.username import (validate_username, is_username_available,
+                                                normalize_username, CHANGE_LIMIT_PER_YEAR)
+                    raw = normalize_username(data.get('slug'))
+                    if raw == '':
+                        if existing_slug:
+                            vals['slug'] = None
+                            slug_change = (existing_slug, None)
+                    elif raw != (existing_slug or ''):
+                        ok, msg = validate_username(raw)
+                        if not ok:
+                            return jsonify({"ok": False, "error": msg}), 200
+                        if not is_username_available(raw, exclude_profile_id=existing_id, cur=cur):
+                            return jsonify({"ok": False, "error": "Bu username band"}), 200
+                        if existing_id:
+                            cur.execute("SELECT COUNT(*) FROM username_history "
+                                        "WHERE profile_id = %s AND changed_at > "
+                                        "NOW() - INTERVAL '365 days'", (existing_id,))
+                            if (cur.fetchone()[0] or 0) >= CHANGE_LIMIT_PER_YEAR:
+                                return jsonify({"ok": False, "error":
+                                    "Username yiliga 2 martadan ko'p o'zgartirilmaydi"}), 200
+                        vals['slug'] = raw
+                        if existing_slug:
+                            slug_change = (existing_slug, raw)
+
                 cols = list(vals.keys())
                 if existing:
-                    set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = CURRENT_TIMESTAMP"
-                    cur.execute(f"UPDATE olim_profiles SET {set_clause} WHERE id = %s",
-                                [vals[c] for c in cols] + [existing[0]])
+                    if cols:
+                        set_clause = ", ".join(f"{c} = %s" for c in cols) + ", updated_at = CURRENT_TIMESTAMP"
+                        cur.execute(f"UPDATE olim_profiles SET {set_clause} WHERE id = %s",
+                                    [vals[c] for c in cols] + [existing_id])
+                    prof_id = existing_id
                 else:
                     all_cols = ['olim_name', 'cabinet_user_id'] + cols
                     placeholders = ", ".join(["%s"] * len(all_cols))
                     cur.execute(
-                        f"INSERT INTO olim_profiles ({', '.join(all_cols)}) VALUES ({placeholders})",
+                        f"INSERT INTO olim_profiles ({', '.join(all_cols)}) VALUES ({placeholders}) "
+                        "RETURNING id",
                         [olim_name, user['id']] + [vals[c] for c in cols])
+                    prof_id = cur.fetchone()[0]
+
+                # slug o'zgargan bo'lsa — tarixga yoz (eski slug 6 oy himoyalanadi)
+                if slug_change and slug_change[0] and prof_id:
+                    cur.execute("INSERT INTO username_history "
+                                "(profile_id, old_slug, new_slug) VALUES (%s, %s, %s)",
+                                (prof_id, slug_change[0], slug_change[1]))
             conn.commit()
         finally:
             conn.close()

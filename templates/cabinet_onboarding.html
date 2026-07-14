@@ -95,6 +95,13 @@
         <div class="ob-group"><label>Ism</label><input class="ob-input" id="ob-first" type="text" value="{{ profile.first_name or '' }}" placeholder="Aziz"></div>
         <div class="ob-group"><label>Otasining ismi</label><input class="ob-input" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
       </div>
+      <div class="ob-group" style="margin-top:10px;">
+        <label>🔗 Sahifa manzili (ixtiyoriy) — olimlar.uz/@</label>
+        <input class="ob-input" id="ob-slug" type="text" value="{{ profile.slug or '' }}"
+               placeholder="babayev_said" autocomplete="off" maxlength="30" spellcheck="false"
+               oninput="this.value=this.value.toLowerCase()">
+        <small style="color:#94a3b8;">3-30 belgi, kichik lotin harflar/raqam/_. Keyin Kabinetda o'zgartirsangiz bo'ladi.</small>
+      </div>
 
       <div class="ob-matches" id="ob-matches"></div>
       <div class="ob-hint" id="ob-hint" style="display:none;">Ismni to'liqroq kiriting — mos olimlarni ko'rsatamiz.</div>
@@ -278,9 +285,11 @@
   document.getElementById('ob-finish').addEventListener('click', function () {
     var btn = this; btn.disabled = true;
     var deg = document.querySelector('input[name=degree]:checked');
+    var slugEl = document.getElementById('ob-slug');
     var body = {
       last_name: last.value.trim(), first_name: first.value.trim(), patronymic: patr.value.trim(),
       academic_degree: deg ? deg.value : '', region: region.value, institution: inst.value.trim(),
+      slug: slugEl ? slugEl.value.trim().toLowerCase() : '',
       profile_completed: '1'
     };
     post('/cabinet/api/profile/save', body).then(function (d) {

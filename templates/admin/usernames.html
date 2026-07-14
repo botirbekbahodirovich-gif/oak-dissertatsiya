@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Username boshqaruvi (admin) — Olimlar.uz{% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1050px;margin:0 auto;">
+  <h1 style="margin:0 0 6px;">🔗 Username boshqaruvi</h1>
+  <p style="color:#94a3b8;font-size:0.86rem;margin-bottom:16px;">
+    Olimlarning sahifa manzillari (@slug). Squatting/impersonation holatlarida o'zgartiring yoki olib tashlang.</p>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="alert-inline {{ 'success' if cat == 'success' else 'error' }}">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="get" action="/admin/usernames" style="display:flex;gap:8px;margin:14px 0;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Ism yoki @slug bo'yicha qidirish…"
+      style="flex:1;border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 12px;background:transparent;color:inherit;">
+    <button type="submit" class="btn btn-action">Qidirish</button>
+  </form>
+
+  <div style="overflow-x:auto;">
+  <table class="table" style="width:100%;">
+    <thead><tr><th>Olim</th><th>Hozirgi URL</th><th>Username (@slug)</th><th></th></tr></thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td>{{ it.olim_name }}</td>
+        <td style="font-size:0.82rem;">
+          {% if it.slug %}<a href="/@{{ it.slug }}" target="_blank">/@{{ it.slug }}</a>
+          {% else %}<a href="/olim/{{ it.olim_name|urlencode }}" target="_blank">/olim/…</a>{% endif %}
+        </td>
+        <td>
+          <form method="POST" action="/admin/usernames/{{ it.id }}/set" style="display:flex;gap:6px;align-items:center;">
+            {{ csrf_token()|safe }}
+            <span style="color:#94a3b8;font-family:ui-monospace,monospace;">@</span>
+            <input type="text" name="slug" value="{{ it.slug }}" maxlength="30"
+              style="border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:5px 9px;background:transparent;color:inherit;font-family:ui-monospace,monospace;width:150px;"
+              placeholder="bo'sh = o'chirish">
+            <button type="submit" class="btn btn-sm btn-primary">Saqlash</button>
+          </form>
+        </td>
+        <td style="white-space:nowrap;">
+          {% if it.slug %}
+          <form method="POST" action="/admin/usernames/{{ it.id }}/set" style="display:inline;"
+                onsubmit="return confirm('@{{ it.slug }} olib tashlansinmi?')">
+            {{ csrf_token()|safe }}
+            <input type="hidden" name="slug" value="">
+            <button type="submit" class="btn btn-sm btn-action">🗑️</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">
+        {% if q %}Topilmadi.{% else %}Hali hech kim username o'rnatmagan. Qidiruv orqali profil toping va slug bering.{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

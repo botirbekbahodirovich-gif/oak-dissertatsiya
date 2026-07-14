@@ -285,6 +285,36 @@
           <h3>Profil ma'lumotlari</h3>
           <p class="desc">Barcha maydonlarni to'ldiring va pastdagi yagona "Saqlash" tugmasini bosing.</p>
 
+          <!-- ── Username / sahifa manzili ── -->
+          <div class="uname-box">
+            <label class="uname-lbl">🔗 Sizning sahifa manzilingiz</label>
+            <div class="uname-row">
+              <span class="uname-prefix">olimlar.uz/@</span>
+              <input class="cab-input uname-input" id="usernameInput" data-pf="slug"
+                     type="text" value="{{ profile.slug or '' }}" placeholder="masalan: babayev_said"
+                     autocomplete="off" maxlength="30" spellcheck="false"
+                     oninput="unameCheck()">
+              <button type="button" class="cab-btn-outline uname-sugg" onclick="unameSuggest()">💡 Taklif</button>
+            </div>
+            <div class="uname-status" id="usernameStatus"></div>
+            <div class="uname-suggestions" id="usernameSuggestions"></div>
+            <p class="desc" style="margin:6px 0 0;">Bu manzilni CV, vizitkarta va ilmiy maqolalarda ishlatishingiz mumkin. Bo'sh qoldirsangiz — eski /olim/ manzil ishlayveradi.</p>
+          </div>
+          <style>
+            .uname-box { border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
+            .uname-lbl { font-weight:700; font-size:0.92rem; display:block; margin-bottom:8px; }
+            .uname-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+            .uname-prefix { color:#94a3b8; font-family:ui-monospace,monospace; font-size:0.9rem; white-space:nowrap; }
+            .uname-input { flex:1; min-width:160px; font-family:ui-monospace,monospace; }
+            .uname-sugg { white-space:nowrap; }
+            .uname-status { font-size:0.84rem; margin-top:8px; min-height:1.1em; }
+            .uname-status.ok { color:#34d399; } .uname-status.bad { color:#f87171; }
+            .uname-suggestions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+            .uname-chip { background:rgba(59,130,246,0.15); color:#60a5fa; border:none; border-radius:999px;
+              padding:4px 12px; font-size:0.82rem; font-family:ui-monospace,monospace; cursor:pointer; }
+            .uname-chip:hover { background:rgba(59,130,246,0.3); }
+          </style>
+
           <!-- Avatar -->
           <div class="avatar-edit-section">
             <div class="current-avatar" id="avatarPreview">
@@ -756,6 +786,46 @@ function saveForm(formId) {
   }).catch(function () { toast('Tarmoq xatosi', false); });
 }
 function saveProfileForm() { saveForm('profileForm'); }
+
+// ── Username (vanity URL) real-time tekshirish + takliflar ──
+var _unameTimer = null;
+function unameCheck() {
+  var inp = document.getElementById('usernameInput');
+  var st = document.getElementById('usernameStatus');
+  var v = (inp.value || '').toLowerCase().trim();
+  inp.value = v;
+  clearTimeout(_unameTimer);
+  if (!v) { st.className = 'uname-status'; st.textContent = ''; return; }
+  st.className = 'uname-status'; st.textContent = 'Tekshirilmoqda…';
+  _unameTimer = setTimeout(function () {
+    fetch('/api/username/check?slug=' + encodeURIComponent(v))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.available) { st.className = 'uname-status ok'; st.textContent = '✓ Bu nom bo\'sh'; }
+        else { st.className = 'uname-status bad'; st.textContent = '✗ ' + (d.error || 'Band'); }
+      }).catch(function () { st.className = 'uname-status'; st.textContent = ''; });
+  }, 350);
+}
+function unameSuggest() {
+  var first = (document.querySelector('[data-pf="first_name"]') || {}).value || '';
+  var last = (document.querySelector('[data-pf="last_name"]') || {}).value || '';
+  var box = document.getElementById('usernameSuggestions');
+  box.textContent = 'Yuklanmoqda…';
+  fetch('/api/username/suggestions?first=' + encodeURIComponent(first) + '&last=' + encodeURIComponent(last))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      box.innerHTML = '';
+      (d.suggestions || []).forEach(function (s) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'uname-chip'; b.textContent = '@' + s;
+        b.onclick = function () {
+          document.getElementById('usernameInput').value = s; unameCheck();
+        };
+        box.appendChild(b);
+      });
+      if (!(d.suggestions || []).length) box.textContent = 'Taklif topilmadi — ism/familiyani kiriting.';
+    }).catch(function () { box.textContent = ''; });
+}
 function saveLinksForm() {
   // Google Scholar havolasi validatsiyasi — bo'sh yoki rasmiy domen bilan boshlanishi shart
   var gs = document.querySelector('#linksForm [data-pf="scholar_url"]');

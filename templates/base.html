@@ -853,6 +853,7 @@
           <span id="notif-badge" style="display:none;position:absolute;top:2px;right:0;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
         </a>
         <a href="/cabinet" class="username" title="Kabinet"><i class="bi bi-person-circle"></i>{{ current_user.username }}</a>
+        {% if cabinet_slug %}<a href="/@{{ cabinet_slug }}" class="username" title="Sizning sahifangiz" style="opacity:0.8;font-family:ui-monospace,monospace;">@{{ cabinet_slug }}</a>{% endif %}
         <a href="/logout" class="btn-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
         {% else %}
         <a href="/login" class="btn-logout" style="border-color:rgba(74,158,255,0.25);background:rgba(74,158,255,0.08);color:#4a9eff;"><i class="bi bi-box-arrow-in-right"></i>Kirish</a>

@@ -62,6 +62,16 @@
 .op-hidx-nums { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.92rem; color: rgba(255,255,255,0.9); }
 .op-hidx-nums b { color: #fff; font-size: 1.05rem; }
 .op-hidx-src { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
+.op-uname { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; }
+.op-uname-txt { font-family: ui-monospace, monospace; font-size: 0.92rem; font-weight: 700;
+  color: #fff; background: rgba(255,255,255,0.14); padding: 4px 12px; border-radius: 999px; }
+.op-uname-btn { background: rgba(255,255,255,0.14); border: none; color: #fff; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 50%; font-size: 0.82rem; text-decoration: none;
+  display: inline-grid; place-items: center; }
+.op-uname-btn:hover { background: rgba(255,255,255,0.28); color: #fff; }
+.op-uname-set { color: rgba(255,255,255,0.85); font-size: 0.85rem; text-decoration: none;
+  background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 999px; }
+.op-uname-set:hover { background: rgba(255,255,255,0.2); color: #fff; text-decoration: none; }
 .op-side { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
 .op-socials { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 240px; }
 .op-soc {
@@ -183,6 +193,21 @@
 {% endblock %}
 
 {% block content %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org", "@type": "Person",
+  "name": {{ olim_name|tojson }},
+  "url": "https://www.olimlar.uz{{ ('/@' ~ profile.slug) if (profile and profile.slug) else ('/olim/' ~ olim_name|urlencode) }}"
+  {%- if profile and profile.institution %}, "affiliation": {"@type": "Organization", "name": {{ profile.institution|tojson }}}{% endif %}
+  {%- set _same = [] %}
+  {%- if profile %}{% for u in [profile.orcid_url, profile.scholar_url, profile.scopus_url, profile.wos_url] %}{% if u %}{% set _ = _same.append(u) %}{% endif %}{% endfor %}{% endif %}
+  {%- if _same %}, "sameAs": {{ _same|tojson }}{% endif %}
+}
+</script>
+<script>
+function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
+  navigator.clipboard.writeText(t.textContent.trim()).then(function(){t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent='olimlar.uz/@{{ profile.slug if profile else "" }}';},1200);});}
+</script>
 {% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
 {% set gender = detect_gender(olim_name) %}
 {% set gender_emoji = '👨‍🎓' if gender == 'male' else ('👩‍🎓' if gender == 'female' else '🎓') %}
@@ -204,6 +229,15 @@
 
     <div class="op-info">
       <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
+      {% if profile and profile.slug %}
+      <div class="op-uname">
+        <span class="op-uname-txt" id="op-uname">olimlar.uz/@{{ profile.slug }}</span>
+        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
+        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/@' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
+      </div>
+      {% elif is_owner %}
+      <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">🔗 Sodda sahifa manzili (@username) o'rnating</a></div>
+      {% endif %}
       <div class="op-degs">
         {% if stats.phd %}<span class="deg-pill phd">{{ stats.phd }} PhD</span>{% endif %}
         {% if stats.dsc %}<span class="deg-pill dsc">{{ stats.dsc }} DSc</span>{% endif %}
