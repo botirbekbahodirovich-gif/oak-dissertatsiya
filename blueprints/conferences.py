@@ -58,6 +58,34 @@ EVENT_TYPES_LOCAL = ('Anjuman', 'Forum', 'Kongress', 'Seminar', 'Simpozium',
 MONTHS_UZ = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul',
              'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr']
 
+# Vazirlik yo'nalishlari — conference_fields boshlang'ich seed (normalizatsiya).
+CONFERENCE_FIELDS_SEED = [
+    'Axborot va kommunikatsiya texnologiyalari',
+    'Biologiya va biotexnologiya',
+    "Fan va ta'lim",
+    'Geologiya-mineralogiya, seysmologiya va zilzilaga chidamliligi, '
+    'qurilish va arxitektura',
+    'Ijtimoiy-gumanitar fanlar',
+    'Iqtisodiyot, davlat va jamiyat qurilishi',
+    'Neft va gaz, energiya, energiya va resurslarni tejash',
+    "Qishloq va suv xo'jaligi",
+    'Sanoat, ishlab chiqarish, transport va logistika',
+    "San'at va madaniyat",
+    'Tibbiyot, farmakologiya va sport',
+]
+
+# deadline eslatma oynalari (kun)
+DEADLINE_BUCKETS = (14, 7, 1)
+
+
+def _field_slug(name):
+    from institutions import transliterate
+    s = transliterate((name or '').lower())
+    for ch in "'ʻʼ‘’`":
+        s = s.replace(ch, '')
+    s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')[:280].strip('-')
+    return s or 'soha'
+
 # Obuna moslashuvi: ixtisoslik_nomi tokenlari konf. nomi/sohasida qidiriladi.
 # Umumiy so'zlar chiqarib tashlanadi — mo'rt moslikni majburlamaymiz (spec).
 _MATCH_STOP = {'fanlari', 'fanlar', 'boyicha', "bo'yicha", 'sohasi', 'hamda',
@@ -191,6 +219,52 @@ def _ensure_schema(cur):
     # Qo'lda kiritilganlar uchun NULL — mavjud xatti-harakat o'zgarmaydi.
     cur.execute("ALTER TABLE IF EXISTS roadmap_conferences "
                 "ADD COLUMN IF NOT EXISTS source_conference_id INTEGER")
+
+    # ── kengaytirish (v2): sohalar normalizatsiyasi + qo'shimcha maydonlar ──
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS conference_fields (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(300) NOT NULL,
+            slug VARCHAR(300) UNIQUE
+        )""")
+    for _fname in CONFERENCE_FIELDS_SEED:
+        cur.execute(
+            "INSERT INTO conference_fields (name, slug) VALUES (%s, %s) "
+            "ON CONFLICT (slug) DO NOTHING", (_fname, _field_slug(_fname)))
+    # conferences'ga yangi ustunlar (mavjud ekvivalentlar qayta ishlatiladi:
+    # start_date/end_date, is_scopus_indexed, title_slug, is_active, event_type)
+    for _col, _typ in (
+        ('acronym', 'VARCHAR(50)'), ('title_en', 'TEXT'),
+        ('field_id', 'INTEGER'), ('tags', "TEXT[]"),
+        ('notification_date', 'DATE'), ('registration_deadline', 'DATE'),
+        ('venue', 'TEXT'), ('organizer_contact', 'TEXT'),
+        ('cfp_url', 'TEXT'), ('poster_image', 'TEXT'),
+        ('ccf_rank', 'VARCHAR(8)'), ('core_rank', 'VARCHAR(8)'),
+        ('doi_available', 'BOOLEAN DEFAULT FALSE'),
+        ('source', 'VARCHAR(50)'),
+    ):
+        cur.execute(f"ALTER TABLE conferences ADD COLUMN IF NOT EXISTS {_col} {_typ}")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_conf_field_id "
+                "ON conferences(field_id)")
+    # field_id — conference_fields'ga yumshoq havola (formal FK yo'q, repo naqshi:
+    # muassasa/institution_map kabi text/soft-mode — migratsiya xavfsizroq)
+    # mavjud `field` (erkin matn) → field_id backfill (nom bo'yicha moslik)
+    cur.execute("""
+        UPDATE conferences c SET field_id = f.id
+        FROM conference_fields f
+        WHERE c.field_id IS NULL AND c.field IS NOT NULL
+          AND LOWER(TRIM(c.field)) = LOWER(TRIM(f.name))
+    """)
+    # deadline eslatma dedup logi (bookmark egasi × konf. × kun-oynasi)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS conference_deadline_log (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            conference_id INTEGER NOT NULL REFERENCES conferences(id) ON DELETE CASCADE,
+            days_bucket INTEGER NOT NULL,
+            sent_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, conference_id, days_bucket)
+        )""")
     _schema_ready = True
 
 
@@ -198,7 +272,11 @@ _CONF_COLS = ('id', 'title', 'title_slug', 'scope', 'organizer', 'field',
               'region', 'city', 'event_type', 'start_date', 'end_date',
               'is_multiday', 'format', 'publisher', 'is_scopus_indexed',
               'submission_deadline', 'country', 'source_url', 'description',
-              'is_active')
+              'is_active',
+              # v2 kengaytirish
+              'acronym', 'title_en', 'field_id', 'tags', 'notification_date',
+              'registration_deadline', 'venue', 'organizer_contact', 'cfp_url',
+              'poster_image', 'ccf_rank', 'core_rank', 'doi_available')
 
 
 def _card(r):
@@ -233,6 +311,25 @@ def _card(r):
         'description': r.get('description') or '',
         'days_remaining': days,
         'expired': days is not None and days < 0,
+        # v2 maydonlar
+        'acronym': r.get('acronym') or '',
+        'title_en': r.get('title_en') or '',
+        'field_id': r.get('field_id'),
+        'tags': list(r.get('tags') or []),
+        'notification_date': (r['notification_date'].isoformat()
+                              if r.get('notification_date') else None),
+        'notification_uz': _uz_date(r.get('notification_date')),
+        'registration_deadline': (r['registration_deadline'].isoformat()
+                                  if r.get('registration_deadline') else None),
+        'registration_uz': _uz_date(r.get('registration_deadline')),
+        'registration_days': _days_until(r.get('registration_deadline')),
+        'venue': r.get('venue') or '',
+        'organizer_contact': r.get('organizer_contact') or '',
+        'cfp_url': r.get('cfp_url') or '',
+        'poster_image': r.get('poster_image') or '',
+        'ccf_rank': (r.get('ccf_rank') or '').upper(),
+        'core_rank': (r.get('core_rank') or '').upper(),
+        'doi_available': bool(r.get('doi_available')),
     }
     return item
 
@@ -483,10 +580,132 @@ def conference_detail(slug):
     return render_template('conference_detail.html', c=conf, similar=similar,
                            saved=saved, has_plan=has_plan, in_roadmap=in_roadmap,
                            is_authenticated=uid is not None,
+                           jsonld=_conference_jsonld(conf),
                            meta_description=(
                                f"{conf['title']} — {conf['start_uz']}"
                                f"{', ' + (conf['city'] or conf['country']) if (conf['city'] or conf['country']) else ''}."
                                " Muddatlar, manba va Roadmap integratsiyasi — Olimlar.uz"))
+
+
+# ── kalendar (.ics) + JSON-LD + bosh sahifa helper ──────────────────────────
+
+SITE_URL = 'https://olimlar.uz'
+
+
+def _conference_jsonld(conf):
+    """schema.org Event JSON-LD (detail sahifa SEO)."""
+    import json as _json
+    loc_parts = [x for x in (conf.get('venue'), conf.get('city'),
+                             conf.get('country')) if x]
+    data = {
+        '@context': 'https://schema.org', '@type': 'Event',
+        'name': conf['title'],
+        'url': f"{SITE_URL}/konferensiya/{conf['slug']}",
+        'eventAttendanceMode': {
+            'online': 'https://schema.org/OnlineEventAttendanceMode',
+            'hybrid': 'https://schema.org/MixedEventAttendanceMode',
+        }.get(conf.get('format'), 'https://schema.org/OfflineEventAttendanceMode'),
+        'eventStatus': 'https://schema.org/EventScheduled',
+    }
+    if conf.get('start_date'):
+        data['startDate'] = conf['start_date']
+    if conf.get('end_date'):
+        data['endDate'] = conf['end_date']
+    if loc_parts:
+        data['location'] = {'@type': 'Place', 'name': ', '.join(loc_parts),
+                            'address': ', '.join(loc_parts)}
+    if conf.get('organizer'):
+        data['organizer'] = {'@type': 'Organization', 'name': conf['organizer']}
+    if conf.get('description'):
+        data['description'] = conf['description'][:500]
+    return _json.dumps(data, ensure_ascii=False)
+
+
+def _ics_dt(d):
+    """date → ICS DATE qiymati (YYYYMMDD, kun bo'yi hodisa)."""
+    return d.strftime('%Y%m%d') if d else None
+
+
+def _ics_escape(s):
+    return (str(s or '').replace('\\', '\\\\').replace(';', '\\;')
+            .replace(',', '\\,').replace('\n', '\\n'))
+
+
+@conferences_bp.route('/konferensiya/<slug>.ics')
+def conference_ics(slug):
+    """Kalendar fayli — VEVENT + submission_deadline uchun 7 kun oldin VALARM."""
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
+        _ensure_schema(cur)
+        cur.execute(f"SELECT {', '.join(_CONF_COLS)} FROM conferences "
+                    "WHERE title_slug = %s AND is_active = TRUE", (slug,))
+        row = cur.fetchone()
+        conn.commit()
+    finally:
+        conn.close()
+    if not row:
+        abort(404)
+    c = _card(row)
+    start = _parse_date(c['start_date']) or date.today()
+    end = _parse_date(c['end_date']) or start
+    from datetime import timedelta
+    dtend = end + timedelta(days=1)          # ICS DTEND — eksklyuziv
+    now = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+    loc = ', '.join(x for x in (c.get('venue'), c.get('city'), c.get('country')) if x)
+    lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Olimlar.uz//Konferensiyalar//UZ',
+        'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+        f'UID:conf-{c["id"]}@olimlar.uz', f'DTSTAMP:{now}',
+        f'DTSTART;VALUE=DATE:{_ics_dt(start)}',
+        f'DTEND;VALUE=DATE:{_ics_dt(dtend)}',
+        f'SUMMARY:{_ics_escape(c["title"])}',
+        f'URL:{SITE_URL}/konferensiya/{c["slug"]}',
+    ]
+    if loc:
+        lines.append(f'LOCATION:{_ics_escape(loc)}')
+    desc = c.get('organizer') or ''
+    if c.get('submission_deadline'):
+        desc += f" | Tezis muddati: {c.get('submission_uz')}"
+    if desc:
+        lines.append(f'DESCRIPTION:{_ics_escape(desc)}')
+    # tezis muddati uchun 7 kun oldin ogohlantirish
+    sub = _parse_date(c['submission_deadline'])
+    if sub:
+        lines += ['BEGIN:VALARM', 'ACTION:DISPLAY',
+                  f'DESCRIPTION:{_ics_escape(c["title"])} — tezis muddati yaqin',
+                  'TRIGGER;VALUE=DATE-TIME:'
+                  + (datetime(sub.year, sub.month, sub.day)
+                     - timedelta(days=7)).strftime('%Y%m%dT090000Z'),
+                  'END:VALARM']
+    lines += ['END:VEVENT', 'END:VCALENDAR']
+    from flask import Response
+    ics = '\r\n'.join(lines) + '\r\n'
+    return Response(ics, mimetype='text/calendar',
+                    headers={'Content-Disposition':
+                             f'attachment; filename="{c["slug"]}.ics"'})
+
+
+def get_upcoming_conferences(limit=3):
+    """Bosh sahifa bloki uchun eng yaqin kelayotgan konferensiyalar (kesh yo'q —
+    yengil so'rov). Xatoda bo'sh ro'yxat."""
+    try:
+        conn = get_connection()
+        try:
+            cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
+            _ensure_schema(cur)
+            cur.execute(f"""
+                SELECT {', '.join(_CONF_COLS)} FROM conferences
+                WHERE is_active = TRUE AND start_date IS NOT NULL
+                  AND start_date >= CURRENT_DATE
+                ORDER BY start_date ASC, id DESC LIMIT %s""", (limit,))
+            rows = [_card(r) for r in cur.fetchall()]
+            conn.commit()
+            return rows
+        finally:
+            conn.close()
+    except Exception:
+        return []
 
 
 # ── bookmark (user_bookmarks UX aksi) ────────────────────────────────────────
@@ -667,12 +886,79 @@ def notify_conference_subscribers(conn, conf_rows):
     return sent
 
 
+def notify_conference_deadlines(conn):
+    """Tezis muddati 14/7/1 kun qolgan konferensiyalarni bookmark qilgan
+    foydalanuvchilarga eslatadi (sayt + Telegram). conference_deadline_log orqali
+    dedup (har user × konf × kun-oynasi bir marta). Xabar soni qaytadi."""
+    sent = 0
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            try:
+                from blueprints.notifications import _ensure_schema as _ensure_notif
+                _ensure_notif(cur)
+            except Exception:
+                pass
+            # bugun bucketlardan biriga to'g'ri keladigan muddatli, bookmark qilingan konf.
+            cur.execute("""
+                SELECT b.user_id, c.id, c.title, c.title_slug, c.submission_deadline,
+                       (c.submission_deadline - CURRENT_DATE) AS days,
+                       u.telegram_chat_id, u.email
+                FROM user_conference_bookmarks b
+                JOIN conferences c ON c.id = b.conference_id
+                JOIN users u ON u.id = b.user_id
+                WHERE c.is_active = TRUE AND c.submission_deadline IS NOT NULL
+                  AND (c.submission_deadline - CURRENT_DATE) = ANY(%s)
+            """, (list(DEADLINE_BUCKETS),))
+            rows = cur.fetchall()
+            if not rows:
+                conn.commit()
+                return 0
+            try:
+                from blueprints.subscriptions import _telegram_chat_id
+                from blueprints.reminders import _send_telegram
+            except Exception:
+                _telegram_chat_id = _send_telegram = None
+            for user_id, cid, title, slug, deadline, days, chat_id, email in rows:
+                days = int(days)
+                # dedup: shu user × konf × kun-oynasi
+                cur.execute("SELECT 1 FROM conference_deadline_log WHERE user_id = %s "
+                            "AND conference_id = %s AND days_bucket = %s",
+                            (user_id, cid, days))
+                if cur.fetchone():
+                    continue
+                when = 'bugun' if days == 0 else f'{days} kun qoldi'
+                msg = (f"Saqlab qo'ygan konferensiyangiz tezis muddati {when}: "
+                       f"{title}\n🔗 /konferensiya/{slug}")
+                cur.execute("INSERT INTO user_alerts (user_id, title, message, level) "
+                            "VALUES (%s, %s, %s, 'warning')",
+                            (user_id, '⏰ Tezis muddati yaqin', msg))
+                cur.execute("INSERT INTO conference_deadline_log "
+                            "(user_id, conference_id, days_bucket) VALUES (%s, %s, %s) "
+                            "ON CONFLICT DO NOTHING", (user_id, cid, days))
+                sent += 1
+                tg = _telegram_chat_id(chat_id, email) if _telegram_chat_id else None
+                if tg and _send_telegram:
+                    _send_telegram(tg, {
+                        'title': f'⏰ Tezis muddati {when}',
+                        'description': title,
+                        'url': f"{SITE_URL}/konferensiya/{slug}"})
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    return sent
+
+
 @conferences_bp.route('/api/v1/conferences/dispatch-alerts', methods=['POST'])
 @csrf.exempt
 def dispatch_alerts():
-    """Scraper tugagach GitHub Actions chaqiradi (REMINDERS_API_KEY bilan —
-    reminders cron kaliti qayta ishlatiladi). Oxirgi 8 kunda qo'shilgan faol
-    konferensiyalarni obunachilarga tarqatadi; dedup log tufayli idempotent."""
+    """Scraper tugagach / kunlik cron GitHub Actions chaqiradi (REMINDERS_API_KEY
+    bilan). Oxirgi 8 kunda qo'shilgan konferensiyalarni obunachilarga tarqatadi
+    + tezis muddati 14/7/1 kun qolganlarini bookmark egalariga eslatadi. Dedup
+    loglar tufayli idempotent."""
     key = request.headers.get('X-Api-Key') or request.args.get('key') or ''
     expected = os.environ.get('REMINDERS_API_KEY', '')
     if not expected or key != expected:
@@ -689,7 +975,9 @@ def dispatch_alerts():
         rows = [_card(r) for r in cur.fetchall()]
         conn.commit()
         sent = notify_conference_subscribers(conn, rows)
-        return jsonify({'ok': True, 'new_conferences': len(rows), 'sent': sent})
+        deadline_sent = notify_conference_deadlines(conn)
+        return jsonify({'ok': True, 'new_conferences': len(rows), 'sent': sent,
+                        'deadline_reminders': deadline_sent})
     finally:
         conn.close()
 
@@ -698,18 +986,52 @@ def dispatch_alerts():
 
 _ADMIN_FIELDS = ('title', 'scope', 'organizer', 'field', 'region', 'city',
                  'event_type', 'start_date', 'end_date', 'format', 'publisher',
-                 'submission_deadline', 'country', 'source_url', 'description')
+                 'submission_deadline', 'country', 'source_url', 'description',
+                 # v2 tahrirlanadigan maydonlar
+                 'acronym', 'title_en', 'venue', 'organizer_contact', 'cfp_url',
+                 'registration_deadline', 'notification_date', 'poster_image',
+                 'ccf_rank', 'core_rank')
+
+# _ADMIN_FIELDS'dan tashqari, alohida ishlov beriladigan ustunlar (bool/array/fk)
+_ADMIN_EXTRA = ('is_scopus_indexed', 'is_multiday', 'field_id', 'tags',
+                'doi_available')
+
+
+def _get_conference_fields():
+    """conference_fields ro'yxati (admin forma select'i uchun)."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("SELECT id, name FROM conference_fields ORDER BY name")
+            rows = [{'id': r[0], 'name': r[1]} for r in cur.fetchall()]
+        conn.commit()
+        return rows
+    except Exception:
+        return []
+    finally:
+        conn.close()
 
 
 def _admin_form_values():
     f = request.form
     v = {k: (f.get(k) or '').strip() or None for k in _ADMIN_FIELDS}
     v['scope'] = v['scope'] if v['scope'] in SCOPES else 'local'
-    for k in ('start_date', 'end_date', 'submission_deadline'):
+    for k in ('start_date', 'end_date', 'submission_deadline',
+              'registration_deadline', 'notification_date'):
         v[k] = _parse_date(v[k])
     v['is_scopus_indexed'] = f.get('is_scopus_indexed') == 'on'
+    v['doi_available'] = f.get('doi_available') == 'on'
     v['is_multiday'] = bool(v['start_date'] and v['end_date']
                             and v['end_date'] != v['start_date'])
+    # field_id (soha select) — bo'sh bo'lsa None
+    try:
+        v['field_id'] = int(f.get('field_id')) if f.get('field_id') else None
+    except (TypeError, ValueError):
+        v['field_id'] = None
+    # tags — vergul bilan ajratilgan
+    tags = [t.strip() for t in (f.get('tags') or '').split(',') if t.strip()]
+    v['tags'] = tags or None
     return v
 
 
@@ -758,19 +1080,18 @@ def admin_conferences_add():
         if not v['title']:
             flash('Sarlavha kiritilishi shart.', 'error')
             return render_template('admin/conference_form.html', item=v,
-                                   edit_mode=False, formats=FORMATS)
+                                   edit_mode=False, formats=FORMATS, fields=_get_conference_fields(), event_types=EVENT_TYPES_LOCAL)
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 _ensure_schema(cur)
                 slug = make_slug(v['title'], cur)
-                cols = list(_ADMIN_FIELDS) + ['is_scopus_indexed', 'is_multiday',
-                                              'title_slug']
+                cols = list(_ADMIN_FIELDS) + list(_ADMIN_EXTRA) + ['title_slug']
                 ph = ', '.join(['%s'] * len(cols))
                 cur.execute(
                     f"INSERT INTO conferences ({', '.join(cols)}) VALUES ({ph})",
                     [v[c] for c in _ADMIN_FIELDS]
-                    + [v['is_scopus_indexed'], v['is_multiday'], slug])
+                    + [v[c] for c in _ADMIN_EXTRA] + [slug])
             conn.commit()
             flash("Konferensiya qo'shildi!", 'success')
             return redirect('/admin/conferences')
@@ -778,11 +1099,11 @@ def admin_conferences_add():
             conn.rollback()
             flash('Xatolik: ' + str(e), 'error')
             return render_template('admin/conference_form.html', item=v,
-                                   edit_mode=False, formats=FORMATS)
+                                   edit_mode=False, formats=FORMATS, fields=_get_conference_fields(), event_types=EVENT_TYPES_LOCAL)
         finally:
             conn.close()
     return render_template('admin/conference_form.html', item=None,
-                           edit_mode=False, formats=FORMATS)
+                           edit_mode=False, formats=FORMATS, fields=_get_conference_fields(), event_types=EVENT_TYPES_LOCAL)
 
 
 @conferences_bp.route('/admin/conferences/edit/<int:cid>', methods=['GET', 'POST'])
@@ -799,12 +1120,12 @@ def admin_conferences_edit(cid):
             if not v['title']:
                 flash('Sarlavha kiritilishi shart.', 'error')
             else:
-                sets = ', '.join(f'{c} = %s' for c in _ADMIN_FIELDS)
+                upd_cols = list(_ADMIN_FIELDS) + list(_ADMIN_EXTRA)
+                sets = ', '.join(f'{c} = %s' for c in upd_cols)
                 cur.execute(
-                    f"UPDATE conferences SET {sets}, is_scopus_indexed = %s, "
-                    "is_multiday = %s, updated_at = NOW() WHERE id = %s",
-                    [v[c] for c in _ADMIN_FIELDS]
-                    + [v['is_scopus_indexed'], v['is_multiday'], cid])
+                    f"UPDATE conferences SET {sets}, updated_at = NOW() "
+                    "WHERE id = %s",
+                    [v[c] for c in upd_cols] + [cid])
                 conn.commit()
                 flash('Saqlandi!', 'success')
                 return redirect('/admin/conferences')
@@ -817,7 +1138,7 @@ def admin_conferences_edit(cid):
     finally:
         conn.close()
     return render_template('admin/conference_form.html', item=dict(row),
-                           edit_mode=True, formats=FORMATS)
+                           edit_mode=True, formats=FORMATS, fields=_get_conference_fields(), event_types=EVENT_TYPES_LOCAL)
 
 
 @conferences_bp.route('/admin/conferences/toggle/<int:cid>', methods=['POST'])
@@ -839,3 +1160,314 @@ def admin_conferences_toggle(cid):
     finally:
         conn.close()
     return redirect('/admin/conferences')
+
+
+# ── Excel import / export (vazirlik ro'yxati) ───────────────────────────────
+
+# Excel sarlavhasi → conferences ustuni (normallashtirilgan kalit bo'yicha)
+_IMPORT_HEADERS = {
+    'mavzunomi': 'title', 'title': 'title',
+    'asosiytashkilot': 'organizer', 'tashkilot': 'organizer',
+    'otkazishsanasi': 'dates', 'sana': 'dates',
+    'yonalishi': 'field', 'yonalish': 'field', 'soha': 'field',
+    'anjumanshakli': 'event_type', 'shakl': 'event_type',
+    'otkazishjoyi': 'location', 'joy': 'location',
+}
+
+
+def _norm_header(s):
+    return re.sub(r'[^a-z0-9]', '', str(s or '').lower())
+
+
+def _parse_conf_date_range(s):
+    """'17.04.2026-18.04.2026' → (start, end); '20.11.2026' → (d, d). Xato → (None, None)."""
+    s = str(s or '').strip()
+    if not s:
+        return None, None
+    parts = re.findall(r'(\d{1,2})[.](\d{1,2})[.](\d{4})', s)
+    out = []
+    for dd, mm, yy in parts:
+        try:
+            out.append(date(int(yy), int(mm), int(dd)))
+        except ValueError:
+            pass
+    if not out:
+        # ISO ehtimoli
+        d = _parse_date(s)
+        return (d, d) if d else (None, None)
+    start = out[0]
+    end = out[1] if len(out) > 1 else out[0]
+    return start, end
+
+
+def _normalize_conf_field(name, field_map):
+    """Yo'nalish nomini conference_fields'ga moslaydi → (canonical_name, field_id).
+    Aniq moslik bo'lmasa token-overlap; topilmasa (asl_nom, None)."""
+    raw = re.sub(r'\s+', ' ', str(name or '').strip()).rstrip(' .,')
+    raw = re.sub(r"\s*Yo['ʻ]?nalishi\s*$", '', raw, flags=re.IGNORECASE).strip()
+    if not raw:
+        return None, None
+    low = raw.lower()
+    if low in field_map:
+        return field_map[low]['name'], field_map[low]['id']
+
+    # token-overlap (matn buzilgan/kesilgan bo'lsa: "San'at va madaniya t").
+    # Tokenlar apostrofsiz solishtiriladi va 5-harfli prefiks bo'yicha mos keladi
+    # (kesilgan so'zlar: madaniya ≈ madaniyat).
+    def _toks(s):
+        return [t for t in re.findall(r"[a-zа-яёўқғҳ]{4,}", s.replace("'", ''))]
+    rtoks = _toks(low)
+    best, best_ov = None, 0
+    for key, fv in field_map.items():
+        ftoks = _toks(key)
+        ov = 0
+        for rt in rtoks:
+            if any(rt[:5] == ft[:5] for ft in ftoks):
+                ov += 1
+        if ov > best_ov:
+            best, best_ov = fv, ov
+    if best and best_ov >= 2:
+        return best['name'], best['id']
+    return raw, None
+
+
+def _normalize_form(shakl):
+    """'Anjuman,' → 'Anjuman'; 'Kongres' → 'Kongress'. event_type qaytaradi."""
+    s = re.sub(r'[^\wʻʼ\' ]', '', str(shakl or '')).strip()
+    if not s:
+        return None
+    low = s.lower()
+    canon = {'anjuman': 'Anjuman', 'forum': 'Forum', 'kongres': 'Kongress',
+             'kongress': 'Kongress', 'seminar': 'Seminar',
+             'simpozium': 'Simpozium', 'konferensiya': 'Konferensiya'}
+    return canon.get(low, s.capitalize())
+
+
+def _split_location(loc):
+    """'Samarqand shahri, Samarqand viloyati' → (city, region)."""
+    parts = [p.strip() for p in str(loc or '').split(',') if p.strip()]
+    if not parts:
+        return None, None
+    if len(parts) == 1:
+        return parts[0], None
+    return parts[0], parts[-1]
+
+
+def _read_import_rows(file):
+    """Excel → [{title, organizer, dates, field, event_type, location, _row}].
+    Sarlavha qatorini avtomatik topadi ('Mavzu nomi' bo'yicha)."""
+    import openpyxl
+    wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+    ws = wb.active
+    all_rows = list(ws.iter_rows(values_only=True))
+    # sarlavha qatorini top
+    header_idx, colmap = None, {}
+    for i, row in enumerate(all_rows[:6]):
+        m = {}
+        for j, cell in enumerate(row):
+            key = _IMPORT_HEADERS.get(_norm_header(cell))
+            if key:
+                m[key] = j
+        if 'title' in m:
+            header_idx, colmap = i, m
+            break
+    if header_idx is None:
+        raise ValueError("Sarlavha qatori topilmadi ('Mavzu nomi' ustuni yo'q).")
+    out = []
+    for i in range(header_idx + 1, len(all_rows)):
+        row = all_rows[i]
+        if not row or all(c is None or str(c).strip() == '' for c in row):
+            continue
+        def g(key):
+            j = colmap.get(key)
+            return row[j] if (j is not None and j < len(row)) else None
+        out.append({
+            'title': str(g('title') or '').strip(),
+            'organizer': str(g('organizer') or '').strip() or None,
+            'dates': g('dates'),
+            'field': g('field'), 'event_type': g('event_type'),
+            'location': g('location'), '_row': i + 1,
+        })
+    return out
+
+
+@conferences_bp.route('/admin/conferences/template')
+@login_required
+def admin_conferences_template():
+    """Bo'sh import shabloni (.xlsx)."""
+    from app import _require_admin
+    _require_admin()
+    import openpyxl
+    from flask import Response
+    import io
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Konferensiyalar'
+    ws.append(['Mavzu nomi', 'Asosiy tashkilot', "O'tkazish sanasi",
+               "Yo'nalishi", 'Anjuman shakli', "O'tkazish joyi"])
+    ws.append(['Masalan: Zamonaviy fizika muammolari', 'Toshkent davlat universiteti',
+               '17.04.2026-18.04.2026', 'Ijtimoiy-gumanitar fanlar', 'Anjuman',
+               'Toshkent shahri, Toshkent viloyati'])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return Response(buf.read(),
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition':
+                             'attachment; filename="konferensiyalar_shablon.xlsx"'})
+
+
+@conferences_bp.route('/admin/conferences/export')
+@login_required
+def admin_conferences_export():
+    """Barcha konferensiyalarni Excel'ga eksport."""
+    from app import _require_admin
+    _require_admin()
+    import openpyxl
+    from flask import Response
+    import io
+    conn = get_connection()
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
+        _ensure_schema(cur)
+        cur.execute(f"SELECT {', '.join(_CONF_COLS)} FROM conferences "
+                    "ORDER BY start_date DESC NULLS LAST, id DESC")
+        rows = cur.fetchall()
+        conn.commit()
+    finally:
+        conn.close()
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Konferensiyalar'
+    ws.append(['ID', 'Nomi', 'Tashkilot', 'Boshlanish', 'Tugash', 'Yo\'nalish',
+               'Shakl', 'Shahar', 'Viloyat', 'Mamlakat', 'Tezis muddati',
+               'Scopus', 'Manba', 'Faol'])
+    for r in rows:
+        ws.append([r['id'], r['title'], r.get('organizer'),
+                   r['start_date'].isoformat() if r.get('start_date') else '',
+                   r['end_date'].isoformat() if r.get('end_date') else '',
+                   r.get('field'), r.get('event_type'), r.get('city'),
+                   r.get('region'), r.get('country'),
+                   r['submission_deadline'].isoformat() if r.get('submission_deadline') else '',
+                   'ha' if r.get('is_scopus_indexed') else '', r.get('source_url'),
+                   'ha' if r.get('is_active', True) else "yo'q"])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return Response(buf.read(),
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition':
+                             'attachment; filename="konferensiyalar_export.xlsx"'})
+
+
+@conferences_bp.route('/admin/conferences/import', methods=['GET', 'POST'])
+@login_required
+def admin_conferences_import():
+    """Excel import: preview (dry-run, xato jadvali) → tasdiqlash → yozish."""
+    from app import _require_admin
+    _require_admin()
+    if request.method == 'GET':
+        return render_template('admin/conference_import.html', stage='upload')
+
+    action = request.form.get('action')
+
+    # ── 2-bosqich: tasdiqlash (preview'dan kelgan valid qatorlarni yozish) ──
+    if action == 'confirm':
+        import json as _json
+        try:
+            valid = _json.loads(request.form.get('valid_json') or '[]')
+        except ValueError:
+            valid = []
+        if not valid:
+            flash("Import qilinadigan qator yo'q.", 'error')
+            return redirect('/admin/conferences/import')
+        added = skipped = 0
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                for r in valid:
+                    start = _parse_date(r.get('start_date'))
+                    # dublikat: title + start_date
+                    cur.execute("SELECT 1 FROM conferences WHERE LOWER(title) = LOWER(%s) "
+                                "AND start_date IS NOT DISTINCT FROM %s",
+                                (r['title'], start))
+                    if cur.fetchone():
+                        skipped += 1
+                        continue
+                    slug = make_slug(r['title'], cur)
+                    end = _parse_date(r.get('end_date'))
+                    cur.execute("""
+                        INSERT INTO conferences
+                            (title, title_slug, scope, organizer, field, field_id,
+                             event_type, start_date, end_date, is_multiday, city,
+                             region, country, source)
+                        VALUES (%s,%s,'local',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    """, (r['title'], slug, r.get('organizer'), r.get('field'),
+                          r.get('field_id'), r.get('event_type'), start, end,
+                          bool(start and end and end != start),
+                          r.get('city'), r.get('region'),
+                          r.get('country') or "O'zbekiston", 'vazirlik'))
+                    added += 1
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            flash('Import xatosi: ' + str(e), 'error')
+            return redirect('/admin/conferences/import')
+        finally:
+            conn.close()
+        flash(f"Import yakunlandi: {added} ta qo'shildi, {skipped} ta dublikat "
+              f"o'tkazib yuborildi.", 'success')
+        return redirect('/admin/conferences')
+
+    # ── 1-bosqich: preview (dry-run) ──
+    file = request.files.get('file')
+    if not file or not file.filename:
+        flash('Fayl tanlanmadi.', 'error')
+        return redirect('/admin/conferences/import')
+    if not file.filename.lower().endswith(('.xlsx', '.xlsm')):
+        flash('Faqat .xlsx fayl qabul qilinadi.', 'error')
+        return redirect('/admin/conferences/import')
+    try:
+        raw_rows = _read_import_rows(file)
+    except Exception as e:
+        flash('Faylni o\'qib bo\'lmadi: ' + str(e), 'error')
+        return redirect('/admin/conferences/import')
+
+    # field_map: nom(lower) → {name, id}
+    field_map = {f['name'].lower(): {'name': f['name'], 'id': f['id']}
+                 for f in _get_conference_fields()}
+    valid, errors = [], []
+    seen = set()
+    for r in raw_rows:
+        errs = []
+        title = r['title']
+        if not title:
+            errs.append('Mavzu nomi bo\'sh')
+        start, end = _parse_conf_date_range(r['dates'])
+        if r['dates'] and not start:
+            errs.append(f"Sana formati noto'g'ri: {r['dates']}")
+        fname, fid = _normalize_conf_field(r['field'], field_map)
+        city, region = _split_location(r['location'])
+        etype = _normalize_form(r['event_type'])
+        dedup_key = (title.lower(), start.isoformat() if start else '')
+        if title and dedup_key in seen:
+            errs.append('Fayl ichida dublikat')
+        seen.add(dedup_key)
+        rec = {
+            'title': title, 'organizer': r['organizer'],
+            'start_date': start.isoformat() if start else None,
+            'end_date': end.isoformat() if end else None,
+            'field': fname, 'field_id': fid, 'event_type': etype,
+            'city': city, 'region': region, 'country': "O'zbekiston",
+            '_row': r['_row'],
+        }
+        if errs:
+            errors.append({**rec, 'errors': errs})
+        else:
+            valid.append(rec)
+    import json as _json
+    return render_template('admin/conference_import.html', stage='preview',
+                           valid=valid, errors=errors,
+                           valid_json=_json.dumps(valid, ensure_ascii=False),
+                           total=len(raw_rows))

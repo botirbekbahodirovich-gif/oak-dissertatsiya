@@ -4,7 +4,11 @@
 <div class="content-card" style="max-width:1150px;margin:0 auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <h1 style="margin:0;">🎤 Konferensiyalarni boshqarish</h1>
-    <a href="/admin/conferences/add" class="btn btn-primary">➕ Yangi qo'shish</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/admin/conferences/import" class="btn btn-action">📥 Excel import</a>
+      <a href="/admin/conferences/export" class="btn btn-action">📤 Excel eksport</a>
+      <a href="/admin/conferences/add" class="btn btn-primary">➕ Yangi qo'shish</a>
+    </div>
   </div>
 
   {% with msgs = get_flashed_messages() %}

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Konferensiyalar — Excel import (admin){% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1100px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <h1 style="margin:0;">📥 Excel import</h1>
+    <a href="/admin/conferences" style="color:#4a9eff;">← Ro'yxatga qaytish</a>
+  </div>
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, m in msgs %}<div class="alert-inline {{ 'success' if cat == 'success' else 'error' }}" style="margin-top:12px;">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <style>
+    .imp-box { border:1px solid rgba(148,163,184,0.2); border-radius:14px; padding:20px; margin-top:16px; }
+    .imp-tbl { width:100%; border-collapse:collapse; font-size:0.84rem; margin-top:10px; }
+    .imp-tbl th { text-align:left; padding:8px 10px; color:#94a3b8; font-size:0.72rem; text-transform:uppercase;
+      border-bottom:1px solid rgba(148,163,184,0.2); white-space:nowrap; }
+    .imp-tbl td { padding:8px 10px; border-bottom:1px solid rgba(148,163,184,0.1); vertical-align:top; }
+    .imp-err { background:rgba(239,68,68,0.08); }
+    .imp-err-msg { color:#f87171; font-size:0.78rem; }
+    .imp-badge { display:inline-block; font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:999px; }
+    .imp-ok { background:rgba(5,150,105,0.16); color:#34d399; }
+    .imp-bad { background:rgba(239,68,68,0.16); color:#f87171; }
+    .imp-stat { display:flex; gap:20px; flex-wrap:wrap; margin:14px 0; }
+    .imp-stat b { font-size:1.4rem; }
+  </style>
+
+  {% if stage == 'upload' %}
+  <!-- ── 1: yuklash ── -->
+  <div class="imp-box">
+    <p style="color:#94a3b8;font-size:0.9rem;margin-top:0;">
+      Vazirlik Excel ro'yxatini yuklang. Ustunlar: <b>Mavzu nomi</b>, <b>Asosiy tashkilot</b>,
+      <b>O'tkazish sanasi</b>, <b>Yo'nalishi</b>, <b>Anjuman shakli</b>, <b>O'tkazish joyi</b>.
+      Sarlavha qatori avtomatik topiladi.
+    </p>
+    <p><a href="/admin/conferences/template" class="btn btn-action">⬇️ Bo'sh shablonni yuklab olish</a></p>
+    <form method="POST" enctype="multipart/form-data" action="/admin/conferences/import">
+      {{ csrf_token()|safe }}
+      <input type="hidden" name="action" value="preview">
+      <input type="file" name="file" accept=".xlsx,.xlsm" required
+        style="display:block;margin:12px 0;">
+      <button type="submit" class="btn btn-primary">Tekshirish (preview)</button>
+    </form>
+  </div>
+
+  {% elif stage == 'preview' %}
+  <!-- ── 2: preview (dry-run) ── -->
+  <div class="imp-stat">
+    <div>Jami qator: <b>{{ total }}</b></div>
+    <div style="color:#34d399;">To'g'ri: <b>{{ valid|length }}</b></div>
+    <div style="color:#f87171;">Xatoli: <b>{{ errors|length }}</b></div>
+  </div>
+
+  {% if errors %}
+  <div class="imp-box">
+    <h3 style="margin:0 0 4px;color:#f87171;">⚠️ Xatoli qatorlar (import qilinmaydi)</h3>
+    <div style="overflow-x:auto;">
+    <table class="imp-tbl">
+      <thead><tr><th>Qator</th><th>Nomi</th><th>Sana</th><th>Yo'nalish</th><th>Xato</th></tr></thead>
+      <tbody>
+        {% for r in errors %}
+        <tr class="imp-err">
+          <td>{{ r._row }}</td>
+          <td>{{ r.title or '—' }}</td>
+          <td>{{ r.start_date or '—' }}</td>
+          <td>{{ r.field or '—' }}</td>
+          <td class="imp-err-msg">{{ r.errors|join('; ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if valid %}
+  <div class="imp-box">
+    <h3 style="margin:0 0 4px;color:#34d399;">✅ Import qilinadigan qatorlar</h3>
+    <div style="overflow-x:auto;">
+    <table class="imp-tbl">
+      <thead><tr><th>#</th><th>Nomi</th><th>Tashkilot</th><th>Sana</th><th>Yo'nalish</th><th>Shakl</th><th>Joy</th></tr></thead>
+      <tbody>
+        {% for r in valid %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ r.title }}</td>
+          <td>{{ r.organizer or '—' }}</td>
+          <td style="white-space:nowrap;">{{ r.start_date or '—' }}{% if r.end_date and r.end_date != r.start_date %} – {{ r.end_date }}{% endif %}</td>
+          <td>{{ r.field or '—' }}{% if r.field_id %} <span class="imp-badge imp-ok">✓</span>{% else %} <span class="imp-badge imp-bad">yangi</span>{% endif %}</td>
+          <td>{{ r.event_type or '—' }}</td>
+          <td>{{ r.city or '—' }}{% if r.region %}, {{ r.region }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <form method="POST" action="/admin/conferences/import" style="margin-top:16px;">
+      {{ csrf_token()|safe }}
+      <input type="hidden" name="action" value="confirm">
+      <input type="hidden" name="valid_json" value='{{ valid_json|e }}'>
+      <button type="submit" class="btn btn-primary">✅ {{ valid|length }} ta qatorni import qilish</button>
+      <a href="/admin/conferences/import" class="btn btn-action">Bekor qilish</a>
+    </form>
+    <p style="color:#94a3b8;font-size:0.8rem;margin-top:8px;">
+      Import paytida <b>title + sana</b> bo'yicha dublikatlar avtomatik o'tkazib yuboriladi.</p>
+  </div>
+  {% else %}
+  <div class="imp-box"><p style="color:#94a3b8;">Import qilinadigan to'g'ri qator yo'q.</p></div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

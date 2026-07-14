@@ -1517,9 +1517,18 @@ def home():
     except Exception:
         top_hindex = {'date': '', 'items': []}
 
+    # Yaqinlashayotgan konferensiyalar — bosh sahifa bloki (3 ta eng yaqin)
+    upcoming_confs = []
+    try:
+        from blueprints.conferences import get_upcoming_conferences
+        upcoming_confs = get_upcoming_conferences(limit=3)
+    except Exception:
+        upcoming_confs = []
+
     return render_template("home.html", recent=recent,
                            deadline_grants=deadline_grants,
                            top_hindex=top_hindex,
+                           upcoming_confs=upcoming_confs,
                            hstats=get_homepage_stats())
 
 

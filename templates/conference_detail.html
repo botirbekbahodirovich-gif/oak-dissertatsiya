@@ -61,6 +61,7 @@
 {% endblock %}
 
 {% block content %}
+{% if jsonld %}<script type="application/ld+json">{{ jsonld|safe }}</script>{% endif %}
 <div class="kd-wrap">
   <a class="kd-back" href="/konferensiyalar/{{ 'mahalliy' if c.scope == 'local' else 'xalqaro' }}">← Konferensiyalar katalogi</a>
 
@@ -75,6 +76,10 @@
       {% if c.format_uz %}<span class="kd-badge type">{{ c.format_uz }}</span>{% endif %}
       {% if c.publisher %}<span class="kd-badge pub">{{ c.publisher }}</span>{% endif %}
       {% if c.is_scopus_indexed %}<span class="kd-badge scopus">✓ Scopus</span>{% endif %}
+      {% if c.ccf_rank %}<span class="kd-badge scopus" title="China Computer Federation reytingi">CCF-{{ c.ccf_rank }}</span>{% endif %}
+      {% if c.core_rank %}<span class="kd-badge scopus" title="CORE reytingi">CORE {{ c.core_rank }}</span>{% endif %}
+      {% if c.doi_available %}<span class="kd-badge pub" title="Materiallar DOI bilan">DOI</span>{% endif %}
+      {% if c.acronym %}<span class="kd-badge type">{{ c.acronym }}</span>{% endif %}
     </div>
 
     <div class="kd-rows">
@@ -128,6 +133,7 @@
       {% else %}
       <a class="kd-btn primary" href="/login?next=/konferensiya/{{ c.slug }}">📋 Roadmap'ga qo'shish</a>
       {% endif %}
+      <a class="kd-btn" href="/konferensiya/{{ c.slug }}.ics" title="Kalendarga qo'shish (.ics)">📅 Kalendarga qo'shish</a>
       <button class="kd-btn" id="kd-share">🔗 Ulashish</button>
     </div>
     {% if is_authenticated and has_plan and not in_roadmap %}

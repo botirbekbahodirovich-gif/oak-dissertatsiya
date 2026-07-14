@@ -89,6 +89,65 @@
     <div><label class="cf-lbl">Manba havolasi</label>
       <input class="cf-in" name="source_url" maxlength="500" value="{{ v.get('source_url') or '' }}"></div>
 
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Yo'nalish (normalizatsiya)</label>
+        <select class="cf-in" name="field_id">
+          <option value="">—</option>
+          {% for f in fields %}
+          <option value="{{ f.id }}" {{ 'selected' if v.get('field_id') == f.id }}>{{ f.name }}</option>
+          {% endfor %}
+        </select></div>
+      <div><label class="cf-lbl">Teglar (vergul bilan)</label>
+        <input class="cf-in" name="tags" value="{{ (v.get('tags') or [])|join(', ') }}"
+          placeholder="AI, tibbiyot, ochiq kirish"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Akronim</label>
+        <input class="cf-in" name="acronym" maxlength="50" value="{{ v.get('acronym') or '' }}"
+          placeholder="ICML, ICONF…"></div>
+      <div><label class="cf-lbl">Inglizcha nomi</label>
+        <input class="cf-in" name="title_en" value="{{ v.get('title_en') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Manzil (venue)</label>
+        <input class="cf-in" name="venue" value="{{ v.get('venue') or '' }}"
+          placeholder="Bino, ko'cha, zal"></div>
+      <div><label class="cf-lbl">Tashkilotchi aloqasi</label>
+        <input class="cf-in" name="organizer_contact" value="{{ v.get('organizer_contact') or '' }}"
+          placeholder="Telefon / email"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Ro'yxatdan o'tish muddati</label>
+        <input class="cf-in" name="registration_deadline" type="date" value="{{ v.get('registration_deadline') or '' }}"></div>
+      <div><label class="cf-lbl">Xabar berish sanasi (notification)</label>
+        <input class="cf-in" name="notification_date" type="date" value="{{ v.get('notification_date') or '' }}"></div>
+    </div>
+
+    <div><label class="cf-lbl">CFP havolasi (Call for Papers)</label>
+      <input class="cf-in" name="cfp_url" value="{{ v.get('cfp_url') or '' }}"></div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">CCF darajasi</label>
+        <input class="cf-in" name="ccf_rank" maxlength="8" value="{{ v.get('ccf_rank') or '' }}"
+          placeholder="A / B / C"></div>
+      <div><label class="cf-lbl">CORE darajasi</label>
+        <input class="cf-in" name="core_rank" maxlength="8" value="{{ v.get('core_rank') or '' }}"
+          placeholder="A* / A / B / C"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Poster rasm havolasi</label>
+        <input class="cf-in" name="poster_image" value="{{ v.get('poster_image') or '' }}"></div>
+      <div style="display:flex;align-items:flex-end;padding-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:0.9rem;cursor:pointer;">
+          <input type="checkbox" name="doi_available" style="accent-color:#3b82f6;"
+            {{ 'checked' if v.get('doi_available') }}>
+          Materiallar DOI bilan chop etiladi</label></div>
+    </div>
+
     <div><label class="cf-lbl">Tavsif</label>
       <textarea class="cf-in" name="description" rows="4">{{ v.get('description') or '' }}</textarea></div>
 
