@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Universitet paneli — taklif | Olimlar.uz{% endblock %}
+{% block content %}
+<div style="max-width:520px;margin:60px auto;text-align:center;background:rgba(30,41,59,0.55);
+            border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:40px 28px;">
+  {% if error %}
+  <div style="font-size:2.4rem;">🚫</div>
+  <h1 style="font-size:1.2rem;font-weight:800;color:#f1f5f9;margin:14px 0 8px;">Havola yaroqsiz</h1>
+  <p style="color:#8899b4;font-size:0.92rem;">{{ error }}</p>
+  <a href="/" style="display:inline-block;margin-top:14px;background:rgba(74,158,255,0.1);color:#7cb8ff;font-weight:700;padding:10px 20px;border-radius:10px;text-decoration:none;">Bosh sahifa</a>
+  {% else %}
+  <div style="font-size:2.4rem;">🏛️</div>
+  <h1 style="font-size:1.2rem;font-weight:800;color:#f1f5f9;margin:14px 0 8px;">
+    Universitet paneliga taklif</h1>
+  <p style="color:#8899b4;font-size:0.92rem;line-height:1.6;">
+    Siz <b style="color:#cbd5e1;">{{ latin_name }}</b> universitet workspace'iga
+    <b>xodim</b> sifatida taklif qilindingiz. Qabul qilsangiz, universitetning
+    monitoring paneliga kirish huquqini olasiz.</p>
+  <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+    <button id="uv-accept" style="background:#3b82f6;color:#fff;font-weight:700;padding:11px 26px;border-radius:10px;border:none;cursor:pointer;">✓ Qabul qilish</button>
+    <a href="/" style="background:rgba(148,163,184,0.12);color:#94a3b8;font-weight:700;padding:11px 22px;border-radius:10px;text-decoration:none;">Bekor qilish</a>
+  </div>
+  <p id="uv-msg" style="display:none;margin-top:14px;font-size:0.85rem;"></p>
+  <script>
+    document.getElementById('uv-accept').addEventListener('click', function () {
+      var btn = this; btn.disabled = true;
+      fetch('/univer/invite/{{ token }}/respond', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'accept' })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        var m = document.getElementById('uv-msg'); m.style.display = 'block';
+        if (d.success) { m.style.color = '#34d399'; m.textContent = "Qabul qilindi! Panelga yo'naltirilmoqda…";
+          location.href = d.redirect || '/univer'; }
+        else { m.style.color = '#f87171'; m.textContent = d.error || 'Xatolik yuz berdi'; btn.disabled = false; }
+      }).catch(function () { btn.disabled = false; });
+    });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

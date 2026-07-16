@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ latin_name }} — Universitet paneli | Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .uv-shell { display: grid; grid-template-columns: 250px 1fr; gap: 18px; margin-top: 10px; }
+  .uv-side { position: sticky; top: 80px; align-self: start; background: rgba(30,41,59,0.55);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 16px 12px;
+    backdrop-filter: blur(12px); }
+  .uv-uni { display: flex; gap: 10px; align-items: center; padding: 4px 6px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 10px; }
+  .uv-uni-logo { width: 44px; height: 44px; border-radius: 10px; object-fit: contain;
+    background: #0f172a; flex: 0 0 44px; }
+  .uv-uni-initial { width: 44px; height: 44px; border-radius: 10px; display: grid;
+    place-items: center; background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: #fff; font-weight: 800; font-size: 1.15rem; flex: 0 0 44px; }
+  .uv-uni-name { font-weight: 800; font-size: 0.86rem; line-height: 1.25; color: #f1f5f9; }
+  .uv-lic { display: inline-flex; align-items: center; gap: 5px; margin-top: 5px;
+    font-size: 0.68rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+    background: rgba(74,158,255,0.14); color: #7cb8ff; border: 1px solid rgba(74,158,255,0.3); }
+  .uv-lic.warn { background: rgba(245,158,11,0.14); color: #fbbf24; border-color: rgba(245,158,11,0.35); }
+  .uv-nav { display: flex; flex-direction: column; gap: 3px; }
+  .uv-nav a, .uv-nav .soon { display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+    border-radius: 10px; font-size: 0.88rem; color: #cbd5e1; text-decoration: none; }
+  .uv-nav a:hover { background: rgba(74,158,255,0.1); color: #fff; text-decoration: none; }
+  .uv-nav a.on { background: rgba(74,158,255,0.16); color: #7cb8ff; font-weight: 700; }
+  .uv-nav .soon { color: #64748b; cursor: default; }
+  .uv-nav .soon em { font-style: normal; font-size: 0.62rem; background: rgba(148,163,184,0.15);
+    padding: 1px 7px; border-radius: 999px; margin-left: auto; }
+  .uv-role { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.72rem; color: #64748b; padding-left: 6px; }
+  .uv-main { min-width: 0; }
+  .uv-h1 { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; margin: 4px 0 4px; }
+  .uv-sub { color: #8899b4; font-size: 0.86rem; margin-bottom: 16px; }
+  .uv-card { background: rgba(30,41,59,0.55); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 18px; backdrop-filter: blur(12px); }
+  .uv-btn { display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: #fff;
+    font-weight: 700; font-size: 0.85rem; padding: 9px 16px; border-radius: 10px; border: none;
+    cursor: pointer; text-decoration: none; }
+  .uv-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .uv-btn.ghost { background: rgba(74,158,255,0.12); color: #7cb8ff; }
+  .uv-btn.danger { background: rgba(239,68,68,0.15); color: #f87171; }
+  .uv-table-wrap { border-radius: 14px; overflow: auto; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(15,23,42,0.5); }
+  .uv-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  .uv-table th { background: rgba(22,32,50,0.9); color: #94a3b8; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.5px; padding: 0.7rem 0.85rem; text-align: left;
+    white-space: nowrap; }
+  .uv-table td { padding: 0.6rem 0.85rem; font-size: 0.85rem; color: #e2e8f0;
+    border-top: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+  .uv-table tbody tr:hover td { background: rgba(36,48,68,0.6); }
+  .uv-empty { padding: 2.2rem 1.4rem; text-align: center; color: #94a3b8; }
+  @media (max-width: 900px) {
+    .uv-shell { grid-template-columns: 1fr; }
+    .uv-side { position: static; padding: 10px; }
+    .uv-uni { padding-bottom: 10px; }
+    .uv-nav { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+    .uv-nav a, .uv-nav .soon { white-space: nowrap; font-size: 0.8rem; padding: 7px 11px; }
+    .uv-nav .soon em { display: none; }
+    .uv-role { display: none; }
+  }
+</style>
+{% block uv_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="uv-shell">
+  <aside class="uv-side">
+    <div class="uv-uni">
+      {% if logo_url %}
+      <img class="uv-uni-logo" src="{{ logo_url }}" alt="">
+      {% else %}
+      <div class="uv-uni-initial">{{ (latin_name or '?')[0]|upper }}</div>
+      {% endif %}
+      <div>
+        <div class="uv-uni-name">{{ latin_name }}</div>
+        {% if license %}
+        <span class="uv-lic{% if license.days_left is not none and license.days_left <= 14 %} warn{% endif %}">
+          {{ license.plan_label }}{% if license.days_left is not none %} — {{ license.days_left }} kun qoldi{% endif %}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <nav class="uv-nav">
+      <a class="{% if section == 'dashboard' %}on{% endif %}" href="/univer">📊 Boshqaruv</a>
+      <a class="{% if section == 'olimlar' %}on{% endif %}" href="/univer/olimlar">👥 Olimlarimiz</a>
+      <a class="{% if section == 'dissertatsiyalar' %}on{% endif %}" href="/univer/dissertatsiyalar">📚 Dissertatsiyalar</a>
+      <a class="{% if section == 'doktorantlar' %}on{% endif %}" href="/univer/doktorantlar">🎓 Doktorantlar</a>
+      <span class="soon">🎪 Konferensiyalarimiz <em>tez kunda</em></span>
+      <span class="soon">📰 Jurnallarimiz <em>tez kunda</em></span>
+      <span class="soon">📈 Hisobotlar <em>tez kunda</em></span>
+      {% if role == 'owner' %}
+      <a class="{% if section == 'sozlamalar' %}on{% endif %}" href="/univer/sozlamalar">⚙️ Sozlamalar</a>
+      {% endif %}
+    </nav>
+    <div class="uv-role">Rolingiz: <b>{{ role_label }}</b></div>
+  </aside>
+  <section class="uv-main">{% block uv_content %}{% endblock %}</section>
+</div>
+{% endblock %}

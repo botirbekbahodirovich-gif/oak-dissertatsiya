@@ -1,0 +1,110 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvs-add { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .uvs-add input, .uvs-add select { background: rgba(15,23,42,0.6); color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; }
+  .uvs-add input[name=ident] { flex: 1; min-width: 200px; }
+  .uvs-role { font-size: 0.7rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+  .uvs-role.owner { background: rgba(139,92,246,0.18); color: #a78bfa; }
+  .uvs-role.staff { background: rgba(59,130,246,0.15); color: #7cb8ff; }
+  .uvs-role.viewer { background: rgba(148,163,184,0.12); color: #94a3b8; }
+  .uvs-status.suspended { color: #f87171; font-size: 0.74rem; }
+  .uvs-status.active { color: #34d399; font-size: 0.74rem; }
+  .uvs-msg { display: none; margin: 10px 0; font-size: 0.84rem; border-radius: 10px; padding: 9px 14px; }
+  .uvs-msg.ok { background: rgba(5,150,105,0.14); color: #34d399; display: block; }
+  .uvs-msg.err { background: rgba(239,68,68,0.14); color: #f87171; display: block; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<h1 class="uv-h1">⚙️ Sozlamalar — xodimlar</h1>
+<p class="uv-sub">{{ latin_name }} paneliga kirish huquqiga ega xodimlar
+  ({{ staff|length }} / {{ max_staff }}). Yangi xodimni username yoki email
+  bo'yicha qo'shing.</p>
+
+<div class="uv-card" style="margin-bottom:16px;">
+  <div class="uvs-add">
+    <input name="ident" id="uvs-ident" placeholder="Username yoki email">
+    <input name="title" id="uvs-title" placeholder="Lavozimi (ixtiyoriy)">
+    <select id="uvs-role">
+      <option value="staff">Xodim (to'liq monitoring)</option>
+      <option value="viewer">Ko'ruvchi (faqat o'qish)</option>
+    </select>
+    <button class="uv-btn" id="uvs-add-btn">➕ Qo'shish</button>
+  </div>
+  <div class="uvs-msg" id="uvs-msg"></div>
+</div>
+
+<div class="uv-table-wrap">
+  <table class="uv-table">
+    <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Lavozimi</th><th>Rol</th>
+      <th>Holat</th><th>Amallar</th></tr></thead>
+    <tbody>
+      {% for s in staff %}
+      <tr>
+        <td style="font-weight:700;">{{ s.username }}</td>
+        <td style="color:#94a3b8;">{{ s.email or '—' }}</td>
+        <td style="color:#94a3b8;">{{ s.title or '—' }}</td>
+        <td><span class="uvs-role {{ s.role }}">{{ s.role_label }}</span></td>
+        <td><span class="uvs-status {{ s.status }}">{{ 'Faol' if s.status == 'active' else "To'xtatilgan" }}</span></td>
+        <td>
+          {% if s.role != 'owner' %}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <select data-role-for="{{ s.id }}" style="background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;font-size:0.76rem;">
+              <option value="staff" {% if s.role == 'staff' %}selected{% endif %}>Xodim</option>
+              <option value="viewer" {% if s.role == 'viewer' %}selected{% endif %}>Ko'ruvchi</option>
+            </select>
+            <button class="uv-btn danger" style="padding:4px 10px;font-size:0.74rem;" data-suspend="{{ s.id }}">
+              {{ "To'xtatish" if s.status == 'active' else 'Faollashtirish' }}</button>
+          </div>
+          {% else %}<span style="color:#64748b;font-size:0.74rem;">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var msg = document.getElementById('uvs-msg');
+  function show(text, ok) {
+    msg.className = 'uvs-msg ' + (ok ? 'ok' : 'err'); msg.textContent = text;
+  }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}) }).then(function (r) { return r.json(); });
+  }
+  document.getElementById('uvs-add-btn').addEventListener('click', function () {
+    var ident = document.getElementById('uvs-ident').value.trim();
+    if (!ident) { show('Username yoki email kiriting', false); return; }
+    post('/univer/api/staff/add', {
+      username_or_email: ident,
+      title: document.getElementById('uvs-title').value.trim(),
+      role: document.getElementById('uvs-role').value
+    }).then(function (d) {
+      if (d.success) { show(d.message || "Qo'shildi", true); setTimeout(function () { location.reload(); }, 700); }
+      else show(d.error || 'Xatolik', false);
+    }).catch(function () { show('Tarmoq xatosi', false); });
+  });
+  document.querySelectorAll('[data-role-for]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      post('/univer/api/staff/' + sel.getAttribute('data-role-for') + '/role',
+           { role: sel.value }).then(function (d) {
+        if (d.success) show("Rol o'zgartirildi", true); else show(d.error || 'Xatolik', false);
+      });
+    });
+  });
+  document.querySelectorAll('[data-suspend]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      post('/univer/api/staff/' + btn.getAttribute('data-suspend') + '/suspend')
+        .then(function (d) {
+          if (d.success) location.reload(); else show(d.error || 'Xatolik', false);
+        });
+    });
+  });
+})();
+</script>
+{% endblock %}

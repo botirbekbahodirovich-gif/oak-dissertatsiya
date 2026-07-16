@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Universitet litsenziyalari — Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
+  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
+  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
+  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
+  .adm-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+  .adm-card h3 { font-size: 1rem; font-weight: 800; color: #e2e8f0; margin: 0 0 12px; }
+  .adm-form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .adm-form input, .adm-form select { background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+    border-radius: 10px; padding: 9px 12px; font-size: 0.85rem; }
+  .adm-form input[name=canonical_institution] { flex: 1 1 280px; }
+  .adm-form button { background: #3b82f6; color: #fff; font-weight: 700; padding: 9px 18px;
+    border-radius: 10px; border: none; cursor: pointer; }
+  .adm-table-wrap { border-radius: 14px; overflow: auto; border: 1px solid #334155; background: #1e293b; }
+  .adm-table { width: 100%; margin: 0; border-collapse: collapse; min-width: 720px; }
+  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; }
+  .adm-table td { padding: 0.6rem 0.9rem; font-size: 0.86rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
+  .adm-table tbody tr:hover td { background: #243044; }
+  .plan-badge { font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
+  .plan-badge.pilot { background: #0ea5e9; } .plan-badge.standard { background: #059669; } .plan-badge.premium { background: #8b5cf6; }
+  .lic-expired { color: #f87171; font-size: 0.76rem; font-weight: 700; }
+  .lic-days { color: #34d399; font-size: 0.76rem; }
+  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <h1>🏛️ Universitet litsenziyalari ({{ items|length }})</h1>
+  <a href="/admin/universities" style="color:#60a5fa;font-size:0.85rem;">← Universitetlar boshqaruvi</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
+{% endwith %}
+
+<div class="adm-card">
+  <h3>➕ Yangi litsenziya (yoki mavjudini yangilash)</h3>
+  <form class="adm-form" method="POST" action="/admin/universities/licenses/create">
+    {{ csrf_token()|safe }}
+    <input name="canonical_institution" list="canon-list" required
+           placeholder="Muassasa (institution_map canonical nomi)">
+    <datalist id="canon-list">
+      {% for n in canon_names %}<option value="{{ n }}">{% endfor %}
+    </datalist>
+    <select name="plan">
+      {% for k, v in plan_labels.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+    </select>
+    <input name="valid_until" type="date" title="Amal qilish muddati">
+    <input name="max_staff" type="number" min="1" max="100" value="5" style="width:90px;" title="Maks. xodim">
+    <input name="notes" placeholder="Izoh (shartnoma raqami va h.k.)" style="flex:1 1 180px;">
+    <button type="submit">Saqlash</button>
+  </form>
+  <p style="margin:10px 0 0;font-size:0.74rem;color:#64748b;">
+    Muassasa nomi institution_map dagi canonical nom bilan AYNAN mos kelishi
+    kerak (datalist'dan tanlang) — aks holda skoplash bo'sh chiqadi.</p>
+</div>
+
+{% if items %}
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead><tr><th>Muassasa</th><th>Tarif</th><th>Muddati</th><th>Xodimlar</th><th>Izoh</th><th></th></tr></thead>
+    <tbody>
+      {% for l in items %}
+      <tr>
+        <td><a href="/admin/universities/licenses/{{ l.id }}" style="color:#60a5fa;">{{ l.latin_name }}</a>
+          <div style="color:#64748b;font-size:0.72rem;">{{ l.canonical_institution }}</div></td>
+        <td><span class="plan-badge {{ l.plan }}">{{ l.plan_label }}</span></td>
+        <td>
+          {% if l.valid_until %}{{ l.valid_until }}<br>
+            {% if l.days_left < 0 %}<span class="lic-expired">Muddati tugagan</span>
+            {% else %}<span class="lic-days">{{ l.days_left }} kun qoldi</span>{% endif %}
+          {% else %}<span style="color:#94a3b8;">Muddatsiz</span>{% endif %}
+        </td>
+        <td style="font-weight:700;">{{ l.staff_count }} / {{ l.max_staff }}</td>
+        <td style="color:#94a3b8;max-width:220px;">{{ (l.notes or '')[:80] }}</td>
+        <td><a href="/admin/universities/licenses/{{ l.id }}" style="color:#60a5fa;">Boshqarish →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="adm-card"><div class="adm-empty">Hozircha litsenziyalar yo'q — yuqoridagi forma orqali birinchisini yarating.</div></div>
+{% endif %}
+{% endblock %}

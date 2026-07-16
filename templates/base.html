@@ -801,6 +801,9 @@
         <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}">Grantlar</a>
         <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}">Konstruktor<span class="nav-pill-new">Yangi</span></a>
         <a href="/stats" class="nav-link{% if request.path.startswith('/stats') or request.path.startswith('/trends') %} active{% endif %}">Analitika</a>
+        {% if univer_workspace %}
+        <a href="/univer" class="nav-link{% if request.path.startswith('/univer') %} active{% endif %}">🏛 Universitetim</a>
+        {% endif %}
         <div class="nav-dd" id="nav-dd">
           <button type="button" class="nav-link nav-dd-btn" id="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Boshqa <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i></button>
           <div class="nav-dd-menu" id="nav-dd-menu">
@@ -832,6 +835,7 @@
             <a href="/admin/vacancies">Vakansiyalar (admin)</a>
             <a href="/admin/survey">So'rovnoma (admin)</a>
             <a href="/admin/universities">Universitetlar (admin)</a>
+            <a href="/admin/universities/licenses">Universitet litsenziyalari (B2B)</a>
             <a href="/admin/institutions">Institutlar birlashtirish (admin)</a>
             <a href="/admin/journals">Jurnallar (admin)</a>
             <a href="/admin/grants">Grantlar (admin)</a>

@@ -1,0 +1,125 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvt-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .uvt-bar input[type=search], .uvt-bar select, .uvt-bar input[type=number] {
+    background: rgba(15,23,42,0.6); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; }
+  .uvt-bar input[type=search] { flex: 1; min-width: 200px; }
+  .uvt-scopes { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .uvt-scope { background: rgba(148,163,184,0.1); color: #94a3b8; border: none;
+    border-radius: 999px; padding: 5px 14px; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+  .uvt-scope.on { background: rgba(74,158,255,0.18); color: #7cb8ff; }
+  .uvt-total { color: #8899b4; font-size: 0.82rem; margin-bottom: 10px; display: flex;
+    justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .uvt-pager { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+  .uvt-pager button { background: rgba(74,158,255,0.1); color: #7cb8ff; border: none;
+    border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
+  .uvt-pager button:disabled { opacity: 0.35; cursor: default; }
+  .uvt-pager span { color: #8899b4; align-self: center; font-size: 0.82rem; }
+  .uv-table td.mv { max-width: 380px; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<h1 class="uv-h1">📚 Dissertatsiyalar</h1>
+<p class="uv-sub">{{ latin_name }} himoyalari — qidiruv, filtr va to'liq CSV eksport</p>
+
+<div class="uvt-scopes" id="uvt-scopes">
+  <button class="uvt-scope on" data-scope="all">Hammasi</button>
+  <button class="uvt-scope" data-scope="olim">Olim</button>
+  <button class="uvt-scope" data-scope="rahbar">Rahbar</button>
+  <button class="uvt-scope" data-scope="mavzu">Mavzu</button>
+</div>
+<div class="uvt-bar">
+  <input id="uvt-q" type="search" placeholder="Qidirish (lotin yoki kirill)…">
+  <select id="uvt-daraja">
+    <option value="">Daraja: barchasi</option>
+    <option value="PhD">PhD</option>
+    <option value="DSc">DSc</option>
+  </select>
+  <input id="uvt-yil" type="number" min="1990" max="2035" placeholder="Yil">
+  <a class="uv-btn ghost" id="uvt-export" href="/univer/api/dissertations/export.csv">⬇️ CSV eksport (to'liq)</a>
+</div>
+
+<div class="uvt-total"><span id="uvt-total"></span>
+  <span style="font-size:0.72rem;color:#64748b;">Eksport 50 qatorlik cheklovsiz — bu sizning ma'lumotingiz</span></div>
+
+<div class="uv-table-wrap">
+  <table class="uv-table">
+    <thead><tr><th>Sana</th><th>Olim</th><th>Mavzu</th><th>Daraja</th>
+      <th>Ixtisoslik</th><th>Ilmiy rahbar</th><th></th></tr></thead>
+    <tbody id="uvt-body"><tr><td colspan="7" class="uv-empty">Yuklanmoqda…</td></tr></tbody>
+  </table>
+</div>
+<div class="uvt-pager" id="uvt-pager" style="display:none;">
+  <button id="uvt-prev">← Oldingi</button>
+  <span id="uvt-page"></span>
+  <button id="uvt-next">Keyingi →</button>
+</div>
+
+<script>
+(function () {
+  var page = 1, scope = 'all';
+  var q = document.getElementById('uvt-q'), daraja = document.getElementById('uvt-daraja'),
+      yil = document.getElementById('uvt-yil'), body = document.getElementById('uvt-body'),
+      total = document.getElementById('uvt-total'), pager = document.getElementById('uvt-pager'),
+      prev = document.getElementById('uvt-prev'), next = document.getElementById('uvt-next'),
+      pageLbl = document.getElementById('uvt-page'), exp = document.getElementById('uvt-export');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function params() {
+    var p = new URLSearchParams();
+    if (q.value.trim()) p.set('q', q.value.trim());
+    if (daraja.value) p.set('daraja', daraja.value);
+    if (yil.value) p.set('yil', yil.value);
+    if (scope !== 'all') p.set('scope', scope);
+    return p;
+  }
+  function load() {
+    var p = params(); p.set('page', page);
+    exp.href = '/univer/api/dissertations/export.csv?' + params().toString();
+    fetch('/univer/api/dissertations?' + p.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { body.innerHTML = '<tr><td colspan="7" class="uv-empty">Xatolik</td></tr>'; return; }
+        total.textContent = d.total + ' ta dissertatsiya';
+        if (!d.records.length) {
+          body.innerHTML = '<tr><td colspan="7" class="uv-empty">Hech narsa topilmadi</td></tr>';
+          pager.style.display = 'none'; return;
+        }
+        body.innerHTML = d.records.map(function (r) {
+          return '<tr><td style="white-space:nowrap;color:#94a3b8;">' + esc(r.Sana) + '</td>' +
+            '<td style="font-weight:600;">' + esc(r.Olim_short || r.Olim) + '</td>' +
+            '<td class="mv">' + esc(r.Mavzu) + '</td>' +
+            '<td>' + esc(r.Daraja) + '</td>' +
+            '<td style="font-family:ui-monospace,monospace;color:#7cb8ff;">' + esc(r.Ixtisoslik) + '</td>' +
+            '<td>' + esc(r.Ilmiy_rahbar_short || r.Ilmiy_rahbar) + '</td>' +
+            '<td>' + (r.id ? '<a href="/dissertation/' + r.id + '" style="color:#7cb8ff;">→</a>' : '') + '</td></tr>';
+        }).join('');
+        pager.style.display = d.pages > 1 ? 'flex' : 'none';
+        pageLbl.textContent = d.page + ' / ' + d.pages;
+        prev.disabled = d.page <= 1; next.disabled = d.page >= d.pages;
+      })
+      .catch(function () { body.innerHTML = '<tr><td colspan="7" class="uv-empty">Tarmoq xatosi</td></tr>'; });
+  }
+  document.getElementById('uvt-scopes').addEventListener('click', function (e) {
+    var b = e.target.closest('.uvt-scope');
+    if (!b) return;
+    scope = b.getAttribute('data-scope');
+    this.querySelectorAll('.uvt-scope').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on'); page = 1; load();
+  });
+  var timer = null;
+  q.addEventListener('input', function () {
+    clearTimeout(timer); timer = setTimeout(function () { page = 1; load(); }, 350);
+  });
+  daraja.addEventListener('change', function () { page = 1; load(); });
+  yil.addEventListener('change', function () { page = 1; load(); });
+  prev.addEventListener('click', function () { if (page > 1) { page--; load(); } });
+  next.addEventListener('click', function () { page++; load(); });
+  load();
+})();
+</script>
+{% endblock %}

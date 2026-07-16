@@ -1,0 +1,208 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvk-row { cursor: pointer; }
+  .uvk-name { display: flex; align-items: center; gap: 9px; font-weight: 700; }
+  .uvk-av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #1d4ed8;
+    color: #fff; display: grid; place-items: center; font-size: 0.8rem; font-weight: 800; flex: 0 0 30px; }
+  .uvk-pub { font-family: ui-monospace, monospace; font-size: 0.78rem; white-space: nowrap; }
+  .uvk-pub b.ok { color: #34d399; } .uvk-pub b.no { color: #fbbf24; }
+  .uvk-wbar { width: 110px; height: 8px; background: rgba(148,163,184,0.12); border-radius: 5px;
+    overflow: hidden; margin-top: 4px; }
+  .uvk-wbar i { display: block; height: 100%; background: linear-gradient(90deg,#1d4ed8,#3b82f6); }
+  .uvk-holat { font-size: 0.7rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .uvk-holat.active { background: rgba(59,130,246,0.15); color: #7cb8ff; }
+  .uvk-holat.good { background: rgba(5,150,105,0.15); color: #34d399; }
+  .uvk-holat.muted { background: rgba(148,163,184,0.12); color: #94a3b8; }
+  .uvk-days { font-size: 0.74rem; color: #94a3b8; }
+  .uvk-days b.soon { color: #fbbf24; } .uvk-days b.past { color: #f87171; }
+  /* drawer */
+  .uvk-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.6); z-index: 1050;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .uvk-overlay.open { opacity: 1; pointer-events: auto; }
+  .uvk-drawer { position: fixed; top: 0; right: -520px; width: min(500px, 94vw); height: 100vh;
+    background: #101828; border-left: 1px solid rgba(255,255,255,0.09); z-index: 1060;
+    transition: right 0.25s; overflow-y: auto; padding: 22px; }
+  .uvk-drawer.open { right: 0; }
+  .uvk-ring { width: 110px; height: 110px; margin: 0 auto; position: relative; }
+  .uvk-ring svg { transform: rotate(-90deg); }
+  .uvk-ring .val { position: absolute; inset: 0; display: grid; place-items: center;
+    font-size: 1.35rem; font-weight: 800; color: #f1f5f9; }
+  .uvk-sec { margin-top: 18px; }
+  .uvk-sec h4 { font-size: 0.82rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 10px; }
+  .uvk-chap { margin-bottom: 9px; font-size: 0.8rem; color: #cbd5e1; }
+  .uvk-chap .t { display: flex; justify-content: space-between; gap: 8px; }
+  .uvk-chap .t span:last-child { color: #8899b4; font-family: ui-monospace, monospace; white-space: nowrap; }
+  .uvk-chap .bar { height: 7px; background: rgba(148,163,184,0.12); border-radius: 5px;
+    overflow: hidden; margin-top: 3px; }
+  .uvk-chap .bar i { display: block; height: 100%; background: linear-gradient(90deg,#1d4ed8,#3b82f6); }
+  .uvk-publi { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
+  .uvk-publi b { color: #e2e8f0; display: block; }
+  .uvk-publi span { color: #8899b4; font-size: 0.72rem; }
+  .uvk-tl { list-style: none; margin: 0; padding: 0; }
+  .uvk-tl li { display: flex; gap: 8px; padding: 5px 0; font-size: 0.78rem; color: #cbd5e1; align-items: baseline; }
+  .uvk-tl .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; align-self: center; }
+  .uvk-tl .dot.done { background: #34d399; } .uvk-tl .dot.active { background: #3b82f6; }
+  .uvk-tl .dot.past { background: #f87171; } .uvk-tl .dot.future { background: #475569; }
+  .uvk-tl .dt { margin-left: auto; color: #64748b; font-size: 0.7rem; white-space: nowrap; }
+  .uvk-consent { margin-top: 18px; font-size: 0.72rem; color: #64748b; border-top: 1px dashed
+    rgba(255,255,255,0.1); padding-top: 10px; }
+  .uvk-invite { background: rgba(15,23,42,0.6); border: 1px dashed rgba(74,158,255,0.3);
+    border-radius: 12px; padding: 14px; margin-top: 14px; font-size: 0.82rem; color: #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<h1 class="uv-h1">🎓 Doktorantlar monitoringi</h1>
+<p class="uv-sub">{{ latin_name }} doktorantlarining himoyaga tayyorgarlik
+  ko'rsatkichlari — faqat ochiq metrikalar (matnlar ko'rinmaydi)</p>
+
+{% if rows %}
+<div class="uv-table-wrap">
+  <table class="uv-table">
+    <thead><tr>
+      <th>Doktorant</th><th>Daraja / Ixtisoslik</th><th>Rahbar</th>
+      <th>Nashrlar</th><th>Dissertatsiya so'zlari</th><th>Himoya sanasi</th><th>Holat</th>
+    </tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="uvk-row" data-uid="{{ r.user_id }}">
+        <td><div class="uvk-name">
+          {% if r.photo_url %}<img class="uvk-av" src="{{ r.photo_url }}" alt="">
+          {% else %}<span class="uvk-av">{{ (r.name or '?')[0]|upper }}</span>{% endif %}
+          {{ r.name }}</div></td>
+        <td><b>{{ r.degree }}</b>{% if r.specialty %} <span style="color:#7cb8ff;font-family:ui-monospace,monospace;">{{ r.specialty }}</span>{% endif %}</td>
+        <td style="color:#94a3b8;">{{ r.advisor }}</td>
+        <td class="uvk-pub">
+          OAK <b class="{{ 'ok' if r.oak_done >= r.oak_req else 'no' }}">{{ r.oak_done }}/{{ r.oak_req }}</b>
+          {% if r.int_req %} · Scopus <b class="{{ 'ok' if r.int_done >= r.int_req else 'no' }}">{{ r.int_done }}/{{ r.int_req }}</b>{% endif %}
+        </td>
+        <td>
+          <span style="font-family:ui-monospace,monospace;font-size:0.78rem;">
+            {{ '{:,}'.format(r.words).replace(',', ' ') }} / {{ '{:,}'.format(r.word_target).replace(',', ' ') }} ({{ r.word_pct }}%)</span>
+          <div class="uvk-wbar"><i style="width:{{ r.word_pct }}%"></i></div>
+        </td>
+        <td class="uvk-days">
+          {% if r.defense_date %}{{ r.defense_date }}<br>
+            {% if r.days_left is not none %}
+              <b class="{{ 'past' if r.days_left < 0 else ('soon' if r.days_left < 90 else '') }}">
+                {% if r.days_left >= 0 %}{{ r.days_left }} kun qoldi{% else %}{{ -r.days_left }} kun o'tib ketgan{% endif %}</b>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="uvk-holat {{ r.holat_class }}">{{ r.holat }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
+  Ko'rsatkichlar doktorantning platformadagi ochiq faoliyati asosida.
+  Qator ustiga bosib batafsil ko'ring.</p>
+{% else %}
+<div class="uv-card">
+  <div class="uv-empty" style="padding-bottom:0.6rem;">
+    <div style="font-size:2rem;">🎓</div>
+    Hozircha doktorantlaringiz platformada faol emas
+  </div>
+  <div class="uvk-invite">
+    <b>Doktorantlaringizni taklif qiling</b> — quyidagi matnni ularga yuboring:
+    <div id="uvk-invite-text" style="margin-top:8px;background:rgba(2,6,23,0.5);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:#94a3b8;">
+      Universitetingiz sizni olimlar.uz da kuzatadi — profil oching, Akademik
+      Reja tuzing va dissertatsiyangizni Konstruktorda yozing:
+      https://olimlar.uz/cabinet
+    </div>
+    <button class="uv-btn ghost" style="margin-top:10px;" onclick="
+      navigator.clipboard.writeText(document.getElementById('uvk-invite-text').textContent.trim())
+        .then(function(){ this.textContent='✓ Nusxalandi'; }.bind(this))">📋 Nusxalash</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- detail drawer -->
+<div class="uvk-overlay" id="uvk-overlay"></div>
+<div class="uvk-drawer" id="uvk-drawer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <h3 id="uvk-d-name" style="margin:0;font-size:1.05rem;font-weight:800;color:#f1f5f9;"></h3>
+    <button onclick="uvkClose()" style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;">✕</button>
+  </div>
+  <div id="uvk-d-body"><div class="uv-empty">Yuklanmoqda…</div></div>
+</div>
+
+<script>
+var uvkOverlay = document.getElementById('uvk-overlay');
+var uvkDrawer = document.getElementById('uvk-drawer');
+function uvkClose() { uvkOverlay.classList.remove('open'); uvkDrawer.classList.remove('open'); }
+uvkOverlay.addEventListener('click', uvkClose);
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+  return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function ring(pct) {
+  var r = 48, c = 2 * Math.PI * r;
+  return '<div class="uvk-ring"><svg width="110" height="110">' +
+    '<circle cx="55" cy="55" r="' + r + '" fill="none" stroke="rgba(148,163,184,0.15)" stroke-width="9"/>' +
+    '<circle cx="55" cy="55" r="' + r + '" fill="none" stroke="#3b82f6" stroke-width="9" stroke-linecap="round"' +
+    ' stroke-dasharray="' + c + '" stroke-dashoffset="' + (c * (1 - pct / 100)) + '"/></svg>' +
+    '<div class="val">' + pct + '%</div></div>';
+}
+document.querySelectorAll('.uvk-row').forEach(function (tr) {
+  tr.addEventListener('click', function () {
+    var uid = tr.getAttribute('data-uid');
+    document.getElementById('uvk-d-name').textContent = tr.querySelector('.uvk-name').textContent.trim();
+    document.getElementById('uvk-d-body').innerHTML = '<div class="uv-empty">Yuklanmoqda…</div>';
+    uvkOverlay.classList.add('open'); uvkDrawer.classList.add('open');
+    fetch('/univer/api/doktorant/' + uid)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.success) {
+          document.getElementById('uvk-d-body').innerHTML =
+            '<div class="uv-empty">' + esc(d.error || 'Xatolik') + '</div>'; return;
+        }
+        var h = ring(d.readiness || 0) +
+          '<p style="text-align:center;color:#8899b4;font-size:0.78rem;margin-top:8px;">Himoyaga tayyorgarlik' +
+          (d.defense_date ? ' · himoya: ' + esc(d.defense_date) : '') + '</p>';
+        if (d.sections && d.sections.length) {
+          h += '<div class="uvk-sec"><h4>Bo\'limlar bo\'yicha so\'z sanog\'i</h4>' +
+            d.sections.map(function (s) {
+              return '<div class="uvk-chap"><div class="t"><span>' + esc(s.title) + '</span>' +
+                '<span>' + s.words + ' / ' + s.target + '</span></div>' +
+                '<div class="bar"><i style="width:' + Math.min(s.pct, 100) + '%"></i></div></div>';
+            }).join('') +
+            '<p style="font-size:0.72rem;color:#64748b;">Jami: ' + d.total_words + ' / ' +
+            d.total_target + ' so\'z (' + d.diss_pct + '%)</p></div>';
+        }
+        if (d.pub_requirements && d.pub_requirements.length) {
+          h += '<div class="uvk-sec"><h4>Nashr talablari (' + d.pub_pct + '%)</h4>' +
+            d.pub_requirements.map(function (p) {
+              return '<div class="uvk-chap"><div class="t"><span>' + esc(p.label) + '</span>' +
+                '<span>' + p.done + ' / ' + p.required + '</span></div>' +
+                '<div class="bar"><i style="width:' + Math.min(p.pct, 100) + '%"></i></div></div>';
+            }).join('') + '</div>';
+        }
+        if (d.publications && d.publications.length) {
+          h += '<div class="uvk-sec"><h4>Nashrlar ro\'yxati</h4>' +
+            d.publications.map(function (p) {
+              return '<div class="uvk-publi"><b>' + esc(p.title) + '</b>' +
+                '<span>' + esc(p.type) + (p.venue ? ' · ' + esc(p.venue) : '') +
+                (p.year ? ' · ' + p.year : '') + ' · ' + esc(p.status) + '</span></div>';
+            }).join('') + '</div>';
+        }
+        if (d.timeline && d.timeline.length) {
+          h += '<div class="uvk-sec"><h4>Reja bosqichlari</h4><ul class="uvk-tl">' +
+            d.timeline.map(function (t) {
+              return '<li><span class="dot ' + esc(t.state) + '"></span>' + esc(t.label) +
+                '<span class="dt">' + esc(t.end) + '</span></li>';
+            }).join('') + '</ul></div>';
+        }
+        h += '<div class="uvk-consent">ℹ️ Ko\'rsatkichlar doktorantning platformadagi ochiq' +
+          ' faoliyati asosida. Dissertatsiya matni universitetga ko\'rinmaydi.</div>';
+        document.getElementById('uvk-d-body').innerHTML = h;
+      })
+      .catch(function () {
+        document.getElementById('uvk-d-body').innerHTML = '<div class="uv-empty">Tarmoq xatosi</div>';
+      });
+  });
+});
+</script>
+{% endblock %}

@@ -684,6 +684,24 @@
             </div>
             {% endfor %}
           </div>
+
+          {% if current_user.is_authenticated %}
+          <!-- Universitet paneli maxfiyligi (users.hide_from_university) -->
+          <div class="np-card" id="np-univ-privacy" style="display:none;">
+            <p class="np-group-title">Maxfiylik</p>
+            <div class="np-row">
+              <span class="np-ic">🏛</span>
+              <div class="np-label"><b>Universitetim faolligimni ko'rmasin</b>
+                <small>Yoqilsa, universitetingizning B2B panelida progress
+                ko'rsatkichlaringiz (so'z soni, nashrlar, muddatlar)
+                ko'rinmaydi</small></div>
+              <label class="np-switch">
+                <input type="checkbox" id="np-hide-univ">
+                <span class="np-slider"></span>
+              </label>
+            </div>
+          </div>
+          {% endif %}
         </div>
 
         <!-- ── 🔔 MENING OBUNALARIM (ixtisoslik bo'yicha yangi himoyalar) ── -->
@@ -880,6 +898,26 @@ function saveLinksForm() {
       clearTimeout(timer);
       timer = setTimeout(flush, 500);   // debounce rapid flipping
     });
+  });
+})();
+
+// ── universitet paneli maxfiyligi (hide_from_university) ──
+(function () {
+  var cb = document.getElementById('np-hide-univ');
+  if (!cb) return;
+  fetch('/univer/api/privacy')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) return;
+      cb.checked = !!d.hidden;
+      document.getElementById('np-univ-privacy').style.display = '';
+    }).catch(function () {});
+  cb.addEventListener('change', function () {
+    post('/univer/api/privacy', { hidden: cb.checked }).then(function (d) {
+      if (d.success) toast(cb.checked ?
+        "Universitetingiz endi faolligingizni ko'rmaydi ✓" : 'Sozlama saqlandi ✓', true);
+      else toast(d.error || 'Xatolik yuz berdi', false);
+    }).catch(function () { toast('Tarmoq xatosi', false); });
   });
 })();
 

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Litsenziya muddati tugagan | Olimlar.uz{% endblock %}
+{% block content %}
+<div style="max-width:560px;margin:60px auto;text-align:center;background:rgba(30,41,59,0.55);
+            border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:40px 28px;">
+  <div style="font-size:2.6rem;">⏳</div>
+  <h1 style="font-size:1.3rem;font-weight:800;color:#f1f5f9;margin:14px 0 8px;">
+    Litsenziya muddati tugagan</h1>
+  <p style="color:#8899b4;font-size:0.92rem;line-height:1.6;">
+    {% if latin_name %}<b style="color:#cbd5e1;">{{ latin_name }}</b> uchun{% endif %}
+    universitet paneli litsenziyasi {% if license and license.valid_until %}
+    <b>{{ license.valid_until }}</b> sanasida tugagan{% else %}hali
+    faollashtirilmagan{% endif %}. Panelni qayta yoqish uchun biz bilan
+    bog'laning — ma'lumotlaringiz saqlanib qolgan.</p>
+  <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <a href="https://t.me/olimlar_uz" target="_blank" rel="noopener"
+       style="background:#3b82f6;color:#fff;font-weight:700;padding:11px 22px;border-radius:10px;text-decoration:none;">✉️ Bog'lanish</a>
+    <a href="/" style="background:rgba(74,158,255,0.1);color:#7cb8ff;font-weight:700;padding:11px 22px;border-radius:10px;text-decoration:none;">Bosh sahifa</a>
+  </div>
+</div>
+{% endblock %}

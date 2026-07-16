@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Universitetlar uchun — B2B panel | Olimlar.uz{% endblock %}
+{% block meta_description %}Universitetingizning ilmiy faoliyatini bitta boshqaruv markazida kuzating: olimlar, dissertatsiyalar, doktorantlar monitoringi va analitika. Pilot bepul.{% endblock %}
+
+{% block extra_head %}
+<style>
+  .uvl-hero { text-align: center; padding: 56px 16px 40px; }
+  .uvl-hero h1 { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 800; color: #f1f5f9;
+    max-width: 780px; margin: 0 auto 14px; line-height: 1.25; }
+  .uvl-hero h1 em { font-style: normal; color: #4a9eff; }
+  .uvl-hero p { color: #8899b4; max-width: 640px; margin: 0 auto 26px; font-size: 1rem; }
+  .uvl-cta { display: inline-flex; align-items: center; gap: 8px; background: #3b82f6;
+    color: #fff; font-weight: 800; padding: 13px 28px; border-radius: 12px;
+    text-decoration: none; font-size: 1rem; }
+  .uvl-cta:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .uvl-cta.ghost { background: rgba(74,158,255,0.1); color: #7cb8ff; margin-left: 8px; }
+  .uvl-pilot { margin-top: 14px; font-size: 0.85rem; color: #34d399; font-weight: 700; }
+  .uvl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px; margin: 24px 0 40px; }
+  .uvl-card { background: rgba(30,41,59,0.55); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 22px 18px; backdrop-filter: blur(12px); }
+  .uvl-card .ic { font-size: 1.6rem; }
+  .uvl-card h3 { font-size: 1rem; font-weight: 800; color: #f1f5f9; margin: 10px 0 6px; }
+  .uvl-card p { font-size: 0.85rem; color: #8899b4; margin: 0; line-height: 1.55; }
+  .uvl-price { text-align: center; padding: 26px 16px 60px; }
+  .uvl-price .box { display: inline-block; background: rgba(30,41,59,0.55);
+    border: 1px solid rgba(74,158,255,0.25); border-radius: 16px; padding: 22px 34px; }
+  .uvl-price h3 { color: #f1f5f9; font-weight: 800; margin: 0 0 6px; }
+  .uvl-price p { color: #8899b4; font-size: 0.9rem; margin: 0 0 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="uvl-hero">
+  <h1>Universitetingizning ilmiy faoliyati — <em>bitta boshqaruv markazida</em></h1>
+  <p>Olimlar.uz'dagi 29 000+ dissertatsiya bazasi ustida qurilgan B2B panel:
+     olimlaringiz, himoyalaringiz, faol doktorantlaringiz progressi va
+     analitika — hammasi real vaqtda, bitta oynada.</p>
+  <a class="uvl-cta" href="https://t.me/olimlar_uz" target="_blank" rel="noopener">✉️ Demo so'rash</a>
+  <a class="uvl-cta ghost" href="mailto:info@olimlar.uz?subject=Universitet%20paneli%20—%20demo">📧 Email yozish</a>
+  <div class="uvl-pilot">🎁 Pilot bepul — birinchi 30 kun</div>
+</div>
+
+<div class="uvl-grid">
+  <div class="uvl-card"><span class="ic">📊</span>
+    <h3>Jonli statistika</h3>
+    <p>Universitetingizning barcha himoyalari: yillik dinamika, ixtisosliklar
+       kesimi, PhD/DSc taqsimoti — grafiklar bilan.</p></div>
+  <div class="uvl-card"><span class="ic">👥</span>
+    <h3>Olimlar katalogi</h3>
+    <p>Universitetingiz ilmiy rahbarlari reytingi: shogirdlar, opponentlik,
+       ilmiy avlodlar, yillik faollik.</p></div>
+  <div class="uvl-card"><span class="ic">🎓</span>
+    <h3>Doktorantlar monitoringi</h3>
+    <p>Doktorantlaringiz himoyaga qanchalik tayyor: nashrlar (OAK/Scopus),
+       dissertatsiya progressi, muddatlar — faqat ochiq ko'rsatkichlar.</p></div>
+  <div class="uvl-card"><span class="ic">📚</span>
+    <h3>To'liq ma'lumot eksporti</h3>
+    <p>Universitetingizning barcha dissertatsiyalarini cheklovsiz CSV/Excel
+       formatida yuklab oling — bu sizning ma'lumotingiz.</p></div>
+  <div class="uvl-card"><span class="ic">🔐</span>
+    <h3>Rollar va xavfsizlik</h3>
+    <p>Egasi, xodim, ko'ruvchi rollari. Har bir universitet faqat o'z
+       ma'lumotini ko'radi. Doktorant matnlari hech kimga ochilmaydi.</p></div>
+</div>
+
+<div class="uvl-price">
+  <div class="box">
+    <h3>Pilot — bepul</h3>
+    <p>30 kunlik to'liq kirish, 5 tagacha xodim. Keyin — kelishilgan tarif.</p>
+    <a class="uvl-cta" href="https://t.me/olimlar_uz" target="_blank" rel="noopener">Bog'lanish</a>
+  </div>
+</div>
+{% endblock %}

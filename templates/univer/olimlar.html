@@ -1,0 +1,139 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<link rel="stylesheet" href="/static/css/olimlar_catalog.css?v=1">
+<style>
+  .uvo-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .uvo-bar input, .uvo-bar select { background: rgba(15,23,42,0.6); color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px;
+    font-size: 0.85rem; }
+  .uvo-bar input { flex: 1; min-width: 180px; }
+  .uvo-total { color: #8899b4; font-size: 0.82rem; margin-bottom: 10px; }
+  .uvo-pager { display: flex; gap: 8px; justify-content: center; margin: 18px 0; }
+  .uvo-pager button { background: rgba(74,158,255,0.1); color: #7cb8ff; border: none;
+    border-radius: 8px; padding: 7px 14px; font-weight: 700; cursor: pointer; }
+  .uvo-pager button:disabled { opacity: 0.35; cursor: default; }
+  .uvo-pager span { color: #8899b4; align-self: center; font-size: 0.82rem; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<h1 class="uv-h1">👥 Olimlarimiz</h1>
+<p class="uv-sub">{{ latin_name }} ilmiy rahbarlari — obro' metrikalari bilan
+  ({{ total_scholars }} olim)</p>
+
+<div class="uvo-bar">
+  <input id="uvo-q" type="search" placeholder="Olim ismi yoki ixtisoslik bo'yicha qidirish…">
+  <select id="uvo-ixt">
+    <option value="">Barcha ixtisosliklar</option>
+    {% for s in facets.specialties[:40] %}
+    <option value="{{ s.code }}">{{ s.code }}{% if s.name %} — {{ s.name[:40] }}{% endif %} ({{ s.count }})</option>
+    {% endfor %}
+  </select>
+  <select id="uvo-daraja">
+    <option value="">Daraja: barchasi</option>
+    <option value="dsc">DSc shogirdlari bor</option>
+    <option value="phd">PhD shogirdlari bor</option>
+  </select>
+  <select id="uvo-faollik">
+    <option value="">Faollik: barchasi</option>
+    <option value="5">Oxirgi 5 yil</option>
+    <option value="10">Oxirgi 10 yil</option>
+  </select>
+  <select id="uvo-sort">
+    <option value="students">Shogirdlar soni</option>
+    <option value="opponents">Opponentlik</option>
+    <option value="generations">Ilmiy avlodlar</option>
+    <option value="publications">Nashrlar</option>
+    <option value="activity">Faollik</option>
+    <option value="name">Ism (A–Z)</option>
+  </select>
+</div>
+
+<div class="uvo-total" id="uvo-total"></div>
+<div id="uvo-content"><div class="uv-empty">Yuklanmoqda…</div></div>
+<div class="uvo-pager" id="uvo-pager" style="display:none;">
+  <button id="uvo-prev">← Oldingi</button>
+  <span id="uvo-page"></span>
+  <button id="uvo-next">Keyingi →</button>
+</div>
+
+<script>
+(function () {
+  var page = 1;
+  var els = {
+    q: document.getElementById('uvo-q'), ixt: document.getElementById('uvo-ixt'),
+    daraja: document.getElementById('uvo-daraja'), faollik: document.getElementById('uvo-faollik'),
+    sort: document.getElementById('uvo-sort'), content: document.getElementById('uvo-content'),
+    total: document.getElementById('uvo-total'), pager: document.getElementById('uvo-pager'),
+    prev: document.getElementById('uvo-prev'), next: document.getElementById('uvo-next'),
+    pageLbl: document.getElementById('uvo-page')
+  };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var COLORS = ['#3b82f6', '#8b5cf6', '#059669', '#e36403', '#0ea5e9', '#d946ef'];
+  function avatar(s) {
+    if (s.photo_url) return '<img class="oc-av" src="' + esc(s.photo_url) + '" alt="" loading="lazy">';
+    var n = s.display || '?', h = 0;
+    for (var i = 0; i < n.length; i++) h = n.charCodeAt(i) + ((h << 5) - h);
+    return '<div class="oc-av" style="background:' + COLORS[Math.abs(h) % COLORS.length] + '">' +
+      esc(n.trim()[0].toUpperCase()) + '</div>';
+  }
+  function card(s) {
+    var badges = '';
+    if (s.dsc_students) badges += '<span class="oc-b dsc">DSc</span>';
+    if (s.phd_students) badges += '<span class="oc-b phd">PhD</span>';
+    if (s.is_claimed) badges += '<span class="oc-b claimed">✓ Tasdiqlangan</span>';
+    var spec = s.specialties && s.specialties.length ? '🔬 ' + esc(s.specialties.join(', ')) : '';
+    return '<div class="oc-card">' +
+      '<div class="oc-card-top">' + avatar(s) + '<div class="oc-card-hd">' +
+        '<div class="oc-card-name">' + esc(s.display) + '</div>' +
+        '<div class="oc-badges">' + badges + '</div></div></div>' +
+      '<div class="oc-card-meta">' + (spec ? '<span>' + spec + '</span>' : '') + '</div>' +
+      '<div class="oc-stats">' +
+        '<div class="oc-stat"><b>' + s.total_students + '</b><span>👥 shogird</span>' +
+          '<small>PhD:' + s.phd_students + ' DSc:' + s.dsc_students + '</small></div>' +
+        '<div class="oc-stat"><b>' + s.opponent_count + '</b><span>⚖️ opponent</span></div>' +
+        '<div class="oc-stat"><b>' + s.next_gen_advisors + '</b><span>🌳 avlod</span></div>' +
+        '<div class="oc-stat"><b>' + s.publications_count + '</b><span>📄 nashr</span></div></div>' +
+      (s.sparkline ? '<div class="oc-spark">' + s.sparkline + '</div>' : '') +
+      '<div class="oc-card-acts">' +
+        '<a class="oc-btn primary" href="/olim/' + encodeURIComponent(s.name) + '">Profil</a></div>' +
+      '</div>';
+  }
+  var timer = null;
+  function load() {
+    var p = new URLSearchParams({ page: page, sort: els.sort.value });
+    if (els.q.value.trim()) p.set('q', els.q.value.trim());
+    if (els.ixt.value) p.set('ixtisoslik', els.ixt.value);
+    if (els.daraja.value) p.set('daraja', els.daraja.value);
+    if (els.faollik.value) p.set('faollik', els.faollik.value);
+    fetch('/univer/api/olimlar?' + p.toString())
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { els.content.innerHTML = '<div class="uv-empty">Xatolik yuz berdi</div>'; return; }
+        els.total.textContent = d.total + ' ta olim topildi';
+        if (!d.scholars.length) {
+          els.content.innerHTML = '<div class="uv-empty">Hech narsa topilmadi</div>';
+          els.pager.style.display = 'none'; return;
+        }
+        els.content.innerHTML = '<div class="oc-grid">' + d.scholars.map(card).join('') + '</div>';
+        els.pager.style.display = d.pages > 1 ? 'flex' : 'none';
+        els.pageLbl.textContent = d.page + ' / ' + d.pages;
+        els.prev.disabled = d.page <= 1;
+        els.next.disabled = d.page >= d.pages;
+      })
+      .catch(function () { els.content.innerHTML = '<div class="uv-empty">Tarmoq xatosi</div>'; });
+  }
+  ['ixt', 'daraja', 'faollik', 'sort'].forEach(function (k) {
+    els[k].addEventListener('change', function () { page = 1; load(); });
+  });
+  els.q.addEventListener('input', function () {
+    clearTimeout(timer); timer = setTimeout(function () { page = 1; load(); }, 350);
+  });
+  els.prev.addEventListener('click', function () { if (page > 1) { page--; load(); } });
+  els.next.addEventListener('click', function () { page++; load(); });
+  load();
+})();
+</script>
+{% endblock %}
