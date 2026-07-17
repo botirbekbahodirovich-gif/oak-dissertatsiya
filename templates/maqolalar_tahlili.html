@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+{% block title %}Ilmiy maqolalar tahlili — Olimlar.uz{% endblock %}
+{% block meta_description %}OpenAlex — 250 million+ ilmiy maqola bazasi asosida mavzu qidiruvi: research gap tahlili, yillik dinamika, top jurnallar, GOST/APA iqtibos.{% endblock %}
+
+{% block extra_head %}
+<style>
+.mq-wrap { max-width: 960px; margin: 0 auto; }
+.mq-head { margin-bottom: 4px; }
+.mq-sub { color: #94a3b8; margin-bottom: 18px; }
+.mq-box { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; }
+.mq-search-row { display: flex; gap: 10px; }
+.mq-input { flex: 1; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 14px;
+            font-size: 1rem; font-family: inherit; color: #0f172a; min-width: 0; }
+.mq-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.mq-btn { background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; border: none; padding: 10px 22px;
+          border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; }
+.mq-btn:hover { opacity: 0.92; }
+.mq-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.mq-btn2 { background: #eef2f7; color: #0f172a; border: 1px solid #cbd5e1; padding: 8px 16px;
+           border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer; }
+.mq-btn2:hover { background: #e2e8f0; }
+.mq-btn2:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Scope pill'lar */
+.mq-pills { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.mq-pill { border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 999px;
+           padding: 6px 14px; font-size: 0.84rem; font-weight: 700; cursor: pointer; }
+.mq-pill.on { background: rgba(59,130,246,0.1); border-color: #3b82f6; color: #1d4ed8; }
+/* Filtrlar qatori */
+.mq-filters { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.mq-filters label { font-size: 0.8rem; color: #64748b; display: flex; align-items: center; gap: 6px; }
+.mq-num { width: 86px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px;
+          font-size: 0.85rem; font-family: inherit; color: #0f172a; }
+.mq-num:focus { outline: none; border-color: #3b82f6; }
+.mq-concept-chip { display: none; align-items: center; gap: 6px; background: rgba(124,92,252,0.12);
+                   color: #6d28d9; border: 1px solid rgba(124,92,252,0.35); border-radius: 999px;
+                   padding: 5px 12px; font-size: 0.82rem; font-weight: 700; }
+.mq-concept-chip.show { display: inline-flex; }
+.mq-concept-chip button { background: none; border: none; color: inherit; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
+.mq-note { color: #64748b; font-size: 0.82rem; margin-top: 12px; }
+.mq-note a { color: #3b82f6; font-weight: 700; text-decoration: none; }
+.mq-loading { display: none; align-items: center; gap: 10px; margin-top: 18px; color: #475569; font-weight: 600; }
+.mq-loading.show { display: flex; }
+.mq-spin { width: 20px; height: 20px; border: 3px solid #dbeafe; border-top-color: #3b82f6; border-radius: 50%;
+           animation: mq-spin 0.8s linear infinite; }
+@keyframes mq-spin { to { transform: rotate(360deg); } }
+.mq-alert { margin-top: 16px; padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; display: none; }
+.mq-alert.show { display: block; }
+.mq-alert.err { background: rgba(239,68,68,0.1); color: #b91c1c; }
+.mq-alert.ok { background: rgba(34,197,94,0.12); color: #15803d; }
+
+.mq-result { display: none; margin-top: 22px; }
+.mq-result.show { display: block; }
+.mq-card-h { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mq-card-h .mq-count { color: #64748b; font-size: 0.85rem; font-weight: 500; }
+.mq-section { margin-top: 22px; }
+
+/* ── Research gap kartasi ── */
+.mq-gap-card { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; }
+.mq-gap-grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+.mq-gap-stat { font-size: 0.9rem; color: #475569; }
+.mq-gap-stat b { display: block; font-size: 1.45rem; font-weight: 800; color: #0f172a; }
+.mq-gap-bar { height: 12px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
+.mq-gap-fill { height: 100%; border-radius: 999px; min-width: 6px; transition: width 0.4s ease; }
+/* Status ranglari — yorliq matni bilan birga (rang yolg'iz emas) */
+.mq-gap-fill.strong { background: #ef4444; }
+.mq-gap-fill.medium { background: #f59e0b; }
+.mq-gap-fill.low { background: #22c55e; }
+.mq-gap-label { margin-top: 10px; font-size: 0.9rem; font-weight: 700; }
+.mq-gap-label.strong { color: #b91c1c; }
+.mq-gap-label.medium { color: #b45309; }
+.mq-gap-label.low { color: #15803d; }
+
+/* ── Yillik dinamika (D3 small multiples) ── */
+.mq-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .mq-chart-grid { grid-template-columns: 1fr; } }
+.mq-panel { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 14px 16px; }
+.mq-panel-h { font-size: 0.88rem; font-weight: 800; color: #0f172a; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 8px; }
+.mq-panel-h span { color: #64748b; font-weight: 600; }
+.mq-panel svg { width: 100%; height: auto; display: block; }
+.mq-axis-text { font-size: 11px; fill: #94a3b8; }
+.mq-bar-label { font-size: 11px; font-weight: 700; fill: #475569; }
+.mq-grid-line { stroke: rgba(100,116,139,0.15); }
+
+/* ── Maqola kartalari ── */
+.mq-item { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; margin-bottom: 10px; padding: 14px 16px; }
+.mq-item-title { font-weight: 700; color: #0f172a; font-size: 0.97rem; line-height: 1.45; text-decoration: none; display: block; }
+.mq-item-title:hover { color: #2563eb; }
+.mq-item-authors { color: #475569; font-size: 0.84rem; margin-top: 6px; }
+.mq-item-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.mq-tag { font-size: 0.76rem; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0;
+          padding: 2px 9px; border-radius: 999px; }
+.mq-tag.oa { background: rgba(34,197,94,0.12); color: #15803d; border-color: rgba(34,197,94,0.3); font-weight: 700; }
+.mq-item-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+.mq-act { border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 9px;
+          padding: 5px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.mq-act:hover { border-color: #3b82f6; color: #1d4ed8; }
+.mq-act.saved { background: rgba(245,158,11,0.14); border-color: rgba(245,158,11,0.5); color: #b45309; }
+.mq-empty { color: #94a3b8; font-size: 0.92rem; padding: 22px 0; text-align: center; }
+.mq-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
+.mq-pager .mq-page-info { color: #64748b; font-size: 0.85rem; }
+
+/* ── Top jurnallar (CSS gorizontal barlar) ── */
+.mq-jrow { margin-bottom: 10px; }
+.mq-jrow-top { display: flex; justify-content: space-between; gap: 10px; font-size: 0.85rem; color: #1e293b; margin-bottom: 4px; }
+.mq-jrow-top .cnt { color: #64748b; flex-shrink: 0; }
+.mq-jbar { height: 10px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
+.mq-jbar-fill { height: 100%; border-radius: 999px; background: #3b82f6; min-width: 4px; }
+
+/* ── Konsept teglari ── */
+.mq-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mq-chip { border: 1px solid #cbd5e1; background: #fff; color: #475569; border-radius: 999px;
+           padding: 6px 13px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+.mq-chip:hover { border-color: #7c5cfc; color: #6d28d9; }
+.mq-chip .cnt { color: #94a3b8; font-weight: 500; }
+
+/* ── Iqtibos modali ── */
+#mq-cite-bg { position: fixed; inset: 0; z-index: 4100; display: none; align-items: center;
+              justify-content: center; background: rgba(2,6,23,0.7); padding: 16px; }
+#mq-cite-bg.show { display: flex; }
+.mq-cite-modal { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 560px;
+                 width: 100%; padding: 22px; max-height: 86vh; overflow-y: auto; }
+.mq-cite-label { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+                 color: #64748b; margin: 0 0 6px; }
+.mq-cite-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 11px 13px;
+               font-size: 0.87rem; color: #1e293b; line-height: 1.55; margin-bottom: 8px; word-break: break-word; }
+
+[data-bs-theme="dark"] .mq-box, [data-bs-theme="dark"] .mq-gap-card,
+[data-bs-theme="dark"] .mq-panel, [data-bs-theme="dark"] .mq-item { background: #1e293b; border-color: rgba(148,163,184,0.15); }
+[data-bs-theme="dark"] .mq-card-h, [data-bs-theme="dark"] .mq-panel-h,
+[data-bs-theme="dark"] .mq-gap-stat b { color: #e2e8f0; }
+[data-bs-theme="dark"] .mq-input, [data-bs-theme="dark"] .mq-num { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+[data-bs-theme="dark"] .mq-pill { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #94a3b8; }
+[data-bs-theme="dark"] .mq-pill.on { background: rgba(59,130,246,0.18); border-color: #3b82f6; color: #93c5fd; }
+[data-bs-theme="dark"] .mq-btn2 { background: #334155; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
+[data-bs-theme="dark"] .mq-item-title { color: #e2e8f0; }
+[data-bs-theme="dark"] .mq-item-title:hover { color: #93c5fd; }
+[data-bs-theme="dark"] .mq-item-authors { color: #94a3b8; }
+[data-bs-theme="dark"] .mq-tag { background: #0f172a; border-color: rgba(148,163,184,0.2); color: #cbd5e1; }
+[data-bs-theme="dark"] .mq-act { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #cbd5e1; }
+[data-bs-theme="dark"] .mq-chip { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #cbd5e1; }
+[data-bs-theme="dark"] .mq-gap-bar, [data-bs-theme="dark"] .mq-jbar { background: #0f172a; }
+[data-bs-theme="dark"] .mq-jrow-top { color: #cbd5e1; }
+[data-bs-theme="dark"] .mq-cite-modal { background: #1e293b; border-color: rgba(148,163,184,0.2); }
+[data-bs-theme="dark"] .mq-cite-box { background: #0f172a; border-color: rgba(148,163,184,0.2); color: #e2e8f0; }
+[data-bs-theme="dark"] .mq-gap-label.strong { color: #fca5a5; }
+[data-bs-theme="dark"] .mq-gap-label.medium { color: #fcd34d; }
+[data-bs-theme="dark"] .mq-gap-label.low { color: #4ade80; }
+[data-bs-theme="dark"] .mq-bar-label { fill: #cbd5e1; }
+@media (max-width: 560px) {
+  .mq-box { padding: 14px; }
+  .mq-search-row { flex-direction: column; }
+  .mq-btn { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mq-wrap">
+  <h1 class="mq-head">📄 Ilmiy maqolalar tahlili</h1>
+  <p class="mq-sub">OpenAlex — 250 million+ ilmiy maqola bazasi asosida</p>
+
+  <div class="mq-box">
+    <div class="mq-search-row">
+      <input id="mq-q" class="mq-input" type="search" maxlength="{{ max_query_len }}"
+             placeholder="Mavzu yoki kalit so'z kiriting… (masalan: sun'iy intellekt)"
+             value="{{ q }}">
+      <button id="mq-run" class="mq-btn">🔍 Qidirish</button>
+    </div>
+
+    <div class="mq-pills" role="group" aria-label="Qamrov">
+      <button type="button" class="mq-pill on" id="mq-pill-all">Hammasi</button>
+      <button type="button" class="mq-pill" id="mq-pill-uz">🇺🇿 Faqat O'zbekiston</button>
+      <button type="button" class="mq-pill" id="mq-pill-oa">🔓 Ochiq kirish</button>
+    </div>
+
+    <div class="mq-filters">
+      <label>Yildan <input id="mq-yf" class="mq-num" type="number" min="1900" max="2035" placeholder="2015"></label>
+      <label>Yilgacha <input id="mq-yt" class="mq-num" type="number" min="1900" max="2035" placeholder="2026"></label>
+      <label>Min. iqtiboslar <input id="mq-mc" class="mq-num" type="number" min="1" placeholder="10"></label>
+      <span id="mq-concept-chip" class="mq-concept-chip">
+        <span id="mq-concept-name"></span>
+        <button type="button" id="mq-concept-x" aria-label="Konsept filtrini olib tashlash">×</button>
+      </span>
+    </div>
+
+    <div class="mq-note" id="mq-note">
+      {% if not current_user.is_authenticated %}
+        💡 Qidiruv uchun <a href="/login">tizimga kiring</a> — bepul.
+      {% elif is_premium %}
+        ⭐ Premium — cheksiz qidiruv
+      {% else %}
+        💡 Bugun qoldi: <b id="mq-left">{{ searches_left }}</b> / {{ free_daily_limit }} bepul qidiruv
+        · <a href="/premium">Premium — cheksiz</a>
+      {% endif %}
+    </div>
+
+    <div id="mq-loading" class="mq-loading"><span class="mq-spin"></span><span>🔍 Qidirilmoqda…</span></div>
+    <div id="mq-alert" class="mq-alert err"></div>
+  </div>
+
+  <div id="mq-result" class="mq-result">
+    <!-- 1. Research gap -->
+    <div class="mq-section" id="mq-gap-section" style="display:none;">
+      <div class="mq-card-h">🎯 Research gap (bo'shliq) tahlili</div>
+      <div class="mq-gap-card">
+        <div class="mq-gap-grid">
+          <div class="mq-gap-stat">🌍 Global<b id="mq-gap-global">—</b></div>
+          <div class="mq-gap-stat">🇺🇿 O'zbekiston<b id="mq-gap-uz">—</b></div>
+        </div>
+        <div class="mq-gap-bar"><div id="mq-gap-fill" class="mq-gap-fill low" style="width:0%"></div></div>
+        <div id="mq-gap-label" class="mq-gap-label low"></div>
+      </div>
+    </div>
+
+    <!-- 2. Yillik dinamika -->
+    <div class="mq-section" id="mq-chart-section" style="display:none;">
+      <div class="mq-card-h">📈 Yillik dinamika <span class="mq-count">oxirgi 10 yil</span></div>
+      <div class="mq-chart-grid">
+        <div class="mq-panel">
+          <div class="mq-panel-h">🌍 Global <span id="mq-chart-gtotal"></span></div>
+          <div id="mq-chart-global"></div>
+        </div>
+        <div class="mq-panel">
+          <div class="mq-panel-h">🇺🇿 O'zbekiston <span id="mq-chart-utotal"></span></div>
+          <div id="mq-chart-uz"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Maqolalar ro'yxati -->
+    <div class="mq-section">
+      <div class="mq-card-h">📄 Maqolalar <span class="mq-count" id="mq-total"></span></div>
+      <div id="mq-list"></div>
+      <div class="mq-pager" id="mq-pager" style="display:none;">
+        <button type="button" class="mq-btn2" id="mq-prev">← Oldingi</button>
+        <span class="mq-page-info" id="mq-page-info"></span>
+        <button type="button" class="mq-btn2" id="mq-next">Keyingi sahifa →</button>
+      </div>
+    </div>
+
+    <!-- 4. Top jurnallar -->
+    <div class="mq-section" id="mq-journals-section" style="display:none;">
+      <div class="mq-card-h">📚 Top jurnallar <span class="mq-count">bu mavzu bo'yicha</span></div>
+      <div class="mq-gap-card" id="mq-journals"></div>
+    </div>
+
+    <!-- 5. Bog'liq konseptlar -->
+    <div class="mq-section" id="mq-concepts-section" style="display:none;">
+      <div class="mq-card-h">🏷 Bog'liq konseptlar <span class="mq-count">bosib filtrlang</span></div>
+      <div class="mq-chips" id="mq-concepts"></div>
+    </div>
+  </div>
+
+  <!-- Iqtibos modali (GOST + APA) -->
+  <div id="mq-cite-bg">
+    <div class="mq-cite-modal">
+      <h3 style="font-size:1rem;margin:0 0 14px;">📋 Iqtibos olish</h3>
+      <div class="mq-cite-label">GOST (O'zbekiston OAK uslubi)</div>
+      <div class="mq-cite-box" id="mq-cite-gost"></div>
+      <button class="mq-btn2" onclick="mqCopyCite('mq-cite-gost', this)">📋 Nusxalash</button>
+      <div class="mq-cite-label" style="margin-top:16px;">APA 7</div>
+      <div class="mq-cite-box" id="mq-cite-apa"></div>
+      <button class="mq-btn2" onclick="mqCopyCite('mq-cite-apa', this)">📋 Nusxalash</button>
+      <div style="text-align:right;margin-top:12px;">
+        <button class="mq-btn2" id="mq-cite-close">Yopish</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="/static/js/paywall.js?v=20260717"></script>
+<script>
+(function () {
+  var LOGGED_IN = window.OAK_LOGGED_IN === true;
+  var PREFILL = {{ q|tojson }};
+  var PAYWALL_FALLBACK = {
+    feature_name: 'Maqolalar tahlili',
+    benefits: ['Cheksiz maqola qidiruvi va research gap tahlili',
+               "250 mln+ maqola (OpenAlex) bo'yicha filtrlar",
+               'GOST/APA iqtibos va saqlash — cheklovsiz']
+  };
+  var GAP_TEXT = {
+    strong: "🔴 Kuchli bo'shliq — bu mavzu O'zbekistonda deyarli o'rganilmagan. Research gap katta!",
+    medium: "🟡 O'rtacha bo'shliq — mavzu O'zbekistonda qisman o'rganilgan.",
+    low:    "🟢 Yaxshi qamrov — mavzu O'zbekistonda faol o'rganilmoqda."
+  };
+
+  var qEl = document.getElementById('mq-q');
+  var runBtn = document.getElementById('mq-run');
+  var loadingEl = document.getElementById('mq-loading');
+  var alertEl = document.getElementById('mq-alert');
+  var resultEl = document.getElementById('mq-result');
+  var listEl = document.getElementById('mq-list');
+  var pagerEl = document.getElementById('mq-pager');
+
+  var state = {
+    query: '', page: 1, total: 0, hasNext: false, works: [],
+    uzOnly: false, oaOnly: false, concept: null, conceptName: ''
+  };
+  var savedSet = {};   // openalex_id -> true
+  var citeWork = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function fmt(n) { return String(n == null ? 0 : n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function fmtShort(n) {
+    if (n >= 1e6) return (Math.round(n / 1e5) / 10) + ' mln';
+    if (n >= 1e3) return (Math.round(n / 100) / 10) + ' ming';
+    return String(n);
+  }
+  function isDark() {
+    return document.documentElement.getAttribute('data-bs-theme') !== 'light';
+  }
+  function showAlert(msg, ok) {
+    alertEl.textContent = msg;
+    alertEl.classList.toggle('err', !ok);
+    alertEl.classList.toggle('ok', !!ok);
+    alertEl.classList.add('show');
+  }
+  function hideAlert() { alertEl.classList.remove('show'); }
+  function askLogin() {
+    window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'maqolalar' } }));
+  }
+
+  // ── Scope pill'lar ──
+  var pillAll = document.getElementById('mq-pill-all');
+  var pillUz = document.getElementById('mq-pill-uz');
+  var pillOa = document.getElementById('mq-pill-oa');
+  function syncPills() {
+    pillAll.classList.toggle('on', !state.uzOnly && !state.oaOnly);
+    pillUz.classList.toggle('on', state.uzOnly);
+    pillOa.classList.toggle('on', state.oaOnly);
+  }
+  pillAll.addEventListener('click', function () {
+    state.uzOnly = false; state.oaOnly = false; syncPills();
+    if (state.query) doSearch(1);
+  });
+  pillUz.addEventListener('click', function () {
+    state.uzOnly = !state.uzOnly; syncPills();
+    if (state.query) doSearch(1);
+  });
+  pillOa.addEventListener('click', function () {
+    state.oaOnly = !state.oaOnly; syncPills();
+    if (state.query) doSearch(1);
+  });
+
+  // ── Konsept filtri ──
+  var conceptChip = document.getElementById('mq-concept-chip');
+  function setConcept(id, name) {
+    state.concept = id || null;
+    state.conceptName = name || '';
+    document.getElementById('mq-concept-name').textContent = name ? '🏷 ' + name : '';
+    conceptChip.classList.toggle('show', !!id);
+  }
+  document.getElementById('mq-concept-x').addEventListener('click', function () {
+    setConcept(null, '');
+    if (state.query) doSearch(1);
+  });
+
+  function collectFilters() {
+    var yf = parseInt(document.getElementById('mq-yf').value, 10);
+    var yt = parseInt(document.getElementById('mq-yt').value, 10);
+    var mc = parseInt(document.getElementById('mq-mc').value, 10);
+    return {
+      year_from: isNaN(yf) ? null : yf,
+      year_to: isNaN(yt) ? null : yt,
+      min_cited: isNaN(mc) ? null : mc,
+      oa_only: state.oaOnly,
+      uz_only: state.uzOnly,
+      concept: state.concept
+    };
+  }
+
+  // ── Qidiruv ──
+  function doSearch(page) {
+    var q = qEl.value.trim();
+    hideAlert();
+    if (q.length < 3) { showAlert("Kamida 3 ta belgi kiriting."); return; }
+    if (!LOGGED_IN) { askLogin(); return; }
+    state.query = q;
+    runBtn.disabled = true;
+    loadingEl.classList.add('show');
+
+    fetch('/api/maqolalar/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q, page: page, filters: collectFilters() })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, status: r.status, data: d }; });
+    }).then(function (res) {
+      loadingEl.classList.remove('show');
+      runBtn.disabled = false;
+      var d = res.data || {};
+      if (!res.ok) {
+        if (res.status === 401) { askLogin(); return; }
+        if (res.status === 402) {
+          window.showPaywall(d.paywall || PAYWALL_FALLBACK);
+          showAlert(d.message || 'Kunlik limit tugadi.');
+          return;
+        }
+        showAlert(d.message || "Xatolik yuz berdi. Qayta urinib ko'ring.");
+        return;
+      }
+      render(d, page);
+    }).catch(function () {
+      loadingEl.classList.remove('show');
+      runBtn.disabled = false;
+      showAlert("Tarmoq xatosi. Qayta urinib ko'ring.");
+    });
+  }
+
+  function render(d, page) {
+    state.page = d.page || page;
+    state.total = d.total || 0;
+    state.hasNext = !!d.has_next;
+    state.works = d.works || [];
+    if (typeof d.searches_left === 'number') {
+      var leftEl = document.getElementById('mq-left');
+      if (leftEl) leftEl.textContent = d.searches_left;
+    }
+    renderList();
+    renderPager();
+    if (state.page === 1) {
+      renderGap(d.gap);
+      renderYearly(d.yearly);
+      renderJournals(d.journals || []);
+      renderConcepts(d.concepts || []);
+    }
+    resultEl.classList.add('show');
+    if (state.page > 1) {
+      listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  // ── 1. Research gap ──
+  function renderGap(gap) {
+    var sec = document.getElementById('mq-gap-section');
+    if (!gap) { sec.style.display = 'none'; return; }
+    document.getElementById('mq-gap-global').textContent = fmt(gap.global_total);
+    document.getElementById('mq-gap-uz').textContent = fmt(gap.uz_total);
+    var fill = document.getElementById('mq-gap-fill');
+    var label = document.getElementById('mq-gap-label');
+    fill.className = 'mq-gap-fill ' + gap.label;
+    fill.style.width = Math.round(gap.score * 100) + '%';
+    label.className = 'mq-gap-label ' + gap.label;
+    label.textContent = GAP_TEXT[gap.label] || '';
+    sec.style.display = '';
+  }
+
+  // ── 2. Yillik dinamika: ikkita bir xil o'qli panel (dual-axis emas) ──
+  function drawPanel(elId, years, counts, color) {
+    var el = document.getElementById(elId);
+    el.innerHTML = '';
+    var W = 420, H = 190, m = { t: 16, r: 6, b: 22, l: 40 };
+    var svg = d3.select(el).append('svg')
+      .attr('viewBox', '0 0 ' + W + ' ' + H)
+      .attr('role', 'img');
+    var x = d3.scaleBand().domain(years).range([m.l, W - m.r]).padding(0.25);
+    var maxV = d3.max(counts) || 1;
+    var y = d3.scaleLinear().domain([0, maxV]).nice().range([H - m.b, m.t]);
+
+    var ticks = y.ticks(3);
+    svg.selectAll('.mq-grid-line').data(ticks).enter().append('line')
+      .attr('class', 'mq-grid-line')
+      .attr('x1', m.l).attr('x2', W - m.r)
+      .attr('y1', function (t) { return y(t); })
+      .attr('y2', function (t) { return y(t); });
+    svg.selectAll('.mq-ytick').data(ticks).enter().append('text')
+      .attr('class', 'mq-axis-text')
+      .attr('x', m.l - 6).attr('y', function (t) { return y(t) + 4; })
+      .attr('text-anchor', 'end')
+      .text(function (t) { return fmtShort(t); });
+    svg.selectAll('.mq-xtick').data(years).enter().append('text')
+      .attr('class', 'mq-axis-text')
+      .attr('x', function (yr) { return x(yr) + x.bandwidth() / 2; })
+      .attr('y', H - 6).attr('text-anchor', 'middle')
+      .text(function (yr, i) { return (i % 2 === 0) ? "'" + String(yr).slice(2) : ''; });
+
+    var maxIdx = counts.indexOf(maxV);
+    var bars = svg.selectAll('.mq-bar').data(years).enter().append('g');
+    bars.append('rect')
+      .attr('x', function (yr) { return x(yr); })
+      .attr('y', function (yr, i) { return counts[i] > 0 ? y(counts[i]) : H - m.b - 2; })
+      .attr('width', x.bandwidth())
+      .attr('height', function (yr, i) { return counts[i] > 0 ? (H - m.b - y(counts[i])) : 2; })
+      .attr('rx', 3).attr('fill', color)
+      .append('title')
+      .text(function (yr, i) { return yr + ' — ' + fmt(counts[i]) + ' ta maqola'; });
+    // Tanlangan to'g'ridan-to'g'ri yorliqlar: maksimum va oxirgi yil
+    svg.selectAll('.mq-bar-label')
+      .data(years.filter(function (yr, i) {
+        return (i === maxIdx || i === years.length - 1) && counts[i] > 0;
+      }))
+      .enter().append('text')
+      .attr('class', 'mq-bar-label')
+      .attr('x', function (yr) { return x(yr) + x.bandwidth() / 2; })
+      .attr('y', function (yr) { return y(counts[years.indexOf(yr)]) - 4; })
+      .attr('text-anchor', 'middle')
+      .text(function (yr) { return fmtShort(counts[years.indexOf(yr)]); });
+  }
+
+  function renderYearly(yearly) {
+    var sec = document.getElementById('mq-chart-section');
+    if (!yearly || !window.d3 || !(d3.max(yearly.global) || d3.max(yearly.uz))) {
+      sec.style.display = 'none';
+      return;
+    }
+    var uzColor = isDark() ? '#0d9f6e' : '#10b981';
+    document.getElementById('mq-chart-gtotal').textContent =
+      fmt(yearly.global.reduce(function (a, b) { return a + b; }, 0)) + ' ta';
+    document.getElementById('mq-chart-utotal').textContent =
+      fmt(yearly.uz.reduce(function (a, b) { return a + b; }, 0)) + ' ta';
+    drawPanel('mq-chart-global', yearly.years, yearly.global, '#3b82f6');
+    drawPanel('mq-chart-uz', yearly.years, yearly.uz, uzColor);
+    sec.style.display = '';
+  }
+
+  // ── 3. Maqola kartalari ──
+  function workUrl(w) {
+    return w.doi || w.oa_url || ('https://openalex.org/' + w.id);
+  }
+  function renderList() {
+    document.getElementById('mq-total').textContent = fmt(state.total) + ' ta topildi';
+    if (!state.works.length) {
+      listEl.innerHTML = '<div class="mq-empty">Natija topilmadi. Boshqa kalit so\'z sinab ko\'ring.</div>';
+      return;
+    }
+    var html = '';
+    state.works.forEach(function (w, i) {
+      var authors = (w.authors || []).slice(0, 4).join(', ');
+      if ((w.authors_total || 0) > 4) authors += ' va b.';
+      var isSaved = !!savedSet[w.id];
+      html += '<div class="mq-item">' +
+        '<a class="mq-item-title" href="' + esc(workUrl(w)) + '" target="_blank" rel="noopener">' +
+          esc(w.title) + '</a>' +
+        (authors ? '<div class="mq-item-authors">👤 ' + esc(authors) + '</div>' : '') +
+        '<div class="mq-item-meta">' +
+          (w.year ? '<span class="mq-tag">📅 ' + w.year + '</span>' : '') +
+          (w.journal ? '<span class="mq-tag">📚 ' + esc(w.journal) + '</span>' : '') +
+          '<span class="mq-tag">🔁 ' + fmt(w.cited_by) + ' iqtibos</span>' +
+          (w.is_oa ? '<span class="mq-tag oa">🔓 Ochiq kirish</span>' : '') +
+        '</div>' +
+        '<div class="mq-item-actions">' +
+          '<button type="button" class="mq-act" data-cite="' + i + '">📋 Iqtibos</button>' +
+          '<button type="button" class="mq-act' + (isSaved ? ' saved' : '') + '" data-save="' + i + '">' +
+            (isSaved ? '★ Saqlangan' : '☆ Saqlash') + '</button>' +
+        '</div>' +
+      '</div>';
+    });
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('[data-cite]').forEach(function (b) {
+      b.addEventListener('click', function () { openCite(parseInt(b.getAttribute('data-cite'), 10)); });
+    });
+    listEl.querySelectorAll('[data-save]').forEach(function (b) {
+      b.addEventListener('click', function () { toggleSave(parseInt(b.getAttribute('data-save'), 10), b); });
+    });
+  }
+
+  function renderPager() {
+    if (!state.works.length && state.page === 1) { pagerEl.style.display = 'none'; return; }
+    pagerEl.style.display = '';
+    document.getElementById('mq-prev').disabled = state.page <= 1;
+    document.getElementById('mq-next').disabled = !state.hasNext;
+    document.getElementById('mq-page-info').textContent = 'Sahifa ' + state.page;
+  }
+  document.getElementById('mq-prev').addEventListener('click', function () {
+    if (state.page > 1) doSearch(state.page - 1);
+  });
+  document.getElementById('mq-next').addEventListener('click', function () {
+    if (state.hasNext) doSearch(state.page + 1);
+  });
+
+  // ── 4. Top jurnallar ──
+  function renderJournals(journals) {
+    var sec = document.getElementById('mq-journals-section');
+    if (!journals.length) { sec.style.display = 'none'; return; }
+    var max = journals[0].count || 1;
+    document.getElementById('mq-journals').innerHTML = journals.map(function (j) {
+      var w = Math.max(3, Math.round((j.count / max) * 100));
+      return '<div class="mq-jrow">' +
+        '<div class="mq-jrow-top"><span>' + esc(j.name) + '</span>' +
+          '<span class="cnt">' + fmt(j.count) + ' ta</span></div>' +
+        '<div class="mq-jbar"><div class="mq-jbar-fill" style="width:' + w + '%"></div></div>' +
+      '</div>';
+    }).join('');
+    sec.style.display = '';
+  }
+
+  // ── 5. Konsept teglari ──
+  function renderConcepts(concepts) {
+    var sec = document.getElementById('mq-concepts-section');
+    var wrap = document.getElementById('mq-concepts');
+    if (!concepts.length) { sec.style.display = 'none'; return; }
+    wrap.innerHTML = '';
+    concepts.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mq-chip';
+      b.innerHTML = esc(c.name) + ' <span class="cnt">· ' + fmtShort(c.count) + '</span>';
+      b.addEventListener('click', function () {
+        setConcept(c.id, c.name);
+        doSearch(1);
+      });
+      wrap.appendChild(b);
+    });
+    sec.style.display = '';
+  }
+
+  // ── Iqtibos (GOST + APA) ──
+  function authorShort(name, apa) {
+    var parts = String(name || '').trim().split(/\s+/);
+    if (parts.length < 2) return parts[0] || '';
+    var fam = parts[parts.length - 1];
+    var initials = parts.slice(0, -1).map(function (p) {
+      return p[0] ? p[0].toUpperCase() + '.' : '';
+    }).join('');
+    return apa ? fam + ', ' + initials : fam + ' ' + initials;
+  }
+  function buildGost(w) {
+    var names = (w.authors || []).slice(0, 3).map(function (n) { return authorShort(n, false); });
+    var auth = names.join(', ');
+    if ((w.authors_total || 0) > 3) auth += ' va b.';
+    var out = (auth ? auth + ' ' : '') + w.title +
+      (w.journal ? ' // ' + w.journal : '') + '.';
+    if (w.year) out += ' — ' + w.year + '.';
+    if (w.volume) out += ' — T. ' + w.volume + (w.issue ? ', № ' + w.issue : '') + '.';
+    else if (w.issue) out += ' — № ' + w.issue + '.';
+    if (w.first_page) out += ' — B. ' + w.first_page + (w.last_page ? '–' + w.last_page : '') + '.';
+    if (w.doi) out += ' — DOI: ' + w.doi.replace('https://doi.org/', '') + '.';
+    return out.replace(/\s+/g, ' ').trim();
+  }
+  function buildApa(w) {
+    var names = (w.authors || []).slice(0, 6).map(function (n) { return authorShort(n, true); });
+    var auth = names.length > 1
+      ? names.slice(0, -1).join(', ') + ', & ' + names[names.length - 1]
+      : (names[0] || '');
+    if ((w.authors_total || 0) > 6) auth += ', et al.';
+    var parts = [];
+    if (auth) parts.push(auth);
+    if (w.year) parts.push('(' + w.year + ').');
+    parts.push(w.title + '.');
+    if (w.journal) {
+      var j = w.journal;
+      if (w.volume) j += ', ' + w.volume + (w.issue ? '(' + w.issue + ')' : '');
+      if (w.first_page) j += ', ' + w.first_page + (w.last_page ? '–' + w.last_page : '');
+      parts.push(j + '.');
+    }
+    if (w.doi) parts.push(w.doi);
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+  function openCite(idx) {
+    var w = state.works[idx];
+    if (!w) return;
+    citeWork = w;
+    document.getElementById('mq-cite-gost').textContent = buildGost(w);
+    document.getElementById('mq-cite-apa').textContent = buildApa(w);
+    document.getElementById('mq-cite-bg').classList.add('show');
+  }
+  window.mqCopyCite = function (boxId, btn) {
+    var text = document.getElementById(boxId).textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+      .then(function () {
+        btn.textContent = '✓ Nusxalandi';
+        setTimeout(function () { btn.textContent = '📋 Nusxalash'; }, 1500);
+      })
+      .catch(function () { prompt('Nusxalang:', text); });
+  };
+  var citeBg = document.getElementById('mq-cite-bg');
+  citeBg.addEventListener('click', function (e) { if (e.target === citeBg) citeBg.classList.remove('show'); });
+  document.getElementById('mq-cite-close').addEventListener('click', function () {
+    citeBg.classList.remove('show');
+  });
+
+  // ── Saqlash ──
+  function toggleSave(idx, btn) {
+    if (!LOGGED_IN) { askLogin(); return; }
+    var w = state.works[idx];
+    if (!w) return;
+    btn.disabled = true;
+    fetch('/api/maqolalar/bookmark', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        openalex_id: w.id, title: w.title,
+        authors: (w.authors || []).join('; '),
+        journal: w.journal, year: w.year, doi: w.doi, oa_url: w.oa_url
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (!d || !d.success) return;
+      savedSet[w.id] = d.saved;
+      btn.classList.toggle('saved', d.saved);
+      btn.textContent = d.saved ? '★ Saqlangan' : '☆ Saqlash';
+    }).catch(function () { btn.disabled = false; });
+  }
+
+  if (LOGGED_IN) {
+    fetch('/api/maqolalar/bookmark/ids')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        ((d && d.ids) || []).forEach(function (id) { savedSet[id] = true; });
+      }).catch(function () {});
+  }
+
+  runBtn.addEventListener('click', function () { doSearch(1); });
+  qEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); doSearch(1); }
+  });
+
+  // /mavzu/tahlil dan kelgan ?q= — avtomatik qidiruv
+  if (PREFILL && PREFILL.length >= 3 && LOGGED_IN) doSearch(1);
+})();
+</script>
+{% endblock %}

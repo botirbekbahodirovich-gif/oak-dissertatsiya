@@ -129,6 +129,22 @@
 [data-bs-theme="dark"] .ta-analysis strong { color: #e2e8f0; }
 [data-bs-theme="dark"] .ta-item-head:hover { background: #162032; }
 [data-bs-theme="dark"] .ta-hist-item { border-color: rgba(148,163,184,0.12); color: #94a3b8; }
+
+/* Maqolalar bloki (OpenAlex preview) */
+.ta-maq-link { display: inline-block; margin-top: 12px; text-decoration: none; }
+.ta-gap-mini { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 14px 16px;
+               margin-bottom: 10px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+               font-size: 0.9rem; color: #475569; }
+.ta-gap-mini b { color: #0f172a; }
+.ta-gap-chip { font-size: 0.78rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+.ta-gap-chip.strong { background: rgba(239,68,68,0.12); color: #b91c1c; }
+.ta-gap-chip.medium { background: rgba(245,158,11,0.16); color: #b45309; }
+.ta-gap-chip.low { background: rgba(34,197,94,0.12); color: #15803d; }
+[data-bs-theme="dark"] .ta-gap-mini { background: #1e293b; border-color: rgba(148,163,184,0.15); color: #94a3b8; }
+[data-bs-theme="dark"] .ta-gap-mini b { color: #e2e8f0; }
+[data-bs-theme="dark"] .ta-gap-chip.strong { background: rgba(239,68,68,0.2); color: #fca5a5; }
+[data-bs-theme="dark"] .ta-gap-chip.medium { background: rgba(245,158,11,0.2); color: #fcd34d; }
+[data-bs-theme="dark"] .ta-gap-chip.low { background: rgba(34,197,94,0.18); color: #4ade80; }
 @media (max-width: 520px) { .ta-box, .ta-analysis { padding: 14px; } }
 </style>
 {% endblock %}
@@ -195,6 +211,15 @@
       <div class="ta-card-h">📚 O'xshash dissertatsiyalar
         <span id="ta-sim-count" class="ta-sim-count"></span></div>
       <div id="ta-acc" class="ta-acc"></div>
+    </div>
+
+    <!-- MAQOLALAR BLOKI: OpenAlex preview — tahlil bilan birga fon so'rovida
+         yuklanadi; OpenAlex yotsa blok jimgina yashiriladi. -->
+    <div id="maqolalar-blok" data-topic="" style="display:none; margin-top:22px;">
+      <div class="ta-card-h">📄 Bu mavzu bo'yicha global maqolalar</div>
+      <div id="gap-mini-card"></div>
+      <div id="articles-preview"></div>
+      <a id="maq-all-link" href="/maqolalar-tahlili" class="ta-btn ta-maq-link">📄 Maqolalar ham tahlil qiling →</a>
     </div>
   </div>
 
@@ -535,6 +560,7 @@
       }
       resultEl.classList.add('show');
       prependHistory(topic, d.similar_count || 0);
+      loadMaqolalar(topic);
       if (d.credit_used) {
         showAlert('✅ Tahlil tayyor (1 kredit ishlatildi' +
           (typeof d.credits_left === 'number' ? ', qoldi: ' + d.credits_left + ' ta' : '') + ').', true);
@@ -549,6 +575,52 @@
       runBtn.disabled = false;
       showAlert('Tarmoq xatosi. Iltimos, qayta urinib ko\'ring.');
     });
+  }
+
+  // ── Maqolalar bloki (OpenAlex preview) — asosiy natijani bloklamaydi:
+  //    tahlil chiqqach fon so'rovi; xatoda blok jimgina yashiriladi. ──
+  function fmtNum(n) { return String(n == null ? 0 : n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function loadMaqolalar(topic) {
+    var blok = document.getElementById('maqolalar-blok');
+    if (!blok) return;
+    var gapEl = document.getElementById('gap-mini-card');
+    var prevEl = document.getElementById('articles-preview');
+    blok.dataset.topic = topic;
+    document.getElementById('maq-all-link').href =
+      '/maqolalar-tahlili?q=' + encodeURIComponent(topic);
+    blok.style.display = '';
+    gapEl.innerHTML = '<div class="ta-empty">📄 Maqolalar yuklanmoqda…</div>';
+    prevEl.innerHTML = '';
+    fetch('/api/maqolalar/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: topic, preview: 1 })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('maqolalar');
+      return r.json();
+    }).then(function (d) {
+      var works = (d && d.works) || [];
+      if (!d || !d.gap || !works.length) { blok.style.display = 'none'; return; }
+      var GAP_LBL = { strong: "Kuchli bo'shliq", medium: "O'rtacha bo'shliq", low: 'Yaxshi qamrov' };
+      gapEl.innerHTML = '<div class="ta-gap-mini">' +
+        '<span>🌍 Global: <b>' + fmtNum(d.gap.global_total) + '</b> ta</span>' +
+        '<span>🇺🇿 O\'zbekiston: <b>' + fmtNum(d.gap.uz_total) + '</b> ta</span>' +
+        '<span class="ta-gap-chip ' + esc(d.gap.label) + '">' + (GAP_LBL[d.gap.label] || '') + '</span>' +
+        '</div>';
+      prevEl.innerHTML = works.map(function (w) {
+        var url = w.doi || w.oa_url || ('https://openalex.org/' + w.id);
+        var meta = [];
+        if (w.journal) meta.push('📚 ' + esc(w.journal));
+        if (w.year) meta.push('📅 ' + w.year);
+        meta.push('🔁 ' + fmtNum(w.cited_by) + ' iqtibos');
+        return '<div class="ta-item"><div class="ta-item-head" style="cursor:default;">' +
+          '<div class="ta-item-body">' +
+            '<a class="ta-item-title" href="' + esc(url) + '" target="_blank" rel="noopener" ' +
+              'style="text-decoration:none;display:block;">' + esc(w.title) + '</a>' +
+            '<div class="ta-item-meta">' + meta.join(' · ') + '</div>' +
+          '</div></div></div>';
+      }).join('');
+    }).catch(function () { blok.style.display = 'none'; });
   }
 
   // ── ixtisoslik obunasi (tahlil natijasidan bir bosishda) ──
