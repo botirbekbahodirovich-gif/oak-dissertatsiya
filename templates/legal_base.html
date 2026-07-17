@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{# Huquqiy hujjatlar uchun umumiy maket: oq hujjat-karta, raqamlangan bo'limlar,
+   print CSS. Har bir sahifa legal_title / legal_updated / legal_body bloklarini
+   to'ldiradi. #}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.legal-lite { background: #f8fafc; color: #0f172a; min-height: 70vh; padding: 48px 0 72px; }
+.legal-narrow { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+.legal-lite h1 { font-size: 1.9rem; font-weight: 800; color: #0f172a; margin: 0 0 6px; }
+.legal-updated { color: #64748b; font-size: 0.88rem; margin: 0 0 26px; }
+.legal-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 36px 40px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.06); line-height: 1.75; color: #334155; }
+.legal-card h2 { font-size: 1.12rem; font-weight: 800; color: #0f172a; margin: 28px 0 10px; }
+.legal-card h2:first-child { margin-top: 0; }
+.legal-card p { margin: 0 0 12px; }
+.legal-card ul, .legal-card ol { margin: 6px 0 14px; padding-left: 24px; }
+.legal-card li { margin: 4px 0; }
+.legal-card strong { color: #0f172a; }
+.legal-card a { color: #2563eb; font-weight: 600; text-decoration: none; }
+.legal-card a:hover { text-decoration: underline; }
+.legal-placeholder { background: #fef9c3; border-radius: 4px; padding: 0 4px; font-weight: 600; color: #854d0e; }
+.legal-contact { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; margin-top: 8px; }
+.legal-nav { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; font-size: 0.9rem; }
+.legal-nav a { color: #2563eb; font-weight: 600; text-decoration: none; }
+.legal-nav a:hover { text-decoration: underline; }
+@media (max-width: 639px) { .legal-card { padding: 22px 20px; } .legal-lite h1 { font-size: 1.45rem; } }
+@media print {
+  .site-header, .oak-footer, .legal-nav, #pwa-install-banner { display: none !important; }
+  .legal-lite { background: #fff; padding: 0; }
+  .legal-card { border: none; box-shadow: none; padding: 0; }
+  .legal-lite h1 { font-size: 1.4rem; }
+  a { color: #0f172a !important; text-decoration: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-lite">
+  <div class="legal-narrow">
+    <h1>{% block legal_title %}{% endblock %}</h1>
+    <p class="legal-updated">Oxirgi yangilanish: {% block legal_updated %}2026-yil 17-iyul{% endblock %}</p>
+    <div class="legal-card">
+      {% block legal_body %}{% endblock %}
+    </div>
+    <div class="legal-nav">
+      <a href="/oferta">Ommaviy oferta</a>
+      <a href="/tolovni-qaytarish">To'lovni qaytarish siyosati</a>
+      <a href="/maxfiylik">Maxfiylik siyosati</a>
+      <a href="#" onclick="window.print(); return false;">🖨 Chop etish</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
