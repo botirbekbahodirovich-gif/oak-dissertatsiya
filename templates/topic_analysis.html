@@ -95,6 +95,15 @@
 .ta-hist-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ta-hist-m { flex-shrink: 0; color: #94a3b8; }
 
+/* Bepul (qisqartirilgan) natija — qulflangan bloklar */
+.ta-lock-card { border: 1px dashed #cbd5e1; border-radius: 14px; background: #f8fafc; padding: 22px; text-align: center; position: relative; overflow: hidden; }
+.ta-lock-blur { filter: blur(6px); user-select: none; pointer-events: none; color: #64748b; text-align: left; }
+.ta-lock-msg { font-weight: 800; color: #0f172a; margin: 12px 0 2px; }
+.ta-lock-sub { color: #64748b; font-size: 0.85rem; margin-bottom: 12px; }
+.ta-lock-list { margin-top: 10px; }
+[data-bs-theme="dark"] .ta-lock-card { background: #162032; border-color: rgba(148,163,184,0.3); }
+[data-bs-theme="dark"] .ta-lock-msg { color: #e2e8f0; }
+
 [data-bs-theme="dark"] .ta-box,
 [data-bs-theme="dark"] .ta-analysis,
 [data-bs-theme="dark"] .ta-stat-card,
@@ -133,7 +142,12 @@
     <textarea id="ta-topic" class="ta-textarea" maxlength="{{ max_topic_len }}"
       placeholder="Rejalashtirayotgan dissertatsiya mavzuingizni kiriting…&#10;Masalan: Sun'iy neyron tarmoqlar asosida tibbiy tasvir tasniflash"></textarea>
     <div class="ta-row">
-      <span class="ta-note">💡 Kuniga {{ daily_limit }} ta bepul tahlil</span>
+      <span class="ta-note">
+        {% if is_premium %}⭐ Premium — cheksiz tahlil
+        {% else %}💡 Oyiga {{ free_monthly_limit }} ta bepul tahlil{% if credits %} · 🎟 Kredit: {{ credits }} ta{% endif %}
+          · <a href="/premium" style="color:#3b82f6;font-weight:700;text-decoration:none;">Premium — cheksiz</a>
+        {% endif %}
+      </span>
       <span id="ta-counter" class="ta-counter">0 / {{ max_topic_len }}</span>
     </div>
     <div class="ta-row" style="margin-top:12px;">
@@ -203,9 +217,19 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/paywall.js?v=20260717"></script>
 <script>
 (function () {
   var BM_KEY = 'oak_diss_bookmarks';
+  // Backend 402/locked javobidagi paywall obyekti bo'lmasa zaxira qiymat.
+  var PAYWALL_FALLBACK = {
+    feature_name: 'AI mavzu tahlili',
+    one_time_product: 'topic_analysis_1',
+    one_time_price: 5000,
+    benefits: ["To'liq AI xulosa va tavsiyalar",
+               "Barcha o'xshash ishlar ro'yxati",
+               'Faol rahbarlar va muassasalar statistikasi']
+  };
   var topicEl = document.getElementById('ta-topic');
   var counterEl = document.getElementById('ta-counter');
   var runBtn = document.getElementById('ta-run');
@@ -427,6 +451,38 @@
     });
   }
 
+  // ── Qulflangan (bepul) natija bloklari ──
+  function lockedAnalysisHtml() {
+    return '<div class="ta-lock-card">' +
+      '<div class="ta-lock-blur">' +
+        '<p><strong>O\'xshashlik darajasi:</strong> mavzuning takrorlanish xavfi va sabablari…</p>' +
+        '<p><strong>Farqlanish yo\'llari:</strong> eng yaqin ishlardan qanday ajralib turish…</p>' +
+        '<p><strong>Tavsiyalar:</strong> mavzuni toraytirish/kengaytirish bo\'yicha…</p>' +
+      '</div>' +
+      '<div class="ta-lock-msg">🔒 AI xulosa qulflangan</div>' +
+      '<div class="ta-lock-sub">To\'liq tahlil: AI xulosa, barcha o\'xshash ishlar, rahbarlar va muassasalar statistikasi</div>' +
+      '<button type="button" class="ta-btn ta-unlock">🔓 Ochish — 5 000 so\'m yoki Premium</button>' +
+      '</div>';
+  }
+  function appendSimilarLock(d) {
+    var hidden = (d.similar_count || 0) - (d.similar || []).length;
+    var div = document.createElement('div');
+    div.className = 'ta-lock-card ta-lock-list';
+    div.innerHTML =
+      '<div class="ta-lock-msg">🔒 Yana ' + hidden + ' ta o\'xshash ish qulflangan</div>' +
+      '<div class="ta-lock-sub">Bepul rejimda faqat eng yaqin ' + (d.similar || []).length + ' ta ish ko\'rsatiladi</div>' +
+      '<button type="button" class="ta-btn ta-unlock">🔓 Barchasini ochish</button>';
+    accEl.appendChild(div);
+    wireUnlockBtns(div, d.paywall);
+  }
+  function wireUnlockBtns(root, paywall) {
+    root.querySelectorAll('.ta-unlock').forEach(function (b) {
+      b.addEventListener('click', function () {
+        window.showPaywall(paywall || PAYWALL_FALLBACK);
+      });
+    });
+  }
+
   function prependHistory(topic, count) {
     var empty = histListEl.querySelector('.ta-empty');
     if (empty) empty.remove();
@@ -457,17 +513,35 @@
       runBtn.disabled = false;
       var d = res.data || {};
       if (!res.ok) {
+        if (res.status === 402) {
+          window.showPaywall(d.paywall || PAYWALL_FALLBACK);
+          showAlert(d.message || 'Bepul limit tugadi.');
+          return;
+        }
         showAlert(d.message || 'Xatolik yuz berdi. Iltimos, qayta urinib ko\'ring.');
         return;
       }
-      analysisEl.innerHTML = mdToHtml(d.analysis || '');
+      if (d.locked) {
+        analysisEl.innerHTML = lockedAnalysisHtml();
+        wireUnlockBtns(analysisEl, d.paywall);
+      } else {
+        analysisEl.innerHTML = mdToHtml(d.analysis || '');
+      }
       simCountEl.textContent = (d.similar_count || 0) + ' ta topildi';
       renderStats(d);
       renderSimilar(d.similar || []);
+      if (d.locked && (d.similar_count || 0) > (d.similar || []).length) {
+        appendSimilarLock(d);
+      }
       resultEl.classList.add('show');
       prependHistory(topic, d.similar_count || 0);
-      if (typeof d.remaining_today === 'number') {
-        showAlert('✅ Tahlil tayyor. Bugun yana ' + d.remaining_today + ' ta tahlil qoldi.', true);
+      if (d.credit_used) {
+        showAlert('✅ Tahlil tayyor (1 kredit ishlatildi' +
+          (typeof d.credits_left === 'number' ? ', qoldi: ' + d.credits_left + ' ta' : '') + ').', true);
+      } else if (d.locked) {
+        showAlert('✅ Bepul tahlil tayyor — to\'liq natija (AI xulosa, barcha o\'xshash ishlar) Premium yoki kredit bilan ochiladi.', true);
+      } else {
+        showAlert('✅ Tahlil tayyor.', true);
       }
       resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function () {

@@ -1339,16 +1339,16 @@ def project_create():
     try:
         with conn.cursor() as cur:
             _ensure_schema(cur)
-            cur.execute("SELECT COALESCE(is_premium, FALSE) FROM users WHERE id = %s",
-                        (current_user.id,))
-            premium = bool((cur.fetchone() or [False])[0])
-            if not premium:
+            from blueprints.payments import user_has_premium
+            if not user_has_premium(current_user.id, cur):
                 cur.execute("SELECT COUNT(*) FROM diss_projects "
                             "WHERE owner_id = %s AND status <> 'archived'",
                             (current_user.id,))
                 if (cur.fetchone()[0] or 0) >= 1:
                     return jsonify({'success': False,
-                                    'error': 'Bepul tarifda 1 ta loyiha yaratish mumkin'}), 403
+                                    'error': 'Bepul tarifda 1 ta loyiha. '
+                                             'Premium bilan cheksiz — /premium',
+                                    'paywall': 'premium'}), 403
             cur.execute("""
                 INSERT INTO diss_projects (owner_id, title, degree_type, specialty_code)
                 VALUES (%s, %s, %s, %s) RETURNING id

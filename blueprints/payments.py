@@ -165,6 +165,16 @@ def _log_event(cur, event, payment_id=None, tx_id=None, raw=''):
 
 # ── Yagona haqiqat manbai: premium va kreditlar (barcha paywall'lar uchun) ───
 
+def _scalar(row):
+    """Birinchi ustun qiymati — chaqiruvchi cursor tuple ham, RealDict ham
+    bo'lishi mumkin (masalan topic_analysis RealDictCursor uzatadi)."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        return next(iter(row.values()), None)
+    return row[0]
+
+
 def user_has_premium(user_id, cur=None):
     """users.is_premium YOKI amaldagi premium entitlement (valid_until > NOW())."""
     if not user_id:
@@ -183,10 +193,10 @@ def user_has_premium(user_id, cur=None):
                            WHERE user_id = %s AND entitlement = 'premium'
                              AND valid_until > NOW())
             """, (user_id, user_id))
-        row = cur.fetchone()
+        val = _scalar(cur.fetchone())
         if own:
             conn.commit()
-        return bool(row and row[0])
+        return bool(val)
     except Exception:
         logger.exception('user_has_premium failed')
         if own and conn:
@@ -256,7 +266,7 @@ def credits_remaining(user_id, entitlement, cur=None):
         cur.execute(
             "SELECT COALESCE(SUM(credits_remaining), 0) FROM user_entitlements "
             "WHERE user_id = %s AND entitlement = %s", (user_id, entitlement))
-        n = int(cur.fetchone()[0] or 0)
+        n = int(_scalar(cur.fetchone()) or 0)
         if own:
             conn.commit()
         return n
@@ -283,8 +293,7 @@ def grant_entitlement(cur, payment):
             "SELECT MAX(valid_until) FROM user_entitlements "
             "WHERE user_id = %s AND entitlement = 'premium' AND valid_until > NOW()",
             (payment['user_id'],))
-        row = cur.fetchone()
-        base = row[0] if row and row[0] else None
+        base = _scalar(cur.fetchone())
         if base:
             cur.execute(
                 "INSERT INTO user_entitlements "

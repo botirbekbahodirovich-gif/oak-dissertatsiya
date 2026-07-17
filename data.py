@@ -1033,13 +1033,26 @@ def dashboard_export():
     try:
         with conn.cursor() as cur:
             _ensure_dashboard_schema(cur)
-            cur.execute("SELECT COALESCE(is_premium, FALSE) FROM users WHERE id = %s", (uid,))
-            premium = bool((cur.fetchone() or [False])[0])
     finally:
         conn.close()
-    limit = 5000 if premium else 50
     w, p = _dashboard_where(f, user_id=uid)
     order = _DASH_SORTS[f['sort']]
+    # To'liq eksport: premium yoki csv_export_credit (kredit faqat natija
+    # 50 qatordan KO'P bo'lganda sarflanadi — kichik to'plamga isrof qilinmaydi).
+    from blueprints.payments import user_has_premium, consume_credit
+    premium = user_has_premium(uid)
+    full = premium
+    if not full:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(f"SELECT COUNT(*) FROM dissertations d{w}", p)
+                total = int((cur.fetchone() or [0])[0] or 0)
+        finally:
+            conn.close()
+        if total > 50:
+            full = consume_credit(uid, 'csv_export_credit')
+    limit = 5000 if full else 50
 
     def generate():
         buf = io.StringIO()
@@ -1064,8 +1077,9 @@ def dashboard_export():
                     buf.seek(0); buf.truncate(0)
         finally:
             conn2.close()
-        if not premium:
-            writer.writerow(["Ko'proq eksport qilish uchun Premium kerak — olimlar.uz/premium"])
+        if not full:
+            writer.writerow(["Ko'proq eksport qilish uchun Premium (olimlar.uz/premium) "
+                             "yoki bir martalik to'liq eksport (10,000 so'm) kerak"])
             yield buf.getvalue()
     return Response(generate(), mimetype='text/csv; charset=utf-8',
                     headers={'Content-Disposition':

@@ -26,6 +26,7 @@ from flask_login import login_required, current_user
 
 from app import csrf
 from data import get_connection
+from blueprints.payments import user_has_premium, consume_credit, credits_remaining
 
 try:
     import psycopg2.extras as psycopg2_extras
@@ -38,7 +39,9 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 GROQ_MODEL = os.environ.get('GROQ_TOPIC_MODEL', 'llama-3.3-70b-versatile')
 GROQ_TIMEOUT = 15  # soniya — oshsa, faqat o'xshash natijalar qaytadi
 
-DAILY_LIMIT = 3
+FREE_MONTHLY_LIMIT = 1     # bepul tarif: oyiga 1 ta tahlil (kalendar oy)
+PREMIUM_DAILY_LIMIT = 30   # premium: amalda cheksiz; suiiste'molga qarshi qalqon
+FREE_SIMILAR_PREVIEW = 3   # bepul natija: faqat top-3 o'xshash ish + foiz
 MAX_TOPIC_LEN = 300
 MIN_TOPIC_LEN = 8
 SIMILAR_LIMIT = 15
@@ -100,14 +103,44 @@ def _uid():
     return current_user.id if getattr(current_user, 'is_authenticated', False) else None
 
 
-def _check_rate_limit(cur, user_id):
-    """Bugun (created_at >= CURRENT_DATE) shu user tahlillari sonini qaytaradi."""
+def _count_scalar(row):
+    """COUNT(*) qiymati — RealDictCursor {'count': n} qaytaradi, tuple emas."""
+    if row is None:
+        return 0
+    if isinstance(row, dict):
+        return int(next(iter(row.values()), 0) or 0)
+    return int(row[0] or 0)
+
+
+def _used_today(cur, user_id):
     cur.execute(
         "SELECT COUNT(*) FROM topic_analysis_log "
         "WHERE user_id = %s AND created_at >= CURRENT_DATE",
         (user_id,))
-    row = cur.fetchone()
-    return int(row[0]) if row else 0
+    return _count_scalar(cur.fetchone())
+
+
+def _used_this_month(cur, user_id):
+    """Kalendar oy boshidan beri ishlatilgan tahlillar (bepul limit hisobi)."""
+    cur.execute(
+        "SELECT COUNT(*) FROM topic_analysis_log "
+        "WHERE user_id = %s AND created_at >= date_trunc('month', NOW())",
+        (user_id,))
+    return _count_scalar(cur.fetchone())
+
+
+# Paywall modal ma'lumoti (frontend showPaywall uchun) — narxlar ko'rsatish
+# uchun xolos; haqiqiy narx faqat blueprints/payments.PRICES da.
+_PAYWALL_INFO = {
+    'feature_name': 'AI mavzu tahlili',
+    'one_time_product': 'topic_analysis_1',
+    'one_time_price': 5000,
+    'benefits': [
+        "To'liq AI xulosa va tavsiyalar",
+        "Barcha o'xshash ishlar ro'yxati (top-3 emas)",
+        'Faol rahbarlar va muassasalar statistikasi',
+    ],
+}
 
 
 def _extract_keywords(topic):
@@ -399,10 +432,13 @@ def _run_groq(topic, similar, stats_text=''):
 @topic_bp.route('/tahlil', methods=['GET'])
 @login_required
 def tahlil_page():
-    history = _load_history(_uid(), limit=5)
+    uid = _uid()
+    history = _load_history(uid, limit=5)
     return render_template('topic_analysis.html',
                            history=history,
-                           daily_limit=DAILY_LIMIT,
+                           is_premium=user_has_premium(uid),
+                           credits=credits_remaining(uid, 'topic_analysis_credit'),
+                           free_monthly_limit=FREE_MONTHLY_LIMIT,
                            max_topic_len=MAX_TOPIC_LEN)
 
 
@@ -424,13 +460,33 @@ def tahlil_run():
         cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
         _ensure_schema(cur)
 
-        used = _check_rate_limit(cur, user_id)
-        if used >= DAILY_LIMIT:
-            return jsonify({
-                'error': 'rate_limited',
-                'message': f"Bugun {DAILY_LIMIT} ta tahlil limitiga yetdingiz",
-                'remaining_today': 0,
-            }), 429
+        # ── Freemium darvoza ─────────────────────────────────────────────
+        # premium → to'liq, cheksiz (kunlik qalqon suiiste'molga qarshi);
+        # kredit → to'liq (shu tranzaksiyada atomik yechiladi);
+        # bepul oylik limit ichida → QISQARTIRILGAN natija (locked=True);
+        # limit tugagan, kredit yo'q → 402 + paywall ma'lumoti.
+        premium = user_has_premium(user_id, cur)
+        credit_used = False
+        locked = False
+        if premium:
+            if _used_today(cur, user_id) >= PREMIUM_DAILY_LIMIT:
+                return jsonify({
+                    'error': 'rate_limited',
+                    'message': f"Kunlik {PREMIUM_DAILY_LIMIT} ta tahlil chegarasiga "
+                               "yetdingiz. Ertaga davom eting.",
+                }), 429
+        else:
+            if _used_this_month(cur, user_id) >= FREE_MONTHLY_LIMIT:
+                credit_used = consume_credit(user_id, 'topic_analysis_credit', cur)
+                if not credit_used:
+                    return jsonify({
+                        'error': 'payment_required',
+                        'message': "Bepul oylik limit tugadi. Bitta tahlil — "
+                                   "5,000 so'm yoki Premium — 29,000/oy.",
+                        'paywall': _PAYWALL_INFO,
+                    }), 402
+            else:
+                locked = True  # bepul tahlil — top-3 + AI'siz qisqa natija
 
         # Layer 1 (DB): trigram o'xshashlik; topilmasa eski ILIKE zaxira yo'li.
         similar = []
@@ -464,19 +520,33 @@ def tahlil_run():
                 cur.execute("ROLLBACK TO SAVEPOINT data_layer")
                 trend, advisors, institutions = None, [], []
 
-        # Layer 2 (AI): DB natijalari kontekst sifatida promptga kiradi.
-        stats_text = _build_stats_text(specialty, trend, advisors,
-                                       institutions, bands)
-        analysis = _run_groq(topic, similar, stats_text)
-        if not analysis:
-            analysis = "AI tahlili vaqtinchalik mavjud emas"
+        # Layer 2 (AI): faqat to'liq (premium/kredit) rejimda — bepul
+        # qisqartirilgan natijada Groq chaqirilmaydi (xarajat nazorati).
+        if locked:
+            analysis = None
+        else:
+            stats_text = _build_stats_text(specialty, trend, advisors,
+                                           institutions, bands)
+            analysis = _run_groq(topic, similar, stats_text)
+            if not analysis:
+                analysis = "AI tahlili vaqtinchalik mavjud emas"
 
         cur.execute(
             "INSERT INTO topic_analysis_log (user_id, topic, result_summary, similar_count) "
             "VALUES (%s, %s, %s, %s) RETURNING created_at",
-            (user_id, topic, analysis[:2000], len(similar)))
+            (user_id, topic, (analysis or '[bepul qisqartirilgan natija]')[:2000],
+             len(similar)))
         created_at = cur.fetchone()['created_at']
+        credits_left = (credits_remaining(user_id, 'topic_analysis_credit', cur)
+                        if credit_used else None)
         conn.commit()
+
+        similar_total = len(similar)
+        if locked:
+            # Bepul rejim: faqat top-3 o'xshash ish + foiz; AI va to'liq
+            # ro'yxat/statistika frontendda qulflangan placeholder bilan.
+            similar = similar[:FREE_SIMILAR_PREVIEW]
+            advisors, institutions = [], []
 
         # Modul 2 ko'prigi: o'xshash ishlar ro'yxatidagi rahbar ismlari uchun slug.
         try:
@@ -490,17 +560,20 @@ def tahlil_run():
         except Exception:
             pass
 
-        remaining = max(0, DAILY_LIMIT - (used + 1))
         return jsonify({
             'analysis': analysis,
             'similar': similar,
-            'similar_count': len(similar),
+            'similar_count': similar_total,
             'bands': bands,
             'specialty': specialty,
             'trend': trend,
             'advisors': advisors,
             'institutions': institutions,
-            'remaining_today': remaining,
+            'locked': locked,
+            'is_premium': premium,
+            'credit_used': credit_used,
+            'credits_left': credits_left,
+            'paywall': _PAYWALL_INFO if locked else None,
             'checked_at': created_at.isoformat() if created_at else None,
         })
     except Exception:
