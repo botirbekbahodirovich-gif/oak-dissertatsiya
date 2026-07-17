@@ -1,0 +1,114 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvj-b { font-size: 0.66rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; margin-right: 3px; white-space: nowrap; }
+  .uvj-b.oak { background: rgba(5,150,105,0.16); color: #34d399; }
+  .uvj-b.scopus { background: rgba(59,130,246,0.16); color: #7cb8ff; }
+  .uvj-b.wos { background: rgba(139,92,246,0.16); color: #a78bfa; }
+  .uvj-b.pending { background: rgba(245,158,11,0.18); color: #fbbf24; }
+  .uvj-b.none { background: rgba(148,163,184,0.12); color: #94a3b8; }
+  .uvj-form { display: none; margin-bottom: 16px; }
+  .uvj-form.open { display: block; }
+  .uvj-form input { background: rgba(15,23,42,0.6); color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; }
+  .uvj-msg { display: none; margin-top: 10px; font-size: 0.84rem; border-radius: 10px; padding: 9px 14px; }
+  .uvj-msg.ok { background: rgba(5,150,105,0.14); color: #34d399; display: block; }
+  .uvj-msg.err { background: rgba(239,68,68,0.14); color: #f87171; display: block; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div>
+    <h1 class="uv-h1">📰 Jurnallarimiz</h1>
+    <p class="uv-sub">{{ latin_name }} jurnallari — tekshiruv holati (OAK/Scopus)
+      va platformadagi iqtiboslar</p>
+  </div>
+  {% if role != 'viewer' %}
+  <button class="uv-btn" id="uvj-open">➕ Jurnal qo'shish so'rovi</button>
+  {% endif %}
+</div>
+
+{% if role != 'viewer' %}
+<div class="uv-card uvj-form" id="uvj-form">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <input id="uvj-name" placeholder="Jurnal nomi *" style="flex:2;min-width:220px;">
+    <input id="uvj-issn" placeholder="ISSN (1234-5678)" style="flex:1;min-width:130px;">
+    <input id="uvj-web" placeholder="Veb-sayt" style="flex:1;min-width:160px;">
+    <button class="uv-btn" id="uvj-save">Yuborish</button>
+  </div>
+  <p style="margin:8px 0 0;font-size:0.74rem;color:#64748b;">
+    So'rov sayt admini tomonidan ko'rib chiqiladi — tasdiqlangach jurnal
+    ro'yxatda va tekshiruv tizimida ko'rinadi.</p>
+  <div class="uvj-msg" id="uvj-msg"></div>
+</div>
+{% endif %}
+
+{% if items %}
+<div class="uv-table-wrap">
+  <table class="uv-table">
+    <thead><tr><th>Jurnal</th><th>ISSN</th><th>Tekshiruv holati</th>
+      <th>Platformadagi iqtiboslar</th><th>Holat</th></tr></thead>
+    <tbody>
+      {% for j in items %}
+      <tr>
+        <td style="max-width:320px;">
+          {% if j.is_active %}<a href="/journals/{{ j.id }}" style="color:#7cb8ff;">{{ j.name[:60] }}</a>
+          {% else %}{{ j.name[:60] }}{% endif %}
+          {% if not j.own %}<br><span class="uvj-b none" title="Nashriyot nomi bo'yicha avtomatik topilgan">avto-mos</span>{% endif %}
+        </td>
+        <td style="color:#94a3b8;font-size:0.8rem;">{{ j.issn or '—' }}</td>
+        <td>
+          {% if j.oak %}<span class="uvj-b oak">✓ OAK</span>{% endif %}
+          {% if j.scopus %}<span class="uvj-b scopus">Scopus</span>{% endif %}
+          {% if j.wos %}<span class="uvj-b wos">WoS</span>{% endif %}
+          {% if not (j.oak or j.scopus or j.wos) %}<span class="uvj-b none">Tasdiq yo'q</span>{% endif %}
+        </td>
+        <td style="text-align:center;font-weight:700;"
+            title="Roadmap nashrlarida shu jurnal ko'rsatilgan soni (faqat son)">{{ j.cited }}</td>
+        <td>
+          {% if j.moderation_status == 'pending' %}<span class="uvj-b pending">⏳ Moderatsiyada</span>
+          {% elif j.is_active %}<span style="color:#34d399;font-size:0.78rem;">Faol</span>
+          {% else %}<span style="color:#94a3b8;font-size:0.78rem;">Nofaol</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
+  "Iqtiboslar" — doktorantlar Roadmap'da nashr joyi sifatida shu jurnalni
+  ko'rsatgan yozuvlar soni (faqat metrika).</p>
+{% else %}
+<div class="uv-card"><div class="uv-empty">
+  Universitetingizga bog'langan jurnallar topilmadi.{% if role != 'viewer' %}
+  "➕ Jurnal qo'shish so'rovi" bilan jurnalingizni ro'yxatga taklif qiling.{% endif %}
+</div></div>
+{% endif %}
+
+{% if role != 'viewer' %}
+<script>
+(function () {
+  var msg = document.getElementById('uvj-msg');
+  function show(t, ok) { msg.className = 'uvj-msg ' + (ok ? 'ok' : 'err'); msg.textContent = t; }
+  document.getElementById('uvj-open').addEventListener('click', function () {
+    document.getElementById('uvj-form').classList.toggle('open');
+  });
+  document.getElementById('uvj-save').addEventListener('click', function () {
+    fetch('/univer/api/journals/request', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('uvj-name').value,
+        issn: document.getElementById('uvj-issn').value,
+        website: document.getElementById('uvj-web').value
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) { show(d.message || 'Yuborildi', true); setTimeout(function () { location.reload(); }, 1000); }
+      else show(d.error || 'Xatolik', false);
+    }).catch(function () { show('Tarmoq xatosi', false); });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

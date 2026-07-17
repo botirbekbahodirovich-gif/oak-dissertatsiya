@@ -51,6 +51,19 @@
     rgba(255,255,255,0.1); padding-top: 10px; }
   .uvk-invite { background: rgba(15,23,42,0.6); border: 1px dashed rgba(74,158,255,0.3);
     border-radius: 12px; padding: 14px; margin-top: 14px; font-size: 0.82rem; color: #cbd5e1; }
+  .uvk-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .uvk-tab { background: rgba(148,163,184,0.1); color: #94a3b8; border: none;
+    border-radius: 999px; padding: 7px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+  .uvk-tab.on { background: rgba(74,158,255,0.18); color: #7cb8ff; }
+  .uvk-pane { display: none; } .uvk-pane.on { display: block; }
+  .uvk-risk { font-size: 0.95rem; cursor: help; }
+  .uvk-load-flag { font-size: 0.68rem; font-weight: 800; background: rgba(239,68,68,0.16);
+    color: #f87171; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .uvk-bulk textarea { width: 100%; background: rgba(15,23,42,0.6); color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 12px;
+    font-size: 0.84rem; font-family: ui-monospace, monospace; }
+  .uvk-links { margin-top: 10px; font-size: 0.76rem; color: #94a3b8; max-height: 220px; overflow-y: auto; }
+  .uvk-links div { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 </style>
 {% endblock %}
 
@@ -59,16 +72,25 @@
 <p class="uv-sub">{{ latin_name }} doktorantlarining himoyaga tayyorgarlik
   ko'rsatkichlari — faqat ochiq metrikalar (matnlar ko'rinmaydi)</p>
 
+<div class="uvk-tabs">
+  <button class="uvk-tab on" data-pane="monitoring">📊 Monitoring</button>
+  <button class="uvk-tab" data-pane="advisors">👔 Rahbarlar yuki</button>
+  <button class="uvk-tab" data-pane="invites">✉️ Takliflar{% if invites %} ({{ invites|length }}){% endif %}</button>
+</div>
+
+<div class="uvk-pane on" data-pane="monitoring">
 {% if rows %}
 <div class="uv-table-wrap">
   <table class="uv-table">
     <thead><tr>
-      <th>Doktorant</th><th>Daraja / Ixtisoslik</th><th>Rahbar</th>
+      <th></th><th>Doktorant</th><th>Daraja / Ixtisoslik</th><th>Rahbar</th>
       <th>Nashrlar</th><th>Dissertatsiya so'zlari</th><th>Himoya sanasi</th><th>Holat</th>
     </tr></thead>
     <tbody>
       {% for r in rows %}
       <tr class="uvk-row" data-uid="{{ r.user_id }}">
+        <td>{% if r.risk == 'red' %}<span class="uvk-risk" title="{{ r.risk_note }}">🔴</span>
+          {% elif r.risk == 'yellow' %}<span class="uvk-risk" title="{{ r.risk_note }}">🟡</span>{% endif %}</td>
         <td><div class="uvk-name">
           {% if r.photo_url %}<img class="uvk-av" src="{{ r.photo_url }}" alt="">
           {% else %}<span class="uvk-av">{{ (r.name or '?')[0]|upper }}</span>{% endif %}
@@ -100,6 +122,7 @@
 </div>
 <p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
   Ko'rsatkichlar doktorantning platformadagi ochiq faoliyati asosida.
+  🔴 himoya yaqin, nashrlar to'liq emas · 🟡 30+ kun faollik yo'q.
   Qator ustiga bosib batafsil ko'ring.</p>
 {% else %}
 <div class="uv-card">
@@ -108,7 +131,8 @@
     Hozircha doktorantlaringiz platformada faol emas
   </div>
   <div class="uvk-invite">
-    <b>Doktorantlaringizni taklif qiling</b> — quyidagi matnni ularga yuboring:
+    <b>Doktorantlaringizni taklif qiling</b> — quyidagi matnni ularga yuboring
+    (yoki "✉️ Takliflar" bo'limida email bo'yicha shaxsiy havolalar yarating):
     <div id="uvk-invite-text" style="margin-top:8px;background:rgba(2,6,23,0.5);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:#94a3b8;">
       Universitetingiz sizni olimlar.uz da kuzatadi — profil oching, Akademik
       Reja tuzing va dissertatsiyangizni Konstruktorda yozing:
@@ -120,6 +144,116 @@
   </div>
 </div>
 {% endif %}
+</div><!-- /monitoring pane -->
+
+<div class="uvk-pane" data-pane="advisors">
+  {% if advisors %}
+  <div class="uv-table-wrap">
+    <table class="uv-table">
+      <thead><tr><th>Ilmiy rahbar</th><th>Joriy shogirdlar (platformada)</th>
+        <th>Tarixiy himoyalar</th><th>Oxirgi himoya yili</th><th></th></tr></thead>
+      <tbody>
+        {% for a in advisors %}
+        <tr>
+          <td style="font-weight:600;">
+            <a href="/olim/{{ a.full_name|urlencode }}" style="color:#7cb8ff;">{{ a.name }}</a></td>
+          <td style="text-align:center;font-weight:700;">{{ a.active }}</td>
+          <td style="text-align:center;color:#94a3b8;">{{ a.historical }}</td>
+          <td style="text-align:center;color:#94a3b8;">{{ a.last_year or '—' }}</td>
+          <td>{% if a.overloaded %}<span class="uvk-load-flag"
+            title="5 tadan ortiq joriy shogird">⚠ Ortiqcha yuklangan</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
+    Joriy shogirdlar — platformadagi tasdiqlangan rahbar-shogird aloqalari
+    (advisor_links); tarixiy — OAK himoyalar bazasidan.</p>
+  {% else %}
+  <div class="uv-card"><div class="uv-empty">Rahbarlar bo'yicha ma'lumot topilmadi</div></div>
+  {% endif %}
+</div><!-- /advisors pane -->
+
+<div class="uvk-pane" data-pane="invites">
+  {% if role != 'viewer' %}
+  <div class="uv-card uvk-bulk" style="margin-bottom:14px;">
+    <h3 style="font-size:0.92rem;font-weight:800;color:#e2e8f0;margin:0 0 8px;">
+      ✉️ Doktorantlarni taklif qilish</h3>
+    <p style="font-size:0.78rem;color:#8899b4;margin:0 0 8px;">
+      Har qatorda bitta email (ko'pi bilan 50 ta). Har biriga 7 kunlik shaxsiy
+      havola yaratiladi — havolani doktorantga o'zingiz yuborasiz.</p>
+    <textarea id="uvk-emails" rows="4" placeholder="doktorant1@misol.uz&#10;doktorant2@misol.uz"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
+      <button class="uv-btn" id="uvk-bulk-send">Havolalar yaratish</button>
+      <button class="uv-btn ghost" id="uvk-copy-all" style="display:none;">📋 Hammasini nusxalash</button>
+      <span id="uvk-bulk-msg" style="font-size:0.8rem;"></span>
+    </div>
+    <div class="uvk-links" id="uvk-links"></div>
+  </div>
+  {% endif %}
+  {% if invites %}
+  <div class="uv-table-wrap">
+    <table class="uv-table">
+      <thead><tr><th>Email</th><th>Yuborilgan</th><th>Holat</th><th>Qabul qilgan</th></tr></thead>
+      <tbody>
+        {% for i in invites %}
+        <tr>
+          <td>{{ i.email }}</td>
+          <td style="color:#94a3b8;">{{ i.created_at }}</td>
+          <td><span class="uvk-holat {{ i.status_class }}">{{ i.status }}</span></td>
+          <td style="color:#94a3b8;">{{ i.accepted_by or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="uv-card"><div class="uv-empty">Hozircha takliflar yuborilmagan</div></div>
+  {% endif %}
+</div><!-- /invites pane -->
+
+<script>
+document.querySelectorAll('.uvk-tab').forEach(function (t) {
+  t.addEventListener('click', function () {
+    document.querySelectorAll('.uvk-tab').forEach(function (x) { x.classList.remove('on'); });
+    document.querySelectorAll('.uvk-pane').forEach(function (x) { x.classList.remove('on'); });
+    t.classList.add('on');
+    document.querySelector('.uvk-pane[data-pane="' + t.getAttribute('data-pane') + '"]').classList.add('on');
+  });
+});
+{% if role != 'viewer' %}
+(function () {
+  var btn = document.getElementById('uvk-bulk-send');
+  if (!btn) return;
+  var lastLinks = [];
+  btn.addEventListener('click', function () {
+    var msg = document.getElementById('uvk-bulk-msg');
+    btn.disabled = true;
+    fetch('/univer/api/doktorant/invites', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emails: document.getElementById('uvk-emails').value })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (!d.success) { msg.style.color = '#f87171'; msg.textContent = d.error || 'Xatolik'; return; }
+      lastLinks = d.links;
+      msg.style.color = '#34d399';
+      msg.textContent = d.links.length + ' ta havola yaratildi' +
+        (d.invalid && d.invalid.length ? ' (' + d.invalid.length + " ta noto'g'ri email o'tkazildi)" : '');
+      document.getElementById('uvk-links').innerHTML = d.links.map(function (l) {
+        return '<div><b>' + l.email + '</b> → ' + l.url + '</div>';
+      }).join('');
+      document.getElementById('uvk-copy-all').style.display = '';
+    }).catch(function () { btn.disabled = false; });
+  });
+  document.getElementById('uvk-copy-all').addEventListener('click', function () {
+    var text = lastLinks.map(function (l) { return l.email + ': ' + l.url; }).join('\n');
+    navigator.clipboard.writeText(text);
+    this.textContent = '✓ Nusxalandi';
+  });
+})();
+{% endif %}
+</script>
 
 <!-- detail drawer -->
 <div class="uvk-overlay" id="uvk-overlay"></div>

@@ -1,0 +1,157 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvc-badge { font-size: 0.68rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .uvc-badge.pending { background: rgba(245,158,11,0.18); color: #fbbf24; }
+  .uvc-badge.off { background: rgba(148,163,184,0.14); color: #94a3b8; }
+  .uvc-badge.on { background: rgba(5,150,105,0.16); color: #34d399; }
+  .uvc-badge.ext { background: rgba(148,163,184,0.1); color: #64748b; }
+  .uvc-form { display: none; margin-bottom: 16px; }
+  .uvc-form.open { display: block; }
+  .uvc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .uvc-grid input, .uvc-grid select, .uvc-form textarea { width: 100%; background: rgba(15,23,42,0.6);
+    color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+    padding: 8px 12px; font-size: 0.85rem; }
+  .uvc-form textarea { margin-top: 8px; }
+  .uvc-msg { display: none; margin-top: 10px; font-size: 0.84rem; border-radius: 10px; padding: 9px 14px; }
+  .uvc-msg.ok { background: rgba(5,150,105,0.14); color: #34d399; display: block; }
+  .uvc-msg.err { background: rgba(239,68,68,0.14); color: #f87171; display: block; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <div>
+    <h1 class="uv-h1">🎪 Konferensiyalarimiz</h1>
+    <p class="uv-sub">{{ latin_name }} tashkil etadigan konferensiyalar —
+      yangi yozuv admin tasdig'idan keyin ommaviy e'lon qilinadi</p>
+  </div>
+  {% if role != 'viewer' %}
+  <button class="uv-btn" id="uvc-open">➕ Konferensiya qo'shish</button>
+  {% endif %}
+</div>
+
+{% if role != 'viewer' %}
+<div class="uv-card uvc-form" id="uvc-form">
+  <input type="hidden" id="uvc-edit-id" value="">
+  <div class="uvc-grid">
+    <input id="uvc-title" placeholder="Konferensiya nomi *" style="grid-column:1/-1;">
+    <input id="uvc-start" type="date" title="Boshlanish sanasi">
+    <input id="uvc-end" type="date" title="Tugash sanasi">
+    <input id="uvc-city" placeholder="Shahar">
+    <select id="uvc-type">
+      <option value="">Shakli…</option>
+      {% for t in event_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+    <select id="uvc-field" style="grid-column:span 2;">
+      <option value="">Yo'nalish…</option>
+      {% for f in fields %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+    </select>
+    <input id="uvc-url" placeholder="Manba URL (e'lon sahifasi)" style="grid-column:1/-1;">
+  </div>
+  <textarea id="uvc-desc" rows="3" placeholder="Qisqacha tavsif…"></textarea>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button class="uv-btn" id="uvc-save">Saqlash</button>
+    <button class="uv-btn ghost" id="uvc-cancel">Bekor qilish</button>
+  </div>
+  <div class="uvc-msg" id="uvc-msg"></div>
+</div>
+{% endif %}
+
+{% if items %}
+<div class="uv-table-wrap">
+  <table class="uv-table">
+    <thead><tr><th>Nomi</th><th>Sana</th><th>Yo'nalish</th>
+      <th>Xabar yuborilgan</th><th>Holat</th><th></th></tr></thead>
+    <tbody>
+      {% for c in items %}
+      <tr data-conf='{{ {"id": c.id, "title": c.title, "start_date": c.start_date|string if c.start_date else "", "end_date": c.end_date|string if c.end_date else "", "city": c.city or "", "field": c.field or "", "event_type": c.event_type or "", "source_url": c.source_url or ""} | tojson }}'>
+        <td style="max-width:340px;">
+          {% if c.slug and c.is_active %}<a href="/konferensiya/{{ c.slug }}" target="_blank" style="color:#7cb8ff;">{{ c.title[:70] }}</a>
+          {% else %}{{ c.title[:70] }}{% endif %}
+          {% if not c.own %}<br><span class="uvc-badge ext" title="Organizer nomi bo'yicha avtomatik topilgan">avto-mos</span>{% endif %}
+        </td>
+        <td style="white-space:nowrap;color:#94a3b8;">{{ c.start_date or '—' }}</td>
+        <td style="color:#94a3b8;font-size:0.8rem;">{{ (c.field or '—')[:34] }}</td>
+        <td style="text-align:center;font-weight:700;" title="Ixtisoslik obunachilariga yuborilgan bildirishnomalar">{{ c.notified }}</td>
+        <td>
+          {% if c.moderation_status == 'pending' %}<span class="uvc-badge pending">⏳ Moderatsiyada</span>
+          {% elif c.is_active %}<span class="uvc-badge on">Faol</span>
+          {% else %}<span class="uvc-badge off">Yashirilgan</span>{% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+          {% if role != 'viewer' and c.own %}
+          <button class="uv-btn ghost" style="padding:4px 10px;font-size:0.74rem;" data-edit="{{ c.id }}">✏️</button>
+          {% if c.moderation_status != 'pending' %}
+          <button class="uv-btn danger" style="padding:4px 10px;font-size:0.74rem;" data-toggle="{{ c.id }}">
+            {{ 'Yashirish' if c.is_active else 'Yoqish' }}</button>
+          {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="uv-card"><div class="uv-empty">
+  Hozircha konferensiyalaringiz yo'q.{% if role != 'viewer' %} Birinchisini
+  "➕ Konferensiya qo'shish" tugmasi bilan yarating — admin tasdig'idan so'ng
+  katalogda e'lon qilinadi va mos ixtisoslik obunachilariga xabar boradi.{% endif %}
+</div></div>
+{% endif %}
+
+{% if role != 'viewer' %}
+<script>
+(function () {
+  var form = document.getElementById('uvc-form');
+  var msg = document.getElementById('uvc-msg');
+  function show(t, ok) { msg.className = 'uvc-msg ' + (ok ? 'ok' : 'err'); msg.textContent = t; }
+  function g(id) { return document.getElementById(id); }
+  function openForm(c) {
+    form.classList.add('open');
+    g('uvc-edit-id').value = c ? c.id : '';
+    g('uvc-title').value = c ? c.title : '';
+    g('uvc-start').value = c ? c.start_date : '';
+    g('uvc-end').value = c ? c.end_date : '';
+    g('uvc-city').value = c ? c.city : '';
+    g('uvc-field').value = c ? c.field : '';
+    g('uvc-type').value = c ? c.event_type : '';
+    g('uvc-url').value = c ? c.source_url : '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.getElementById('uvc-open').addEventListener('click', function () { openForm(null); });
+  document.getElementById('uvc-cancel').addEventListener('click', function () { form.classList.remove('open'); });
+  document.getElementById('uvc-save').addEventListener('click', function () {
+    var id = g('uvc-edit-id').value;
+    var body = {
+      title: g('uvc-title').value, start_date: g('uvc-start').value,
+      end_date: g('uvc-end').value, city: g('uvc-city').value,
+      field: g('uvc-field').value, event_type: g('uvc-type').value,
+      source_url: g('uvc-url').value, description: g('uvc-desc').value
+    };
+    fetch(id ? '/univer/api/conferences/' + id + '/update' : '/univer/api/conferences/add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) { show(d.message || 'Saqlandi', true); setTimeout(function () { location.reload(); }, 900); }
+      else show(d.error || 'Xatolik', false);
+    }).catch(function () { show('Tarmoq xatosi', false); });
+  });
+  document.querySelectorAll('[data-edit]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      openForm(JSON.parse(b.closest('tr').getAttribute('data-conf')));
+    });
+  });
+  document.querySelectorAll('[data-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      fetch('/univer/api/conferences/' + b.getAttribute('data-toggle') + '/toggle', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.success) location.reload(); else show(d.error || 'Xatolik', false); });
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

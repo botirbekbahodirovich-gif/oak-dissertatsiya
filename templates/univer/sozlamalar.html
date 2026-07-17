@@ -15,17 +15,67 @@
   .uvs-msg { display: none; margin: 10px 0; font-size: 0.84rem; border-radius: 10px; padding: 9px 14px; }
   .uvs-msg.ok { background: rgba(5,150,105,0.14); color: #34d399; display: block; }
   .uvs-msg.err { background: rgba(239,68,68,0.14); color: #f87171; display: block; }
+  .uvs-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex: 0 0 44px; }
+  .uvs-switch input { opacity: 0; width: 0; height: 0; }
+  .uvs-slider { position: absolute; inset: 0; background: rgba(148,163,184,0.25);
+    border-radius: 999px; transition: 0.2s; cursor: pointer; }
+  .uvs-slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px;
+    top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+  .uvs-switch input:checked + .uvs-slider { background: #3b82f6; }
+  .uvs-switch input:checked + .uvs-slider:before { transform: translateX(20px); }
+  .uvs-audit { max-height: 340px; overflow-y: auto; }
+  .uvs-audit li { display: flex; gap: 10px; padding: 7px 0; font-size: 0.8rem; color: #cbd5e1;
+    border-bottom: 1px solid rgba(255,255,255,0.05); align-items: baseline; }
+  .uvs-audit .who { color: #7cb8ff; font-weight: 700; white-space: nowrap; }
+  .uvs-audit .ts { margin-left: auto; color: #64748b; font-size: 0.7rem; white-space: nowrap; }
 </style>
 {% endblock %}
 
 {% block uv_content %}
-<h1 class="uv-h1">⚙️ Sozlamalar — xodimlar</h1>
-<p class="uv-sub">{{ latin_name }} paneliga kirish huquqiga ega xodimlar
-  ({{ staff|length }} / {{ max_staff }}). Yangi xodimni username yoki email
-  bo'yicha qo'shing.</p>
+<h1 class="uv-h1">⚙️ Sozlamalar</h1>
+<p class="uv-sub">{{ latin_name }} — bildirishnomalar, litsenziya
+  {% if role == 'owner' %}, xodimlar va audit jurnali{% endif %}</p>
 
-<div class="uv-card" style="margin-bottom:16px;">
-  <div class="uvs-add">
+<!-- kunlik digest (har bir xodim o'ziniki) -->
+<div class="uv-card" style="margin-bottom:14px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;">
+      <b style="color:#e2e8f0;font-size:0.92rem;">🔔 Kunlik digest</b>
+      <p style="margin:4px 0 0;font-size:0.78rem;color:#8899b4;">
+        Doktorantlaringiz voqealari (yangi nashr, bob yakunlandi, himoya
+        yaqinlashmoqda) — kuniga ko'pi bilan bitta bildirishnoma.</p>
+    </div>
+    <label class="uvs-switch">
+      <input type="checkbox" id="uvs-digest" {% if digest_on %}checked{% endif %}>
+      <span class="uvs-slider"></span>
+    </label>
+  </div>
+</div>
+
+<!-- litsenziya ma'lumoti -->
+<div class="uv-card" style="margin-bottom:14px;">
+  <b style="color:#e2e8f0;font-size:0.92rem;">📜 Litsenziya</b>
+  {% if license %}
+  <p style="margin:6px 0 0;font-size:0.84rem;color:#cbd5e1;">
+    Tarif: <b>{{ license.plan_label }}</b>
+    {% if license.valid_until %} · {{ license.valid_until }} gacha
+      {% if license.days_left is not none %}
+      ({% if license.days_left <= 14 %}<span style="color:#fbbf24;">{{ license.days_left }} kun qoldi</span>
+      {% else %}{{ license.days_left }} kun qoldi{% endif %})
+      {% endif %}
+    {% else %} · muddatsiz{% endif %}
+    · maks. {{ max_staff }} xodim</p>
+  <p style="margin:8px 0 0;font-size:0.78rem;color:#8899b4;">
+    Litsenziyani uzaytirish yoki tarifni oshirish —
+    <a href="https://t.me/olimlar_uz" target="_blank" rel="noopener" style="color:#7cb8ff;">biz bilan bog'laning</a>.</p>
+  {% endif %}
+</div>
+
+{% if role == 'owner' %}
+<!-- xodimlar boshqaruvi (faqat owner) -->
+<div class="uv-card" style="margin-bottom:14px;">
+  <b style="color:#e2e8f0;font-size:0.92rem;">👥 Xodimlar ({{ staff|length }} / {{ max_staff }})</b>
+  <div class="uvs-add" style="margin-top:10px;">
     <input name="ident" id="uvs-ident" placeholder="Username yoki email">
     <input name="title" id="uvs-title" placeholder="Lavozimi (ixtiyoriy)">
     <select id="uvs-role">
@@ -35,47 +85,68 @@
     <button class="uv-btn" id="uvs-add-btn">➕ Qo'shish</button>
   </div>
   <div class="uvs-msg" id="uvs-msg"></div>
+
+  <div class="uv-table-wrap">
+    <table class="uv-table">
+      <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Lavozimi</th><th>Rol</th>
+        <th>Holat</th><th>Amallar</th></tr></thead>
+      <tbody>
+        {% for s in staff %}
+        <tr>
+          <td style="font-weight:700;">{{ s.username }}</td>
+          <td style="color:#94a3b8;">{{ s.email or '—' }}</td>
+          <td style="color:#94a3b8;">{{ s.title or '—' }}</td>
+          <td><span class="uvs-role {{ s.role }}">{{ s.role_label }}</span></td>
+          <td><span class="uvs-status {{ s.status }}">{{ 'Faol' if s.status == 'active' else "To'xtatilgan" }}</span></td>
+          <td>
+            {% if s.role != 'owner' %}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <select data-role-for="{{ s.id }}" style="background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;font-size:0.76rem;">
+                <option value="staff" {% if s.role == 'staff' %}selected{% endif %}>Xodim</option>
+                <option value="viewer" {% if s.role == 'viewer' %}selected{% endif %}>Ko'ruvchi</option>
+              </select>
+              <button class="uv-btn danger" style="padding:4px 10px;font-size:0.74rem;" data-suspend="{{ s.id }}">
+                {{ "To'xtatish" if s.status == 'active' else 'Faollashtirish' }}</button>
+            </div>
+            {% else %}<span style="color:#64748b;font-size:0.74rem;">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-<div class="uv-table-wrap">
-  <table class="uv-table">
-    <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Lavozimi</th><th>Rol</th>
-      <th>Holat</th><th>Amallar</th></tr></thead>
-    <tbody>
-      {% for s in staff %}
-      <tr>
-        <td style="font-weight:700;">{{ s.username }}</td>
-        <td style="color:#94a3b8;">{{ s.email or '—' }}</td>
-        <td style="color:#94a3b8;">{{ s.title or '—' }}</td>
-        <td><span class="uvs-role {{ s.role }}">{{ s.role_label }}</span></td>
-        <td><span class="uvs-status {{ s.status }}">{{ 'Faol' if s.status == 'active' else "To'xtatilgan" }}</span></td>
-        <td>
-          {% if s.role != 'owner' %}
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <select data-role-for="{{ s.id }}" style="background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 8px;font-size:0.76rem;">
-              <option value="staff" {% if s.role == 'staff' %}selected{% endif %}>Xodim</option>
-              <option value="viewer" {% if s.role == 'viewer' %}selected{% endif %}>Ko'ruvchi</option>
-            </select>
-            <button class="uv-btn danger" style="padding:4px 10px;font-size:0.74rem;" data-suspend="{{ s.id }}">
-              {{ "To'xtatish" if s.status == 'active' else 'Faollashtirish' }}</button>
-          </div>
-          {% else %}<span style="color:#64748b;font-size:0.74rem;">—</span>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<!-- audit jurnali (faqat owner) -->
+<div class="uv-card">
+  <b style="color:#e2e8f0;font-size:0.92rem;">🧾 Audit jurnali (oxirgi 50 amal)</b>
+  {% if audit %}
+  <ul class="uvs-audit" style="list-style:none;margin:10px 0 0;padding:0;">
+    {% for a in audit %}
+    <li><span class="who">{{ a.username }}</span><span>{{ a.action }}</span>
+      <span class="ts">{{ a.created_at }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p style="margin:8px 0 0;font-size:0.8rem;color:#8899b4;">Hozircha yozuvlar yo'q.</p>
+  {% endif %}
 </div>
+{% endif %}
 
 <script>
 (function () {
-  var msg = document.getElementById('uvs-msg');
-  function show(text, ok) {
-    msg.className = 'uvs-msg ' + (ok ? 'ok' : 'err'); msg.textContent = text;
-  }
   function post(url, body) {
     return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body || {}) }).then(function (r) { return r.json(); });
+  }
+  // kunlik digest toggle (har bir xodim o'ziniki)
+  document.getElementById('uvs-digest').addEventListener('change', function () {
+    post('/univer/api/digest-pref', { enabled: this.checked });
+  });
+  {% if role == 'owner' %}
+  var msg = document.getElementById('uvs-msg');
+  function show(text, ok) {
+    msg.className = 'uvs-msg ' + (ok ? 'ok' : 'err'); msg.textContent = text;
   }
   document.getElementById('uvs-add-btn').addEventListener('click', function () {
     var ident = document.getElementById('uvs-ident').value.trim();
@@ -105,6 +176,7 @@
         });
     });
   });
+  {% endif %}
 })();
 </script>
 {% endblock %}

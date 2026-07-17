@@ -98,7 +98,11 @@
       <tr class="adm-jr-row" data-search="{{ (j.name ~ ' ' ~ j.issn)|lower }}">
         <td>{{ j.id }}</td>
         <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;">{% else %}📚{% endif %}</td>
-        <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️</span>{% endif %}</td>
+        <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️</span>{% endif %}
+          {% if j.moderation_status == 'pending' %}
+          <span style="font-size:0.68rem;font-weight:800;background:rgba(245,158,11,0.18);color:#fbbf24;border-radius:999px;padding:2px 8px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          {% endif %}
+          {% if j.canonical_institution %}<br><small style="color:#60a5fa;">🏛 {{ j.canonical_institution[:44] }}</small>{% endif %}</td>
         <td style="font-size:0.78rem;color:#94a3b8;">{{ j.issn or '—' }}</td>
         <td style="color:#93bbfc;font-size:0.78rem;">{{ j.codes or '—' }}</td>
         <td>{% if j.oak_approved %}✅{% else %}—{% endif %}</td>
@@ -116,6 +120,13 @@
         </td>
         <td>
           <div class="adm-actions">
+            {% if j.moderation_status == 'pending' %}
+            <form method="POST" action="/admin/journals/approve/{{ j.id }}" style="display:inline;">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="adm-btn" title="Tasdiqlash"
+                      style="background:#059669;color:#fff;">✓</button>
+            </form>
+            {% endif %}
             <a href="/admin/journals/edit/{{ j.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
             <form method="POST" action="/admin/journals/delete/{{ j.id }}" onsubmit="return confirm('Rostdan o\'chirilsinmi?')" style="display:inline;">
               {{ csrf_token()|safe }}

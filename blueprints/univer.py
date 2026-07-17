@@ -119,7 +119,78 @@ def _ensure_schema(cur):
                 "ON university_invite_tokens(token)")
     cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS "
                 "hide_from_university BOOLEAN DEFAULT FALSE")
+    # ── Part 2: boshqaruv, hisobotlar, engagement ────────────────────────
+    # jurnallar: universitetga bog'lash + so'rov oqimi (journals jadvali
+    # app.py init'da yaratiladi — bu ALTERlar xavfsiz)
+    try:
+        for _col, _typ in (('canonical_institution', 'VARCHAR(500)'),
+                           ('submitted_by', 'INTEGER'),
+                           ('moderation_status', "VARCHAR(20) DEFAULT 'approved'")):
+            cur.execute(f"ALTER TABLE journals ADD COLUMN IF NOT EXISTS {_col} {_typ}")
+    except Exception:
+        pass  # journals hali yo'q muhit (toza test bazasi) — keyingi so'rovda
+    # taklif tokenlari: doktorant roli + email logi
+    cur.execute("ALTER TABLE university_invite_tokens "
+                "ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'staff'")
+    cur.execute("ALTER TABLE university_invite_tokens "
+                "ADD COLUMN IF NOT EXISTS email VARCHAR(255)")
+    # doktorant ↔ universitet to'g'ridan-to'g'ri bog'lash (taklif qabulida)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS university_doctorant_links (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            canonical_institution VARCHAR(500) NOT NULL,
+            invited_by INTEGER REFERENCES users(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, canonical_institution)
+        )""")
+    # kunlik xodim digest'i: xodim darajasida ON/OFF + kunlik dedup logi
+    cur.execute("ALTER TABLE university_staff "
+                "ADD COLUMN IF NOT EXISTS digest_enabled BOOLEAN DEFAULT TRUE")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS university_digest_log (
+            id SERIAL PRIMARY KEY,
+            canonical_institution VARCHAR(500) NOT NULL,
+            digest_date DATE NOT NULL DEFAULT CURRENT_DATE,
+            events_count INTEGER DEFAULT 0,
+            sent_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(canonical_institution, digest_date)
+        )""")
+    # ommaviy profil (litsenziya perki) — canonical nom bilan kalitlangan
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS university_public_profiles (
+            id SERIAL PRIMARY KEY,
+            canonical_institution VARCHAR(500) UNIQUE NOT NULL,
+            description TEXT,
+            website VARCHAR(500),
+            logo_url VARCHAR(500),
+            contact_email VARCHAR(255),
+            updated_by INTEGER REFERENCES users(id),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""")
+    # audit jurnali — har bir boshqaruv amali uchun bitta qator
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS university_audit_log (
+            id SERIAL PRIMARY KEY,
+            canonical_institution VARCHAR(500) NOT NULL,
+            user_id INTEGER REFERENCES users(id),
+            action VARCHAR(200) NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_univ_audit "
+                "ON university_audit_log(canonical_institution, created_at DESC)")
     _schema_ready = True
+
+
+def _audit(cur, canonical, action):
+    """Boshqaruv amalini audit jurnaliga yozadi (hech qachon amalni buzmaydi)."""
+    try:
+        uid = getattr(current_user, 'id', None)
+        cur.execute("INSERT INTO university_audit_log "
+                    "(canonical_institution, user_id, action) VALUES (%s, %s, %s)",
+                    (canonical, uid, (action or '')[:200]))
+    except Exception:
+        pass
 
 
 # ── kirish modeli ────────────────────────────────────────────────────────────
@@ -265,6 +336,22 @@ def _doctoral_user_ids(cur, canonical):
             'profile_degree': degree or '', 'profile_ixtisoslik': ixt or '',
             'profile_advisor': advisor or '', 'slug': slug or '',
         })
+    # Part 2: taklif havolasi orqali to'g'ridan-to'g'ri bog'langan doktorantlar
+    # (olim_profiles zanjiri bo'lmasa ham monitoring ko'radi)
+    try:
+        for uid, name in _fetchall(cur, """
+                SELECT u.id, u.username FROM university_doctorant_links l
+                JOIN users u ON u.id = l.user_id
+                WHERE l.canonical_institution = %s
+                  AND COALESCE(u.hide_from_university, FALSE) = FALSE
+                """, (canonical,)):
+            users.setdefault(uid, {
+                'user_id': uid, 'name': name or f'user{uid}', 'photo_url': '',
+                'profile_degree': '', 'profile_ixtisoslik': '',
+                'profile_advisor': '', 'slug': '',
+            })
+    except Exception:
+        pass
     return users
 
 
@@ -488,40 +575,62 @@ def univer_dissertations():
 def univer_doktorantlar():
     ctx = _workspace_ctx('doktorantlar')
     rows = _doctoral_rows(ctx['canonical'])
-    return render_template('univer/doktorantlar.html', rows=rows, **ctx)
+    advisors = _advisor_load(ctx['canonical'])
+    invites = _doctorant_invites(ctx['canonical'])
+    return render_template('univer/doktorantlar.html', rows=rows,
+                           advisors=advisors, invites=invites, **ctx)
 
 
 @univer_bp.route('/univer/sozlamalar')
 @login_required
 def univer_sozlamalar():
+    """Part 2: barcha xodimlarga ochiq — o'z digest sozlamasi + litsenziya
+    ma'lumoti. Xodimlar ro'yxati va audit jurnali faqat owner ko'rinishida
+    (server tomonda ham: boshqaruv API'lari owner-only)."""
     ctx = _workspace_ctx('sozlamalar')
-    if ctx['role'] != 'owner':
-        abort(403)
-    staff = []
+    staff, audit, digest_on = [], [], True
     try:
         conn = _conn()
         try:
             with conn.cursor() as cur:
                 _ensure_schema(cur)
-                cur.execute("""
-                    SELECT s.id, s.user_id, u.username, u.email, s.role,
-                           s.title, s.status, s.created_at
-                    FROM university_staff s JOIN users u ON u.id = s.user_id
-                    WHERE s.canonical_institution = %s
-                    ORDER BY (s.role = 'owner') DESC, s.id
-                """, (ctx['canonical'],))
-                staff = [dict(zip(('id', 'user_id', 'username', 'email', 'role',
-                                   'title', 'status', 'created_at'), r))
-                         for r in cur.fetchall()]
+                cur.execute("SELECT COALESCE(digest_enabled, TRUE) "
+                            "FROM university_staff WHERE user_id = %s "
+                            "AND canonical_institution = %s",
+                            (current_user.id, ctx['canonical']))
+                r = cur.fetchone()
+                digest_on = bool(r[0]) if r else True
+                if ctx['role'] == 'owner':
+                    cur.execute("""
+                        SELECT s.id, s.user_id, u.username, u.email, s.role,
+                               s.title, s.status, s.created_at
+                        FROM university_staff s JOIN users u ON u.id = s.user_id
+                        WHERE s.canonical_institution = %s
+                        ORDER BY (s.role = 'owner') DESC, s.id
+                    """, (ctx['canonical'],))
+                    staff = [dict(zip(('id', 'user_id', 'username', 'email', 'role',
+                                       'title', 'status', 'created_at'), r))
+                             for r in cur.fetchall()]
+                    cur.execute("""
+                        SELECT a.action, COALESCE(u.username, '—'), a.created_at
+                        FROM university_audit_log a
+                        LEFT JOIN users u ON u.id = a.user_id
+                        WHERE a.canonical_institution = %s
+                        ORDER BY a.created_at DESC LIMIT 50
+                    """, (ctx['canonical'],))
+                    audit = [{'action': r[0], 'username': r[1],
+                              'created_at': str(r[2])[:16] if r[2] else ''}
+                             for r in cur.fetchall()]
             conn.commit()
         finally:
             conn.close()
     except Exception:
-        staff = []
+        staff, audit = [], []
     for s in staff:
         s['role_label'] = ROLE_LABELS.get(s['role'], s['role'])
     lic = ctx['license']
-    return render_template('univer/sozlamalar.html', staff=staff,
+    return render_template('univer/sozlamalar.html', staff=staff, audit=audit,
+                           digest_on=digest_on,
                            max_staff=(lic['max_staff'] if lic else DEFAULT_MAX_STAFF),
                            **ctx)
 
@@ -750,6 +859,26 @@ def _doctoral_rows(canonical):
                         WHERE al.student_id = ANY(%s) AND al.status = 'accepted'
                         GROUP BY al.student_id""", (ids,)):
                     advisors[sid] = aname or ''
+
+                # oxirgi faollik (risk bayrog'i uchun): blok saqlashlari +
+                # nashr qo'shishlari — faqat vaqt belgilari, kontent EMAS
+                last_act = {}
+                for uid_, ts in _fetchall(cur, """
+                        SELECT p.owner_id, MAX(b.updated_at)
+                        FROM diss_projects p
+                        JOIN dissertation_blocks b ON b.dissertation_id = p.id
+                        WHERE p.owner_id = ANY(%s) AND p.status <> 'archived'
+                        GROUP BY p.owner_id""", (ids,)):
+                    if ts:
+                        last_act[uid_] = ts
+                for uid_, ts in _fetchall(cur, """
+                        SELECT rp.user_id, MAX(pub.created_at)
+                        FROM roadmap_publications pub
+                        JOIN roadmap_plans rp ON rp.id = pub.plan_id
+                        WHERE rp.user_id = ANY(%s)
+                        GROUP BY rp.user_id""", (ids,)):
+                    if ts and (uid_ not in last_act or ts > last_act[uid_]):
+                        last_act[uid_] = ts
             conn.commit()
         finally:
             conn.close()
@@ -787,6 +916,21 @@ def _doctoral_rows(canonical):
             holat, holat_class = 'Yakuniy bosqich', 'good'
         else:
             holat, holat_class = 'Faol', 'active'
+        # ── risk bayroqlari (Part 2) ──
+        # 🔴 himoya < 90 kun VA nashrlar to'liq emas; 🟡 30+ kun faollik yo'q
+        pubs_incomplete = (done.get('maqola_milliy', 0) < oak_req
+                           or done.get('maqola_xalqaro', 0) < int_req)
+        act = last_act.get(uid)
+        act_date = act.date() if hasattr(act, 'date') else act
+        idle_days = (date.today() - act_date).days if act_date else None
+        risk, risk_note = '', ''
+        if days_left is not None and days_left < 90 and pubs_incomplete:
+            risk = 'red'
+            risk_note = "Himoyagacha 90 kundan kam, nashrlar to'liq emas"
+        elif idle_days is None or idle_days >= 30:
+            risk = 'yellow'
+            risk_note = ("30+ kun faollik yo'q" if idle_days is not None
+                         else "Platformada faollik qayd etilmagan")
         rows.append({
             'user_id': uid, 'name': u['name'], 'photo_url': u['photo_url'],
             'degree': degree.upper() if degree != 'magistr' else 'Magistr',
@@ -798,9 +942,61 @@ def _doctoral_rows(canonical):
             'defense_date': defense.isoformat() if defense else '',
             'days_left': days_left,
             'holat': holat, 'holat_class': holat_class, 'overall': overall,
+            'risk': risk, 'risk_note': risk_note, 'idle_days': idle_days,
         })
     rows.sort(key=lambda r: -r['overall'])
     return rows
+
+
+def _advisor_load(canonical):
+    """'Rahbarlar yuki' sub-tab: universitet rahbarlari — platformadagi joriy
+    shogirdlar soni (advisor_links accepted) + tarixiy (dissertations,
+    olimlar_catalog keshidan). >5 joriy shogird — ortiqcha yuklangan."""
+    current_load = {}
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                users = _doctoral_user_ids(cur, canonical)
+                if users:
+                    for name, cnt in _fetchall(cur, """
+                            SELECT u2.username, COUNT(*)
+                            FROM advisor_links al
+                            JOIN users u2 ON u2.id = al.advisor_id
+                            WHERE al.student_id = ANY(%s) AND al.status = 'accepted'
+                            GROUP BY u2.username""", (list(users),)):
+                        current_load[(name or '').strip().lower()] = \
+                            {'name': name, 'active': cnt}
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    out = []
+    try:
+        from blueprints.olimlar_catalog import _build_cache
+        cache = _build_cache()
+        for s in cache['data']:
+            if canonical not in s['institutions']:
+                continue
+            key = s['display'].strip().lower()
+            cur_row = current_load.pop(key, None) or \
+                current_load.pop(s['name'].strip().lower(), None)
+            active = cur_row['active'] if cur_row else 0
+            out.append({'name': s['display'], 'full_name': s['name'],
+                        'historical': s['total_students'],
+                        'last_year': s['last_year'], 'active': active,
+                        'overloaded': active > 5})
+    except Exception:
+        pass
+    # faqat platformada joriy shogirdi bor, lekin tarixiy bazada yo'q rahbarlar
+    for row in current_load.values():
+        out.append({'name': row['name'], 'full_name': row['name'],
+                    'historical': 0, 'last_year': None,
+                    'active': row['active'], 'overloaded': row['active'] > 5})
+    out.sort(key=lambda r: (-r['active'], -r['historical']))
+    return out[:100]
 
 
 @univer_bp.route('/univer/api/doktorant/<int:uid>')
@@ -898,6 +1094,17 @@ def _owner_or_403():
     return canonical
 
 
+def _manager_or_403():
+    """Boshqaruv amallari (Part 2): owner yoki staff. Viewer → 403 (barcha
+    POST'larda server tomonda ham tekshiriladi)."""
+    canonical, role = get_university_access_or_403()
+    if role not in ('owner', 'staff'):
+        abort(make_response(jsonify(
+            {'success': False,
+             'error': "Ko'ruvchi (viewer) roli o'zgartirish kirita olmaydi"}), 403))
+    return canonical
+
+
 def _staff_count(cur, canonical):
     cur.execute("SELECT COUNT(*) FROM university_staff "
                 "WHERE canonical_institution = %s AND status = 'active'",
@@ -959,6 +1166,8 @@ def api_staff_add():
                                  (data.get('role') or 'staff').strip(),
                                  (data.get('title') or '').strip()[:200],
                                  current_user.id, max_staff)
+            if ok:
+                _audit(cur, canonical, f"Xodim qo'shildi: {ident}")
         conn.commit()
         return (jsonify({'success': True, 'message': msg}) if ok
                 else (jsonify({'success': False, 'error': msg}), 400))
@@ -994,6 +1203,7 @@ def api_staff_role(sid):
             _staff_row_for_update(cur, sid, canonical)
             cur.execute("UPDATE university_staff SET role = %s WHERE id = %s",
                         (role, sid))
+            _audit(cur, canonical, f"Xodim roli o'zgartirildi (#{sid} → {role})")
         conn.commit()
         return jsonify({'success': True})
     finally:
@@ -1015,6 +1225,7 @@ def api_staff_suspend(sid):
                         "ELSE 'active' END WHERE id = %s RETURNING status", (sid,))
             new_status = cur.fetchone()[0]
             _nav_cache.pop(row[1], None)
+            _audit(cur, canonical, f"Xodim holati o'zgartirildi (#{sid} → {new_status})")
         conn.commit()
         return jsonify({'success': True, 'status': new_status})
     finally:
@@ -1065,7 +1276,7 @@ def univer_invite_landing(token):
                 _ensure_schema(cur)
                 cur.execute("""
                     SELECT t.id, t.license_id, t.expires_at, t.used_by,
-                           l.canonical_institution
+                           l.canonical_institution, COALESCE(t.role, 'staff')
                     FROM university_invite_tokens t
                     JOIN university_licenses l ON l.id = t.license_id
                     WHERE t.token = %s""", (token,))
@@ -1078,14 +1289,14 @@ def univer_invite_landing(token):
     if not row:
         return render_template('univer/invite.html', error='Taklif havolasi '
                                'topilmadi yoki bekor qilingan.'), 404
-    _tid, _lid, expires_at, used_by, canonical = row
+    _tid, _lid, expires_at, used_by, canonical, role = row
     if used_by:
         return render_template('univer/invite.html', error='Bu taklif havolasi '
                                'allaqachon ishlatilgan.'), 410
     if expires_at and expires_at < datetime.now():
         return render_template('univer/invite.html', error='Taklif havolasi '
                                'muddati tugagan (havola 7 kun amal qiladi).'), 410
-    return render_template('univer/invite.html', token=token,
+    return render_template('univer/invite.html', token=token, role=role,
                            canonical=canonical, latin_name=_latin(canonical))
 
 
@@ -1099,14 +1310,16 @@ def univer_invite_respond(token):
             _ensure_schema(cur)
             cur.execute("""
                 SELECT t.id, t.expires_at, t.used_by, t.created_by,
-                       l.canonical_institution, l.max_staff, l.valid_until
+                       l.canonical_institution, l.max_staff, l.valid_until,
+                       COALESCE(t.role, 'staff')
                 FROM university_invite_tokens t
                 JOIN university_licenses l ON l.id = t.license_id
                 WHERE t.token = %s FOR UPDATE""", (token,))
             row = cur.fetchone()
             if not row:
                 return jsonify({'success': False, 'error': 'Havola topilmadi'}), 404
-            tid, expires_at, used_by, created_by, canonical, max_staff, valid_until = row
+            (tid, expires_at, used_by, created_by, canonical, max_staff,
+             valid_until, role) = row
             if used_by:
                 return jsonify({'success': False,
                                 'error': 'Havola allaqachon ishlatilgan'}), 409
@@ -1116,17 +1329,45 @@ def univer_invite_respond(token):
             if valid_until and valid_until < date.today():
                 return jsonify({'success': False,
                                 'error': 'Universitet litsenziyasi muddati tugagan'}), 410
-            ok, msg = _add_staff(cur, canonical, current_user.email or
-                                 current_user.username, 'staff', '',
-                                 created_by, max_staff or DEFAULT_MAX_STAFF)
-            if not ok:
-                return jsonify({'success': False, 'error': msg}), 400
+            if role == 'doctorant':
+                # doktorant: xodim EMAS — monitoring uchun universitetga
+                # bog'lanadi (university_doctorant_links) + profil institusiyasi
+                # bo'sh bo'lsa to'ldiriladi
+                cur.execute("""
+                    INSERT INTO university_doctorant_links
+                        (user_id, canonical_institution, invited_by)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (user_id, canonical_institution) DO NOTHING
+                """, (current_user.id, canonical, created_by))
+                try:
+                    email = (current_user.email or '').strip().lower()
+                    if email:
+                        cur.execute("""
+                            UPDATE olim_profiles op SET institution = %s
+                            FROM cabinet_users cu
+                            WHERE cu.id = op.cabinet_user_id
+                              AND LOWER(cu.email) = %s
+                              AND COALESCE(TRIM(op.institution), '') = ''
+                        """, (canonical, email))
+                except Exception:
+                    pass
+                _audit(cur, canonical,
+                       f"Doktorant taklifni qabul qildi: {current_user.username}")
+            else:
+                ok, msg = _add_staff(cur, canonical, current_user.email or
+                                     current_user.username, 'staff', '',
+                                     created_by, max_staff or DEFAULT_MAX_STAFF)
+                if not ok:
+                    return jsonify({'success': False, 'error': msg}), 400
+                _audit(cur, canonical,
+                       f"Xodim taklif havola orqali qo'shildi: {current_user.username}")
             cur.execute("UPDATE university_invite_tokens "
                         "SET used_by = %s, used_at = NOW() WHERE id = %s",
                         (current_user.id, tid))
         conn.commit()
         _nav_cache.pop(current_user.id, None)
-        return jsonify({'success': True, 'redirect': '/univer'})
+        return jsonify({'success': True,
+                        'redirect': '/reja' if role == 'doctorant' else '/univer'})
     except Exception as e:
         conn.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1378,6 +1619,892 @@ def admin_license_invite_link(lid):
         conn.close()
     url = request.url_root.rstrip('/') + '/univer/invite/' + token
     return jsonify({'success': True, 'url': url})
+
+
+# ═══════════════ KONFERENSIYALARIMIZ (Part 2 — boshqaruv) ════════════════════
+# Universitet o'z konferensiyalarini boshqaradi: canonical_institution
+# to'ldirilgan yozuvlar avtoritetli; organizer fuzzy-mos kelganlar ham
+# ko'rsatiladi (faqat o'qish). Yangi yozuv 'pending' + is_active=FALSE bilan
+# yaratiladi — admin tasdiqlamaguncha ommaviy sahifalarda KO'RINMAYDI.
+
+_UNI_CONF_FIELDS = ('title', 'start_date', 'end_date', 'city', 'field',
+                    'event_type', 'description', 'source_url')
+
+
+def _organizer_match_sql(latin_name):
+    """(sql, params) — organizer matnida universitet kalit so'zlari (AND)."""
+    try:
+        from app import _uni_keywords
+        kws = _uni_keywords(latin_name)[:4]
+    except Exception:
+        kws = []
+    if not kws:
+        return "FALSE", []
+    return (" AND ".join(["organizer ILIKE %s"] * len(kws)),
+            [f'%{k}%' for k in kws])
+
+
+def _uni_conferences(cur, canonical):
+    """Universitet konferensiyalari: o'ziniki (canonical) + organizer mosi."""
+    from blueprints.conferences import _ensure_schema as _ensure_conf
+    _ensure_conf(cur)
+    org_sql, org_params = _organizer_match_sql(_latin(canonical))
+    cur.execute(f"""
+        SELECT c.id, c.title, c.title_slug, c.start_date, c.end_date, c.city,
+               c.field, c.event_type, c.source_url, c.is_active,
+               COALESCE(c.moderation_status, 'approved'),
+               (c.canonical_institution = %s) AS own,
+               (SELECT COUNT(*) FROM conference_notifications_log l
+                 WHERE l.conference_id = c.id) AS notified
+        FROM conferences c
+        WHERE c.canonical_institution = %s
+           OR (c.canonical_institution IS NULL AND ({org_sql}))
+        ORDER BY (c.canonical_institution = %s) DESC,
+                 c.start_date DESC NULLS LAST, c.id DESC
+        LIMIT 200
+    """, [canonical, canonical] + org_params + [canonical])
+    cols = ('id', 'title', 'slug', 'start_date', 'end_date', 'city', 'field',
+            'event_type', 'source_url', 'is_active', 'moderation_status',
+            'own', 'notified')
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+@univer_bp.route('/univer/konferensiyalar')
+@login_required
+def univer_conferences_page():
+    ctx = _workspace_ctx('konferensiyalar')
+    items, fields = [], []
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                items = _uni_conferences(cur, ctx['canonical'])
+                cur.execute("SELECT name FROM conference_fields ORDER BY name")
+                fields = [r[0] for r in cur.fetchall()]
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    from blueprints.conferences import EVENT_TYPES_LOCAL
+    return render_template('univer/konferensiyalar.html', items=items,
+                           fields=fields, event_types=EVENT_TYPES_LOCAL, **ctx)
+
+
+def _conf_form_vals(data):
+    from blueprints.conferences import _parse_date as _pd
+    v = {k: (data.get(k) or '').strip() or None for k in _UNI_CONF_FIELDS}
+    v['start_date'] = _pd(v['start_date'])
+    v['end_date'] = _pd(v['end_date'])
+    if v['title']:
+        v['title'] = v['title'][:600]
+    return v
+
+
+@univer_bp.route('/univer/api/conferences/add', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_uni_conference_add():
+    canonical = _manager_or_403()
+    v = _conf_form_vals(request.get_json(silent=True) or {})
+    if not v['title']:
+        return jsonify({'success': False, 'error': 'Sarlavha kiritilishi shart'}), 400
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            from blueprints.conferences import (_ensure_schema as _ensure_conf,
+                                                make_slug)
+            _ensure_conf(cur)
+            slug = make_slug(v['title'], cur)
+            cur.execute("""
+                INSERT INTO conferences
+                    (title, title_slug, scope, organizer, field, city,
+                     event_type, start_date, end_date, is_multiday, description,
+                     source_url, country, source, canonical_institution,
+                     submitted_by, moderation_status, is_active)
+                VALUES (%s, %s, 'local', %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        'O''zbekiston', 'universitet', %s, %s, 'pending', FALSE)
+                RETURNING id
+            """, (v['title'], slug, _latin(canonical), v['field'], v['city'],
+                  v['event_type'], v['start_date'], v['end_date'],
+                  bool(v['start_date'] and v['end_date']
+                       and v['end_date'] != v['start_date']),
+                  v['description'], v['source_url'], canonical,
+                  current_user.id))
+            new_id = cur.fetchone()[0]
+            _audit(cur, canonical, f"Konferensiya yaratildi (moderatsiyaga): "
+                                   f"{v['title'][:80]}")
+        conn.commit()
+        return jsonify({'success': True, 'id': new_id,
+                        'message': "Yuborildi — sayt admini tasdiqlagach "
+                                   "ommaviy e'lon qilinadi"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+def _own_conference_or_403(cur, canonical, cid):
+    """Konferensiya AYNAN shu universitetniki ekanini tekshiradi (egalik
+    guardi — boshqa universitet yozuviga urinish 403)."""
+    cur.execute("SELECT id FROM conferences "
+                "WHERE id = %s AND canonical_institution = %s", (cid, canonical))
+    if not cur.fetchone():
+        abort(make_response(jsonify({'success': False, 'error': 'forbidden'}), 403))
+
+
+@univer_bp.route('/univer/api/conferences/<int:cid>/update', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_uni_conference_update(cid):
+    canonical = _manager_or_403()
+    v = _conf_form_vals(request.get_json(silent=True) or {})
+    if not v['title']:
+        return jsonify({'success': False, 'error': 'Sarlavha kiritilishi shart'}), 400
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            _own_conference_or_403(cur, canonical, cid)
+            cur.execute("""
+                UPDATE conferences SET title = %s, field = %s, city = %s,
+                    event_type = %s, start_date = %s, end_date = %s,
+                    is_multiday = %s, description = %s, source_url = %s,
+                    updated_at = NOW()
+                WHERE id = %s
+            """, (v['title'], v['field'], v['city'], v['event_type'],
+                  v['start_date'], v['end_date'],
+                  bool(v['start_date'] and v['end_date']
+                       and v['end_date'] != v['start_date']),
+                  v['description'], v['source_url'], cid))
+            _audit(cur, canonical, f"Konferensiya tahrirlandi (#{cid})")
+        conn.commit()
+        return jsonify({'success': True})
+    finally:
+        conn.close()
+
+
+@univer_bp.route('/univer/api/conferences/<int:cid>/toggle', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_uni_conference_toggle(cid):
+    """O'z (tasdiqlangan) konferensiyasini yashirish/qayta yoqish.
+    'pending' yozuvni yoqib bo'lmaydi — faqat admin tasdiqlaydi."""
+    canonical = _manager_or_403()
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            _own_conference_or_403(cur, canonical, cid)
+            cur.execute("""
+                UPDATE conferences SET is_active = NOT is_active, updated_at = NOW()
+                WHERE id = %s AND COALESCE(moderation_status, 'approved') = 'approved'
+                RETURNING is_active
+            """, (cid,))
+            r = cur.fetchone()
+            if not r:
+                return jsonify({'success': False,
+                                'error': "Moderatsiyadagi yozuvni o'zgartirib "
+                                         "bo'lmaydi"}), 400
+            _audit(cur, canonical, f"Konferensiya holati o'zgartirildi (#{cid})")
+        conn.commit()
+        return jsonify({'success': True, 'is_active': bool(r[0])})
+    finally:
+        conn.close()
+
+
+# ═══════════════════════ JURNALLARIMIZ (Part 2) ══════════════════════════════
+
+@univer_bp.route('/univer/jurnallar')
+@login_required
+def univer_journals_page():
+    ctx = _workspace_ctx('jurnallar')
+    items = []
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                org_sql, org_params = _organizer_match_sql(_latin(ctx['canonical']))
+                pub_sql = org_sql.replace('organizer', 'publisher')
+                cur.execute(f"""
+                    SELECT id, name, issn, oak_approved, scopus_indexed,
+                           wos_indexed, is_active,
+                           COALESCE(moderation_status, 'approved'),
+                           (canonical_institution = %s) AS own
+                    FROM journals
+                    WHERE canonical_institution = %s
+                       OR (canonical_institution IS NULL AND ({pub_sql}))
+                    ORDER BY (canonical_institution = %s) DESC, LOWER(name)
+                    LIMIT 100
+                """, [ctx['canonical'], ctx['canonical']] + org_params
+                     + [ctx['canonical']])
+                cols = ('id', 'name', 'issn', 'oak', 'scopus', 'wos',
+                        'is_active', 'moderation_status', 'own')
+                items = [dict(zip(cols, r)) for r in cur.fetchall()]
+                # platformadagi iqtiboslar: Roadmap nashrlari shu jurnal nomini
+                # venue sifatida ko'rsatgan soni (FAQAT SON — metrika)
+                for it in items:
+                    try:
+                        cur.execute(
+                            "SELECT COUNT(*) FROM roadmap_publications "
+                            "WHERE venue ILIKE %s", (f"%{it['name'][:80]}%",))
+                        it['cited'] = cur.fetchone()[0] or 0
+                    except Exception:
+                        it['cited'] = 0
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        items = []
+    return render_template('univer/jurnallar.html', items=items, **ctx)
+
+
+@univer_bp.route('/univer/api/journals/request', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_uni_journal_request():
+    """"Jurnal qo'shish so'rovi" — pending journals qatori (is_active=FALSE,
+    ommaviy ro'yxatlarda ko'rinmaydi) — sayt admini /admin/journals da
+    tasdiqlaydi."""
+    canonical = _manager_or_403()
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()[:500]
+    if not name:
+        return jsonify({'success': False, 'error': 'Jurnal nomi kiritilishi shart'}), 400
+    issn = (data.get('issn') or '').strip()[:20] or None
+    website = (data.get('website') or '').strip()[:500] or None
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            from blueprints.journal_check import normalize_title
+            cur.execute("""
+                INSERT INTO journals (name, name_normalized, issn, website,
+                    publisher, country, canonical_institution, submitted_by,
+                    moderation_status, is_active)
+                VALUES (%s, %s, %s, %s, %s, 'O''zbekiston', %s, %s,
+                        'pending', FALSE)
+                ON CONFLICT (name) DO NOTHING RETURNING id
+            """, (name, normalize_title(name), issn, website,
+                  _latin(canonical), canonical, current_user.id))
+            row = cur.fetchone()
+            if not row:
+                return jsonify({'success': False,
+                                'error': 'Bu nomdagi jurnal allaqachon mavjud'}), 400
+            _audit(cur, canonical, f"Jurnal so'rovi yuborildi: {name[:80]}")
+        conn.commit()
+        return jsonify({'success': True, 'id': row[0],
+                        'message': "So'rov yuborildi — admin tasdiqlagach "
+                                   "ro'yxatda ko'rinadi"})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@univer_bp.route('/admin/journals/approve/<int:jid>', methods=['POST'])
+@login_required
+def admin_journal_approve(jid):
+    """Universitet yuborgan pending jurnalni tasdiqlash (sayt admini)."""
+    _admin_guard()
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("UPDATE journals SET moderation_status = 'approved', "
+                        "is_active = TRUE, updated_at = NOW() "
+                        "WHERE id = %s AND moderation_status = 'pending' "
+                        "RETURNING name", (jid,))
+            r = cur.fetchone()
+        conn.commit()
+        flash(f"Jurnal tasdiqlandi: {r[0]}" if r else 'Tasdiqlanadigan yozuv topilmadi.',
+              'success' if r else 'error')
+    finally:
+        conn.close()
+    return redirect(url_for('admin.admin_journals'))
+
+
+# ═══════════ DOKTORANT TAKLIFLARI (bulk invite) + DIGEST (Part 2) ════════════
+
+MAX_BULK_INVITES = 50
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+
+def _doctorant_invites(canonical):
+    """Yuborilgan doktorant takliflari ro'yxati (holati bilan)."""
+    out = []
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                cur.execute("""
+                    SELECT t.email, t.token, t.created_at, t.expires_at,
+                           t.used_at, u.username
+                    FROM university_invite_tokens t
+                    JOIN university_licenses l ON l.id = t.license_id
+                    LEFT JOIN users u ON u.id = t.used_by
+                    WHERE l.canonical_institution = %s AND t.role = 'doctorant'
+                    ORDER BY t.created_at DESC LIMIT 100
+                """, (canonical,))
+                now = datetime.now()
+                for email, token, created, expires, used_at, uname in cur.fetchall():
+                    if used_at:
+                        status, cls = 'Qabul qilingan', 'good'
+                    elif expires and expires < now:
+                        status, cls = 'Muddati tugagan', 'muted'
+                    else:
+                        status, cls = 'Kutilmoqda', 'active'
+                    out.append({'email': email or '—',
+                                'url': f'/univer/invite/{token}',
+                                'created_at': str(created)[:10] if created else '',
+                                'status': status, 'status_class': cls,
+                                'accepted_by': uname or ''})
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return out
+
+
+@univer_bp.route('/univer/api/doktorant/invites', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_doctorant_invites():
+    """Bulk taklif: har qatorda bitta email (maks. 50). Har biriga 7 kunlik
+    bir martalik havola yaratiladi — xodim ularni o'zi yuboradi (SMTP yo'q,
+    havolalar ro'yxati qaytadi)."""
+    canonical = _manager_or_403()
+    raw = (request.get_json(silent=True) or {}).get('emails') or ''
+    emails, bad = [], []
+    for line in raw.splitlines():
+        e = line.strip().lower()
+        if not e:
+            continue
+        (emails if _EMAIL_RE.match(e) else bad).append(e)
+    emails = list(dict.fromkeys(emails))          # takrorlarni olib tashlash
+    if not emails:
+        return jsonify({'success': False,
+                        'error': "Kamida bitta to'g'ri email kiriting"}), 400
+    if len(emails) > MAX_BULK_INVITES:
+        return jsonify({'success': False,
+                        'error': f"Bir so'rovda ko'pi bilan {MAX_BULK_INVITES} ta "
+                                 f"email (siz {len(emails)} ta yubordingiz)"}), 400
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("SELECT id FROM university_licenses "
+                        "WHERE canonical_institution = %s", (canonical,))
+            lic = cur.fetchone()
+            if not lic:
+                return jsonify({'success': False, 'error': 'Litsenziya topilmadi'}), 404
+            links = []
+            for e in emails:
+                token = secrets.token_urlsafe(32)[:64]
+                cur.execute("""
+                    INSERT INTO university_invite_tokens
+                        (token, license_id, created_by, role, email)
+                    VALUES (%s, %s, %s, 'doctorant', %s)
+                """, (token, lic[0], current_user.id, e))
+                links.append({'email': e,
+                              'url': request.url_root.rstrip('/')
+                                     + '/univer/invite/' + token})
+            _audit(cur, canonical,
+                   f"Doktorant takliflari yaratildi ({len(links)} ta)")
+        conn.commit()
+        return jsonify({'success': True, 'links': links, 'invalid': bad})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@univer_bp.route('/univer/api/digest-pref', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_digest_pref():
+    """Xodimning o'z kunlik digest toggle'i (university_staff.digest_enabled)."""
+    canonical, _role = get_university_access_or_403()
+    enabled = bool((request.get_json(silent=True) or {}).get('enabled'))
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("UPDATE university_staff SET digest_enabled = %s "
+                        "WHERE user_id = %s AND canonical_institution = %s",
+                        (enabled, current_user.id, canonical))
+        conn.commit()
+        return jsonify({'success': True, 'enabled': enabled})
+    finally:
+        conn.close()
+
+
+DIGEST_DEFENSE_MARKS = (60, 30)
+
+
+def _digest_events(cur, canonical):
+    """Oxirgi 24 soatdagi doktorant voqealari — FAQAT METRIKALAR:
+    nashr qo'shildi, bob yakunlandi (word_target'ga yetdi), himoya 60/30 kun."""
+    users = _doctoral_user_ids(cur, canonical)
+    if not users:
+        return []
+    ids = list(users)
+    events = []
+    for uid, title in _fetchall(cur, """
+            SELECT rp.user_id, pub.title FROM roadmap_publications pub
+            JOIN roadmap_plans rp ON rp.id = pub.plan_id
+            WHERE rp.user_id = ANY(%s)
+              AND pub.created_at >= NOW() - INTERVAL '1 day'
+            LIMIT 20""", (ids,)):
+        nm = users.get(uid, {}).get('name', 'Doktorant')
+        events.append(f"📄 {nm} yangi nashr qo'shdi")
+    for uid, btitle in _fetchall(cur, """
+            SELECT p.owner_id, b.title FROM dissertation_blocks b
+            JOIN diss_projects p ON p.id = b.dissertation_id
+            WHERE p.owner_id = ANY(%s) AND p.status <> 'archived'
+              AND COALESCE(b.word_target, 0) > 0
+              AND b.word_count >= b.word_target
+              AND b.updated_at >= NOW() - INTERVAL '1 day'
+            LIMIT 20""", (ids,)):
+        nm = users.get(uid, {}).get('name', 'Doktorant')
+        events.append(f"✅ {nm}: \"{(btitle or '')[:40]}\" bo'limi maqsadga yetdi")
+    for uid, days in _fetchall(cur, """
+            SELECT user_id, (target_defense_date - CURRENT_DATE)
+            FROM roadmap_plans
+            WHERE is_active AND user_id = ANY(%s)
+              AND (target_defense_date - CURRENT_DATE) = ANY(%s)""",
+            (ids, list(DIGEST_DEFENSE_MARKS))):
+        nm = users.get(uid, {}).get('name', 'Doktorant')
+        events.append(f"⏰ {nm} himoyasiga {days} kun qoldi")
+    return events[:15]
+
+
+@univer_bp.route('/api/v1/univer/dispatch-digest', methods=['POST'])
+@csrf.exempt
+def dispatch_univer_digest():
+    """Kunlik cron (GitHub Actions, REMINDERS_API_KEY) — har faol litsenziyali
+    universitet uchun voqealarni yig'ib, xodimlarga KUNIGA KO'PI BILAN BITTA
+    user_alert yuboradi (university_digest_log dedup)."""
+    import os as _os
+    key = request.headers.get('X-Api-Key') or request.args.get('key') or ''
+    expected = _os.environ.get('REMINDERS_API_KEY', '')
+    if not expected or key != expected:
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    sent = skipped = 0
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            try:
+                from blueprints.notifications import _ensure_schema as _ensure_notif
+                _ensure_notif(cur)
+            except Exception:
+                pass
+            cur.execute("""
+                SELECT canonical_institution FROM university_licenses
+                WHERE valid_until IS NULL OR valid_until >= CURRENT_DATE
+            """)
+            unis = [r[0] for r in cur.fetchall()]
+            for canonical in unis:
+                # kunlik dedup — INSERT muvaffaqiyatsiz bo'lsa bugun yuborilgan
+                cur.execute("""
+                    INSERT INTO university_digest_log
+                        (canonical_institution, digest_date)
+                    VALUES (%s, CURRENT_DATE)
+                    ON CONFLICT (canonical_institution, digest_date) DO NOTHING
+                    RETURNING id""", (canonical,))
+                log = cur.fetchone()
+                if not log:
+                    skipped += 1
+                    continue
+                events = _digest_events(cur, canonical)
+                if not events:
+                    # voqea yo'q — log qoladi (qayta urinilmaydi), alert yo'q
+                    continue
+                cur.execute("UPDATE university_digest_log SET events_count = %s "
+                            "WHERE id = %s", (len(events), log[0]))
+                msg = ("Doktorantlaringiz bo'yicha bugungi xulosa:\n"
+                       + "\n".join(events)
+                       + "\n🔗 /univer/doktorantlar")
+                cur.execute("""
+                    SELECT user_id FROM university_staff
+                    WHERE canonical_institution = %s AND status = 'active'
+                      AND COALESCE(digest_enabled, TRUE)""", (canonical,))
+                for (staff_uid,) in cur.fetchall():
+                    cur.execute("""
+                        INSERT INTO user_alerts (user_id, title, message, level)
+                        VALUES (%s, %s, %s, 'info')
+                    """, (staff_uid, f"🏛 {_latin(canonical)} — kunlik digest", msg))
+                    sent += 1
+        conn.commit()
+        return jsonify({'ok': True, 'universities': len(unis),
+                        'alerts_sent': sent, 'already_sent_today': skipped})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+# ═══════════════════ HISOBOTLAR (Part 2 — OAK hisoboti) ═════════════════════
+
+_report_last = {}       # user_id → ts (1 hisobot/daqiqa)
+REPORT_SECTIONS = {
+    'himoyalar': "Himoyalar ro'yxati",
+    'ixtisosliklar': 'Ixtisosliklar kesimi',
+    'rahbarlar': 'Rahbarlar faolligi',
+    'doktorantlar': 'Doktorantlar progressi',
+    'nashrlar': 'Nashrlar statistikasi',
+}
+_REPORT_ROW_CAP = 2000
+
+
+def _report_period(a):
+    """(y0, y1, m0, m1, label) — yil / chorak / oraliq."""
+    this_year = date.today().year
+    try:
+        y0 = int(a.get('y0') or a.get('year') or this_year)
+    except (TypeError, ValueError):
+        y0 = this_year
+    try:
+        y1 = int(a.get('y1') or y0)
+    except (TypeError, ValueError):
+        y1 = y0
+    if y0 > y1:
+        y0, y1 = y1, y0
+    y0, y1 = max(1950, y0), min(2100, y1)
+    quarter = a.get('quarter') or ''
+    m0, m1 = 1, 12
+    label = f'{y0}' if y0 == y1 else f'{y0}–{y1}'
+    if y0 == y1 and quarter in ('1', '2', '3', '4'):
+        q = int(quarter)
+        m0, m1 = (q - 1) * 3 + 1, q * 3
+        label = f'{y0}, {q}-chorak'
+    return y0, y1, m0, m1, label
+
+
+def _report_data(canonical, y0, y1, m0, m1, sections):
+    """Hisobot bo'limlari uchun ma'lumot — mavjud skoplangan so'rovlar ustida
+    (yangi og'ir agregatsiya yo'q, faqat prezentatsiya)."""
+    out = {}
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            variants = _variants(cur, canonical)
+            W = "TRIM(d.muassasa) = ANY(%s)"
+            yr = (f"d.sana ~ '(19|20)\\d{{2}}' "
+                  f"AND ({_YEAR_EXPR})::int BETWEEN %s AND %s")
+            mon = ""
+            mparams = []
+            if (m0, m1) != (1, 12):
+                mon = (" AND TRIM(d.sana) ~ '^[0-9]{2}[.][0-9]{2}[.][0-9]{4}$' "
+                       "AND substring(TRIM(d.sana) from 4 for 2)::int "
+                       "BETWEEN %s AND %s")
+                mparams = [m0, m1]
+            base_params = [variants, y0, y1] + mparams
+
+            if 'himoyalar' in sections:
+                cur.execute(f"""
+                    SELECT d.sana, d.olim, d.mavzu, d.daraja, d.ixtisoslik,
+                           d.ilmiy_rahbar
+                    FROM dissertations d WHERE {W} AND {yr}{mon}
+                    ORDER BY ({_YEAR_EXPR})::int, d.id LIMIT %s
+                """, base_params + [_REPORT_ROW_CAP])
+                out['himoyalar'] = [
+                    {'sana': (r[0] or '').strip(), 'olim': (r[1] or '').strip(),
+                     'mavzu': (r[2] or '').strip(), 'daraja': (r[3] or '').strip(),
+                     'ixtisoslik': (r[4] or '').strip(),
+                     'rahbar': (r[5] or '').strip()} for r in cur.fetchall()]
+
+            if 'ixtisosliklar' in sections:
+                cur.execute(f"""
+                    SELECT TRIM(d.ixtisoslik), MAX(d.ixtisoslik_nomi), COUNT(*)
+                    FROM dissertations d WHERE {W} AND {yr}{mon}
+                      AND d.ixtisoslik IS NOT NULL AND TRIM(d.ixtisoslik) <> ''
+                    GROUP BY 1 ORDER BY 3 DESC LIMIT 50
+                """, base_params)
+                out['ixtisosliklar'] = [
+                    {'code': r[0], 'name': (r[1] or '').strip(), 'count': r[2]}
+                    for r in cur.fetchall()]
+
+            if 'rahbarlar' in sections:
+                cur.execute(f"""
+                    SELECT TRIM(d.ilmiy_rahbar), COUNT(*),
+                           COUNT(*) FILTER (WHERE {_PHD_LIKE}),
+                           COUNT(*) FILTER (WHERE {_DSC_LIKE})
+                    FROM dissertations d WHERE {W} AND {yr}{mon}
+                      AND d.ilmiy_rahbar IS NOT NULL AND TRIM(d.ilmiy_rahbar) <> ''
+                    GROUP BY 1 ORDER BY 2 DESC LIMIT 50
+                """, base_params)
+                out['rahbarlar'] = [
+                    {'name': r[0], 'count': r[1], 'phd': r[2], 'dsc': r[3]}
+                    for r in cur.fetchall()]
+
+            if 'nashrlar' in sections:
+                users = _doctoral_user_ids(cur, canonical)
+                rows = []
+                if users:
+                    from blueprints.roadmap import (PUB_TYPE_LABELS,
+                                                    PUB_STATUS_LABELS)
+                    cur.execute("""
+                        SELECT pub.pub_type, pub.status, COUNT(*)
+                        FROM roadmap_publications pub
+                        JOIN roadmap_plans rp ON rp.id = pub.plan_id
+                        WHERE rp.user_id = ANY(%s)
+                        GROUP BY 1, 2 ORDER BY 1, 2
+                    """, (list(users),))
+                    for ptype, status, cnt in cur.fetchall():
+                        rows.append({
+                            'type': PUB_TYPE_LABELS.get(ptype, ptype),
+                            'status': PUB_STATUS_LABELS.get(status, status),
+                            'count': cnt})
+                out['nashrlar'] = rows
+        conn.commit()
+    finally:
+        conn.close()
+    if 'doktorantlar' in sections:
+        out['doktorantlar'] = _doctoral_rows(canonical)
+    return out
+
+
+@univer_bp.route('/univer/hisobotlar')
+@login_required
+def univer_reports_page():
+    ctx = _workspace_ctx('hisobotlar')
+    return render_template('univer/hisobotlar.html',
+                           sections=REPORT_SECTIONS,
+                           this_year=date.today().year, **ctx)
+
+
+@univer_bp.route('/univer/hisobot')
+@login_required
+def univer_report_generate():
+    canonical, _role = get_university_access_or_403()
+    now = time.time()
+    if now - _report_last.get(current_user.id, 0) < 60:
+        return Response("Hisobot tayyorlanmoqda — bir daqiqadan so'ng qayta "
+                        "urinib ko'ring", status=429,
+                        mimetype='text/plain; charset=utf-8')
+    _report_last[current_user.id] = now
+    a = request.args
+    y0, y1, m0, m1, period_label = _report_period(a)
+    sections = [s for s in (a.get('sections') or '').split(',')
+                if s in REPORT_SECTIONS] or list(REPORT_SECTIONS)
+    fmt = a.get('format') if a.get('format') in ('screen', 'xlsx', 'docx') \
+        else 'screen'
+    try:
+        data = _report_data(canonical, y0, y1, m0, m1, sections)
+    except Exception:
+        _report_last.pop(current_user.id, None)   # muvaffaqiyatsiz urinish limitga kirmaydi
+        return Response("Hisobot ma'lumotlarini olishda xatolik — birozdan "
+                        "so'ng qayta urinib ko'ring", status=503,
+                        mimetype='text/plain; charset=utf-8')
+    try:
+        conn = _conn()
+        try:
+            with conn.cursor() as cur:
+                _ensure_schema(cur)
+                _audit(cur, canonical,
+                       f"Hisobot yaratildi ({period_label}, {fmt})")
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    latin = _latin(canonical)
+    if fmt == 'xlsx':
+        return _report_xlsx(latin, period_label, sections, data)
+    if fmt == 'docx':
+        return _report_docx(latin, period_label, sections, data)
+    return render_template('univer/report.html', latin_name=latin,
+                           period_label=period_label, sections=sections,
+                           section_labels=REPORT_SECTIONS, data=data,
+                           generated_at=datetime.now().strftime('%d.%m.%Y %H:%M'))
+
+
+_REPORT_HEADERS = {
+    'himoyalar': ['Sana', 'Olim', 'Mavzu', 'Daraja', 'Ixtisoslik', 'Ilmiy rahbar'],
+    'ixtisosliklar': ['Shifr', 'Nomi', 'Himoyalar soni'],
+    'rahbarlar': ['Ilmiy rahbar', 'Jami', 'PhD', 'DSc'],
+    'doktorantlar': ['Doktorant', 'Daraja', 'Ixtisoslik', 'Rahbar',
+                     'OAK nashrlari', 'Xalqaro nashrlar', "So'zlar", 'Progress %',
+                     'Himoya sanasi', 'Holat'],
+    'nashrlar': ['Nashr turi', 'Holati', 'Soni'],
+}
+
+
+def _report_rows(section, data):
+    """Bo'lim ma'lumotini jadval qatorlariga aylantiradi (xlsx/docx uchun)."""
+    rows = data.get(section) or []
+    if section == 'himoyalar':
+        return [[r['sana'], r['olim'], r['mavzu'], r['daraja'],
+                 r['ixtisoslik'], r['rahbar']] for r in rows]
+    if section == 'ixtisosliklar':
+        return [[r['code'], r['name'], r['count']] for r in rows]
+    if section == 'rahbarlar':
+        return [[r['name'], r['count'], r['phd'], r['dsc']] for r in rows]
+    if section == 'doktorantlar':
+        return [[r['name'], r['degree'], r['specialty'], r['advisor'],
+                 f"{r['oak_done']}/{r['oak_req']}",
+                 f"{r['int_done']}/{r['int_req']}" if r['int_req'] else '—',
+                 f"{r['words']}/{r['word_target']}", r['overall'],
+                 r['defense_date'] or '—', r['holat']] for r in rows]
+    if section == 'nashrlar':
+        return [[r['type'], r['status'], r['count']] for r in rows]
+    return []
+
+
+def _report_xlsx(latin, period_label, sections, data):
+    import io
+    import openpyxl
+    from openpyxl.styles import Font
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+    for s in sections:
+        ws = wb.create_sheet(REPORT_SECTIONS[s][:31])
+        ws.append([f"{latin} — {REPORT_SECTIONS[s]} ({period_label})"])
+        ws['A1'].font = Font(bold=True, size=13)
+        ws.append([])
+        ws.append(_REPORT_HEADERS[s])
+        for c in ws[3]:
+            c.font = Font(bold=True)
+        for row in _report_rows(s, data):
+            ws.append(row)
+        for i, w in enumerate((14, 30, 60, 12, 14, 30)[:len(_REPORT_HEADERS[s])]):
+            ws.column_dimensions[chr(65 + i)].width = w
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return Response(buf.read(),
+                    mimetype='application/vnd.openxmlformats-officedocument'
+                             '.spreadsheetml.sheet',
+                    headers={'Content-Disposition':
+                             'attachment; filename="hisobot.xlsx"'})
+
+
+def _report_docx(latin, period_label, sections, data):
+    import io
+    from docx import Document
+    from docx.shared import Pt
+    doc = Document()
+    doc.add_heading(f'«{latin}»', 0)
+    doc.add_heading(f'Ilmiy faoliyat hisoboti, {period_label}', level=1)
+    p = doc.add_paragraph(
+        f"Hisobot olimlar.uz platformasi ma'lumotlari asosida "
+        f"{datetime.now().strftime('%d.%m.%Y')} sanasida tayyorlandi.")
+    p.runs[0].font.size = Pt(10)
+    for s in sections:
+        doc.add_heading(REPORT_SECTIONS[s], level=2)
+        rows = _report_rows(s, data)
+        if not rows:
+            doc.add_paragraph("Ma'lumot topilmadi.")
+            continue
+        headers = _REPORT_HEADERS[s]
+        # .docx jadvali katta ro'yxatlarda og'irlashadi — 300 qator kifoya,
+        # to'liq ro'yxat uchun .xlsx bor
+        table = doc.add_table(rows=1, cols=len(headers))
+        table.style = 'Light Grid Accent 1'
+        for i, h in enumerate(headers):
+            table.rows[0].cells[i].text = h
+        for row in rows[:300]:
+            cells = table.add_row().cells
+            for i, v in enumerate(row):
+                cells[i].text = str(v if v is not None else '')
+        if len(rows) > 300:
+            doc.add_paragraph(f"... va yana {len(rows) - 300} ta qator "
+                              f"(to'liq ro'yxat .xlsx formatida).")
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return Response(buf.read(),
+                    mimetype='application/vnd.openxmlformats-officedocument'
+                             '.wordprocessingml.document',
+                    headers={'Content-Disposition':
+                             'attachment; filename="hisobot.docx"'})
+
+
+# ═══════════ OMMAVIY PROFIL TAHRIRI (litsenziya perki, Part 2) ═══════════════
+
+@univer_bp.route('/univer/api/public-profile', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_public_profile():
+    """Ommaviy /university/<name> sahifasidagi tavsif/veb-sayt/logo/email —
+    owner+staff tahrirlaydi. body.canonical AYNAN xodimning universiteti
+    bo'lishi shart (boshqa universitet sahifasidan urinish → 403)."""
+    canonical = _manager_or_403()
+    data = request.get_json(silent=True) or {}
+    if (data.get('canonical') or '').strip() != canonical:
+        return jsonify({'success': False, 'error': 'forbidden'}), 403
+    desc = (data.get('description') or '').strip()[:3000] or None
+    website = (data.get('website') or '').strip()[:500] or None
+    logo = (data.get('logo_url') or '').strip()[:500] or None
+    email = (data.get('contact_email') or '').strip()[:255] or None
+    if website and not website.startswith(('http://', 'https://')):
+        website = 'https://' + website
+    conn = _conn()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute("""
+                INSERT INTO university_public_profiles
+                    (canonical_institution, description, website, logo_url,
+                     contact_email, updated_by, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (canonical_institution) DO UPDATE SET
+                    description = EXCLUDED.description,
+                    website = EXCLUDED.website,
+                    logo_url = EXCLUDED.logo_url,
+                    contact_email = EXCLUDED.contact_email,
+                    updated_by = EXCLUDED.updated_by, updated_at = NOW()
+            """, (canonical, desc, website, logo, email, current_user.id))
+            _audit(cur, canonical, 'Ommaviy profil tahrirlandi')
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+def get_public_profile_context(cur, canonical, user_id=None):
+    """/university/<name> sahifasi uchun (content.py chaqiradi):
+    {official, profile{...}, can_edit} — jadval yo'q/DB xatosida bo'sh dict."""
+    out = {'official': False, 'profile': None, 'can_edit': False}
+    if not canonical:
+        return out
+    try:
+        cur.execute("SELECT 1 FROM university_licenses "
+                    "WHERE canonical_institution = %s "
+                    "AND (valid_until IS NULL OR valid_until >= CURRENT_DATE)",
+                    (canonical,))
+        out['official'] = cur.fetchone() is not None
+        cur.execute("SELECT description, website, logo_url, contact_email "
+                    "FROM university_public_profiles "
+                    "WHERE canonical_institution = %s", (canonical,))
+        r = cur.fetchone()
+        if r:
+            out['profile'] = {'description': r[0] or '', 'website': r[1] or '',
+                              'logo_url': r[2] or '', 'contact_email': r[3] or ''}
+        if user_id and out['official']:
+            cur.execute("SELECT role FROM university_staff "
+                        "WHERE user_id = %s AND canonical_institution = %s "
+                        "AND status = 'active'", (user_id, canonical))
+            sr = cur.fetchone()
+            out['can_edit'] = bool(sr and sr[0] in ('owner', 'staff'))
+    except Exception:
+        pass
+    return out
 
 
 # ── navbar bayrog'i (har so'rovda yengil, 2 daqiqa modul keshi) ──────────────

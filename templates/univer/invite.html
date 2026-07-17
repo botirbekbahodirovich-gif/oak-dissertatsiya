@@ -12,10 +12,20 @@
   <div style="font-size:2.4rem;">🏛️</div>
   <h1 style="font-size:1.2rem;font-weight:800;color:#f1f5f9;margin:14px 0 8px;">
     Universitet paneliga taklif</h1>
+  {% if role == 'doctorant' %}
+  <p style="color:#8899b4;font-size:0.92rem;line-height:1.6;">
+    <b style="color:#cbd5e1;">{{ latin_name }}</b> sizni olimlar.uz da
+    <b>doktorant</b> sifatida taklif qilmoqda. Qabul qilsangiz, universitetingiz
+    sizning platformadagi ochiq ko'rsatkichlaringizni (nashrlar soni, progress %)
+    kuzata oladi — dissertatsiya matningiz hech qachon ko'rinmaydi.
+    Buni istalgan payt kabinetdagi "Universitetim faolligimni ko'rmasin"
+    sozlamasi bilan o'chirib qo'yishingiz mumkin.</p>
+  {% else %}
   <p style="color:#8899b4;font-size:0.92rem;line-height:1.6;">
     Siz <b style="color:#cbd5e1;">{{ latin_name }}</b> universitet workspace'iga
     <b>xodim</b> sifatida taklif qilindingiz. Qabul qilsangiz, universitetning
     monitoring paneliga kirish huquqini olasiz.</p>
+  {% endif %}
   <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
     <button id="uv-accept" style="background:#3b82f6;color:#fff;font-weight:700;padding:11px 26px;border-radius:10px;border:none;cursor:pointer;">✓ Qabul qilish</button>
     <a href="/" style="background:rgba(148,163,184,0.12);color:#94a3b8;font-weight:700;padding:11px 22px;border-radius:10px;text-decoration:none;">Bekor qilish</a>

@@ -86,12 +86,10 @@
       <a class="{% if section == 'olimlar' %}on{% endif %}" href="/univer/olimlar">👥 Olimlarimiz</a>
       <a class="{% if section == 'dissertatsiyalar' %}on{% endif %}" href="/univer/dissertatsiyalar">📚 Dissertatsiyalar</a>
       <a class="{% if section == 'doktorantlar' %}on{% endif %}" href="/univer/doktorantlar">🎓 Doktorantlar</a>
-      <span class="soon">🎪 Konferensiyalarimiz <em>tez kunda</em></span>
-      <span class="soon">📰 Jurnallarimiz <em>tez kunda</em></span>
-      <span class="soon">📈 Hisobotlar <em>tez kunda</em></span>
-      {% if role == 'owner' %}
+      <a class="{% if section == 'konferensiyalar' %}on{% endif %}" href="/univer/konferensiyalar">🎪 Konferensiyalarimiz</a>
+      <a class="{% if section == 'jurnallar' %}on{% endif %}" href="/univer/jurnallar">📰 Jurnallarimiz</a>
+      <a class="{% if section == 'hisobotlar' %}on{% endif %}" href="/univer/hisobotlar">📈 Hisobotlar</a>
       <a class="{% if section == 'sozlamalar' %}on{% endif %}" href="/univer/sozlamalar">⚙️ Sozlamalar</a>
-      {% endif %}
     </nav>
     <div class="uv-role">Rolingiz: <b>{{ role_label }}</b></div>
   </aside>

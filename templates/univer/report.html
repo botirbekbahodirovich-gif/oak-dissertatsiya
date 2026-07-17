@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ latin_name }} — hisobot ({{ period_label }}){% endblock %}
+
+{% block extra_head %}
+<style>
+  .rp-wrap { max-width: 960px; margin: 20px auto; background: rgba(30,41,59,0.55);
+    border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 32px; }
+  .rp-title { text-align: center; margin-bottom: 26px; }
+  .rp-title h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 4px; }
+  .rp-title p { color: #8899b4; font-size: 0.9rem; margin: 0; }
+  .rp-sec h2 { font-size: 1.02rem; font-weight: 800; color: #e2e8f0;
+    border-bottom: 2px solid rgba(74,158,255,0.35); padding-bottom: 6px; margin: 26px 0 12px; }
+  .rp-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .rp-table th { background: rgba(22,32,50,0.9); color: #94a3b8; text-align: left;
+    padding: 7px 9px; font-size: 0.72rem; text-transform: uppercase; }
+  .rp-table td { padding: 6px 9px; border-top: 1px solid rgba(255,255,255,0.07); color: #e2e8f0; }
+  .rp-actions { text-align: center; margin: 18px 0; }
+  .rp-print { background: #3b82f6; color: #fff; border: none; border-radius: 10px;
+    padding: 10px 24px; font-weight: 700; cursor: pointer; }
+  .rp-foot { text-align: center; color: #64748b; font-size: 0.72rem; margin-top: 24px; }
+  @media print {
+    header, footer, .rp-actions, .oak-footer, .broadcast-rotator, #nav-links { display: none !important; }
+    body, html { background: #fff !important; }
+    .rp-wrap { background: #fff; border: none; box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+    .rp-title h1, .rp-sec h2, .rp-table td { color: #000 !important; }
+    .rp-title p, .rp-foot { color: #444 !important; }
+    .rp-table th { background: #eee !important; color: #333 !important; }
+    .rp-table td { border-top: 1px solid #ccc; }
+    .rp-sec { break-inside: avoid-page; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rp-actions"><button class="rp-print" onclick="window.print()">🖨 Chop etish</button></div>
+<div class="rp-wrap">
+  <div class="rp-title">
+    <h1>«{{ latin_name }}»</h1>
+    <p>Ilmiy faoliyat hisoboti — {{ period_label }}</p>
+    <p style="font-size:0.76rem;margin-top:4px;">olimlar.uz ma'lumotlari asosida, {{ generated_at }}</p>
+  </div>
+
+  {% for s in sections %}
+  <div class="rp-sec">
+    <h2>{{ section_labels[s] }}</h2>
+    {% set rows = data.get(s) or [] %}
+    {% if not rows %}
+    <p style="color:#8899b4;font-size:0.84rem;">Ma'lumot topilmadi.</p>
+    {% elif s == 'himoyalar' %}
+    <table class="rp-table">
+      <thead><tr><th>Sana</th><th>Olim</th><th>Mavzu</th><th>Daraja</th><th>Ixtisoslik</th><th>Ilmiy rahbar</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td style="white-space:nowrap;">{{ r.sana }}</td><td>{{ r.olim }}</td>
+        <td>{{ r.mavzu[:120] }}</td><td>{{ r.daraja }}</td><td>{{ r.ixtisoslik }}</td><td>{{ r.rahbar }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <p style="color:#64748b;font-size:0.72rem;">Jami: {{ rows|length }} ta himoya</p>
+    {% elif s == 'ixtisosliklar' %}
+    <table class="rp-table">
+      <thead><tr><th>Shifr</th><th>Nomi</th><th>Himoyalar soni</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.code }}</td><td>{{ r.name }}</td><td>{{ r.count }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% elif s == 'rahbarlar' %}
+    <table class="rp-table">
+      <thead><tr><th>Ilmiy rahbar</th><th>Jami</th><th>PhD</th><th>DSc</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.name }}</td><td>{{ r.count }}</td><td>{{ r.phd }}</td><td>{{ r.dsc }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% elif s == 'doktorantlar' %}
+    <table class="rp-table">
+      <thead><tr><th>Doktorant</th><th>Daraja</th><th>Rahbar</th><th>Nashrlar (OAK)</th>
+        <th>So'zlar</th><th>Progress</th><th>Himoya</th><th>Holat</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.name }}</td><td>{{ r.degree }}</td><td>{{ r.advisor }}</td>
+        <td>{{ r.oak_done }}/{{ r.oak_req }}</td><td>{{ r.words }}/{{ r.word_target }}</td>
+        <td>{{ r.overall }}%</td><td>{{ r.defense_date or '—' }}</td><td>{{ r.holat }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% elif s == 'nashrlar' %}
+    <table class="rp-table">
+      <thead><tr><th>Nashr turi</th><th>Holati</th><th>Soni</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.type }}</td><td>{{ r.status }}</td><td>{{ r.count }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="rp-foot">Hisobot olimlar.uz platformasining ochiq ma'lumotlari
+    asosida avtomatik tayyorlandi · Doktorant ko'rsatkichlari faqat metrik
+    ma'lumotlar (matnlar kirmaydi)</div>
+</div>
+{% endblock %}

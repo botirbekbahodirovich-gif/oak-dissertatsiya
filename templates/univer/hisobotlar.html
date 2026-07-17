@@ -1,0 +1,85 @@
+{% extends "univer/layout.html" %}
+
+{% block uv_head %}
+<style>
+  .uvr-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .uvr-row select, .uvr-row input { background: rgba(15,23,42,0.6); color: #e2e8f0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; }
+  .uvr-secs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .uvr-sec { display: flex; align-items: center; gap: 9px; background: rgba(15,23,42,0.5);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 11px 13px;
+    font-size: 0.86rem; color: #cbd5e1; cursor: pointer; }
+  .uvr-sec input { accent-color: #3b82f6; width: 16px; height: 16px; }
+  .uvr-fmt { display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+{% endblock %}
+
+{% block uv_content %}
+<h1 class="uv-h1">📈 Hisobotlar</h1>
+<p class="uv-sub">{{ latin_name }} — OAK va ichki hisobotlar uchun tayyor
+  format: ekran (chop etish), Excel (.xlsx) yoki Word (.docx)</p>
+
+<div class="uv-card">
+  <h3 style="font-size:0.92rem;font-weight:800;color:#e2e8f0;margin:0 0 12px;">1. Davrni tanlang</h3>
+  <div class="uvr-row">
+    <select id="uvr-mode">
+      <option value="year">Bitta yil</option>
+      <option value="quarter">Yil + chorak</option>
+      <option value="range">Yillar oralig'i</option>
+    </select>
+    <input id="uvr-y0" type="number" min="1950" max="2100" value="{{ this_year }}" style="width:100px;">
+    <select id="uvr-quarter" style="display:none;">
+      <option value="1">1-chorak (yan–mar)</option>
+      <option value="2">2-chorak (apr–iyn)</option>
+      <option value="3">3-chorak (iyl–sen)</option>
+      <option value="4">4-chorak (okt–dek)</option>
+    </select>
+    <span id="uvr-dash" style="display:none;color:#64748b;">—</span>
+    <input id="uvr-y1" type="number" min="1950" max="2100" value="{{ this_year }}" style="width:100px;display:none;">
+  </div>
+
+  <h3 style="font-size:0.92rem;font-weight:800;color:#e2e8f0;margin:14px 0 12px;">2. Bo'limlarni tanlang</h3>
+  <div class="uvr-secs">
+    {% for key, label in sections.items() %}
+    <label class="uvr-sec"><input type="checkbox" data-sec="{{ key }}" checked> {{ label }}</label>
+    {% endfor %}
+  </div>
+
+  <h3 style="font-size:0.92rem;font-weight:800;color:#e2e8f0;margin:14px 0 12px;">3. Hisobot yaratish</h3>
+  <div class="uvr-fmt">
+    <button class="uv-btn" data-fmt="screen">🖥 Ekranda ko'rish / chop etish</button>
+    <button class="uv-btn ghost" data-fmt="xlsx">📊 Excel (.xlsx)</button>
+    <button class="uv-btn ghost" data-fmt="docx">📄 Word (.docx)</button>
+  </div>
+  <p style="margin:10px 0 0;font-size:0.72rem;color:#64748b;">
+    Hisobot faqat ochiq metrikalarni o'z ichiga oladi. Cheklov: daqiqasiga 1 ta hisobot.</p>
+</div>
+
+<script>
+(function () {
+  var mode = document.getElementById('uvr-mode');
+  function syncMode() {
+    var m = mode.value;
+    document.getElementById('uvr-quarter').style.display = m === 'quarter' ? '' : 'none';
+    document.getElementById('uvr-y1').style.display = m === 'range' ? '' : 'none';
+    document.getElementById('uvr-dash').style.display = m === 'range' ? '' : 'none';
+  }
+  mode.addEventListener('change', syncMode);
+  document.querySelectorAll('[data-fmt]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var secs = Array.prototype.slice.call(document.querySelectorAll('[data-sec]'))
+        .filter(function (c) { return c.checked; })
+        .map(function (c) { return c.getAttribute('data-sec'); });
+      if (!secs.length) { alert("Kamida bitta bo'lim tanlang"); return; }
+      var p = new URLSearchParams({ sections: secs.join(','), format: b.getAttribute('data-fmt') });
+      p.set('y0', document.getElementById('uvr-y0').value);
+      if (mode.value === 'range') p.set('y1', document.getElementById('uvr-y1').value);
+      if (mode.value === 'quarter') p.set('quarter', document.getElementById('uvr-quarter').value);
+      var url = '/univer/hisobot?' + p.toString();
+      if (b.getAttribute('data-fmt') === 'screen') window.open(url, '_blank');
+      else location.href = url;
+    });
+  });
+})();
+</script>
+{% endblock %}

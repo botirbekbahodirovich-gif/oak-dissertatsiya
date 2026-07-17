@@ -265,6 +265,18 @@ def _ensure_schema(cur):
             sent_at TIMESTAMP DEFAULT NOW(),
             UNIQUE(user_id, conference_id, days_bucket)
         )""")
+    # ── B2B universitet paneli (Part 2): universitet yuborgan yozuvlar ──
+    # canonical_institution to'ldirilgan bo'lsa — u avtoritetli bog'lash.
+    # MUHIM: 'pending' yozuvlar is_active=FALSE bilan yaratiladi, shuning
+    # uchun barcha ommaviy so'rovlar (is_active filtri) ularni ko'rsatmaydi;
+    # admin approve = moderation_status='approved' + is_active=TRUE.
+    for _col, _typ in (('canonical_institution', 'VARCHAR(500)'),
+                       ('submitted_by', 'INTEGER'),
+                       ('moderation_status', "VARCHAR(20) DEFAULT 'approved'")):
+        cur.execute(f"ALTER TABLE conferences ADD COLUMN IF NOT EXISTS {_col} {_typ}")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_conf_canonical "
+                "ON conferences(canonical_institution) "
+                "WHERE canonical_institution IS NOT NULL")
     _schema_ready = True
 
 
@@ -276,7 +288,10 @@ _CONF_COLS = ('id', 'title', 'title_slug', 'scope', 'organizer', 'field',
               # v2 kengaytirish
               'acronym', 'title_en', 'field_id', 'tags', 'notification_date',
               'registration_deadline', 'venue', 'organizer_contact', 'cfp_url',
-              'poster_image', 'ccf_rank', 'core_rank', 'doi_available')
+              'poster_image', 'ccf_rank', 'core_rank', 'doi_available',
+              # B2B universitet paneli (faqat SELECT'larda; INSERT'lar
+              # _ADMIN_FIELDS/_ADMIN_EXTRA bilan boshqariladi)
+              'canonical_institution', 'submitted_by', 'moderation_status')
 
 
 def _card(r):
@@ -1042,6 +1057,7 @@ def admin_conferences():
     _require_admin()
     q = (request.args.get('q') or '').strip()
     scope = request.args.get('scope') or ''
+    moderation = request.args.get('moderation') or ''
     where, params = ["TRUE"], []
     if q:
         where.append("(title ILIKE %s OR organizer ILIKE %s)")
@@ -1049,25 +1065,34 @@ def admin_conferences():
     if scope in SCOPES:
         where.append("scope = %s")
         params.append(scope)
+    if moderation == 'pending':
+        where.append("moderation_status = 'pending'")
     conn = get_connection()
     try:
         cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
         _ensure_schema(cur)
+        cur.execute("SELECT COUNT(*) AS n FROM conferences "
+                    "WHERE moderation_status = 'pending'")
+        pending_count = cur.fetchone()['n'] or 0
         cur.execute(
             f"SELECT {', '.join(_CONF_COLS)} FROM conferences "
             f"WHERE {' AND '.join(where)} "
-            "ORDER BY is_active DESC, start_date DESC NULLS LAST, id DESC "
+            "ORDER BY (moderation_status = 'pending') DESC, is_active DESC, "
+            "start_date DESC NULLS LAST, id DESC "
             "LIMIT 400", params)
         items = []
         for r in cur.fetchall():
             it = _card(r)
             it['is_active'] = bool(r['is_active'])
+            it['moderation_status'] = r.get('moderation_status') or 'approved'
+            it['canonical_institution'] = r.get('canonical_institution') or ''
             items.append(it)
         conn.commit()
     finally:
         conn.close()
     return render_template('admin/conferences.html', items=items, q=q,
-                           scope=scope)
+                           scope=scope, moderation=moderation,
+                           pending_count=pending_count)
 
 
 @conferences_bp.route('/admin/conferences/add', methods=['GET', 'POST'])
@@ -1139,6 +1164,49 @@ def admin_conferences_edit(cid):
         conn.close()
     return render_template('admin/conference_form.html', item=dict(row),
                            edit_mode=True, formats=FORMATS, fields=_get_conference_fields(), event_types=EVENT_TYPES_LOCAL)
+
+
+@conferences_bp.route('/admin/conferences/approve/<int:cid>', methods=['POST'])
+@login_required
+def admin_conferences_approve(cid):
+    """Universitet yuborgan 'pending' konferensiyani tasdiqlash: ommaviy
+    ko'rinadi (is_active=TRUE) va ixtisoslik obunachilariga darhol alert
+    ketadi (dedup log cron takrorlashidan saqlaydi)."""
+    from app import _require_admin
+    _require_admin()
+    conn = get_connection()
+    approved_card = None
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor)
+        _ensure_schema(cur)
+        cur.execute("UPDATE conferences SET moderation_status = 'approved', "
+                    "is_active = TRUE, updated_at = NOW() "
+                    "WHERE id = %s AND moderation_status = 'pending' "
+                    "RETURNING id", (cid,))
+        ok = cur.fetchone()
+        if ok:
+            cur.execute(f"SELECT {', '.join(_CONF_COLS)} FROM conferences "
+                        "WHERE id = %s", (cid,))
+            row = cur.fetchone()
+            if row:
+                approved_card = _card(row)
+        conn.commit()
+    finally:
+        conn.close()
+    if approved_card:
+        # obunachilarga tarqatish — alohida connection, xato approve'ni buzmaydi
+        try:
+            conn2 = get_connection()
+            try:
+                notify_conference_subscribers(conn2, [approved_card])
+            finally:
+                conn2.close()
+        except Exception:
+            pass
+        flash("Konferensiya tasdiqlandi va e'lon qilindi!", 'success')
+    else:
+        flash("Tasdiqlanadigan yozuv topilmadi.", 'error')
+    return redirect('/admin/conferences?moderation=pending')
 
 
 @conferences_bp.route('/admin/conferences/toggle/<int:cid>', methods=['POST'])

@@ -101,6 +101,7 @@
       <h1>{{ uni.latin_name or uni.name }}</h1>
       {% if uni.latin_name and uni.latin_name != uni.name %}<p class="up-subname">{{ uni.name }}</p>{% endif %}
       <div class="up-badges">
+        {% if official %}<span class="up-badge" style="background:rgba(5,150,105,0.2);color:#34d399;border:1px solid rgba(5,150,105,0.4);" title="Universitet rasmiy boshqaruvidagi profil">✓ Rasmiy profil</span>{% endif %}
         {% if uni.im_category %}<span class="up-badge {{ uni.im_category }}">{{ {'universitet':'Universitet','akademiya':'Akademiya','institut':'Institut','markaz':'Markaz'}.get(uni.im_category, uni.im_category) }}</span>{% endif %}
         {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
         {% if uni.city or uni.region %}<span class="up-badge loc">📍 {{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
@@ -131,6 +132,55 @@
 </div>
 
 <div class="up-wrap">
+  {% if can_edit_uni %}
+  <!-- B2B litsenziya perki: universitet xodimi ommaviy profilni tahrirlaydi -->
+  <div class="up-section" id="uv-pp-edit" style="border:1px dashed rgba(74,158,255,0.35);">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <h2 style="margin:0;">✏️ Profilni tahrirlash <small style="color:#64748b;font-size:0.7rem;">(universitet paneli)</small></h2>
+      <button id="uv-pp-toggle" style="background:rgba(74,158,255,0.12);color:#7cb8ff;border:none;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;">Ochish</button>
+    </div>
+    <div id="uv-pp-form" style="display:none;margin-top:12px;">
+      <textarea id="uv-pp-desc" rows="4" placeholder="Universitet tavsifi…"
+        style="width:100%;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;font-size:0.86rem;">{{ uni.description or '' }}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <input id="uv-pp-web" value="{{ uni.website or '' }}" placeholder="Veb-sayt (https://…)"
+          style="flex:1;min-width:180px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
+        <input id="uv-pp-logo" value="" placeholder="Logo URL (ixtiyoriy)"
+          style="flex:1;min-width:180px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
+        <input id="uv-pp-email" value="{{ uni.email or '' }}" placeholder="Aloqa email"
+          style="flex:1;min-width:160px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
+        <button id="uv-pp-save" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-weight:700;cursor:pointer;">Saqlash</button>
+      </div>
+      <p id="uv-pp-msg" style="display:none;margin:8px 0 0;font-size:0.8rem;"></p>
+    </div>
+  </div>
+  <script>
+    document.getElementById('uv-pp-toggle').addEventListener('click', function () {
+      var f = document.getElementById('uv-pp-form');
+      var open = f.style.display === 'none';
+      f.style.display = open ? 'block' : 'none';
+      this.textContent = open ? 'Yopish' : 'Ochish';
+    });
+    document.getElementById('uv-pp-save').addEventListener('click', function () {
+      var btn = this; btn.disabled = true;
+      fetch('/univer/api/public-profile', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canonical: {{ canonical_name | tojson }},
+          description: document.getElementById('uv-pp-desc').value,
+          website: document.getElementById('uv-pp-web').value,
+          logo_url: document.getElementById('uv-pp-logo').value,
+          contact_email: document.getElementById('uv-pp-email').value
+        })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        btn.disabled = false;
+        var m = document.getElementById('uv-pp-msg'); m.style.display = 'block';
+        if (d.success) { m.style.color = '#34d399'; m.textContent = 'Saqlandi — sahifa yangilanmoqda…'; location.reload(); }
+        else { m.style.color = '#f87171'; m.textContent = d.error || 'Xatolik'; }
+      }).catch(function () { btn.disabled = false; });
+    });
+  </script>
+  {% endif %}
   <!-- Umumiy ma'lumot -->
   <div class="up-section">
     <h2>ℹ️ Umumiy ma'lumot</h2>

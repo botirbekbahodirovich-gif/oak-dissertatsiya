@@ -25,6 +25,10 @@
       <option value="international" {{ 'selected' if scope == 'international' }}>Xalqaro</option>
     </select>
     <button type="submit" class="btn btn-action">Qidirish</button>
+    <a href="/admin/conferences{% if moderation != 'pending' %}?moderation=pending{% endif %}"
+       class="btn {{ 'btn-primary' if moderation == 'pending' else 'btn-action' }}"
+       style="{% if pending_count %}border-color:#f59e0b;color:{{ '#fff' if moderation == 'pending' else '#fbbf24' }};{% endif %}">
+      ⏳ Moderatsiyada{% if pending_count %} ({{ pending_count }}){% endif %}</a>
   </form>
 
   <div style="overflow-x:auto;">
@@ -38,7 +42,11 @@
       <tr {% if not c.is_active %}style="opacity:0.5;"{% endif %}>
         <td>{{ c.id }}</td>
         <td><a href="/konferensiya/{{ c.slug }}" target="_blank">{{ c.title[:56] }}</a>
-          {% if c.organizer %}<br><small style="color:#94a3b8;">{{ c.organizer[:44] }}</small>{% endif %}</td>
+          {% if c.moderation_status == 'pending' %}
+          <span style="font-size:0.68rem;font-weight:800;background:rgba(245,158,11,0.18);color:#fbbf24;border-radius:999px;padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          {% endif %}
+          {% if c.organizer %}<br><small style="color:#94a3b8;">{{ c.organizer[:44] }}</small>{% endif %}
+          {% if c.canonical_institution %}<br><small style="color:#60a5fa;">🏛 {{ c.canonical_institution[:44] }}</small>{% endif %}</td>
         <td>{{ '🇺🇿' if c.scope == 'local' else '🌍' }} {{ c.event_type or '—' }}</td>
         <td style="white-space:nowrap;">{{ c.start_date or '—' }}
           {% if c.submission_deadline %}<br><small style="color:#94a3b8;">CFP: {{ c.submission_deadline }}</small>{% endif %}</td>
@@ -46,6 +54,13 @@
         <td>{{ '✓' if c.is_scopus_indexed else '—' }}</td>
         <td>{{ '🟢' if c.is_active else '⚪' }}</td>
         <td style="white-space:nowrap;">
+          {% if c.moderation_status == 'pending' %}
+          <form method="POST" action="/admin/conferences/approve/{{ c.id }}" style="display:inline;">
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-sm"
+              style="background:#059669;color:#fff;border-radius:8px;">✓ Tasdiqlash</button>
+          </form>
+          {% endif %}
           <a href="/admin/conferences/edit/{{ c.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
           <form method="POST" action="/admin/conferences/toggle/{{ c.id }}" style="display:inline;">
             {{ csrf_token()|safe }}

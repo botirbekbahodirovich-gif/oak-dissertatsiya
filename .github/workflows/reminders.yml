@@ -18,3 +18,14 @@ jobs:
           curl --fail-with-body -sS -X POST \
             -H "X-API-Key: ${REMINDERS_API_KEY}" \
             https://www.olimlar.uz/api/v1/reminders/process
+
+      # B2B universitet paneli: xodimlarga kunlik doktorant digest'i
+      # (universitet boshiga kuniga bitta alert; endpoint idempotent)
+      - name: Universitet digestini yuborish
+        if: always()
+        env:
+          REMINDERS_API_KEY: ${{ secrets.REMINDERS_API_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-API-Key: ${REMINDERS_API_KEY}" \
+            https://www.olimlar.uz/api/v1/univer/dispatch-digest

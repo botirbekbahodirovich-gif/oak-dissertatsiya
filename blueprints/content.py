@@ -322,6 +322,8 @@ def university_profile(name):
     stats = {'total': 0, 'phd': 0, 'dsc': 0, 'olimlar': 0, 'ixtisosliklar': 0, 'rahbarlar': 0}
     top_olimlar, top_rahbarlar, recent, by_year, top_ixtisos = [], [], [], [], []
     gallery, rector_olim, im_info = [], None, None
+    canonical_name = None
+    up_ctx = {'official': False, 'profile': None, 'can_edit': False}
     try:
         conn = get_connection()
         try:
@@ -352,8 +354,18 @@ def university_profile(name):
                     imr = cur.fetchone()
                     if imr and imr[0]:
                         from institutions import transliterate_display
+                        canonical_name = imr[0]
                         im_info = {'latin_name': transliterate_display(imr[0]),
                                    'category': imr[1] or '', 'region': imr[2] or ''}
+                except Exception:
+                    pass
+                # B2B litsenziya perki: "Rasmiy profil" belgisi + universitet
+                # xodimi tahrirlagan tavsif/veb-sayt/logo/email (univer.py)
+                try:
+                    from blueprints.univer import get_public_profile_context
+                    uid_ = current_user.id if current_user.is_authenticated else None
+                    up_ctx = get_public_profile_context(
+                        cur, canonical_name or term, uid_)
                 except Exception:
                     pass
                 cur.execute(f"""
@@ -428,6 +440,19 @@ def university_profile(name):
                'description': '', 'founded_year': None, 'rector': '', 'address': '',
                'phone': '', 'email': '', 'telegram': ''}
 
+    # Staff-edited public profile fields override curated/empty values so a
+    # licensed university's edits appear immediately.
+    if up_ctx.get('profile'):
+        pp = up_ctx['profile']
+        if pp['description']:
+            uni['description'] = pp['description']
+        if pp['website']:
+            uni['website'] = pp['website']
+        if pp['logo_url']:
+            uni['logo_url'] = pp['logo_url']
+        if pp['contact_email']:
+            uni['email'] = pp['contact_email']
+
     # Institution-map metadata (Latin name, category, region) for the header.
     if im_info:
         # Curated rows already carry a proper Latin name; only map-only
@@ -454,7 +479,10 @@ def university_profile(name):
                            top_olimlar=top_olimlar, top_rahbarlar=top_rahbarlar,
                            recent=recent, by_year=by_year, top_ixtisos=top_ixtisos,
                            gallery=gallery, rector_olim=rector_olim,
-                           is_admin=is_admin, h_index=h_index)
+                           is_admin=is_admin, h_index=h_index,
+                           official=up_ctx.get('official', False),
+                           can_edit_uni=up_ctx.get('can_edit', False),
+                           canonical_name=canonical_name or term)
 
 
 @content_bp.route('/journals')

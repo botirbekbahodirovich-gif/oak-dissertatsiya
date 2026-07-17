@@ -1676,20 +1676,34 @@ def admin_journals():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                # moderation_status/canonical_institution — B2B universitet
+                # paneli so'rovlari (blueprints/univer.py qo'shadi); ustunlar
+                # hali yo'q bazada so'rov yiqilmasligi uchun COALESCE emas,
+                # avval mavjudligini kafolatlaymiz.
+                try:
+                    from blueprints.univer import _ensure_schema as _ensure_univ
+                    _ensure_univ(cur)
+                except Exception:
+                    pass
                 cur.execute("""
                     SELECT j.id, j.name, j.indexing, j.country, j.is_active, j.is_predatory,
                            j.logo_url, j.oak_approved, j.scopus_indexed, j.wos_indexed,
                            j.issn,
-                           COALESCE(string_agg(DISTINCT js.specialty_code, ', ' ORDER BY js.specialty_code), '')
+                           COALESCE(string_agg(DISTINCT js.specialty_code, ', ' ORDER BY js.specialty_code), ''),
+                           COALESCE(j.moderation_status, 'approved'),
+                           COALESCE(j.canonical_institution, '')
                     FROM journals j
                     LEFT JOIN journal_specialties js ON js.journal_id = j.id
-                    GROUP BY j.id ORDER BY LOWER(j.name)
+                    GROUP BY j.id
+                    ORDER BY (COALESCE(j.moderation_status, 'approved') = 'pending') DESC,
+                             LOWER(j.name)
                 """)
                 items = [{"id": r[0], "name": r[1] or "", "indexing": r[2] or "",
                           "country": r[3] or "", "is_active": r[4], "is_predatory": r[5],
                           "logo_url": r[6] or "", "oak_approved": r[7], "scopus_indexed": r[8],
                           "wos_indexed": r[9], "issn": r[10] or "",
-                          "codes": r[11] or ""} for r in cur.fetchall()]
+                          "codes": r[11] or "", "moderation_status": r[12],
+                          "canonical_institution": r[13]} for r in cur.fetchall()]
                 # verification analytics (registry counts, top searches, flagged saves)
                 cur.execute("SELECT COUNT(*) FROM suspect_publishers")
                 stats['suspect_publishers'] = cur.fetchone()[0] or 0
