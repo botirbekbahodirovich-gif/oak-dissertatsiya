@@ -734,6 +734,7 @@ from blueprints.ranking import ranking_bp
 from blueprints.olimlar_catalog import olimlar_catalog_bp
 from blueprints.univer import univer_bp
 from blueprints.legal import legal_bp
+from blueprints.payments import payments_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -763,6 +764,12 @@ app.register_blueprint(ranking_bp)
 app.register_blueprint(olimlar_catalog_bp)
 app.register_blueprint(univer_bp)
 app.register_blueprint(legal_bp)
+app.register_blueprint(payments_bp)
+
+# ATMOS callback server-to-server keladi (imzo + pay/get bilan himoyalangan),
+# pay/create esa JSON fetch (login_required) — ikkalasida CSRF token yo'q.
+csrf.exempt(app.view_functions['payments.atmos_callback'])
+csrf.exempt(app.view_functions['payments.pay_create'])
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])

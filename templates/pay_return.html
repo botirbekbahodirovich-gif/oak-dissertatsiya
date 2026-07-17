@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}To'lov holati — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.ret-wrap { max-width: 520px; margin: 48px auto; padding: 0 20px; text-align: center; }
+.ret-card { background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 40px 28px; }
+.ret-icon { font-size: 3rem; margin-bottom: 12px; }
+.ret-card h1 { font-size: 1.35rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
+.ret-card p { color: #94a3b8; font-size: 0.95rem; margin: 0 0 20px; }
+.ret-btn { display: inline-block; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff; padding: 11px 24px; border-radius: 12px; font-weight: 800; text-decoration: none; }
+.ret-btn:hover { opacity: 0.92; color: #fff; }
+.ret-btn.alt { background: #334155; }
+.ret-spin { width: 34px; height: 34px; border: 4px solid #334155; border-top-color: #3b82f6; border-radius: 50%; margin: 0 auto 16px; animation: ret-spin 0.8s linear infinite; }
+@keyframes ret-spin { to { transform: rotate(360deg); } }
+[data-bs-theme="light"] .ret-card { background: #fff; border-color: #e2e8f0; }
+[data-bs-theme="light"] .ret-card h1 { color: #0f172a; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ret-wrap">
+  {% if not payment %}
+  <div class="ret-card">
+    <div class="ret-icon">🤔</div>
+    <h1>To'lov topilmadi</h1>
+    <p>Bu hisobda to'lov yozuvi ko'rinmadi.</p>
+    <a class="ret-btn" href="/premium">Premium sahifasiga qaytish</a>
+  </div>
+
+  {% elif payment.status == 'paid' %}
+  <div class="ret-card">
+    <div class="ret-icon">✅</div>
+    <h1>To'lov qabul qilindi!</h1>
+    <p>{{ product_label }} — xizmat faollashtirildi.</p>
+    <a class="ret-btn" href="{{ feature_url }}">Xizmatdan foydalanish →</a>
+    <p style="margin-top:16px;"><a href="/cabinet/tolovlar" style="color:#60a5fa;">To'lovlarim</a></p>
+  </div>
+
+  {% elif payment.status in ('created', 'pending') %}
+  <div class="ret-card" id="ret-pending">
+    <div class="ret-spin"></div>
+    <h1>To'lov tekshirilmoqda…</h1>
+    <p>{{ product_label }} — tasdiqlanishi odatda bir necha soniya davom etadi. Sahifa avtomatik yangilanadi.</p>
+    <a class="ret-btn alt" href="/cabinet/tolovlar">To'lovlarim</a>
+  </div>
+  <div class="ret-card" id="ret-timeout" style="display:none;">
+    <div class="ret-icon">⏳</div>
+    <h1>Hali tasdiqlanmadi</h1>
+    <p>To'lov hali bankdan tasdiq kutmoqda. Bir necha daqiqadan so'ng
+       <a href="/cabinet/tolovlar" style="color:#60a5fa;">To'lovlarim</a> sahifasini tekshiring —
+       muammo bo'lsa <a href="https://t.me/send_kod_bot" style="color:#60a5fa;">qo'llab-quvvatlash</a>ga yozing.</p>
+    <a class="ret-btn alt" href="/premium">Premium sahifasi</a>
+  </div>
+
+  {% else %}
+  <div class="ret-card">
+    <div class="ret-icon">😕</div>
+    <h1>To'lov amalga oshmadi</h1>
+    <p>{{ product_label }} — holat: {{ status_labels.get(payment.status, payment.status) }}.
+       Mablag' yechilmagan bo'lishi kerak; yechilgan bo'lsa
+       <a href="/tolovni-qaytarish" style="color:#60a5fa;">qaytarish siyosati</a>ga qarang.</p>
+    <a class="ret-btn" href="/premium">Qayta urinib ko'rish</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if payment and payment.status in ('created', 'pending') %}
+<script>
+(function () {
+  var tries = 0, MAX_TRIES = 10;
+  function poll() {
+    tries++;
+    fetch('/api/pay/status/{{ payment.id }}')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.status === 'paid' || d.status === 'failed' || d.status === 'cancelled') {
+          window.location.reload();
+          return;
+        }
+        if (tries >= MAX_TRIES) {
+          document.getElementById('ret-pending').style.display = 'none';
+          document.getElementById('ret-timeout').style.display = 'block';
+          return;
+        }
+        setTimeout(poll, 3000);
+      }).catch(function () {
+        if (tries < MAX_TRIES) setTimeout(poll, 3000);
+      });
+  }
+  setTimeout(poll, 3000);
+})();
+</script>
+{% endif %}
+{% endblock %}

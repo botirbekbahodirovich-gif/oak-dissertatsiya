@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}To'lovlar (admin){% endblock %}
+{% block content %}
+<div class="content-card" style="max-width:1200px;margin:0 auto;">
+  <h1 style="margin-bottom:4px;">💳 To'lovlarni boshqarish</h1>
+  <p style="color:#94a3b8;">
+    Bugun: <b>{{ '{:,}'.format(totals.today).replace(',', ' ') }} so'm</b> ·
+    Shu oy: <b>{{ '{:,}'.format(totals.month).replace(',', ' ') }} so'm</b> ·
+    Jami muvaffaqiyatli: <b>{{ totals.count }} ta</b>
+  </p>
+
+  <form method="GET" action="/admin/payments"
+        style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:14px 0 20px;">
+    <label style="font-size:0.85rem;">Holat
+      <select name="status" class="form-control">
+        <option value="">Barchasi</option>
+        {% for s, lbl in status_labels.items() %}
+        <option value="{{ s }}" {{ 'selected' if cur_status == s }}>{{ lbl }}</option>
+        {% endfor %}
+      </select></label>
+    <label style="font-size:0.85rem;">Dan
+      <input type="date" name="from" class="form-control" value="{{ date_from }}"></label>
+    <label style="font-size:0.85rem;">Gacha
+      <input type="date" name="to" class="form-control" value="{{ date_to }}"></label>
+    <button type="submit" class="btn btn-primary" style="padding:7px 18px;">Filtrlash</button>
+  </form>
+
+  <div style="overflow-x:auto;">
+    <table class="table" style="min-width:900px;font-size:0.88rem;">
+      <thead>
+        <tr>
+          <th>#</th><th>Foydalanuvchi</th><th>Mahsulot</th><th>Summa</th>
+          <th>Holat</th><th>ATMOS tx</th><th>Yaratildi</th><th>To'landi</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td title="{{ r.email }}">{{ r.username }}</td>
+          <td>{{ r.product }}</td>
+          <td style="white-space:nowrap;">{{ '{:,}'.format(r.amount_som).replace(',', ' ') }} so'm</td>
+          <td>{{ r.status_label }}</td>
+          <td style="font-family:monospace;font-size:0.8rem;">{{ r.provider_tx or '—' }}</td>
+          <td style="white-space:nowrap;">{{ r.created_at.strftime('%m-%d %H:%M') if r.created_at else '—' }}</td>
+          <td style="white-space:nowrap;">{{ r.paid_at.strftime('%m-%d %H:%M') if r.paid_at else '—' }}</td>
+          <td>
+            {% if r.status == 'paid' %}
+            <form method="POST" action="/admin/payments/{{ r.id }}/refund" style="display:inline;"
+                  onsubmit="return confirm('#{{ r.id }} to\'lovni refunded deb belgilaysizmi? Ishlatilmagan entitlement bekor qilinadi (premium bo\'lsa is_premium qayta hisoblanadi). Pulni ATMOS kabinetida alohida qaytaring.');">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="btn btn-sm"
+                      style="background:#7f1d1d;color:#fecaca;padding:3px 10px;font-size:0.78rem;border-radius:8px;">
+                Refunded deb belgilash</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px;">To'lovlar topilmadi.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

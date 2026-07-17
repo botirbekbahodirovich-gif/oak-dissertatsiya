@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}To'lovlarim — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.ph-wrap { max-width: 860px; margin: 0 auto; }
+.ph-wrap h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 18px; }
+.ph-status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+.ph-stat { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 16px 18px; }
+.ph-stat .l { color: #94a3b8; font-size: 0.8rem; font-weight: 600; }
+.ph-stat .v { color: #f1f5f9; font-size: 1.05rem; font-weight: 800; margin-top: 4px; }
+.ph-stat.prem { border-color: rgba(124,92,252,0.5); }
+.ph-table-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; overflow: hidden; }
+.ph-scroll { overflow-x: auto; }
+.ph-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.ph-table th, .ph-table td { padding: 11px 16px; text-align: left; font-size: 0.88rem; border-top: 1px solid rgba(148,163,184,0.12); }
+.ph-table th { color: #94a3b8; border-top: none; font-weight: 700; }
+.ph-table td { color: #cbd5e1; }
+.ph-badge { font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.ph-badge.paid { background: rgba(34,197,94,0.15); color: #4ade80; }
+.ph-badge.pending, .ph-badge.created { background: rgba(245,158,11,0.15); color: #fcd34d; }
+.ph-badge.failed, .ph-badge.cancelled { background: rgba(239,68,68,0.15); color: #fca5a5; }
+.ph-badge.refunded { background: rgba(148,163,184,0.15); color: #cbd5e1; }
+.ph-empty { padding: 32px; text-align: center; color: #94a3b8; }
+.ph-cta { margin-top: 20px; text-align: center; }
+.ph-cta a { color: #60a5fa; font-weight: 700; text-decoration: none; }
+[data-bs-theme="light"] .ph-stat, [data-bs-theme="light"] .ph-table-card { background: #fff; border-color: #e2e8f0; }
+[data-bs-theme="light"] .ph-stat .v { color: #0f172a; }
+[data-bs-theme="light"] .ph-table td { color: #334155; }
+@media (max-width: 639px) { .ph-status-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ph-wrap">
+  <h1>💳 To'lovlarim</h1>
+
+  <div class="ph-status-grid">
+    <div class="ph-stat prem">
+      <div class="l">Premium holati</div>
+      <div class="v">
+        {% if premium_until %}⭐ {{ premium_until.strftime('%Y-%m-%d') }} gacha
+        {% elif is_premium %}⭐ Faol
+        {% else %}— <a href="/premium" style="color:#a78bfa;font-size:0.85rem;">Ulash</a>{% endif %}
+      </div>
+    </div>
+    <div class="ph-stat">
+      <div class="l">Tahlil krediti</div>
+      <div class="v">{{ credits.get('topic_analysis', 0) }} ta</div>
+    </div>
+    <div class="ph-stat">
+      <div class="l">Eksport krediti</div>
+      <div class="v">{{ credits.get('csv_export', 0) }} ta</div>
+    </div>
+  </div>
+
+  <div class="ph-table-card">
+    <div class="ph-scroll">
+      <table class="ph-table">
+        <thead>
+          <tr><th>Sana</th><th>Mahsulot</th><th>Summa</th><th>Holat</th></tr>
+        </thead>
+        <tbody>
+          {% for p in history %}
+          <tr>
+            <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') if p.created_at else '—' }}</td>
+            <td>{{ p.product }}</td>
+            <td>{{ '{:,}'.format(p.amount_som).replace(',', ' ') }} so'm</td>
+            <td><span class="ph-badge {{ p.status }}">{{ p.status_label }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4"><div class="ph-empty">Hali to'lovlar yo'q.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="ph-cta">
+    <a href="/premium">⭐ Premium imkoniyatlarini ko'rish →</a>
+  </div>
+</div>
+{% endblock %}
