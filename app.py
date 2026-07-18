@@ -27,6 +27,30 @@ if not session_secret:
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
 
+# ── Error logging ───────────────────────────────────────────────────────────
+# Under Gunicorn, app.logger has no handlers by default, so tracebacks vanish
+# (this is why 85 server errors were invisible). Attach Gunicorn's error
+# handlers so both the 500 handler and _log_silent() below reach the journal
+# (view with: journalctl -u olimlar | grep "500 ERROR\|Silent error").
+import logging
+if not app.debug:
+    _gunicorn_logger = logging.getLogger('gunicorn.error')
+    if _gunicorn_logger.handlers:            # only when actually run by Gunicorn
+        app.logger.handlers = _gunicorn_logger.handlers
+        app.logger.setLevel(_gunicorn_logger.level)
+
+
+def _log_silent(exc):
+    """Log a swallowed (formerly `except: pass`) error — never raises itself.
+    Includes the request URL when a request context is active, so it is safe to
+    call from context processors, before_request hooks and cached helpers."""
+    try:
+        from flask import has_request_context
+        where = request.url if has_request_context() else '<no request context>'
+        app.logger.warning("Silent error at %s: %s", where, exc)
+    except Exception:
+        pass
+
 # Ensure the news image upload directory exists.
 try:
     os.makedirs(os.path.join(app.static_folder, "uploads", "news"), exist_ok=True)
@@ -244,8 +268,8 @@ def inject_auth_status():
             current_username = getattr(current_user, 'username', None)
         elif 'cabinet_user_id' in session:
             is_logged_in = True
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     return dict(is_logged_in=is_logged_in, current_username=current_username)
 
 
@@ -669,8 +693,8 @@ def require_registration():
     try:
         if current_user.is_authenticated or _sess.get("cabinet_user_id"):
             return None
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     return redirect("/register")
 
 
@@ -1781,8 +1805,8 @@ def compute_gender_stats():
         # distinct-researcher gender counts
         for g in name_gender.values():
             gender_stats[g] = gender_stats.get(g, 0) + 1
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     weekly_years = sorted(gender_by_year.keys())[-12:]
     result = {
         "gender_stats": gender_stats,
@@ -1871,8 +1895,8 @@ def _trends_data():
                             adv_students.setdefault(rb, set()).add(ol.lower())
         finally:
             conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
 
     years_all = sorted(yearly.keys())
     if not years_all:
@@ -2025,8 +2049,8 @@ def _collab_index():
                             adj[opp].add(o); adj[o].add(opp)
         finally:
             conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     spec_map = {n: c.most_common(1)[0][0] for n, c in spec_ctr.items() if c}
     inst_map = {n: c.most_common(1)[0][0] for n, c in inst_ctr.items() if c}
     idx = {
@@ -2249,8 +2273,8 @@ def _clustering_build():
                         kw_docs[kw].add(i)
         finally:
             conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
 
     if not docs:
         empty = {"clusters": [], "total_clusters": 0, "clustered": 0, "unclustered": 0, "total": 0}
@@ -2624,8 +2648,8 @@ def notifications_page():
             conn.commit()
         finally:
             conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     return render_template("notifications.html", notifications=notifs)
 
 
@@ -2644,8 +2668,8 @@ def check_blocked():
         if (hasattr(current_user, 'is_authenticated') and current_user.is_authenticated
                 and getattr(current_user, 'username', None) == 'admin'):
             return None
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
     ip = get_real_ip()
     if not ip:
         return None
@@ -2860,6 +2884,8 @@ def page_not_found(e):
 
 @app.errorhandler(500)
 def server_error(e):
+    import traceback
+    app.logger.error("500 ERROR: %s\n%s", request.url, traceback.format_exc())
     return render_template('errors/500.html'), 500
 
 
@@ -3612,8 +3638,8 @@ def survey_submit_api():
         elif session.get('cabinet_user_id'):
             user_id = session['cabinet_user_id']
             username = session.get('cabinet_olim_name') or None
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
 
     group_number = 1
     try:
@@ -4040,8 +4066,8 @@ def _compute_heatmap_data():
                         R["years"][yr] = R["years"].get(yr, 0) + 1
         finally:
             conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        _log_silent(e)
 
     region_unis = {r: [] for r in region_names}
     for us in uni_stats.values():
@@ -4221,7 +4247,8 @@ def _resolve_institution_redirect(cur, term):
                 target = cur_name
                 break
         cur.execute("RELEASE SAVEPOINT _ir_chain")
-    except Exception:
+    except Exception as e:
+        _log_silent(e)
         try:
             cur.execute("ROLLBACK TO SAVEPOINT _ir_chain")
         except Exception:
