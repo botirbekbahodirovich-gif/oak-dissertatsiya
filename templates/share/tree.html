@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% set _deg_full = {'PhD': 'PhD — falsafa doktori', 'DSc': 'DSc — fan doktori'}.get(stats.degree, stats.degree) %}
+
+{% block title %}{{ olim_name }} — Ilmiy shajara daraxti | Olimlar.uz{% endblock %}
+{% block og_type %}profile{% endblock %}
+{% block og_title %}{{ olim_name }} — Ilmiy shajara daraxti{% endblock %}
+{% block meta_description %}{{ olim_name }}{% if _deg_full %}, {{ _deg_full }}{% endif %} — {{ stats.n_students }} ta shogird, {{ stats.n_generations }} ta ilmiy avlod. Olimlar.uz'da ilmiy shajara daraxtini ko'ring.{% endblock %}
+{% block og_image %}{{ og_image_url }}{% endblock %}
+
+{% block extra_head %}
+<meta property="og:url" content="{{ page_url }}">
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.sh { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 22px 0 48px; }
+.sh-wrap { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+.sh-crumb { font-size: 0.85rem; color: #64748b; margin-bottom: 14px; }
+.sh-crumb a { color: #60a5fa; text-decoration: none; }
+.sh-crumb a:hover { text-decoration: underline; }
+.sh-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.sh-hero h1 { font-size: 1.75rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; line-height: 1.2; }
+.sh-hero .sh-tag { display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; color: #60a5fa; text-transform: uppercase; margin-bottom: 8px; }
+.sh-hero .sh-meta { color: #94a3b8; font-size: 0.98rem; }
+.sh-hero .sh-meta b { color: #cbd5e1; font-weight: 700; }
+.sh-hero .sh-inst { color: #64748b; font-size: 0.9rem; margin-top: 3px; }
+.sh-back { background: #162032; border: 1px solid #334155; color: #93bbfc; font-size: 0.85rem; font-weight: 600; padding: 9px 16px; border-radius: 10px; text-decoration: none; white-space: nowrap; }
+.sh-back:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
+.sh-stage { position: relative; background: #0b1220; border: 1px solid #334155; border-radius: 16px; height: 66vh; min-height: 480px; overflow: hidden; }
+#gen-canvas { position: absolute; inset: 0; }
+.gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
+.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.82rem; padding: 8px 12px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 280px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); line-height: 1.5; }
+.gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.74rem; color: #475569; pointer-events: none; }
+.shajara-svg { cursor: grab; }
+.shajara-svg:active { cursor: grabbing; }
+.sh-link { fill: none; stroke: #334155; stroke-width: 1.8px; stroke-opacity: 0.7; }
+.sh-node .sh-bg { transition: stroke 0.25s, filter 0.25s; }
+.sh-node:hover .sh-bg { filter: brightness(1.12); }
+.sh-init { font-weight: 800; pointer-events: none; }
+.sh-avatar { pointer-events: none; }
+.sh-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
+.sh-badge-t { fill: #fff; font-size: 11px; font-weight: 800; pointer-events: none; }
+.sh-label { fill: #cbd5e1; font-size: 12px; font-weight: 600; pointer-events: none; }
+
+/* stat kartochkalar */
+.sh-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.sh-card { background: #111c33; border: 1px solid #1e293b; border-radius: 14px; padding: 16px 18px; text-align: center; }
+.sh-card .n { font-size: 1.9rem; font-weight: 800; color: #93bbfc; line-height: 1; }
+.sh-card .l { font-size: 0.82rem; color: #94a3b8; margin-top: 6px; }
+
+/* share panel */
+.sh-share { background: #111c33; border: 1px solid #1e293b; border-radius: 14px; padding: 16px 18px; margin-top: 8px; }
+.sh-share h3 { margin: 0 0 12px; font-size: 1rem; color: #e2e8f0; font-weight: 700; }
+.sh-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.sh-sbtn { display: inline-flex; align-items: center; gap: 8px; border: none; cursor: pointer; color: #fff; font-size: 0.88rem; font-weight: 600; padding: 10px 16px; border-radius: 10px; text-decoration: none; }
+.sh-sbtn:hover { filter: brightness(1.1); text-decoration: none; color: #fff; }
+.sh-sbtn.tg { background: #229ED9; }
+.sh-sbtn.fb { background: #1877F2; }
+.sh-sbtn.li { background: #0A66C2; }
+.sh-sbtn.x  { background: #000; border: 1px solid #333; }
+.sh-sbtn.cp { background: #334155; }
+.sh-toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px); background: #1e293b; color: #e2e8f0; border: 1px solid #3b82f6; padding: 12px 22px; border-radius: 12px; font-size: 0.9rem; opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 60; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.sh-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (max-width: 640px) { .sh-stats { grid-template-columns: repeat(3, 1fr); } .sh-hero h1 { font-size: 1.4rem; } .sh-card .n { font-size: 1.5rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sh">
+  <div class="sh-wrap">
+    <div class="sh-crumb"><a href="/">Bosh sahifa</a> › <a href="{% if slug %}/@{{ slug }}{% else %}/olim/{{ olim_name|urlencode }}{% endif %}">{{ olim_name }}</a> › Ilmiy shajara</div>
+
+    <div class="sh-hero">
+      <div>
+        <span class="sh-tag">🌳 Mening ilmiy daraxtim</span>
+        <h1>{{ olim_name }}</h1>
+        <div class="sh-meta">
+          {% if _deg_full %}<b>{{ _deg_full }}</b>{% endif %}
+          {% if stats.position %}{% if _deg_full %} · {% endif %}{{ stats.position }}{% endif %}
+        </div>
+        {% if stats.institution %}<div class="sh-inst">{{ stats.institution }}</div>{% endif %}
+      </div>
+      <a class="sh-back" href="{% if slug %}/@{{ slug }}{% else %}/olim/{{ olim_name|urlencode }}{% endif %}">← Profilga qaytish</a>
+    </div>
+
+    <div class="sh-stage" id="gen-stage">
+      <div class="gen-loading" id="gen-loading">🌳 Shajara daraxti qurilmoqda...</div>
+      <div class="gen-empty" id="gen-empty" style="display:none;">
+        <div style="font-size:2.6rem;margin-bottom:10px;">🌳</div>
+        <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
+        <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
+      </div>
+      <div id="gen-canvas" style="display:none;"></div>
+      <div class="gen-tooltip" id="gen-tooltip"></div>
+      <div class="gen-hint">🖱️ Suring · ⚲ g'ildirak bilan kattalashtiring · sharni bosing → shogirdlarni oching</div>
+    </div>
+
+    <div class="sh-stats">
+      <div class="sh-card"><div class="n">{{ stats.n_students }}</div><div class="l">ta shogird tayyorlagan</div></div>
+      <div class="sh-card"><div class="n">{{ stats.n_generations }}</div><div class="l">ta ilmiy avlod</div></div>
+      <div class="sh-card"><div class="n">{{ stats.n_defended }}</div><div class="l">ta himoya (avlodda)</div></div>
+    </div>
+
+    <div class="sh-share">
+      <h3>📢 Shajarani ulashing</h3>
+      <div class="sh-btns">
+        <a class="sh-sbtn tg" id="sh-tg" target="_blank" rel="noopener">✈️ Telegram</a>
+        <a class="sh-sbtn fb" id="sh-fb" target="_blank" rel="noopener">f Facebook</a>
+        <a class="sh-sbtn li" id="sh-li" target="_blank" rel="noopener">in LinkedIn</a>
+        <a class="sh-sbtn x"  id="sh-x"  target="_blank" rel="noopener">𝕏 Twitter</a>
+        <button type="button" class="sh-sbtn cp" id="sh-cp">🔗 Nusxa olish</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="sh-toast" id="sh-toast">Havola nusxalandi ✓</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="/static/js/genealogy_tree.js?v=share1"></script>
+<script>
+(function () {
+  var OLIM = {{ olim_name|tojson }};
+  var PAGE_URL = {{ page_url|tojson }};
+  var SHARE_TEXT = OLIM + " — ilmiy shajara daraxti | Olimlar.uz";
+  var canvas = document.getElementById('gen-canvas');
+  var loading = document.getElementById('gen-loading');
+  var empty = document.getElementById('gen-empty');
+
+  function showEmpty() {
+    loading.style.display = 'none';
+    canvas.style.display = 'none';
+    empty.style.display = 'flex';
+  }
+  function build() {
+    loading.style.display = 'flex';
+    empty.style.display = 'none';
+    canvas.style.display = 'block';
+    window.ShajaraTree.mount({
+      container: canvas, name: OLIM, tooltip: '#gen-tooltip',
+      onEmpty: showEmpty,
+      onReady: function () { loading.style.display = 'none'; }
+    });
+  }
+  build();
+
+  // ── Share tugmalari ──
+  var u = encodeURIComponent(PAGE_URL);
+  var t = encodeURIComponent(SHARE_TEXT);
+  function track(ch) {
+    try { if (window.ym && window.YM_ID) window.ym(window.YM_ID, 'reachGoal', 'share_tree', { channel: ch }); } catch (e) {}
+  }
+  var links = {
+    'sh-tg': { url: 'https://t.me/share/url?url=' + u + '&text=' + t, ch: 'telegram' },
+    'sh-fb': { url: 'https://www.facebook.com/sharer/sharer.php?u=' + u, ch: 'facebook' },
+    'sh-li': { url: 'https://www.linkedin.com/sharing/share-offsite/?url=' + u, ch: 'linkedin' },
+    'sh-x':  { url: 'https://twitter.com/intent/tweet?url=' + u + '&text=' + t, ch: 'twitter' }
+  };
+  Object.keys(links).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.href = links[id].url;
+    el.addEventListener('click', function () { track(links[id].ch); });
+  });
+
+  var toast = document.getElementById('sh-toast');
+  function showToast(msg) {
+    toast.textContent = msg; toast.classList.add('on');
+    setTimeout(function () { toast.classList.remove('on'); }, 1800);
+  }
+  document.getElementById('sh-cp').addEventListener('click', function () {
+    track('copy');
+    var done = function () { showToast('Havola nusxalandi ✓'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(PAGE_URL).then(done).catch(function () {
+        window.prompt('Havolani nusxalang:', PAGE_URL);
+      });
+    } else {
+      window.prompt('Havolani nusxalang:', PAGE_URL);
+    }
+  });
+})();
+</script>
+{% endblock %}
