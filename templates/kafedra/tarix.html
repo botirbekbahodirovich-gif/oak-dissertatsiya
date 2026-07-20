@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Mening kafedra hujjatlarim — Olimlar.uz{% endblock %}
+
+{% block content %}
+<div class="kfd-tarix" style="max-width:880px;margin:0 auto;padding:20px 4px 60px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size:1.5rem;font-weight:800;margin:0;">Mening kafedra hujjatlarim</h1>
+    <a href="/kafedra/" class="btn btn-outline-light btn-sm"><i class="bi bi-plus-lg"></i> Yangi hujjat</a>
+  </div>
+
+  {% if not documents %}
+  <div class="text-center py-5 opacity-75">
+    <p>Hali hech qanday hujjat yaratmagansiz.</p>
+    <a href="/kafedra/" class="btn btn-primary">Birinchi hujjatni yaratish</a>
+  </div>
+  {% else %}
+  <div class="table-responsive">
+    <table class="table table-dark table-hover align-middle">
+      <thead>
+        <tr><th>Turi</th><th>Fan nomi</th><th>Holati</th><th>Sana</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for d in documents %}
+        <tr>
+          <td>{{ d.document_icon }} {{ d.document_label }}</td>
+          <td>{{ d.fan_nomi }}</td>
+          <td>
+            {% if d.status == 'completed' %}<span class="badge bg-success">Tayyor</span>
+            {% elif d.status == 'failed' %}<span class="badge bg-danger">Xato</span>
+            {% else %}<span class="badge bg-secondary">Tayyorlanmoqda</span>{% endif %}
+          </td>
+          <td class="opacity-75">{{ d.created_at.strftime('%d.%m.%Y %H:%M') if d.created_at else '' }}</td>
+          <td>
+            <a href="/kafedra/generated/{{ d.id }}/" class="btn btn-sm btn-outline-light">Ko'rish</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

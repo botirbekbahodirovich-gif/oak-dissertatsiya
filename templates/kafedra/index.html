@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Kafedra hujjatlari — Olimlar.uz{% endblock %}
+{% block meta_description %}Sillabus, ishchi o'quv dasturi, test savollari va boshqa kafedra hujjatlarini AI yordamida bir necha daqiqada yarating.{% endblock %}
+
+{% block content %}
+<div class="kfd">
+  <style>
+    .kfd { max-width: 1100px; margin: 0 auto; padding: 8px 4px 40px; }
+    .kfd-hero { text-align: center; padding: 36px 16px 28px; }
+    .kfd-hero h1 { font-weight: 800; font-size: 2rem; margin-bottom: 10px; }
+    .kfd-hero p { opacity: 0.75; max-width: 640px; margin: 0 auto; }
+    .kfd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-top: 24px; }
+    .kfd-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 10px; transition: transform .15s, border-color .15s; }
+    .kfd-card:hover { transform: translateY(-2px); border-color: rgba(74,158,255,0.4); }
+    .kfd-icon { font-size: 2rem; }
+    .kfd-card h3 { font-size: 1.08rem; font-weight: 700; margin: 0; }
+    .kfd-card p { font-size: 0.88rem; opacity: 0.75; flex: 1; margin: 0; }
+    .kfd-card-actions { display: flex; gap: 8px; margin-top: 6px; }
+  </style>
+
+  <div class="kfd-hero">
+    <h1>🎓 Kafedra hujjatlari</h1>
+    <p>Oliy ta'lim professor-o'qituvchilari uchun o'quv va uslubiy hujjatlar — sun'iy intellekt yordamida bir necha daqiqada tayyor.</p>
+    {% if current_user.is_authenticated %}
+    <a href="/kafedra/tarix/" class="btn btn-outline-light btn-sm mt-2"><i class="bi bi-clock-history"></i> Mening hujjatlarim</a>
+    {% endif %}
+  </div>
+
+  <div class="kfd-grid">
+    {% for key, cfg in doc_types.items() %}
+    <div class="kfd-card">
+      <div class="kfd-icon">{{ cfg.icon }}</div>
+      <h3>{{ cfg.label }}</h3>
+      <p>{{ cfg.description }}</p>
+      <div class="kfd-card-actions">
+        <a href="/kafedra/{{ key }}/" class="btn btn-primary btn-sm flex-grow-1">Boshlash</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

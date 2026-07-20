@@ -761,6 +761,7 @@ from blueprints.legal import legal_bp
 from blueprints.payments import payments_bp
 from blueprints.maqolalar import maqolalar_bp
 from blueprints.share import share_bp
+from blueprints.kafedra import kafedra_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -793,6 +794,7 @@ app.register_blueprint(legal_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(maqolalar_bp)
 app.register_blueprint(share_bp)
+app.register_blueprint(kafedra_bp)
 
 # ATMOS callback server-to-server keladi (imzo + pay/get bilan himoyalangan),
 # pay/create esa JSON fetch (login_required) — ikkalasida CSRF token yo'q.

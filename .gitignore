@@ -24,3 +24,6 @@ users.db
 
 # Universitet merge pipeline natijalari (qayta generatsiya qilinadi)
 output/
+
+# Kafedra hujjatlari — runtime da yaratilgan DOCX fayllar (serverda generatsiya qilinadi)
+static/generated_docs/

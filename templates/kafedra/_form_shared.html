@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}{{ cfg.label }} — Kafedra hujjatlari — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ cfg.description }}{% endblock %}
+
+{% block content %}
+<div class="kfd-form">
+  <style>
+    .kfd-form { max-width: 760px; margin: 0 auto; padding: 8px 4px 60px; }
+    .kfd-form-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+    .kfd-form-head .ic { font-size: 2.2rem; }
+    .kfd-form-head h1 { font-size: 1.5rem; font-weight: 800; margin: 0; }
+    .kfd-form-head p { margin: 2px 0 0; opacity: 0.7; font-size: 0.9rem; }
+    .kfd-steps { display: flex; gap: 8px; margin-bottom: 26px; }
+    .kfd-step-dot { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); }
+    .kfd-step-dot.active { background: #4a9eff; }
+    .kfd-progress-label { font-size: 0.82rem; opacity: 0.65; margin-bottom: 18px; }
+    .kfd-panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px; padding: 26px; }
+    .kfd-field { margin-bottom: 16px; }
+    .kfd-field label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+    .kfd-optional-toggle { cursor: pointer; color: #4a9eff; font-size: 0.88rem; margin: 10px 0 16px;
+      display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+    .kfd-optional-body { display: none; padding-top: 6px; }
+    .kfd-optional-body.open { display: block; }
+    .kfd-hint { font-size: 0.8rem; opacity: 0.55; margin-top: 16px; }
+    .kfd-summary dt { opacity: 0.65; font-size: 0.85rem; }
+    .kfd-summary dd { margin-bottom: 10px; }
+    .kfd-loading { text-align: center; padding: 30px 10px; }
+    .kfd-loading .spinner-border { width: 3rem; height: 3rem; }
+    .kfd-actions { display: flex; justify-content: space-between; margin-top: 22px; gap: 10px; }
+  </style>
+
+  <div class="kfd-form-head">
+    <div class="ic">{{ cfg.icon }}</div>
+    <div>
+      <h1>{{ cfg.label }}</h1>
+      <p>{{ cfg.description }}</p>
+    </div>
+  </div>
+
+  <div class="kfd-steps">
+    <div class="kfd-step-dot active" data-step-dot="1"></div>
+    <div class="kfd-step-dot" data-step-dot="2"></div>
+    <div class="kfd-step-dot" data-step-dot="3"></div>
+  </div>
+  <div class="kfd-progress-label" id="kfdProgressLabel">1-bosqich: Ma'lumotlar</div>
+
+  <form id="kfdForm" autocomplete="off">
+    <!-- ── 1-bosqich: Ma'lumotlar ── -->
+    <div class="kfd-panel" data-step="1">
+      {% for key in cfg.main_fields %}
+      {% set meta = field_meta.get(key, {'type': 'text'}) %}
+      <div class="kfd-field">
+        <label for="f_{{ key }}">{{ field_labels.get(key, key) }}{% if meta.get('required') %} <span class="text-danger">*</span>{% endif %}</label>
+        {% if meta.type == 'select' %}
+        <select class="form-select" id="f_{{ key }}" name="{{ key }}">
+          <option value="">— tanlang —</option>
+          {% for opt in meta.options %}
+          <option value="{{ opt }}"{% if prefill.get(key) == opt %} selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+        {% elif meta.type == 'number' %}
+        <input type="number" class="form-control" id="f_{{ key }}" name="{{ key }}"
+               min="{{ meta.get('min', 1) }}" max="{{ meta.get('max', 100) }}"
+               value="{{ prefill.get(key) or meta.get('default', '') }}">
+        {% elif meta.type == 'textarea' %}
+        <textarea class="form-control" id="f_{{ key }}" name="{{ key }}" rows="2"
+                  placeholder="{{ meta.get('placeholder', '') }}">{{ prefill.get(key, '') }}</textarea>
+        {% else %}
+        <input type="text" class="form-control" id="f_{{ key }}" name="{{ key }}"
+               placeholder="{{ meta.get('placeholder', '') }}" value="{{ prefill.get(key, '') }}"
+               {% if meta.get('required') %}required{% endif %}>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% if cfg.optional_fields %}
+      <div class="kfd-optional-toggle" id="kfdOptToggle">
+        <i class="bi bi-chevron-right" id="kfdOptChevron"></i> Ixtiyoriy maydonlar (hammasi standart qiymatlar bilan to'ldirilgan)
+      </div>
+      <div class="kfd-optional-body" id="kfdOptBody">
+        {% for key in cfg.optional_fields %}
+        {% set meta = field_meta.get(key, {'type': 'text'}) %}
+        <div class="kfd-field">
+          <label for="f_{{ key }}">{{ field_labels.get(key, key) }}</label>
+          {% if meta.type == 'select' %}
+          <select class="form-select" id="f_{{ key }}" name="{{ key }}">
+            <option value="">— tanlang —</option>
+            {% for opt in meta.options %}
+            <option value="{{ opt }}"{% if (prefill.get(key) or meta.get('default')) == opt %} selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+          {% elif meta.type == 'number' %}
+          <input type="number" class="form-control" id="f_{{ key }}" name="{{ key }}"
+                 min="{{ meta.get('min', 1) }}" max="{{ meta.get('max', 100) }}"
+                 value="{{ prefill.get(key) or meta.get('default', '') }}">
+          {% elif meta.type == 'textarea' %}
+          <textarea class="form-control" id="f_{{ key }}" name="{{ key }}" rows="2"
+                    placeholder="{{ meta.get('placeholder', '') }}">{{ prefill.get(key, '') }}</textarea>
+          {% else %}
+          <input type="text" class="form-control" id="f_{{ key }}" name="{{ key }}"
+                 placeholder="{{ meta.get('placeholder', '') }}"
+                 value="{{ prefill.get(key) or meta.get('default', '') }}">
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="kfd-actions">
+        <span></span>
+        <button type="button" class="btn btn-primary" id="kfdToStep2">
+          {% if current_user.is_authenticated %}To'lovga o'tish{% else %}Davom etish{% endif %} <i class="bi bi-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── 2-bosqich: Tasdiqlash ── -->
+    <div class="kfd-panel" data-step="2" style="display:none;">
+      <h5 class="mb-3">Kiritilgan ma'lumotlar</h5>
+      <dl class="kfd-summary" id="kfdSummary"></dl>
+
+      {% if not current_user.is_authenticated %}
+      <div class="alert alert-info">
+        Hujjatni yaratish uchun avval tizimga kiring.
+        <a href="/login?next={{ request.path }}" class="alert-link">Kirish</a>
+      </div>
+      {% else %}
+      <div class="alert alert-success">
+        Bepul — bu hujjatni hoziroq yarating. <b>Narx: 0 so'm</b> (ro'yxatdan o'tgan foydalanuvchilar uchun cheklovsiz).
+      </div>
+      {% endif %}
+
+      <div class="kfd-actions">
+        <button type="button" class="btn btn-outline-secondary" id="kfdBackTo1"><i class="bi bi-arrow-left"></i> Orqaga</button>
+        {% if current_user.is_authenticated %}
+        <button type="submit" class="btn btn-primary" id="kfdGenerateBtn">Yaratish <i class="bi bi-magic"></i></button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── 3-bosqich: Natija ── -->
+    <div class="kfd-panel" data-step="3" style="display:none;">
+      <div class="kfd-loading" id="kfdLoading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 mb-1">AI hujjatni tayyorlamoqda...</p>
+        <p class="opacity-75" style="font-size:0.85rem;">Bu odatda 15-40 soniya davom etadi. Sahifani yopmang.</p>
+      </div>
+      <div id="kfdError" style="display:none;" class="alert alert-danger"></div>
+    </div>
+  </form>
+
+  <p class="kfd-hint">Hujjat OAK standartlariga moslashtirilgan .docx formatida yaratiladi. Yaratilgan hujjat sifatini tekshirib, kerak bo'lsa tahrirlashni tavsiya qilamiz.</p>
+</div>
+
+<script>
+(function() {
+  const form = document.getElementById('kfdForm');
+  const optToggle = document.getElementById('kfdOptToggle');
+  const optBody = document.getElementById('kfdOptBody');
+  const optChevron = document.getElementById('kfdOptChevron');
+  if (optToggle) {
+    optToggle.addEventListener('click', function() {
+      optBody.classList.toggle('open');
+      optChevron.className = optBody.classList.contains('open') ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+    });
+  }
+
+  const steps = form.querySelectorAll('[data-step]');
+  const dots = document.querySelectorAll('[data-step-dot]');
+  const progressLabel = document.getElementById('kfdProgressLabel');
+  const stepLabels = {1: "1-bosqich: Ma'lumotlar", 2: '2-bosqich: Tasdiqlash', 3: '3-bosqich: Natija'};
+
+  function showStep(n) {
+    steps.forEach(s => s.style.display = (s.dataset.step == n) ? '' : 'none');
+    dots.forEach(d => d.classList.toggle('active', d.dataset.stepDot <= n));
+    progressLabel.textContent = stepLabels[n];
+  }
+
+  document.getElementById('kfdToStep2').addEventListener('click', function() {
+    const required = form.querySelectorAll('[required]');
+    for (const el of required) {
+      if (!el.value.trim()) { el.focus(); return; }
+    }
+    const summary = document.getElementById('kfdSummary');
+    summary.innerHTML = '';
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+      if (!el.value || !el.value.trim()) return;
+      const label = el.closest('.kfd-field') ? el.closest('.kfd-field').querySelector('label').textContent : el.name;
+      summary.innerHTML += '<dt>' + label.replace('*', '') + '</dt><dd>' + el.value.replace(/</g, '&lt;') + '</dd>';
+    });
+    showStep(2);
+  });
+
+  document.getElementById('kfdBackTo1').addEventListener('click', function() { showStep(1); });
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    showStep(3);
+    document.getElementById('kfdLoading').style.display = '';
+    document.getElementById('kfdError').style.display = 'none';
+
+    const data = {};
+    form.querySelectorAll('input, select, textarea').forEach(el => { if (el.name) data[el.name] = el.value; });
+
+    fetch(window.location.pathname + 'generate', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    }).then(r => r.json()).then(res => {
+      if (!res.success) { throw new Error(res.error || "Xatolik yuz berdi"); }
+      pollStatus(res.document_id);
+    }).catch(err => showError(err.message));
+  });
+
+  function pollStatus(docId) {
+    fetch('/kafedra/status/' + docId).then(r => r.json()).then(res => {
+      if (res.status === 'completed') {
+        window.location.href = res.result_url;
+      } else if (res.status === 'failed') {
+        showError(res.error || "Hujjatni yaratib bo'lmadi. Qayta urinib ko'ring.");
+      } else {
+        setTimeout(() => pollStatus(docId), 2500);
+      }
+    }).catch(() => setTimeout(() => pollStatus(docId), 4000));
+  }
+
+  function showError(msg) {
+    document.getElementById('kfdLoading').style.display = 'none';
+    const errBox = document.getElementById('kfdError');
+    errBox.textContent = msg;
+    errBox.style.display = '';
+  }
+})();
+</script>
+{% endblock %}
