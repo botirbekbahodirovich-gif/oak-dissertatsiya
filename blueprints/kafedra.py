@@ -33,7 +33,9 @@ from flask_login import current_user, login_required
 
 from app import csrf
 from data import get_connection
-from services.document_prompts import DOCUMENT_TYPES, FIELD_LABELS, FIELD_META, TALIM_BOSQICHLARI
+from services.document_prompts import (DOCUMENT_TYPES, EXTRA_FIELDS, FIELD_META, RAHBAR_LABELS,
+                                       SAMPLE_TOPICS, SECTIONS, TALIM_BOSQICHLARI,
+                                       section_defaults, section_summary)
 from services.document_generator import GenerationError, generate_document_content
 from services.docx_builder import save_docx
 
@@ -171,32 +173,11 @@ def index():
     return render_template('kafedra/index.html', doc_types=DOCUMENT_TYPES)
 
 
-@kafedra_bp.route('/<doc_type>/')
-def document_form(doc_type):
-    if doc_type not in DOCUMENT_TYPES:
-        abort(404)
-    cfg = DOCUMENT_TYPES[doc_type]
-    prefill = {}
-    scholar_id = request.args.get('scholar_id', type=int)
-    if scholar_id:
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT institution, ixtisoslik, academic_degree FROM olim_profiles WHERE id = %s
-                """, (scholar_id,))
-                row = cur.fetchone()
-                if row:
-                    prefill = {
-                        'muassasa_shaxslar': row[0] or '',
-                        'mutaxassislik': row[1] or '',
-                        'talim_bosqichi': _degree_to_bosqich(row[2]),
-                    }
-        finally:
-            conn.close()
-    return render_template(f'kafedra/{doc_type.replace("-", "_")}.html',
-                           doc_type=doc_type, cfg=cfg, talim_bosqichlari=TALIM_BOSQICHLARI,
-                           prefill=prefill, field_meta=FIELD_META, field_labels=FIELD_LABELS)
+def _muassasa_section_key(cfg):
+    for key in ('muassasa_shaxslar_full', 'muassasa_shaxslar_qisqa'):
+        if key in cfg.get('sections', []):
+            return key
+    return None
 
 
 def _degree_to_bosqich(academic_degree):
@@ -206,6 +187,138 @@ def _degree_to_bosqich(academic_degree):
     if 'magistr' in d:
         return 'Magistratura'
     return ''
+
+
+def _profile_autofill(muassasa_key):
+    """Login qilgan foydalanuvchi cabinet orqali olim_profiles'ga bog'langan bo'lsa,
+    tuzuvchi F.I.Sh./unvon/lavozim/universitet/email avtomatik to'ldiriladi
+    (data.py:_render_olim_profile dagi message_target_id bilan bir xil bridge)."""
+    if not muassasa_key or not getattr(current_user, 'is_authenticated', False):
+        return {}
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT p.olim_name, p.institution, p.academic_degree, p.academic_rank, p.position
+                FROM cabinet_users cu
+                JOIN olim_profiles p ON p.cabinet_user_id = cu.id
+                WHERE LOWER(cu.email) = LOWER(%s) LIMIT 1
+            """, (current_user.email,))
+            row = cur.fetchone()
+        conn.commit()
+    except Exception:
+        return {}
+    finally:
+        conn.close()
+    if not row:
+        return {}
+    olim_name, institution, academic_degree, academic_rank, position = row
+    out = {'tuzuvchi_fio': olim_name or '', 'email': current_user.email or ''}
+    if academic_degree or academic_rank:
+        out['ilmiy_daraja_unvon'] = ', '.join(p for p in (academic_degree, academic_rank) if p)
+    if position:
+        out['lavozim'] = position
+    if institution and muassasa_key == 'muassasa_shaxslar_full':
+        out['universitet'] = institution
+    elif institution:
+        out['universitet'] = institution
+    return {k: v for k, v in out.items() if v}
+
+
+@kafedra_bp.route('/<doc_type>/')
+def document_form(doc_type):
+    if doc_type not in DOCUMENT_TYPES:
+        abort(404)
+    cfg = DOCUMENT_TYPES[doc_type]
+    muassasa_key = _muassasa_section_key(cfg)
+
+    defaults = {}
+    for sect_key in cfg.get('sections', []):
+        defaults.update(section_defaults(sect_key))
+    for key in cfg['main_fields']:
+        meta = FIELD_META.get(key) or EXTRA_FIELDS.get(key) or {}
+        if 'default' in meta:
+            defaults[key] = meta['default']
+    for key in cfg.get('extra_fields', []):
+        meta = EXTRA_FIELDS.get(key, {})
+        if meta.get('type') == 'group':
+            for fk, fmeta in meta['fields'].items():
+                if 'default' in fmeta:
+                    defaults[fk] = fmeta['default']
+        elif 'default' in meta:
+            defaults[key] = meta['default']
+
+    profile_autofilled = False
+    autofill = _profile_autofill(muassasa_key)
+    if autofill:
+        defaults.update(autofill)
+        profile_autofilled = True
+
+    scholar_id = request.args.get('scholar_id', type=int)
+    if scholar_id:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT institution, ixtisoslik, academic_degree, olim_name,
+                           academic_rank, position
+                    FROM olim_profiles WHERE id = %s
+                """, (scholar_id,))
+                row = cur.fetchone()
+                if row:
+                    institution, ixtisoslik, academic_degree, olim_name, academic_rank, position = row
+                    defaults['mutaxassislik'] = ixtisoslik or defaults.get('mutaxassislik', '')
+                    defaults['talim_bosqichi'] = _degree_to_bosqich(academic_degree) or defaults.get('talim_bosqichi', '')
+                    if muassasa_key:
+                        if institution:
+                            defaults['universitet'] = institution
+                        if olim_name:
+                            defaults['tuzuvchi_fio'] = olim_name
+                        if academic_degree or academic_rank:
+                            defaults['ilmiy_daraja_unvon'] = ', '.join(
+                                p for p in (academic_degree, academic_rank) if p)
+                        if position:
+                            defaults['lavozim'] = position
+                    profile_autofilled = True
+        finally:
+            conn.close()
+
+    rahbar_label = RAHBAR_LABELS.get(doc_type, 'Rahbar F.I.Sh.')
+    summaries = {sect_key: section_summary(sect_key, defaults) for sect_key in cfg.get('sections', [])}
+    sample_topics_key = 'mashgulotlar_rejasi' if 'mashgulotlar_rejasi' in cfg.get('sections', []) else doc_type
+    sample_topics = SAMPLE_TOPICS.get(sample_topics_key, [])
+    return render_template(f'kafedra/{doc_type.replace("-", "_")}.html',
+                           doc_type=doc_type, cfg=cfg, talim_bosqichlari=TALIM_BOSQICHLARI,
+                           defaults=defaults, field_meta=FIELD_META, extra_field_meta=EXTRA_FIELDS,
+                           sections=SECTIONS, muassasa_key=muassasa_key, rahbar_label=rahbar_label,
+                           profile_autofilled=profile_autofilled, summaries=summaries,
+                           sample_topics=sample_topics)
+
+
+@kafedra_bp.route('/<doc_type>/namuna/')
+def sample_preview(doc_type):
+    if doc_type not in DOCUMENT_TYPES:
+        abort(404)
+    cfg = DOCUMENT_TYPES[doc_type]
+    return jsonify({
+        'label': cfg['label'],
+        'html': render_template(f'kafedra/samples/{doc_type.replace("-", "_")}.html'),
+        'download_url': url_for('kafedra.sample_download', doc_type=doc_type),
+    })
+
+
+@kafedra_bp.route('/<doc_type>/namuna/download')
+def sample_download(doc_type):
+    if doc_type not in DOCUMENT_TYPES:
+        abort(404)
+    import os
+    path = os.path.join('static', 'samples', f'namuna_{doc_type.replace("-", "_")}.docx')
+    if not os.path.exists(path):
+        abort(404)
+    cfg = DOCUMENT_TYPES[doc_type]
+    return send_file(path, as_attachment=True,
+                     download_name=f"Namuna_{cfg['label'].replace(' ', '_')}.docx",
+                     mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
 
 @kafedra_bp.route('/<doc_type>/generate', methods=['POST'])

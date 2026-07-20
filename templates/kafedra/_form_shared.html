@@ -1,16 +1,68 @@
 {% extends "base.html" %}
-{% block title %}{{ cfg.label }} — Kafedra hujjatlari — Olimlar.uz{% endblock %}
-{% block meta_description %}{{ cfg.description }}{% endblock %}
+{% block title %}{{ cfg.title }} — Kafedra hujjatlari — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ cfg.tagline }}{% endblock %}
+
+{% macro widget(key, meta, value) %}
+{% if meta.type == 'select' %}
+<select class="form-select kfd-input" id="f_{{ key }}" name="{{ key }}" data-required="{{ 'true' if meta.required else 'false' }}">
+  <option value="">— tanlang —</option>
+  {% for opt in meta.options %}<option value="{{ opt }}"{% if value == opt %} selected{% endif %}>{{ opt }}</option>{% endfor %}
+</select>
+{% elif meta.type == 'number' %}
+<input type="number" class="form-control kfd-input" id="f_{{ key }}" name="{{ key }}"
+       min="{{ meta.min if meta.min is defined else 0 }}" max="{{ meta.max if meta.max is defined else 999 }}"
+       placeholder="{{ meta.placeholder or '' }}" value="{{ value if value is not none else '' }}"
+       data-required="{{ 'true' if meta.required else 'false' }}">
+{% elif meta.type == 'textarea' %}
+<textarea class="form-control kfd-input" id="f_{{ key }}" name="{{ key }}" rows="3"
+          placeholder="{{ meta.placeholder or '' }}">{{ value or '' }}</textarea>
+{% elif meta.type in ('chips', 'toggle') %}
+<input type="hidden" id="f_{{ key }}" name="{{ key }}" value="{{ value or meta.default or '' }}"
+       data-required="{{ 'true' if meta.required else 'false' }}">
+<div class="kfd-{{ 'chips' if meta.type == 'chips' else 'toggle' }}" data-group-target="{{ key }}">
+  {% for opt in meta.options %}
+  <button type="button" class="kfd-{{ 'chip' if meta.type == 'chips' else 'toggle-btn' }}{% if (value or meta.default) == opt %} active{% endif %}" data-value="{{ opt }}">{{ opt }}</button>
+  {% endfor %}
+</div>
+{% if meta.hint %}<div class="kfd-field-hint">{{ meta.hint }}</div>{% endif %}
+{% else %}
+<input type="text" class="form-control kfd-input" id="f_{{ key }}" name="{{ key }}"
+       placeholder="{{ meta.placeholder or '' }}" value="{{ value or '' }}"
+       data-required="{{ 'true' if meta.required else 'false' }}">
+{% endif %}
+{% endmacro %}
+
+{% macro checkbox_group(key, meta, value_list) %}
+<div class="kfd-field">
+  <label>{{ meta.label }}</label>
+  <div class="kfd-checkbox-grid">
+    {% for opt in meta.options %}
+    <label class="kfd-checkbox-item">
+      <input type="checkbox" name="{{ key }}" value="{{ opt }}"{% if opt in (value_list or []) %} checked{% endif %}>
+      {{ opt }}
+    </label>
+    {% endfor %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro main_field(key) %}
+{% set meta = field_meta.get(key) or extra_field_meta.get(key) or {'type': 'text', 'label': key} %}
+<div class="kfd-field">
+  <label for="f_{{ key }}">{{ meta.label or key }}{% if meta.required %} <span class="text-danger">*</span>{% endif %}</label>
+  {{ widget(key, meta, defaults.get(key)) }}
+</div>
+{% endmacro %}
 
 {% block content %}
 <div class="kfd-form">
   <style>
-    .kfd-form { max-width: 760px; margin: 0 auto; padding: 8px 4px 60px; }
+    .kfd-form { max-width: 800px; margin: 0 auto; padding: 8px 4px 60px; }
     .kfd-form-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
     .kfd-form-head .ic { font-size: 2.2rem; }
     .kfd-form-head h1 { font-size: 1.5rem; font-weight: 800; margin: 0; }
     .kfd-form-head p { margin: 2px 0 0; opacity: 0.7; font-size: 0.9rem; }
-    .kfd-steps { display: flex; gap: 8px; margin-bottom: 26px; }
+    .kfd-steps { display: flex; gap: 8px; margin-bottom: 10px; }
     .kfd-step-dot { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); }
     .kfd-step-dot.active { background: #4a9eff; }
     .kfd-progress-label { font-size: 0.82rem; opacity: 0.65; margin-bottom: 18px; }
@@ -18,23 +70,58 @@
       border-radius: 14px; padding: 26px; }
     .kfd-field { margin-bottom: 16px; }
     .kfd-field label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
-    .kfd-optional-toggle { cursor: pointer; color: #4a9eff; font-size: 0.88rem; margin: 10px 0 16px;
-      display: inline-flex; align-items: center; gap: 6px; user-select: none; }
-    .kfd-optional-body { display: none; padding-top: 6px; }
-    .kfd-optional-body.open { display: block; }
+    .kfd-field-hint { font-size: 0.78rem; opacity: 0.6; margin-top: 4px; }
+    .kfd-sec-heading { font-size: 1rem; font-weight: 700; margin: 4px 0 14px; display: flex; align-items: center; gap: 8px; }
+    .kfd-main-progress { font-size: 0.8rem; opacity: 0.6; margin-left: auto; font-weight: 500; }
+    .kfd-optional-intro { font-size: 0.85rem; opacity: 0.65; margin: 26px 0 14px; padding-top: 18px;
+      border-top: 1px dashed rgba(255,255,255,0.12); }
+    .kfd-collapse { margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+    .kfd-collapse summary { cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 0.92rem;
+      display: flex; align-items: center; gap: 10px; list-style: none; }
+    .kfd-collapse summary::-webkit-details-marker { display: none; }
+    .kfd-collapse summary .chev { transition: transform 0.15s; }
+    .kfd-collapse[open] summary .chev { transform: rotate(90deg); }
+    .kfd-collapse-summary { margin-left: auto; font-size: 0.8rem; opacity: 0.55; font-weight: 400; }
+    .kfd-collapse-body { padding: 4px 16px 18px; }
+    .kfd-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+    .kfd-grid2 .kfd-full { grid-column: 1 / -1; }
+    .kfd-hours-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .kfd-hours-grid .kfd-field label { font-size: 0.76rem; }
+    .kfd-jami-box { margin-top: 10px; padding: 10px 14px; background: rgba(255,255,255,0.06); border-radius: 8px;
+      font-size: 0.85rem; display: flex; justify-content: space-between; }
+    .kfd-chips-preset { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .kfd-chip-preset { border: 1px solid rgba(255,255,255,0.16); background: transparent; color: inherit;
+      border-radius: 999px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
+    .kfd-chip-preset:hover { border-color: #4a9eff; }
+    .kfd-total-badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+    .kfd-total-badge.ok { background: rgba(34,197,94,0.18); color: #4ade80; }
+    .kfd-total-badge.bad { background: rgba(239,68,68,0.18); color: #f87171; }
+    .kfd-chips, .kfd-toggle { display: flex; gap: 8px; flex-wrap: wrap; }
+    .kfd-chip, .kfd-toggle-btn { border: 1px solid rgba(255,255,255,0.16); background: transparent; color: inherit;
+      border-radius: 999px; padding: 8px 16px; font-size: 0.86rem; cursor: pointer; }
+    .kfd-chip.active, .kfd-toggle-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
+    .kfd-checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kfd-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; font-weight: 400; cursor: pointer; }
+    .kfd-warning-box { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 10px;
+      padding: 12px 16px; font-size: 0.84rem; margin-bottom: 16px; color: #fde047; }
+    .kfd-autofill-banner { background: rgba(74,158,255,0.12); border: 1px solid rgba(74,158,255,0.3);
+      border-radius: 10px; padding: 10px 16px; font-size: 0.85rem; margin-bottom: 16px; color: #93bbfc; }
+    .kfd-savelocal { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; margin-bottom: 16px; opacity: 0.85; }
+    .kfd-sample-link { font-size: 0.78rem; color: #4a9eff; cursor: pointer; text-decoration: underline; float: right; }
     .kfd-hint { font-size: 0.8rem; opacity: 0.55; margin-top: 16px; }
     .kfd-summary dt { opacity: 0.65; font-size: 0.85rem; }
     .kfd-summary dd { margin-bottom: 10px; }
     .kfd-loading { text-align: center; padding: 30px 10px; }
     .kfd-loading .spinner-border { width: 3rem; height: 3rem; }
     .kfd-actions { display: flex; justify-content: space-between; margin-top: 22px; gap: 10px; }
+    .kfd-submit-full { width: 100%; padding: 14px; font-size: 1.02rem; font-weight: 700; }
   </style>
 
   <div class="kfd-form-head">
     <div class="ic">{{ cfg.icon }}</div>
     <div>
-      <h1>{{ cfg.label }}</h1>
-      <p>{{ cfg.description }}</p>
+      <h1>{{ cfg.title }}</h1>
+      <p>{{ cfg.tagline }}</p>
     </div>
   </div>
 
@@ -43,76 +130,121 @@
     <div class="kfd-step-dot" data-step-dot="2"></div>
     <div class="kfd-step-dot" data-step-dot="3"></div>
   </div>
-  <div class="kfd-progress-label" id="kfdProgressLabel">1-bosqich: Ma'lumotlar</div>
+  <div class="kfd-progress-label" id="kfdProgressLabel">(1) Ma'lumotlar — (2) Tasdiqlash — (3) Natija</div>
 
   <form id="kfdForm" autocomplete="off">
     <!-- ── 1-bosqich: Ma'lumotlar ── -->
     <div class="kfd-panel" data-step="1">
-      {% for key in cfg.main_fields %}
-      {% set meta = field_meta.get(key, {'type': 'text'}) %}
-      <div class="kfd-field">
-        <label for="f_{{ key }}">{{ field_labels.get(key, key) }}{% if meta.get('required') %} <span class="text-danger">*</span>{% endif %}</label>
-        {% if meta.type == 'select' %}
-        <select class="form-select" id="f_{{ key }}" name="{{ key }}">
-          <option value="">— tanlang —</option>
-          {% for opt in meta.options %}
-          <option value="{{ opt }}"{% if prefill.get(key) == opt %} selected{% endif %}>{{ opt }}</option>
-          {% endfor %}
-        </select>
-        {% elif meta.type == 'number' %}
-        <input type="number" class="form-control" id="f_{{ key }}" name="{{ key }}"
-               min="{{ meta.get('min', 1) }}" max="{{ meta.get('max', 100) }}"
-               value="{{ prefill.get(key) or meta.get('default', '') }}">
-        {% elif meta.type == 'textarea' %}
-        <textarea class="form-control" id="f_{{ key }}" name="{{ key }}" rows="2"
-                  placeholder="{{ meta.get('placeholder', '') }}">{{ prefill.get(key, '') }}</textarea>
-        {% else %}
-        <input type="text" class="form-control" id="f_{{ key }}" name="{{ key }}"
-               placeholder="{{ meta.get('placeholder', '') }}" value="{{ prefill.get(key, '') }}"
-               {% if meta.get('required') %}required{% endif %}>
-        {% endif %}
-      </div>
-      {% endfor %}
 
-      {% if cfg.optional_fields %}
-      <div class="kfd-optional-toggle" id="kfdOptToggle">
-        <i class="bi bi-chevron-right" id="kfdOptChevron"></i> Ixtiyoriy maydonlar (hammasi standart qiymatlar bilan to'ldirilgan)
-      </div>
-      <div class="kfd-optional-body" id="kfdOptBody">
-        {% for key in cfg.optional_fields %}
-        {% set meta = field_meta.get(key, {'type': 'text'}) %}
-        <div class="kfd-field">
-          <label for="f_{{ key }}">{{ field_labels.get(key, key) }}</label>
-          {% if meta.type == 'select' %}
-          <select class="form-select" id="f_{{ key }}" name="{{ key }}">
-            <option value="">— tanlang —</option>
-            {% for opt in meta.options %}
-            <option value="{{ opt }}"{% if (prefill.get(key) or meta.get('default')) == opt %} selected{% endif %}>{{ opt }}</option>
-            {% endfor %}
-          </select>
-          {% elif meta.type == 'number' %}
-          <input type="number" class="form-control" id="f_{{ key }}" name="{{ key }}"
-                 min="{{ meta.get('min', 1) }}" max="{{ meta.get('max', 100) }}"
-                 value="{{ prefill.get(key) or meta.get('default', '') }}">
-          {% elif meta.type == 'textarea' %}
-          <textarea class="form-control" id="f_{{ key }}" name="{{ key }}" rows="2"
-                    placeholder="{{ meta.get('placeholder', '') }}">{{ prefill.get(key, '') }}</textarea>
-          {% else %}
-          <input type="text" class="form-control" id="f_{{ key }}" name="{{ key }}"
-                 placeholder="{{ meta.get('placeholder', '') }}"
-                 value="{{ prefill.get(key) or meta.get('default', '') }}">
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
+      {% if profile_autofilled %}
+      <div class="kfd-autofill-banner">✓ Profilingizdagi ma'lumotlar bilan to'ldirildi</div>
       {% endif %}
 
-      <div class="kfd-actions">
-        <span></span>
-        <button type="button" class="btn btn-primary" id="kfdToStep2">
-          {% if current_user.is_authenticated %}To'lovga o'tish{% else %}Davom etish{% endif %} <i class="bi bi-arrow-right"></i>
+      <div class="kfd-sec-heading">A. Asosiy ma'lumotlar <span class="kfd-main-progress" id="kfdMainProgress">0/{{ cfg.main_fields|length }} to'ldirildi</span></div>
+      {% for key in cfg.main_fields %}{{ main_field(key) }}{% endfor %}
+
+      <div class="kfd-optional-intro">
+        <b>B. IXTIYORIY — MOSLASHTIRISH.</b> Hammasi standart qiymatlar bilan to'ldirilgan.
+        O'zgartirmoqchi bo'lsangizgina oching.
+      </div>
+
+      {% for key in cfg.extra_fields %}
+        {% set meta = extra_field_meta.get(key, {}) %}
+        {% if meta.type == 'checkboxes' %}
+          {{ checkbox_group(key, meta, defaults.get(key)) }}
+        {% elif meta.type == 'group' %}
+          <div class="kfd-field">
+            {% if meta.title %}<label>{{ meta.title }}</label>{% endif %}
+            {% for fk, fmeta in meta.fields.items() %}
+              {% if fmeta.type == 'checkbox' %}
+              <label class="kfd-checkbox-item" style="display:flex;margin-bottom:8px;">
+                <input type="checkbox" name="{{ fk }}" value="1"{% if defaults.get(fk) %} checked{% endif %}> {{ fmeta.label }}
+              </label>
+              {% elif fmeta.type == 'checkboxes' %}
+                {{ checkbox_group(fk, fmeta, defaults.get(fk)) }}
+              {% else %}
+              <div class="kfd-field"><label>{{ fmeta.label }}</label>{{ widget(fk, fmeta, defaults.get(fk)) }}</div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% else %}
+          {{ main_field(key) }}
+        {% endif %}
+      {% endfor %}
+
+      {% for sect_key in cfg.sections %}
+      {% set sect = sections[sect_key] %}
+      <details class="kfd-collapse" data-section="{{ sect_key }}">
+        <summary><span class="chev">▸</span> {{ sect.title }}
+          <span class="kfd-collapse-summary" data-summary-for="{{ sect_key }}">{{ summaries.get(sect_key, '') }}</span></summary>
+        <div class="kfd-collapse-body">
+
+          {% if sect_key == 'kredit_soat' %}
+            <div class="kfd-grid2">
+              <div class="kfd-field"><label>Kurs turi</label>{{ widget('kurs_turi', sect.fields.kurs_turi, defaults.get('kurs_turi')) }}</div>
+              <div class="kfd-field"><label>Kredit (ECTS)</label>{{ widget('kredit', sect.fields.kredit, defaults.get('kredit')) }}</div>
+              <div class="kfd-field"><label>Semestr</label>{{ widget('semestr', sect.fields.semestr, defaults.get('semestr')) }}</div>
+              <div class="kfd-field"><label>O'quv yili</label>{{ widget('oquv_yili', sect.fields.oquv_yili, defaults.get('oquv_yili')) }}</div>
+            </div>
+            <div class="kfd-hours-grid">
+              {% for hf in sect.hours_fields %}
+              <div class="kfd-field"><label>{{ sect.fields[hf].label }}</label>{{ widget(hf, sect.fields[hf], defaults.get(hf)) }}</div>
+              {% endfor %}
+            </div>
+            <div class="kfd-jami-box">
+              <span>Jami soatlar: <b id="kfdJamiSoat">{{ defaults.get('maruza_soat',0) + defaults.get('amaliy_soat',0) + defaults.get('lab_soat',0) + defaults.get('seminar_soat',0) + defaults.get('mustaqil_soat',0) }}</b></span>
+              <span id="kfdTavsiya" style="opacity:0.6;">Tavsiya: {{ defaults.get('kredit', 3) }} kredit ≈ {{ defaults.get('kredit', 3) * 30 }} soat</span>
+            </div>
+
+          {% elif sect_key == 'baholash_mezoni' %}
+            <div class="kfd-field-hint" style="margin-bottom:10px;">{{ sect.hint }}</div>
+            <div class="kfd-chips-preset">
+              {% for chip in sect.chips %}
+              <button type="button" class="kfd-chip-preset" data-jn="{{ chip[0] }}" data-on="{{ chip[1] }}" data-yn="{{ chip[2] }}">{{ chip[0] }}/{{ chip[1] }}/{{ chip[2] }}</button>
+              {% endfor %}
+            </div>
+            <div class="kfd-grid2">
+              <div class="kfd-field"><label>Joriy nazorat (%)</label>{{ widget('jn_foiz', sect.fields.jn_foiz, defaults.get('jn_foiz')) }}</div>
+              <div class="kfd-field"><label>Oraliq nazorat (%)</label>{{ widget('on_foiz', sect.fields.on_foiz, defaults.get('on_foiz')) }}</div>
+              <div class="kfd-field kfd-full"><label>Yakuniy nazorat (%)</label>{{ widget('yn_foiz', sect.fields.yn_foiz, defaults.get('yn_foiz')) }}</div>
+            </div>
+            <div>Jami: <span class="kfd-total-badge ok" id="kfdBaholashJami">100%</span></div>
+
+          {% elif sect_key in ('mavzular_rejasi', 'mashgulotlar_rejasi') %}
+            <div class="kfd-field-hint" style="margin-bottom:10px;">{{ sect.hint }}</div>
+            <div class="kfd-field"><label>{{ sect.fields.mavzular_soni.label }}</label>{{ widget('mavzular_soni', sect.fields.mavzular_soni, defaults.get('mavzular_soni')) }}</div>
+            <div class="kfd-field">
+              <label>{{ sect.fields.mavzular_royxati.label }}
+                {% if sample_topics %}<span class="kfd-sample-link" id="kfdSampleFill">Namuna bilan to'ldirish</span>{% endif %}
+              </label>
+              {{ widget('mavzular_royxati', sect.fields.mavzular_royxati, defaults.get('mavzular_royxati')) }}
+            </div>
+            <div class="kfd-field"><label>{{ sect.fields.mavzular_qoshimcha.label }}</label>{{ widget('mavzular_qoshimcha', sect.fields.mavzular_qoshimcha, defaults.get('mavzular_qoshimcha')) }}</div>
+
+          {% elif sect_key in ('muassasa_shaxslar_full', 'muassasa_shaxslar_qisqa') %}
+            <div class="kfd-warning-box">⚠️ {{ sect.warning }}</div>
+            <label class="kfd-savelocal">
+              <input type="checkbox" id="kfdSaveLocal"> Bu ma'lumotlarni brauzerda saqlab qolish
+            </label>
+            <div class="kfd-grid2">
+              {% for fk, fmeta in sect.fields.items() %}
+              <div class="kfd-field{% if fmeta.full %} kfd-full{% endif %}">
+                <label>{{ rahbar_label if fk == 'rahbar_fio' else fmeta.label }}</label>
+                {{ widget(fk, fmeta, defaults.get(fk)) }}
+              </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </details>
+      {% endfor %}
+
+      <div class="kfd-actions" style="margin-top:26px;">
+        <button type="button" class="btn btn-primary kfd-submit-full" id="kfdToStep2">
+          Yaratishga o'tish <i class="bi bi-arrow-right"></i>
         </button>
       </div>
+      <p class="text-center kfd-field-hint">To'lov yo'q! DOCX fayl bir necha daqiqada tayyor bo'ladi.</p>
     </div>
 
     <!-- ── 2-bosqich: Tasdiqlash ── -->
@@ -126,9 +258,7 @@
         <a href="/login?next={{ request.path }}" class="alert-link">Kirish</a>
       </div>
       {% else %}
-      <div class="alert alert-success">
-        Bepul — bu hujjatni hoziroq yarating. <b>Narx: 0 so'm</b> (ro'yxatdan o'tgan foydalanuvchilar uchun cheklovsiz).
-      </div>
+      <div class="alert alert-success">To'lov yo'q — bepul, hoziroq yaratishingiz mumkin.</div>
       {% endif %}
 
       <div class="kfd-actions">
@@ -149,27 +279,115 @@
       <div id="kfdError" style="display:none;" class="alert alert-danger"></div>
     </div>
   </form>
-
-  <p class="kfd-hint">Hujjat OAK standartlariga moslashtirilgan .docx formatida yaratiladi. Yaratilgan hujjat sifatini tekshirib, kerak bo'lsa tahrirlashni tavsiya qilamiz.</p>
 </div>
 
 <script>
 (function() {
   const form = document.getElementById('kfdForm');
-  const optToggle = document.getElementById('kfdOptToggle');
-  const optBody = document.getElementById('kfdOptBody');
-  const optChevron = document.getElementById('kfdOptChevron');
-  if (optToggle) {
-    optToggle.addEventListener('click', function() {
-      optBody.classList.toggle('open');
-      optChevron.className = optBody.classList.contains('open') ? 'bi bi-chevron-down' : 'bi bi-chevron-right';
+  const sampleTopics = {{ sample_topics|tojson }};
+  const muassasaKeys = {{ (sections[muassasa_key]['fields'].keys()|list if muassasa_key else [])|tojson }};
+
+  // ── chip/toggle/preset klik ──
+  form.addEventListener('click', function(e) {
+    const btn = e.target.closest('.kfd-chip, .kfd-toggle-btn');
+    if (btn) {
+      const group = btn.closest('[data-group-target]');
+      const name = group.dataset.groupTarget;
+      group.querySelectorAll('.kfd-chip, .kfd-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('f_' + name).value = btn.dataset.value;
+      updateProgress(); updateSummaries();
+      return;
+    }
+    const preset = e.target.closest('.kfd-chip-preset');
+    if (preset) {
+      document.getElementById('f_jn_foiz').value = preset.dataset.jn;
+      document.getElementById('f_on_foiz').value = preset.dataset.on;
+      document.getElementById('f_yn_foiz').value = preset.dataset.yn;
+      updateSummaries();
+      return;
+    }
+    if (e.target.id === 'kfdSampleFill') {
+      const details = e.target.closest('details');
+      const ta = details ? details.querySelector('textarea[name="mavzular_royxati"]') : null;
+      if (ta) ta.value = sampleTopics.join('\n');
+    }
+  });
+
+  form.addEventListener('input', function() { updateProgress(); updateSummaries(); });
+  form.addEventListener('change', function() {
+    updateProgress(); updateSummaries();
+    const cb = document.getElementById('kfdSaveLocal');
+    if (cb && cb.checked) saveLocalMuassasa();
+  });
+
+  function updateProgress() {
+    const req = form.querySelectorAll('[data-required="true"]');
+    let filled = 0;
+    req.forEach(el => { if (el.value && el.value.trim()) filled++; });
+    const el = document.getElementById('kfdMainProgress');
+    if (el) el.textContent = filled + '/' + req.length + " to'ldirildi";
+  }
+
+  function g(id) { const el = document.getElementById('f_' + id); return el ? el.value : ''; }
+  function setSummary(key, text) { const el = document.querySelector('[data-summary-for="' + key + '"]'); if (el) el.textContent = text; }
+
+  function updateSummaries() {
+    if (document.getElementById('f_kredit')) {
+      const hours = ['maruza_soat', 'amaliy_soat', 'lab_soat', 'seminar_soat', 'mustaqil_soat']
+        .reduce((s, k) => s + (parseInt(g(k)) || 0), 0);
+      setSummary('kredit_soat', g('kredit') + " kredit · " + hours + " soat · " + g('maruza_soat') +
+        " ma'ruza · " + g('amaliy_soat') + " amaliy · " + g('mustaqil_soat') + ' mustaqil');
+      const jami = document.getElementById('kfdJamiSoat'); if (jami) jami.textContent = hours;
+      const tavsiya = document.getElementById('kfdTavsiya');
+      if (tavsiya) tavsiya.textContent = 'Tavsiya: ' + g('kredit') + ' kredit ≈ ' + ((parseInt(g('kredit')) || 0) * 30) + ' soat';
+    }
+    if (document.getElementById('f_jn_foiz')) {
+      const jn = parseInt(g('jn_foiz')) || 0, on = parseInt(g('on_foiz')) || 0, yn = parseInt(g('yn_foiz')) || 0;
+      const total = jn + on + yn;
+      setSummary('baholash_mezoni', jn + '/' + on + '/' + yn);
+      const badge = document.getElementById('kfdBaholashJami');
+      if (badge) { badge.textContent = total + '%'; badge.className = 'kfd-total-badge ' + (total === 100 ? 'ok' : 'bad'); }
+    }
+    ['mavzular_rejasi', 'mashgulotlar_rejasi'].forEach(key => {
+      if (document.querySelector('[data-summary-for="' + key + '"]') && document.getElementById('f_mavzular_soni')) {
+        setSummary(key, g('mavzular_soni') + ' mavzu');
+      }
+    });
+    ['muassasa_shaxslar_full', 'muassasa_shaxslar_qisqa'].forEach(key => {
+      if (document.querySelector('[data-summary-for="' + key + '"]') && document.getElementById('f_universitet')) {
+        const uni = g('universitet').trim();
+        setSummary(key, uni ? uni : "to'ldirilmagan (sariq placeholder bilan)");
+      }
     });
   }
 
+  // ── localStorage: muassasa ma'lumotlarini saqlash/tiklash ──
+  function saveLocalMuassasa() {
+    const data = {};
+    muassasaKeys.forEach(k => { const el = document.getElementById('f_' + k); if (el) data[k] = el.value; });
+    localStorage.setItem('kafedra_muassasa_data', JSON.stringify(data));
+  }
+  (function restoreLocalMuassasa() {
+    const saved = localStorage.getItem('kafedra_muassasa_data');
+    if (!saved) return;
+    try {
+      const data = JSON.parse(saved);
+      let any = false;
+      Object.keys(data).forEach(k => {
+        const el = document.getElementById('f_' + k);
+        if (el && !el.value && data[k]) { el.value = data[k]; any = true; }
+      });
+      if (any) { const cb = document.getElementById('kfdSaveLocal'); if (cb) cb.checked = true; }
+      updateSummaries();
+    } catch (e) {}
+  })();
+
+  // ── bosqichlar ──
   const steps = form.querySelectorAll('[data-step]');
   const dots = document.querySelectorAll('[data-step-dot]');
   const progressLabel = document.getElementById('kfdProgressLabel');
-  const stepLabels = {1: "1-bosqich: Ma'lumotlar", 2: '2-bosqich: Tasdiqlash', 3: '3-bosqich: Natija'};
+  const stepLabels = {1: "(1) Ma'lumotlar", 2: '(2) Tasdiqlash', 3: '(3) Natija'};
 
   function showStep(n) {
     steps.forEach(s => s.style.display = (s.dataset.step == n) ? '' : 'none');
@@ -178,15 +396,17 @@
   }
 
   document.getElementById('kfdToStep2').addEventListener('click', function() {
-    const required = form.querySelectorAll('[required]');
+    const required = form.querySelectorAll('[data-required="true"]');
     for (const el of required) {
-      if (!el.value.trim()) { el.focus(); return; }
+      if (!el.value || !el.value.trim()) { el.focus(); return; }
     }
     const summary = document.getElementById('kfdSummary');
     summary.innerHTML = '';
     form.querySelectorAll('input, select, textarea').forEach(el => {
+      if (!el.name || el.type === 'checkbox' || el.type === 'hidden') return;
       if (!el.value || !el.value.trim()) return;
-      const label = el.closest('.kfd-field') ? el.closest('.kfd-field').querySelector('label').textContent : el.name;
+      const fieldWrap = el.closest('.kfd-field');
+      const label = fieldWrap && fieldWrap.querySelector('label') ? fieldWrap.querySelector('label').textContent : el.name;
       summary.innerHTML += '<dt>' + label.replace('*', '') + '</dt><dd>' + el.value.replace(/</g, '&lt;') + '</dd>';
     });
     showStep(2);
@@ -201,7 +421,23 @@
     document.getElementById('kfdError').style.display = 'none';
 
     const data = {};
-    form.querySelectorAll('input, select, textarea').forEach(el => { if (el.name) data[el.name] = el.value; });
+    const multiCount = {};
+    form.querySelectorAll('input[type=checkbox]').forEach(el => {
+      multiCount[el.name] = (multiCount[el.name] || 0) + 1;
+    });
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+      if (!el.name) return;
+      if (el.type === 'checkbox') {
+        if (multiCount[el.name] > 1) {
+          if (!Array.isArray(data[el.name])) data[el.name] = [];
+          if (el.checked) data[el.name].push(el.value);
+        } else {
+          data[el.name] = el.checked;
+        }
+      } else {
+        data[el.name] = el.value;
+      }
+    });
 
     fetch(window.location.pathname + 'generate', {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
@@ -229,6 +465,8 @@
     errBox.textContent = msg;
     errBox.style.display = '';
   }
+
+  updateProgress();
 })();
 </script>
 {% endblock %}

@@ -17,6 +17,22 @@
     .kfd-card h3 { font-size: 1.08rem; font-weight: 700; margin: 0; }
     .kfd-card p { font-size: 0.88rem; opacity: 0.75; flex: 1; margin: 0; }
     .kfd-card-actions { display: flex; gap: 8px; margin-top: 6px; }
+
+    .kfd-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1200;
+      display: none; align-items: center; justify-content: center; padding: 24px; }
+    .kfd-modal-overlay.open { display: flex; }
+    .kfd-modal-paper { background: #fff; color: #0f172a; border-radius: 10px; max-width: 720px; width: 100%;
+      max-height: 86vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .kfd-modal-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
+    .kfd-modal-badge { background: #fef3c7; color: #92400e; font-size: 0.72rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 999px; letter-spacing: 0.03em; }
+    .kfd-modal-title { font-weight: 700; flex: 1; }
+    .kfd-modal-head a, .kfd-modal-head button { color: #0f172a; text-decoration: none; font-size: 1.1rem;
+      background: none; border: none; cursor: pointer; padding: 4px 8px; }
+    .kfd-modal-body { overflow-y: auto; padding: 28px 34px; font-family: "Times New Roman", Times, serif;
+      line-height: 1.5; background: #f8fafc; }
+    .kfd-modal-body .kfd-paper { background: #fff; padding: 30px 36px; box-shadow: 0 1px 8px rgba(0,0,0,0.08); min-height: 400px; }
+    .kfd-modal-loading { text-align: center; padding: 60px 0; color: #64748b; }
   </style>
 
   <div class="kfd-hero">
@@ -35,9 +51,51 @@
       <p>{{ cfg.description }}</p>
       <div class="kfd-card-actions">
         <a href="/kafedra/{{ key }}/" class="btn btn-primary btn-sm flex-grow-1">Boshlash</a>
+        <button type="button" class="btn btn-outline-light btn-sm kfd-namuna-btn" data-doc-type="{{ key }}" data-doc-label="{{ cfg.label }}">👁 Namuna</button>
       </div>
     </div>
     {% endfor %}
   </div>
 </div>
+
+<div class="kfd-modal-overlay" id="kfdModalOverlay">
+  <div class="kfd-modal-paper">
+    <div class="kfd-modal-head">
+      <span class="kfd-modal-badge">NAMUNA</span>
+      <span class="kfd-modal-title" id="kfdModalTitle"></span>
+      <a href="#" id="kfdModalDownload" title="Yuklab olish"><i class="bi bi-download"></i></a>
+      <button type="button" id="kfdModalClose" title="Yopish">✕</button>
+    </div>
+    <div class="kfd-modal-body" id="kfdModalBody">
+      <div class="kfd-modal-loading">Yuklanmoqda...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const overlay = document.getElementById('kfdModalOverlay');
+  const body = document.getElementById('kfdModalBody');
+  const title = document.getElementById('kfdModalTitle');
+  const downloadLink = document.getElementById('kfdModalDownload');
+
+  function openModal(docType, label) {
+    title.textContent = label;
+    body.innerHTML = '<div class="kfd-modal-loading">Yuklanmoqda...</div>';
+    overlay.classList.add('open');
+    fetch('/kafedra/' + docType + '/namuna/').then(r => r.json()).then(res => {
+      body.innerHTML = '<div class="kfd-paper">' + res.html + '</div>';
+      downloadLink.href = res.download_url;
+    }).catch(() => {
+      body.innerHTML = '<div class="kfd-modal-loading">Namuna hozircha mavjud emas.</div>';
+    });
+  }
+
+  document.querySelectorAll('.kfd-namuna-btn').forEach(btn => {
+    btn.addEventListener('click', () => openModal(btn.dataset.docType, btn.dataset.docLabel));
+  });
+  document.getElementById('kfdModalClose').addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('open'); });
+})();
+</script>
 {% endblock %}
