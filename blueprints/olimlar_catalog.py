@@ -156,6 +156,7 @@ def _build_cache():
                     FROM dissertations d
                     LEFT JOIN institution_map im ON TRIM(d.muassasa) = im.cyrillic_name
                     WHERE d.ilmiy_rahbar IS NOT NULL AND TRIM(d.ilmiy_rahbar) <> ''
+                      AND (d.data_quality = 'complete' OR d.data_quality IS NULL)
                     GROUP BY TRIM(d.ilmiy_rahbar)
                 """, (_PHD_PATTERNS, _DSC_PATTERNS))
                 for r in base:
