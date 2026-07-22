@@ -1,17 +1,25 @@
 """Username (vanity URL) validatsiya va tekshirish.
 
 Slug qoidalari (impersonation/homoglyph oldini olish uchun qat'iy ASCII):
-  - 3-30 belgi, faqat [a-z0-9_], harf bilan boshlanadi
-  - ketma-ket '__' yo'q, '_' bilan tugamaydi
-  - kirilcha/unicode belgilar rad etiladi (faqat ASCII a-z,0-9,_)
+  - 3-30 belgi, faqat [a-z0-9_.], harf bilan boshlanadi
+  - ketma-ket '__'/'..' yo'q, '_'/'.' bilan tugamaydi
+  - kirilcha/unicode belgilar rad etiladi (faqat ASCII a-z,0-9,_,.)
   - zaxiralangan so'zlar bloklanadi
 
 Bandlik olim_profiles.slug VA users.slug bo'yicha tekshiriladi (+ 6 oy ichida
 bo'shatilmagan username_history eski slug'lari himoyalangan).
+
+Eslatma: nuqta ("familiya.ism", Instagram uslubidagi bare-path formati —
+olimlar.uz/karimov.sardor) keyinchalik pastki chiziqqa qo'shimcha ravishda
+qabul qilingan; eski pastki-chiziqli slug'lar ('aliyev_vali') ham amal qiladi.
 """
 import re
 
-# Route/xizmat nomlari bilan to'qnashmasligi + impersonation oldini olish
+# Route/xizmat nomlari bilan to'qnashmasligi + impersonation oldini olish.
+# Ro'yxat barcha ildiz darajasidagi (top-level) static route'lardan yig'ilgan
+# (grep -rohE "\.route\(\s*['\"]/[a-zA-Z0-9_-]+['\"]" app.py blueprints/*.py data.py ...
+# + Blueprint(..., url_prefix=...) qatorlari) — yangi top-level route qo'shilsa
+# shu ro'yxat ham yangilanishi kerak.
 RESERVED_WORDS = {
     'admin', 'api', 'about', 'cabinet', 'contact', 'courses', 'dashboard',
     'login', 'logout', 'register', 'profile', 'settings', 'search', 'help',
@@ -26,9 +34,12 @@ RESERVED_WORDS = {
     'crawler', 'scraper', 'olimlar', 'dissertatsiyalar', 'workspace', 'reja',
     'blog', 'yangiliklar', 'vacancies', 'journals', 'councils', 'rahbar',
     'rahbar-topish', 'tadqiqot-xaritasi',
+    # 2026-07-22 auditda topilgan, oldin yo'q bo'lgan top-level route'lar:
+    'filters', 'maxfiylik', 'oferta', 'premium', 'univer', 'kafedra',
+    'sw.js', 'sitemap.xml', 'robots.txt',
 }
 
-_SLUG_RE = re.compile(r'^[a-z][a-z0-9_]*$')
+_SLUG_RE = re.compile(r'^[a-z][a-z0-9_.]*$')
 MIN_LEN, MAX_LEN = 3, 30
 CHANGE_LIMIT_PER_YEAR = 2       # yilda maksimal o'zgartirish
 OLD_SLUG_HOLD_DAYS = 180        # eski slug 6 oy himoyalanadi
@@ -51,12 +62,14 @@ def validate_username(slug):
     if not slug[0].isascii() or not slug[0].isalpha():
         return False, "Harf (a-z) bilan boshlanishi kerak"
     if not _SLUG_RE.match(slug):
-        return False, ("Faqat kichik lotin harflari, raqamlar va pastki chiziq "
-                       "(a-z, 0-9, _). Kirilcha harflar mumkin emas")
+        return False, ("Faqat kichik lotin harflari, raqamlar, pastki chiziq va "
+                       "nuqta (a-z, 0-9, _, .). Kirilcha harflar mumkin emas")
     if '__' in slug:
         return False, "Ketma-ket ikkita pastki chiziq mumkin emas"
-    if slug.endswith('_'):
-        return False, "Pastki chiziq bilan tugashi mumkin emas"
+    if '..' in slug:
+        return False, "Ketma-ket ikkita nuqta mumkin emas"
+    if slug.endswith('_') or slug.endswith('.'):
+        return False, "Pastki chiziq yoki nuqta bilan tugashi mumkin emas"
     if slug in RESERVED_WORDS:
         return False, "Bu nom zaxiralangan"
     return True, 'OK'
@@ -125,7 +138,7 @@ def _translit(s):
 
 
 def generate_username_suggestion(first_name, last_name):
-    """3-5 ta band bo'lmagan taklif: familiya_ism, ism_familiya, familiya_i, ...
+    """3-5 ta band bo'lmagan taklif: familiya.ism, ism.familiya, familiya_ism, ...
     Bandlik tekshiriladi; toza namzedlar qaytadi (bo'sh bo'lsa raqamli variant)."""
     f = _translit(first_name)
     l = _translit(last_name)
@@ -138,6 +151,8 @@ def generate_username_suggestion(first_name, last_name):
             cands.append(x)
 
     if l and f:
+        _add(f'{l}.{f}')
+        _add(f'{f}.{l}')
         _add(f'{l}_{f}')
         _add(f'{f}_{l}')
         _add(f'{l}_{f[:1]}')

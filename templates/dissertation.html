@@ -69,6 +69,14 @@
   </a>
 </div>
 
+{% if missing_author %}
+<div class="mb-3" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.35);border-radius:12px;padding:14px 18px;color:#e2e8f0;">
+  ⚠️ Bu dissertatsiya muallifi haqida ma'lumot mavjud emas. Agar siz muallif bo'lsangiz,
+  <a href="/register" style="color:#facc15;font-weight:600;">profilingizni yaratib</a>,
+  bu dissertatsiyani o'zingizga biriktirishingiz mumkin.
+</div>
+{% endif %}
+
 <!-- ── Section 1: Mavzu ── -->
 <div class="mavzu-card">
   <div class="mavzu-title">{{ row.Mavzu or '—' }}</div>
@@ -99,7 +107,8 @@
         <div class="field-lbl">👤 Olim</div>
         <div class="field-val" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           {{ avatar(row.get('photo_url') if row.get is defined else None, row.Olim or '', 48) }}
-          {% if row.Olim %}<a href="/olim/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>{% else %}—{% endif %}
+          {% if row.Olim %}<a href="/olim/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>
+          {% else %}<span style="color:#94a3b8;">⚠️ Noma'lum muallif</span>{% endif %}
         </div>
       </div>
       {% if row.Mavzu_raqami %}

@@ -972,6 +972,11 @@ def _run_startup_migrations():
                 )
             cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS photo_url TEXT")
             cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS ilmiy_rahbar_photo_url TEXT")
+            # Ma'lumotlar sifati belgisi — 'complete' (standart), 'missing_author',
+            # 'incomplete' (rahbar yozuvi buzilgan/yo'q). scripts/flag_data_quality.py
+            # bilan belgilanadi (avval DRY RUN, keyin --apply).
+            cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS data_quality VARCHAR(20) DEFAULT 'complete'")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_dissertations_quality ON dissertations(data_quality)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS notifications (
                     id SERIAL PRIMARY KEY,

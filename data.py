@@ -175,6 +175,16 @@ def clean_olim_name(name: str) -> str:
     return result[:35] + '…' if len(result) > 35 else result
 
 
+def get_display_author(dissertation):
+    """Muallif ustuni bo'sh bo'lsa ko'rsatish uchun placeholder qaytaradi
+    (data_quality='missing_author' — scripts/flag_data_quality.py bilan
+    belgilanadi). `dissertation` dict yoki RealDictRow bo'lishi mumkin."""
+    olim = (dissertation.get('Olim') or dissertation.get('olim') or '').strip()
+    if not olim:
+        return "Noma'lum muallif"
+    return olim
+
+
 def normalize_row(row):
     if row is None:
         return None
@@ -198,6 +208,7 @@ def normalize_row(row):
         "Link": link,
         "supervisor_count": get_supervisor_counts().get(
             ' '.join(str(row.get("Ilmiy_rahbar") or "").split()), 1),
+        "DataQuality": row.get("DataQuality") or 'complete',
     }
 
 
@@ -938,7 +949,8 @@ def dashboard_search():
         rows = _query_rows(
             'SELECT d.id, d.oak_id, d.sana AS "Sana", d.daraja AS "Daraja", d.olim AS "Olim", '
             'd.mavzu AS "Mavzu", d.ixtisoslik AS "Ixtisoslik", d.muassasa AS "Muassasa", '
-            'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link" '
+            'd.ilmiy_rahbar AS "Ilmiy_rahbar", d.link AS "Link", '
+            'COALESCE(d.data_quality, \'complete\') AS "DataQuality" '
             f'FROM dissertations d{w2} '
             f'ORDER BY {order} LIMIT %s OFFSET %s',
             p2 + [per_page, (page - 1) * per_page])
@@ -1249,6 +1261,50 @@ def profile_by_username(slug):
     return _render_olim_profile(olim_name)
 
 
+@data_bp.route('/<slug>')
+def profile_by_bare_username(slug):
+    """Instagram uslubidagi '@'siz vanity URL (olimlar.uz/karimov.sardor) —
+    kanonik /@slug ga 301 (bitta indekslanadigan URL, /olim/<name> bilan bir xil
+    naqsh). Boshqa barcha aniq (static) route'lar Werkzeug tomonidan bu dinamik
+    qoidadan OLDIN tekshiriladi, shuning uchun bu qator qayerda ro'yxatdan
+    o'tishidan qat'iy nazar xavfsiz — lekin RESERVED_WORDS baribir qo'shimcha
+    himoya sifatida tekshiriladi (band bo'lmagan lekin hali yozilmagan route
+    nomlarini ham "o'lik" username qilib olishning oldini olish uchun)."""
+    from flask import redirect
+    from utils.username import normalize_username, validate_username
+    slug = normalize_username(slug)
+    ok, _ = validate_username(slug)
+    if not ok:
+        abort(404)
+    olim_name = None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT olim_name FROM olim_profiles WHERE slug = %s LIMIT 1",
+                            (slug,))
+                r = cur.fetchone()
+                if r:
+                    olim_name = r[0]
+                else:
+                    cur.execute("""
+                        SELECT p.slug FROM username_history h
+                        JOIN olim_profiles p ON p.id = h.profile_id
+                        WHERE h.old_slug = %s AND p.slug IS NOT NULL
+                        ORDER BY h.changed_at DESC LIMIT 1""", (slug,))
+                    hr = cur.fetchone()
+                    if hr and hr[0]:
+                        slug = hr[0]
+                        olim_name = True  # faqat "topildi" belgisi — pastda slug bilan redirect
+        finally:
+            conn.close()
+    except Exception:
+        olim_name = None
+    if not olim_name:
+        abort(404)
+    return redirect('/@' + slug, code=301)
+
+
 def _render_olim_profile(term):
     term = (term or '').strip()
     # Exact (case-insensitive) match so links resolve to the correct person in each role.
@@ -1440,8 +1496,11 @@ def dissertation(id):
     if not row:
         abort(404)
     row['Olim_short'] = clean_olim_name(row.get('Olim', ''))
+    row['display_author'] = get_display_author(row)
+    missing_author = not (row.get('Olim') or '').strip()
     saturation = get_ixtisoslik_saturation(row.get('Ixtisoslik', ''))
-    return render_template('dissertation.html', row=row, id=id, saturation=saturation)
+    return render_template('dissertation.html', row=row, id=id, saturation=saturation,
+                           missing_author=missing_author)
 
 
 @data_bp.route('/author/<path:name>')

@@ -62,7 +62,9 @@
 .op-hidx-nums { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.92rem; color: rgba(255,255,255,0.9); }
 .op-hidx-nums b { color: #fff; font-size: 1.05rem; }
 .op-hidx-src { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
-.op-uname { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; }
+.op-uname { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; flex-wrap: wrap; }
+.username-badge { font-family: ui-monospace, monospace; font-size: 0.78rem; font-weight: 700;
+  color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 999px; }
 .op-uname-txt { font-family: ui-monospace, monospace; font-size: 0.92rem; font-weight: 700;
   color: #fff; background: rgba(255,255,255,0.14); padding: 4px 12px; border-radius: 999px; }
 .op-uname-btn { background: rgba(255,255,255,0.14); border: none; color: #fff; cursor: pointer;
@@ -214,7 +216,7 @@
 </script>
 <script>
 function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
-  navigator.clipboard.writeText(t.textContent.trim()).then(function(){t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent='olimlar.uz/@{{ profile.slug if profile else "" }}';},1200);});}
+  navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if profile else "" }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent=old;},1200);});}
 </script>
 {% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
 {% set gender = detect_gender(olim_name) %}
@@ -239,9 +241,10 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
       {% if profile and profile.slug %}
       <div class="op-uname">
-        <span class="op-uname-txt" id="op-uname">olimlar.uz/@{{ profile.slug }}</span>
+        <span class="username-badge" title="Sayt ichidagi nom">@{{ profile.slug }}</span>
+        <span class="op-uname-txt" id="op-uname">olimlar.uz/{{ profile.slug }}</span>
         <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
-        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/@' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
+        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
       </div>
       {% elif is_owner %}
       <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">🔗 Sodda sahifa manzili (@username) o'rnating</a></div>

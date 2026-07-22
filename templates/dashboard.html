@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "ad_macros.html" import ad_banner %}
 {% block title %}Olimlar.uz — Jadvali{% endblock %}
-{% block meta_description %}27,000+ dissertatsiya ma'lumotlar jadvali. Qidiruv, filtr, PhD/DSc statistika.{% endblock %}
+{% block meta_description %}29,000+ dissertatsiya ma'lumotlar jadvali. Qidiruv, filtr, PhD/DSc statistika.{% endblock %}
 {% block extra_head %}
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
@@ -354,6 +354,11 @@
     </div>
     <!-- Search summary card -->
     <div id="search-summary" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;font-size:13px;"></div>
+    <!-- Ixtisoslik obunasi taklifi (filtr faol bo'lganda) -->
+    <div id="ixt-sub-hint" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(74,158,255,0.06);border:1px solid rgba(74,158,255,0.18);border-radius:8px;font-size:13px;">
+      🔔 <b id="ixt-sub-label"></b> ixtisosligi bo'yicha yangi himoyalardan xabardor bo'ling —
+      <a href="#" id="ixt-sub-btn" style="color:#4a9eff;font-weight:600;">Obuna bo'lish</a>
+    </div>
   </div>
 
   {{ ad_banner('dashboard-top', 'inline') }}
@@ -430,7 +435,6 @@
         <button class="hdr-btn" id="saved-toggle" title="Faqat saqlanganlar">⭐ Saqlanganlar</button>
         {% endif %}
         <button class="hdr-btn" id="copy-link-btn" title="Joriy qidiruv havolasi">🔗 Havolani nusxalash</button>
-        <a class="hdr-btn" id="export-btn" href="#" title="Joriy natijalarni CSV yuklab olish">⬇️ Eksport (CSV)</a>
         <div class="view-toggle" id="view-toggle">
           <button type="button" class="vt-btn active" id="vt-table">📋 Jadval</button>
           <button type="button" class="vt-btn" id="vt-card">🃏 Kartochka</button>
@@ -562,6 +566,35 @@
     const m = String(val).match(/^\d{2}\.\d{2}\.\d{2}/);
     return m ? m[0] : escHtml(val.slice(0, 10));
   }
+  // ── ixtisoslik obunasi taklifi (filtr faol bo'lganda ko'rinadi) ──
+  function updateIxtSubHint() {
+    const hint = document.getElementById('ixt-sub-hint');
+    if (!hint || hint.dataset.done) return;
+    const code = currentFilters.ixtisoslik;
+    if (!code) { hint.style.display = 'none'; return; }
+    document.getElementById('ixt-sub-label').textContent = code;
+    hint.style.display = 'block';
+  }
+  document.getElementById('ixt-sub-btn')?.addEventListener('click', function (e) {
+    e.preventDefault();
+    if (!LOGGED_IN) {
+      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save' } }));
+      return;
+    }
+    const code = currentFilters.ixtisoslik;
+    if (!code) return;
+    fetch('/api/v1/subscriptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ixtisoslik: code })
+    }).then(r => r.json()).then(d => {
+      const hint = document.getElementById('ixt-sub-hint');
+      hint.dataset.done = '1';
+      hint.innerHTML = (d && (d.success || d.already))
+        ? "✅ Obuna qo'shildi — yangi himoyalar haqida xabar beramiz (Kabinet → Bildirishnomalar)."
+        : '⚠️ ' + ((d && d.error) || 'Xatolik — qayta urinib ko\'ring.');
+    }).catch(() => {});
+  });
   function renderRows(records, startIndex) {
     if (!records.length) {
       tableBody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i><div>Ma\'lumot topilmadi</div></div></td></tr>';
@@ -581,7 +614,10 @@
       const olimDisplay = escHtml(r.Olim_short || r.Olim || '—');
       const olimLink = r.Olim
         ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
-        : '—';
+        : '<span style="color:#94a3b8;" title="Bu yozuvda muallif ko\'rsatilmagan">⚠️ Noma\'lum muallif</span>';
+      const qualityDot = r.DataQuality === 'incomplete'
+        ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#eab308;margin-left:5px;vertical-align:middle;"></span>'
+        : '';
       const termLower = term.toLowerCase();
       const mavzuFull = r.Mavzu || '';
       const showOpponentBadge = term.length >= 2 &&
@@ -606,7 +642,7 @@
           <td data-col-key="mavzu" class="cell-mavzu">${term ? highlight(mavzuFull, term) : escHtml(mavzuFull || '—')}${opponentBadge}</td>
           <td data-col-key="daraja" style="cursor:default;">${darajaSpan}</td>
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
-          <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}</td>
+          <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}${qualityDot}</td>
           <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
           <td data-col-key="star" class="cell-star ${r.bookmarked ? 'on' : ''}" onclick="event.stopPropagation();toggleBookmark(${num}, this)" title="Saqlash">${r.bookmarked ? '★' : '☆'}</td>
         </tr>`);
@@ -1019,7 +1055,7 @@
       const reason = _guestGateReason();
       if (reason) {
         _guestResetToFree();
-        window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason } }));
+        window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason, total: currentTotal } }));
       }
     }
     if (searchController) searchController.abort();
@@ -1034,7 +1070,7 @@
         if (data && data.error === 'login_required') {
           // Backstop: agar gated so'rov baribir serverга yetsa
           tableBody.style.opacity = '1'; _searchSpinner(false);
-          if (!LOGGED_IN) window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'pagination' } }));
+          if (!LOGGED_IN) window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { total: (data && data.total) || currentTotal } }));
           return;
         }
         currentTotal   = data.total;
@@ -1046,7 +1082,7 @@
         if (data.histogram) renderHistogram(data.histogram);
         renderChips();
         syncUrl();
-        updateExportLink();
+        updateIxtSubHint();
         tableBody.style.opacity = '1';
         _searchSpinner(false);
       })
@@ -1233,7 +1269,7 @@
   });
 
   // ════════════════════════════════════════════════════════════════════
-  // DASHBOARD v2 — facetlar, chips, histogram, iqtibos, bookmark, eksport
+  // DASHBOARD v2 — facetlar, chips, histogram, iqtibos, bookmark
   // ════════════════════════════════════════════════════════════════════
   const LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
   let facetExpanded = { fan: false, muassasa: false };
@@ -1426,7 +1462,7 @@
     updateData(false);
   });
 
-  // ── sort / saved / havola / eksport ──
+  // ── sort / saved / havola ──
   document.getElementById('sort-select')?.addEventListener('change', function() {
     facetState.sort = this.value;
     updateData(true);
@@ -1441,16 +1477,6 @@
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
       .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => this.textContent = '🔗 Havolani nusxalash', 1600); })
       .catch(() => prompt('Havolani nusxalang:', url));
-  });
-  function updateExportLink() {
-    const a = document.getElementById('export-btn');
-    if (a) a.href = '/api/dashboard/export.csv?' + buildSearchParams(false).toString();
-  }
-  document.getElementById('export-btn')?.addEventListener('click', function(e) {
-    if (!LOGGED_IN) {
-      e.preventDefault();
-      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save' } }));
-    }
   });
 
   // ── mobil filter drawer ──
@@ -1481,7 +1507,7 @@
   // ── bookmark (Google Scholar "Save") ──
   window.toggleBookmark = function(dissId, starEl) {
     if (!LOGGED_IN) {
-      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save' } }));
+      window.dispatchEvent(new CustomEvent('show-login-modal', { detail: { reason: 'save', total: currentTotal } }));
       return;
     }
     fetch('/api/bookmarks/toggle', {
