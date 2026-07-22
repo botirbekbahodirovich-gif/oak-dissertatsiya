@@ -333,9 +333,9 @@
           <datalist id="muassasa-list"></datalist>
           <form id="profileForm" onsubmit="return false;">
           <div class="cab-grid">
-            <div class="cab-group"><label>🧑 Ism</label><input class="cab-input" data-pf="first_name" type="text" value="{{ profile.first_name or '' }}" placeholder="Ismingiz"></div>
-            <div class="cab-group"><label>🧑 Familya</label><input class="cab-input" data-pf="last_name" type="text" value="{{ profile.last_name or '' }}" placeholder="Familyangiz"></div>
-            <div class="cab-group"><label>🧑 Otasining ismi</label><input class="cab-input" data-pf="patronymic" type="text" value="{{ profile.patronymic or '' }}" placeholder="Otangizning ismi"></div>
+            <div class="cab-group"><label>🧑 Ism</label><input class="cab-input auto-capitalize" data-pf="first_name" type="text" value="{{ profile.first_name or '' }}" placeholder="Ismingiz"></div>
+            <div class="cab-group"><label>🧑 Familya</label><input class="cab-input auto-capitalize" data-pf="last_name" type="text" value="{{ profile.last_name or '' }}" placeholder="Familyangiz"></div>
+            <div class="cab-group"><label>🧑 Otasining ismi</label><input class="cab-input auto-capitalize" data-pf="patronymic" type="text" value="{{ profile.patronymic or '' }}" placeholder="Otangizning ismi"></div>
             <div class="cab-group"><label>💼 Lavozim</label><input class="cab-input" data-pf="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
             <div class="cab-group"><label>🏛️ Muassasa</label><input class="cab-input" data-pf="institution" type="text" value="{{ profile.institution or '' }}" list="muassasa-list" placeholder="Muassasa nomi"></div>
             <div class="cab-group"><label>📅 Tug'ilgan yili</label><input class="cab-input" data-pf="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
@@ -396,9 +396,9 @@
               <div class="cab-group"><label>🔢 Ixtisoslik shifri</label><input class="cab-input" data-pf="ixtisoslik" type="text" value="{{ profile.ixtisoslik or '' }}" placeholder="05.01.01"></div>
               <div class="cab-group"><label>📅 Himoya yili</label><input class="cab-input" data-pf="defense_year" type="number" value="{{ profile.defense_year or '' }}" placeholder="2021"></div>
               <div class="cab-group full"><label>📄 Dissertatsiya mavzusi</label><input class="cab-input" data-pf="dissertatsiya_mavzu" type="text" value="{{ profile.dissertatsiya_mavzu or '' }}" placeholder="Dissertatsiya mavzusi"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi PhD,PhD"><label>🧑‍🏫 Ilmiy rahbar</label><input class="cab-input" data-pf="advisor_name" list="rahbar-list" type="text" value="{{ profile.advisor_name or '' }}" placeholder="Ilmiy rahbar F.I.Sh"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🏫 Ilmiy maslahatchi</label><input class="cab-input" data-pf="consultant_name" list="rahbar-list" type="text" value="{{ profile.consultant_name or '' }}" placeholder="Ilmiy maslahatchi F.I.Sh"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🎓 O'z PhD ilmiy rahbaringiz</label><input class="cab-input" data-pf="phd_advisor_name" list="rahbar-list" type="text" value="{{ profile.phd_advisor_name or '' }}" placeholder="PhD ilmiy rahbaringiz"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi PhD,PhD"><label>🧑‍🏫 Ilmiy rahbar</label><input class="cab-input auto-capitalize" data-pf="advisor_name" list="rahbar-list" type="text" value="{{ profile.advisor_name or '' }}" placeholder="Ilmiy rahbar F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🏫 Ilmiy maslahatchi</label><input class="cab-input auto-capitalize" data-pf="consultant_name" list="rahbar-list" type="text" value="{{ profile.consultant_name or '' }}" placeholder="Ilmiy maslahatchi F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🎓 O'z PhD ilmiy rahbaringiz</label><input class="cab-input auto-capitalize" data-pf="phd_advisor_name" list="rahbar-list" type="text" value="{{ profile.phd_advisor_name or '' }}" placeholder="PhD ilmiy rahbaringiz"></div>
               <div class="cab-group full"><label>⚖️ Opponentlar</label><input class="cab-input" data-pf="opponents" type="text" value="{{ profile.opponents or '' }}" placeholder="Opponentlar — ; bilan ajrating"></div>
             </div>
           </div>
@@ -527,8 +527,8 @@
             <input type="hidden" id="shogird-id">
             <datalist id="shogird-list"></datalist>
             <div class="cab-grid">
-              <div class="cab-group full"><label>Shogird F.I.Sh *</label><input class="cab-input" id="shogird-student_name" list="shogird-list" type="text" placeholder="Ism Familiya"></div>
-              <div class="cab-group"><label>Ilmiy daraja</label>
+              <div class="cab-group full"><label>Shogird F.I.Sh *</label><input class="cab-input auto-capitalize" id="shogird-student_name" list="shogird-list" type="text" placeholder="Ism Familiya"></div>
+              <div class="cab-group"><label>Ilmiy daraja / Tur</label>
                 <select class="cab-select" id="shogird-degree">
                   <option value="">—</option>
                   <option value="Magistr">Magistr</option>
@@ -537,6 +537,13 @@
                 </select>
               </div>
               <div class="cab-group"><label>Himoya yili</label><input class="cab-input" id="shogird-year" type="number" placeholder="2022"></div>
+              <div class="cab-group full"><label>Mavzu</label><input class="cab-input" id="shogird-mavzu" type="text" placeholder="Dissertatsiya/bitiruv ishi mavzusi"></div>
+              <div class="cab-group"><label>Holati</label>
+                <select class="cab-select" id="shogird-holati">
+                  <option value="jarayonda">Jarayonda</option>
+                  <option value="himoya qildi">Himoya qildi</option>
+                </select>
+              </div>
             </div>
             <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('shogird')">Bekor</button><button class="cab-btn" onclick="saveItem('shogird')">Saqlash</button></div>
           </div>
@@ -544,7 +551,8 @@
             {% for s in shogirdlar %}
             <div class="item-card">
               <div class="it-title">{{ s.student_name }}</div>
-              <div class="it-meta">{% if s.degree %}{{ s.degree }}{% endif %}{% if s.year %} · {{ s.year }}{% endif %}</div>
+              <div class="it-meta">{% if s.degree %}{{ s.degree }}{% endif %}{% if s.year %} · {{ s.year }}{% endif %}{% if s.holati %} · {{ s.holati }}{% endif %}</div>
+              {% if s.mavzu %}<div class="it-meta">{{ s.mavzu }}</div>{% endif %}
               <div class="it-actions">
                 <button class="it-btn it-edit" onclick='editShogird({{ s|tojson }})'>Tahrirlash ✏️</button>
                 <button class="it-btn it-del" onclick="delItem('shogird', {{ s.id }})">O'chirish 🗑️</button>
@@ -1053,7 +1061,7 @@ var FIELDS = {
   konf: ['title', 'conference_name', 'location', 'date', 'url'],
   ish: ['position', 'organization', 'start_date', 'end_date', 'is_current'],
   rasm: ['image_url', 'caption'],
-  shogird: ['student_name', 'degree', 'year']
+  shogird: ['student_name', 'degree', 'year', 'mavzu', 'holati']
 };
 var APIPATH = { maqola: 'maqola', konf: 'konferensiya', ish: 'ish', rasm: 'rasm', shogird: 'shogird' };
 function saveItem(t) {

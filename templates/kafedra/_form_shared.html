@@ -26,7 +26,7 @@
 </div>
 {% if meta.hint %}<div class="kfd-field-hint">{{ meta.hint }}</div>{% endif %}
 {% else %}
-<input type="text" class="form-control kfd-input" id="f_{{ key }}" name="{{ key }}"
+<input type="text" class="form-control kfd-input{{ ' auto-capitalize' if key.endswith('_fio') else '' }}" id="f_{{ key }}" name="{{ key }}"
        placeholder="{{ meta.placeholder or '' }}" value="{{ value or '' }}"
        data-required="{{ 'true' if meta.required else 'false' }}">
 {% endif %}

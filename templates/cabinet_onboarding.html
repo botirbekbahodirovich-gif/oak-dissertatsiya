@@ -91,9 +91,9 @@
       <h3><span class="ob-step">1</span>To'liq ismingiz</h3>
       <p class="desc">Ism-familiyangizni kiriting — bazadan dissertatsiyangizni avtomatik topamiz.</p>
       <div class="ob-grid">
-        <div class="ob-group"><label>Familiya</label><input class="ob-input" id="ob-last" type="text" value="{{ profile.last_name or '' }}" placeholder="Karimov"></div>
-        <div class="ob-group"><label>Ism</label><input class="ob-input" id="ob-first" type="text" value="{{ profile.first_name or '' }}" placeholder="Aziz"></div>
-        <div class="ob-group"><label>Otasining ismi</label><input class="ob-input" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
+        <div class="ob-group"><label>Familiya</label><input class="ob-input auto-capitalize" id="ob-last" type="text" value="{{ profile.last_name or '' }}" placeholder="Karimov"></div>
+        <div class="ob-group"><label>Ism</label><input class="ob-input auto-capitalize" id="ob-first" type="text" value="{{ profile.first_name or '' }}" placeholder="Aziz"></div>
+        <div class="ob-group"><label>Otasining ismi</label><input class="ob-input auto-capitalize" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
       </div>
       <div class="ob-group" style="margin-top:10px;">
         <label>🔗 Sahifa manzili (ixtiyoriy) — olimlar.uz/@</label>

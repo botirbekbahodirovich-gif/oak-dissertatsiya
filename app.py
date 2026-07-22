@@ -1395,6 +1395,11 @@ def _run_startup_migrations():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            # degree allaqachon 'Magistr'/'PhD'/'DSc' qiymatlarini qabul qiladi
+            # (cabinet.html formasida); mavzu/holati — magistratura talabalarini
+            # profilda F.I.Sh | Mavzu | Yil | Holat ko'rinishida chiqarish uchun.
+            cur.execute("ALTER TABLE olim_shogirdlar ADD COLUMN IF NOT EXISTS mavzu VARCHAR(500)")
+            cur.execute("ALTER TABLE olim_shogirdlar ADD COLUMN IF NOT EXISTS holati VARCHAR(50) DEFAULT 'jarayonda'")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_olim_shogirdlar_name "
                         "ON olim_shogirdlar(olim_name)")
             indexes = [
@@ -1603,8 +1608,8 @@ def _placeholder_news():
          "Oliy Attestatsiya Komissiyasi tizimidagi so'nggi o'zgarishlar va e'lonlar haqida ma'lumot."),
         ("AI tadqiqot yordamchisi qo'shildi",
          "Endi sun'iy intellekt yordamida mavzu tanlash va adabiyotlar tahlilini amalga oshirish mumkin."),
-        ("27,000+ dissertatsiya bazaga yuklandi",
-         "Platformaga 27 mingdan ortiq dissertatsiya himoyasi haqida to'liq ma'lumot qo'shildi."),
+        ("29,000+ dissertatsiya bazaga yuklandi",
+         "Platformaga 29 mingdan ortiq dissertatsiya himoyasi haqida to'liq ma'lumot qo'shildi."),
     ]
     return [{
         "id": 0, "title": t, "summary": s,

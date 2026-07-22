@@ -340,14 +340,15 @@ _SORT_KEYS = {
 
 
 def _translit_variants(q):
-    """Qidiruv uchun lotin↔kirill variantlari (ikki yo'nalishda)."""
-    from institutions import transliterate
-    out = {q.lower()}
+    """Qidiruv uchun lotin↔kirill variantlari (ikki yo'nalishda).
+
+    Ismlar bazada FAQAT kirilda saqlanadi — shuning uchun lotin→kiril
+    yo'nalishi asosiy (masalan "aliyev" → "алиев" topilishi uchun)."""
+    from utils.transliterate import get_search_variants
     try:
-        out.add(transliterate(q).lower())
+        return {v.lower() for v in get_search_variants(q) if v}
     except Exception:
-        pass
-    return {v for v in out if v}
+        return {q.lower()} if q else set()
 
 
 def _apply_filters(data, f):

@@ -16,6 +16,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 from data import get_connection
+from utils.links import normalize_telegram, normalize_orcid, normalize_scholar, normalize_url
+from utils.transliterate import get_search_variants
 
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
@@ -505,6 +507,17 @@ def profile_save():
                 vals[_yf] = None
     if 'profile_completed' in vals:
         vals['profile_completed'] = str(data.get('profile_completed')).lower() in ('1', 'true', 'yes', 'on')
+    # Tashqi havolalarni kanonik shaklga keltirish — foydalanuvchi "@user",
+    # "user", "t.me/user" yoki to'liq URL kiritishi mumkin.
+    if vals.get('telegram_url'):
+        vals['telegram_url'] = normalize_telegram(vals['telegram_url'])
+    if vals.get('orcid_url'):
+        vals['orcid_url'] = normalize_orcid(vals['orcid_url'])
+    if vals.get('scholar_url'):
+        vals['scholar_url'] = normalize_scholar(vals['scholar_url'])
+    for _uf in ('scopus_url', 'wos_url', 'website_url'):
+        if vals.get(_uf):
+            vals[_uf] = normalize_url(vals[_uf])
     # Google Scholar havolasi — bo'sh yoki rasmiy domen bilan boshlanishi shart
     # (client'dagi saveLinksForm tekshiruvining server tomondagi jufti).
     if vals.get('scholar_url') and not vals['scholar_url'].startswith('https://scholar.google.com/'):
@@ -674,7 +687,9 @@ def search_olim():
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify({"results": []})
-    like = f"%{q.lower()}%"
+    variants = get_search_variants(q)
+    like_clause = " OR ".join(["LOWER(TRIM(olim)) LIKE %s"] * len(variants))
+    like_params = [f"%{v.lower()}%" for v in variants]
     results = []
     try:
         conn = get_connection()
@@ -683,8 +698,8 @@ def search_olim():
                 cur.execute(
                     "SELECT TRIM(olim), COUNT(*) AS cnt, MIN(mavzu) AS sample_mavzu, "
                     "MIN(daraja) AS sample_daraja FROM dissertations "
-                    "WHERE olim IS NOT NULL AND TRIM(olim) <> '' AND LOWER(TRIM(olim)) LIKE %s "
-                    "GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 25", (like,))
+                    f"WHERE olim IS NOT NULL AND TRIM(olim) <> '' AND ({like_clause}) "
+                    "GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 25", like_params)
                 results = [{"name": r[0], "count": r[1],
                             "mavzu": r[2] or "", "daraja": (r[3] or "").upper()}
                            for r in cur.fetchall()]
@@ -758,7 +773,9 @@ def search_advisor():
     q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify({"results": []})
-    like = f"%{q.lower()}%"
+    variants = get_search_variants(q)
+    like_clause = " OR ".join(["LOWER(TRIM(ilmiy_rahbar)) LIKE %s"] * len(variants))
+    like_params = [f"%{v.lower()}%" for v in variants]
     results = []
     try:
         conn = get_connection()
@@ -767,8 +784,8 @@ def search_advisor():
                 cur.execute(
                     "SELECT TRIM(ilmiy_rahbar), COUNT(*) AS cnt FROM dissertations "
                     "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> '' "
-                    "AND LOWER(TRIM(ilmiy_rahbar)) LIKE %s "
-                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 15", (like,))
+                    f"AND ({like_clause}) "
+                    "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 15", like_params)
                 results = [{"name": r[0], "count": r[1]} for r in cur.fetchall()]
         finally:
             conn.close()
@@ -1102,7 +1119,7 @@ def rasm_delete(id):
 
 
 # shogirdlar (students) — PhD/DSc supervise students; magistr advisors too.
-_SHOGIRD = ['student_name', 'degree', 'year']
+_SHOGIRD = ['student_name', 'degree', 'year', 'mavzu', 'holati']
 
 
 @cabinet_bp.route('/cabinet/api/shogird/add', methods=['POST'])

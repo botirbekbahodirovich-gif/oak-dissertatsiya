@@ -22,6 +22,7 @@ from flask_login import current_user
 
 from extensions import cache
 from data import get_connection
+from utils.transliterate import get_search_variants
 
 try:
     import psycopg2.extras as psycopg2_extras
@@ -174,7 +175,9 @@ def advisor_directory():
 
     advisors = _advisor_index()['advisors']
     if q:
-        advisors = [a for a in advisors if q in a['name'].lower()]
+        q_variants = [v.lower() for v in get_search_variants(q)]
+        advisors = [a for a in advisors
+                    if any(v in a['name'].lower() for v in q_variants)]
     if code:
         low = code.lower()
         advisors = [a for a in advisors

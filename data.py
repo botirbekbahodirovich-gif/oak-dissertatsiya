@@ -716,7 +716,6 @@ def filters():
 # ═════════════════════════════════════════════════════════════════════════
 
 _bookmarks_ready = False
-_export_last = {}   # user_id -> ts (per-worker rate limit, 30s)
 
 _YEAR_EXPR = r"(regexp_match(TRIM(d.sana), '(19|20)\d{2}'))[1]"
 
@@ -1012,80 +1011,6 @@ def bookmarks_list():
     return jsonify({'success': True, 'records': rows, 'page': page})
 
 
-@data_bp.route('/api/dashboard/export.csv')
-def dashboard_export():
-    """CSV eksport — joriy filtrlangan to'plam. Bepul: 50 qator + premium
-    eslatmasi; premium (users.is_premium): 5000 qator. UTF-8 BOM (Excel)."""
-    import csv
-    import io
-    import time as _time
-    from flask_login import current_user
-    if not getattr(current_user, 'is_authenticated', False):
-        return redirect('/login')
-    now = _time.time()
-    if now - _export_last.get(current_user.id, 0) < 30:
-        return Response("Eksport tayyorlanmoqda, biroz kuting", status=429,
-                        mimetype='text/plain; charset=utf-8')
-    _export_last[current_user.id] = now
-    f = _dashboard_filters(request.args)
-    uid = current_user.id
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            _ensure_dashboard_schema(cur)
-    finally:
-        conn.close()
-    w, p = _dashboard_where(f, user_id=uid)
-    order = _DASH_SORTS[f['sort']]
-    # To'liq eksport: premium yoki csv_export_credit (kredit faqat natija
-    # 50 qatordan KO'P bo'lganda sarflanadi — kichik to'plamga isrof qilinmaydi).
-    from blueprints.payments import user_has_premium, consume_credit
-    premium = user_has_premium(uid)
-    full = premium
-    if not full:
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute(f"SELECT COUNT(*) FROM dissertations d{w}", p)
-                total = int((cur.fetchone() or [0])[0] or 0)
-        finally:
-            conn.close()
-        if total > 50:
-            full = consume_credit(uid, 'csv_export_credit')
-    limit = 5000 if full else 50
-
-    def generate():
-        buf = io.StringIO()
-        writer = csv.writer(buf)
-        yield '﻿'  # UTF-8 BOM — Excel o'zbek matnini to'g'ri ochadi
-        writer.writerow(['sana', 'olim', 'mavzu', 'daraja', 'ixtisoslik',
-                         'fan_tarmoqi', 'ilmiy_rahbar', 'muassasa'])
-        yield buf.getvalue()
-        buf.seek(0); buf.truncate(0)
-        conn2 = get_connection()
-        try:
-            with conn2.cursor() as cur:
-                cur.execute(
-                    "SELECT d.sana, d.olim, d.mavzu, d.daraja, d.ixtisoslik, "
-                    "COALESCE(d.fan_tarmoqi, ''), d.ilmiy_rahbar, d.muassasa "
-                    f"FROM dissertations d{w} ORDER BY {order} LIMIT %s",
-                    p + [limit])
-                for row in cur.fetchall():
-                    writer.writerow([(x or '').strip() if isinstance(x, str) else (x or '')
-                                     for x in row])
-                    yield buf.getvalue()
-                    buf.seek(0); buf.truncate(0)
-        finally:
-            conn2.close()
-        if not full:
-            writer.writerow(["Ko'proq eksport qilish uchun Premium (olimlar.uz/premium) "
-                             "yoki bir martalik to'liq eksport (10,000 so'm) kerak"])
-            yield buf.getvalue()
-    return Response(generate(), mimetype='text/csv; charset=utf-8',
-                    headers={'Content-Disposition':
-                             'attachment; filename="olimlar-dissertatsiyalar.csv"'})
-
-
 @data_bp.route('/search-stats')
 def search_stats():
     search = request.args.get('search', '').strip()
@@ -1342,7 +1267,7 @@ def _render_olim_profile(term):
 
     # Portfolio data (new profile tables) — empty if not yet filled in
     profile = None
-    maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
+    maqolalar = konferensiyalar = ish_faoliyati = rasmlar = magistratura_talabalari = []
     try:
         conn = get_connection()
         try:
@@ -1362,11 +1287,18 @@ def _render_olim_profile(term):
                                        "start_date DESC NULLS LAST, id DESC")
                 rasmlar = _fetch("SELECT * FROM olim_rasmlar WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s))",
                                  "created_at DESC, id DESC")
+                # OAK bazasi faqat PhD/DSc himoyalarini kuzatadi — magistratura
+                # talabalari (OAK yozuvi yo'q) shu yerda, olim o'zi kiritgan
+                # olim_shogirdlar'dan olinadi (cabinet.py shogird_add/edit).
+                magistratura_talabalari = _fetch(
+                    "SELECT * FROM olim_shogirdlar WHERE LOWER(TRIM(olim_name)) = LOWER(TRIM(%s)) "
+                    "AND LOWER(TRIM(COALESCE(degree,''))) = 'magistr'",
+                    "year DESC NULLS LAST, id DESC")
         finally:
             conn.close()
     except Exception:
         profile = None
-        maqolalar = konferensiyalar = ish_faoliyati = rasmlar = []
+        maqolalar = konferensiyalar = ish_faoliyati = rasmlar = magistratura_talabalari = []
 
     stats = {
         'total': len(own),
@@ -1460,6 +1392,7 @@ def _render_olim_profile(term):
                            message_target_id=message_target_id,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,
+                           magistratura_talabalari=magistratura_talabalari,
                            stats=stats, profile=profile, maqolalar=maqolalar,
                            konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
                            tree_parents=tree_parents, tree_children=tree_children,
@@ -1619,22 +1552,24 @@ def chat():
         
         else:
             # Search PostgreSQL for relevant dissertations as context for Groq
-            search_term = f"%{message}%"
+            # — lotin va kiril variantlari, foydalanuvchi qaysi alifboda
+            # yozishidan qat'iy nazar bazadagi (kiril) yozuvlarni topsin.
+            search_terms = [f"%{message}%", f"%{latin_to_cyrillic(message)}%"]
             sql = '''
                 SELECT olim, mavzu, daraja, muassasa, ilmiy_rahbar, ixtisoslik, sana
                 FROM dissertations
                 WHERE
-                    olim ILIKE %s OR
-                    mavzu ILIKE %s OR
-                    muassasa ILIKE %s OR
-                    ilmiy_rahbar ILIKE %s OR
-                    ixtisoslik ILIKE %s
+                    (olim ILIKE %s OR olim ILIKE %s) OR
+                    (mavzu ILIKE %s OR mavzu ILIKE %s) OR
+                    (muassasa ILIKE %s OR muassasa ILIKE %s) OR
+                    (ilmiy_rahbar ILIKE %s OR ilmiy_rahbar ILIKE %s) OR
+                    (ixtisoslik ILIKE %s OR ixtisoslik ILIKE %s)
                 LIMIT 10
             '''
             conn = get_connection()
             try:
                 with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                    cur.execute(sql, [search_term] * 5)
+                    cur.execute(sql, search_terms * 5)
                     found_rows = cur.fetchall()
             finally:
                 conn.close()
