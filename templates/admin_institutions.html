@@ -11,8 +11,16 @@
   .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
   .adm-search { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
   .adm-search input { flex: 1; min-width: 220px; background: #0f1626; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; }
+  .adm-search select { background: #0f1626; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; }
   .adm-search button { background: #3b82f6; color: #fff; font-weight: 700; padding: 10px 18px; border: none; border-radius: 10px; cursor: pointer; }
   .adm-search a.clear { align-self: center; color: #94a3b8; font-size: 0.84rem; text-decoration: none; }
+  .adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.1rem; }
+  .adm-stat { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 0.7rem 0.9rem; }
+  .adm-stat .n { font-size: 1.25rem; font-weight: 800; color: #f1f5f9; line-height: 1.15; }
+  .adm-stat .l { font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+  .adm-cats { display: flex; gap: 8px; flex-wrap: wrap; margin: -0.3rem 0 1.1rem; }
+  .adm-cat-chip { background: rgba(59,130,246,0.12); border: 1px solid #334155; color: #93c5fd; border-radius: 999px; padding: 4px 12px; font-size: 0.78rem; }
+  .adm-cat-chip b { color: #e2e8f0; }
   .adm-table-wrap { border-radius: 14px; overflow-x: auto; border: 1px solid #334155; background: #1e293b; }
   .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
   .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; white-space: nowrap; }
@@ -66,22 +74,52 @@
   {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
 {% endwith %}
 
+<div class="adm-stats">
+  <div class="adm-stat"><div class="n">{{ total_groups }}</div><div class="l">Jami muassasa</div></div>
+  <div class="adm-stat"><div class="n">{{ total_diss }}</div><div class="l">Jami dissertatsiya</div></div>
+  <div class="adm-stat"><div class="n">{{ added_stats.today }} / {{ added_stats.week }} / {{ added_stats.month }}</div><div class="l">Qo'shilgan (bugun/hafta/oy)</div></div>
+  <div class="adm-stat"><div class="n">{{ changed_stats.today }} / {{ changed_stats.week }} / {{ changed_stats.month }}</div><div class="l">O'zgartirilgan (bugun/hafta/oy)</div></div>
+</div>
+{% if cat_stats %}
+<div class="adm-cats">
+  {% for c, n in cat_stats %}
+  <span class="adm-cat-chip"><b>{{ n }}</b> {{ c }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
 <form class="adm-search" method="GET" action="/admin/institutions">
   <input type="text" name="q" value="{{ q }}" placeholder="Nomi bo'yicha qidirish (lotin yoki kirill)…" autocomplete="off">
+  <select name="category">
+    <option value="">Barcha kategoriya</option>
+    {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c == category }}>{{ c }}</option>{% endfor %}
+  </select>
+  <select name="region">
+    <option value="">Barcha region</option>
+    {% for r in regions %}<option value="{{ r }}" {{ 'selected' if r == region }}>{{ r }}</option>{% endfor %}
+  </select>
+  <select name="sort">
+    <option value="diss" {{ 'selected' if sort == 'diss' }}>Dissertatsiya soni</option>
+    <option value="name" {{ 'selected' if sort == 'name' }}>Nomi (A-Z)</option>
+    <option value="variants" {{ 'selected' if sort == 'variants' }}>Variantlar soni</option>
+    <option value="date" {{ 'selected' if sort == 'date' }}>Sana (yangi)</option>
+  </select>
   <button type="submit">Qidirish</button>
-  {% if q %}<a class="clear" href="/admin/institutions">Tozalash</a>{% endif %}
+  {% if q or category or region or sort != 'diss' %}<a class="clear" href="/admin/institutions">Tozalash</a>{% endif %}
 </form>
 
 {% if items %}
 <div class="adm-table-wrap">
   <table class="adm-table">
     <thead>
-      <tr><th>Nomi</th><th style="text-align:right;">Variantlar</th><th style="text-align:right;">Dissertatsiya</th><th style="width:1%;">Amal</th></tr>
+      <tr><th>Nomi</th><th>Kategoriya</th><th>Region</th><th style="text-align:right;">Variantlar</th><th style="text-align:right;">Dissertatsiya</th><th style="width:1%;">Amal</th></tr>
     </thead>
     <tbody>
       {% for it in items %}
       <tr>
         <td class="adm-name"><a href="/university/{{ it.name|urlencode }}" target="_blank" rel="noopener">{{ it.name }}</a></td>
+        <td>{{ it.category }}</td>
+        <td>{{ it.region or '—' }}</td>
         <td class="num">{{ it.variant_count }}</td>
         <td class="num">{{ it.diss_count }}</td>
         <td>
@@ -94,20 +132,21 @@
 </div>
 
 {% if total_pages > 1 %}
+{% set base_qs = ('&q=' ~ (q|urlencode) if q else '') ~ ('&category=' ~ (category|urlencode) if category else '') ~ ('&region=' ~ (region|urlencode) if region else '') ~ ('&sort=' ~ sort if sort != 'diss' else '') %}
 <div class="adm-pager">
-  {% set prev_url = '/admin/institutions?page=' ~ (page-1) ~ ('&q=' ~ (q|urlencode) if q else '') %}
-  {% set next_url = '/admin/institutions?page=' ~ (page+1) ~ ('&q=' ~ (q|urlencode) if q else '') %}
+  {% set prev_url = '/admin/institutions?page=' ~ (page-1) ~ base_qs %}
+  {% set next_url = '/admin/institutions?page=' ~ (page+1) ~ base_qs %}
   <a class="{{ 'disabled' if page <= 1 else '' }}" href="{{ prev_url }}">← Oldingi</a>
-  <span>{{ page }} / {{ total_pages }}</span>
+  <span>{{ page }} / {{ total_pages }} ({{ total }} ta)</span>
   <a class="{{ 'disabled' if page >= total_pages else '' }}" href="{{ next_url }}">Keyingi →</a>
 </div>
 {% endif %}
 {% else %}
-<div class="adm-table-wrap"><div class="adm-empty">{% if q %}«{{ q }}» bo'yicha muassasa topilmadi.{% else %}Muassasalar ro'yxati bo'sh.{% endif %}</div></div>
+<div class="adm-table-wrap"><div class="adm-empty">{% if q or category or region %}Filtrlarga mos muassasa topilmadi.{% else %}Muassasalar ro'yxati bo'sh.{% endif %}</div></div>
 {% endif %}
 
 {% if recent %}
-<div class="adm-log-h">Oxirgi o'zgarishlar</div>
+<div class="adm-log-h" id="recent">Oxirgi o'zgarishlar ({{ log_total }})</div>
 <div class="adm-table-wrap">
   {% for r in recent %}
   <div class="log-row">
@@ -124,6 +163,13 @@
   </div>
   {% endfor %}
 </div>
+{% if log_total_pages > 1 %}
+<div class="adm-pager">
+  <a class="{{ 'disabled' if lpage <= 1 else '' }}" href="/admin/institutions?lpage={{ lpage-1 }}#recent">← Oldingi</a>
+  <span>{{ lpage }} / {{ log_total_pages }}</span>
+  <a class="{{ 'disabled' if lpage >= log_total_pages else '' }}" href="/admin/institutions?lpage={{ lpage+1 }}#recent">Keyingi →</a>
+</div>
+{% endif %}
 {% endif %}
 
 <!-- rename / merge modal -->

@@ -1476,10 +1476,16 @@ def admin_university_delete(id):
 
 # Canonical groups with their variant + dissertation counts. Grouping key is the
 # same COALESCE the /universities directory uses, so counts stay in lock-step.
+# category/region are aggregated with MAX() — variants of one canonical group
+# occasionally disagree (rare data-entry slip), so this picks one deterministic
+# value rather than erroring; it's a display/filter aid, not a source of truth.
 _INST_GROUPS_SQL = """
     SELECT COALESCE(im.canonical_name, im.cyrillic_name) AS canon,
            COUNT(DISTINCT im.cyrillic_name)              AS variant_count,
-           COUNT(d.id)                                   AS diss_count
+           COUNT(d.id)                                   AS diss_count,
+           MAX(im.category)                              AS category,
+           MAX(im.region)                                AS region,
+           MAX(im.created_at)                            AS last_added
     FROM institution_map im
     LEFT JOIN dissertations d ON TRIM(d.muassasa) = im.cyrillic_name
     WHERE im.is_active = TRUE
@@ -1510,23 +1516,65 @@ def admin_institutions():
     _require_admin()
     from data import get_connection
     q = (request.args.get('q') or '').strip()
+    category = (request.args.get('category') or '').strip()
+    region = (request.args.get('region') or '').strip()
+    sort = (request.args.get('sort') or 'diss').strip()
     page = request.args.get('page', 1, type=int)
     if page < 1:
         page = 1
-    per_page = 50
+    per_page = 100
+
+    lpage = request.args.get('lpage', 1, type=int)
+    if lpage < 1:
+        lpage = 1
+    log_per_page = 25
 
     groups, recent = [], []
+    categories, regions = [], []
+    log_total = 0
+    added_stats = {'today': 0, 'week': 0, 'month': 0}
+    changed_stats = {'today': 0, 'week': 0, 'month': 0}
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(_INST_GROUPS_SQL)
                 groups = [{'name': r[0], 'variant_count': r[1] or 0,
-                           'diss_count': r[2] or 0} for r in cur.fetchall()]
+                           'diss_count': r[2] or 0, 'category': r[3] or 'universitet',
+                           'region': r[4] or '', 'last_added': r[5]} for r in cur.fetchall()]
+
+                cur.execute(
+                    "SELECT DISTINCT category FROM institution_map "
+                    "WHERE is_active = TRUE AND category IS NOT NULL ORDER BY category")
+                categories = [r[0] for r in cur.fetchall()]
+                cur.execute(
+                    "SELECT DISTINCT region FROM institution_map "
+                    "WHERE is_active = TRUE AND region IS NOT NULL ORDER BY region")
+                regions = [r[0] for r in cur.fetchall()]
+
+                cur.execute(
+                    "SELECT COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today, "
+                    "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS week, "
+                    "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') AS month "
+                    "FROM institution_map WHERE is_active = TRUE")
+                r = cur.fetchone()
+                added_stats = {'today': r[0] or 0, 'week': r[1] or 0, 'month': r[2] or 0}
+
+                cur.execute(
+                    "SELECT COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today, "
+                    "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') AS week, "
+                    "COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') AS month "
+                    "FROM institution_renames")
+                r = cur.fetchone()
+                changed_stats = {'today': r[0] or 0, 'week': r[1] or 0, 'month': r[2] or 0}
+
+                cur.execute("SELECT COUNT(*) FROM institution_renames")
+                log_total = cur.fetchone()[0] or 0
                 cur.execute(
                     "SELECT id, old_name, new_name, was_merge, moved_variants, "
                     "admin_username, created_at FROM institution_renames "
-                    "ORDER BY id DESC LIMIT 20")
+                    "ORDER BY id DESC LIMIT %s OFFSET %s",
+                    (log_per_page, (lpage - 1) * log_per_page))
                 for r in cur.fetchall():
                     mv = r[4] if isinstance(r[4], list) else []
                     recent.append({
@@ -1539,12 +1587,33 @@ def admin_institutions():
     except Exception:
         groups, recent = [], []
 
+    # Category breakdown is computed from the full unfiltered set so the stat
+    # cards stay stable while the table below is narrowed by search/filters.
+    cat_counts = {}
+    for g in groups:
+        cat_counts[g['category']] = cat_counts.get(g['category'], 0) + 1
+    cat_stats = sorted(cat_counts.items(), key=lambda kv: -kv[1])
+    total_diss = sum(g['diss_count'] for g in groups)
+
     # Search matches in both scripts via the site's Cyrillic→Latin helper: fold
     # the query and each name to Latin so Latin input finds Cyrillic names.
     if q:
         ql = transliterate(q).lower()
         groups = [g for g in groups if ql in transliterate(g['name']).lower()]
-    groups.sort(key=lambda g: (-g['diss_count'], (g['name'] or '').lower()))
+    if category:
+        groups = [g for g in groups if g['category'] == category]
+    if region:
+        groups = [g for g in groups if g['region'] == region]
+
+    if sort == 'name':
+        groups.sort(key=lambda g: (g['name'] or '').lower())
+    elif sort == 'variants':
+        groups.sort(key=lambda g: (-g['variant_count'], (g['name'] or '').lower()))
+    elif sort == 'date':
+        groups.sort(key=lambda g: g['last_added'] or datetime.min, reverse=True)
+    else:
+        sort = 'diss'
+        groups.sort(key=lambda g: (-g['diss_count'], (g['name'] or '').lower()))
 
     total = len(groups)
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -1553,9 +1622,19 @@ def admin_institutions():
     start = (page - 1) * per_page
     items = groups[start:start + per_page]
 
+    log_total_pages = max(1, (log_total + log_per_page - 1) // log_per_page)
+    if lpage > log_total_pages:
+        lpage = log_total_pages
+
     return render_template('admin_institutions.html', items=items, q=q,
+                           category=category, region=region, sort=sort,
+                           categories=categories, regions=regions,
                            page=page, total_pages=total_pages, total=total,
-                           recent=recent)
+                           total_groups=sum(cat_counts.values()),
+                           total_diss=total_diss, cat_stats=cat_stats,
+                           added_stats=added_stats, changed_stats=changed_stats,
+                           recent=recent, lpage=lpage, log_total=log_total,
+                           log_total_pages=log_total_pages)
 
 
 @admin_bp.route('/admin/institutions/rename', methods=['POST'])
