@@ -1,0 +1,25 @@
+{# Sahifaga xos SEO qo'shimchalari: hreflang alternate'lar + JSON-LD schema.
+   base.html'dagi mavjud title/meta_description/og_* bloklarini
+   ALMASHTIRMAYDI — ular davom etadi. Bu faqat qo'shimcha (hreflang +
+   structured data), {% block seo_extra %}{{ seo_meta(...) }}{% endblock %}
+   ichida chaqiriladi. #}
+{% macro seo_meta(title, description, schema_type='WebPage', extra_schema={}, canonical_path='') %}
+  {% set canonical_url = 'https://olimlar.uz' + (canonical_path or request.path) %}
+  <link rel="alternate" hreflang="uz-Cyrl" href="{{ canonical_url }}">
+  <link rel="alternate" hreflang="uz-Latn" href="{{ canonical_url }}?latin=1">
+  <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": {{ schema_type | tojson }},
+    "headline": {{ title | tojson }},
+    "alternativeHeadline": {{ (title | to_latin) | tojson }},
+    "description": {{ description | tojson }},
+    "inLanguage": ["uz-Cyrl", "uz-Latn"],
+    "url": {{ canonical_url | tojson }}
+    {% for k, v in extra_schema.items() if v %},
+    {{ k | tojson }}: {{ v | tojson }}
+    {% endfor %}
+  }
+  </script>
+{% endmacro %}
