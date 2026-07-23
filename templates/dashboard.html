@@ -292,6 +292,17 @@
     </div>
   </div>
 
+  {% from 'partials/cta_banner.html' import cta_banner %}
+  {{ cta_banner(
+      variant='search',
+      title=(('{:,}'.format(dissertations_count).replace(',', ' ') + ' dissertatsiya. Sizniki ham bormikan?') if dissertations_count else 'Bazadagi dissertatsiyalar. Sizniki ham bormikan?'),
+      body="Ismingizni yozing — o'zingizni yoki ustozlaringizni topib ko'ring.",
+      cta_text="Qidirib ko'rish →",
+      cta_href='#search-input',
+      show_only_anon=True,
+      icon='🔍'
+  ) }}
+
   <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-3" id="stats-row">
     <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd" style="background:rgba(74,158,255,0.12);color:#4a9eff;"><i class="bi bi-collection-fill"></i></span></div><div class="h3 mb-1" id="stat-total">—</div><div class="text-muted">Jami dissertatsiyalar</div></div></div>
     <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd">PhD</span></div><div class="h3 mb-1" id="stat-phd">—</div><div class="text-muted">PhD dissertatsiyalar</div></div></div>
@@ -1266,6 +1277,9 @@
     showSkeleton();
     updateData(true);
     initResizeHandles();
+    if (window.location.hash === '#search-input') {
+      document.getElementById('search-input')?.focus();
+    }
   });
 
   // ════════════════════════════════════════════════════════════════════

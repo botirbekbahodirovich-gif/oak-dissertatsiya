@@ -79,6 +79,7 @@ def password_login():
             if bcrypt.checkpw(password, hash_bytes):
                 session.permanent = True
                 login_user(User(row[0], row[1], row[2], row[4]), remember=True)
+                session['just_logged_in'] = True
                 session.modified = True
                 return redirect(_post_login_dest(url_for('index')))
         return render_template('login.html', error='Login yoki parol xato')
@@ -185,6 +186,7 @@ def google_callback():
     session.modified = True
     nxt = session.pop('main_google_next', '/') or '/'
     session.pop('main_google_state', None)
+    session['just_registered' if created else 'just_logged_in'] = True
     # New accounts complete their scholar profile first (cabinet onboarding
     # bridges the main-site session in via _bridge_from_main).
     return redirect('/cabinet/onboarding' if created else nxt)
@@ -319,6 +321,7 @@ def telegram_login():
 
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
+    session['just_registered' if is_new else 'just_logged_in'] = True
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     dest = _post_login_dest('/')
     return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})

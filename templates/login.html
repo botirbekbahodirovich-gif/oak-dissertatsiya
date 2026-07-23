@@ -11,6 +11,16 @@
     {% if registered %}
       <div class="alert-inline success"><i class="bi bi-check-circle-fill"></i>&nbsp;Ro'yxatdan muvaffaqiyatli o'tdingiz.</div>
     {% endif %}
+    {% set next_url = request.args.get('next', '') %}
+    {% if '/analiz' in next_url or '/tahlil' in next_url %}
+      <div class="olz-context-msg"><p>Izlanishlaringizni avtomatlashtiring — hammasi bir joyda, olimlar.uz da.</p></div>
+    {% elif '/kafedra' in next_url %}
+      <div class="olz-context-msg"><p>Kafedra hujjatlaringizni AI yordamida yarating. Boshlash uchun kiring.</p></div>
+    {% elif '/saqla' in next_url or '/bookmark' in next_url %}
+      <div class="olz-context-msg"><p>Yoqtirgan dissertatsiyalaringizni saqlab qo'ying.</p></div>
+    {% elif '/olim/' in next_url %}
+      <div class="olz-context-msg"><p>Kirib, o'z ilmiy profilingizni ham yarating.</p></div>
+    {% endif %}
     {% if error %}
       <div class="alert-inline error"><i class="bi bi-exclamation-triangle-fill"></i>&nbsp;{{ error }}</div>
     {% endif %}

@@ -1,0 +1,44 @@
+{#
+  CTA banner makro — kontekstual, inline (popup emas) taklif bloklari.
+
+  Parametrlar:
+    variant: 'search' | 'profile' | 'action' (uslub varianti)
+    title:   asosiy sarlavha
+    body:    tavsif
+    cta_text: tugma matni
+    cta_href: tugma havolasi
+    show_only_anon: True bo'lsa, faqat login qilmagan foydalanuvchiga ko'rinadi
+    icon:    ixtiyoriy emoji (chap tomonda)
+
+  Namuna:
+    {% from 'partials/cta_banner.html' import cta_banner %}
+    {{ cta_banner(
+        variant='search',
+        title="29 373 dissertatsiya. Sizniki ham bormikan?",
+        body="Ismingizni yozing — o'zingizni yoki ustozlaringizni topib ko'ring.",
+        cta_text="Qidirib ko'rish →",
+        cta_href='#search-input',
+        show_only_anon=True,
+        icon='🔍'
+    ) }}
+#}
+{% macro cta_banner(variant='search', title='', body='', cta_text='', cta_href='', show_only_anon=True, icon='') %}
+  {% if not show_only_anon or not current_user.is_authenticated %}
+  <div class="olz-cta olz-cta--{{ variant }}">
+    <div class="olz-cta__inner">
+      {% if icon %}<div class="olz-cta__icon">{{ icon }}</div>{% endif %}
+      <div class="olz-cta__content">
+        <h3 class="olz-cta__title">{{ title }}</h3>
+        {% if body %}<p class="olz-cta__body">{{ body }}</p>{% endif %}
+      </div>
+      {% if cta_text and cta_href %}
+      <a href="{{ cta_href }}"
+         class="olz-cta__btn"
+         onclick="if(typeof ym==='function' && typeof YM_ID!=='undefined') ym(YM_ID, 'reachGoal', 'cta_click_{{ variant }}');">
+        {{ cta_text }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+{% endmacro %}

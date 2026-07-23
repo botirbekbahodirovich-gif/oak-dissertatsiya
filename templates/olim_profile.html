@@ -588,8 +588,15 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
           <figure style="margin:0;"><img src="{{ img.image_url }}" alt="{{ img.caption or olim_name }}">{% if img.caption %}<figcaption>{{ img.caption }}</figcaption>{% endif %}</figure>
           {% endfor %}
         </div>
+      {% elif is_owner %}
+        <div class="op-empty">
+          <div class="ico">📷</div>
+          <div style="font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:10px;">Faoliyatingizni rasmlar orqali ko'rsating</div>
+          <div style="max-width:480px;margin:0 auto;line-height:1.6;">Rasmlar profilingizni jonlantiradi va tashrif buyuruvchilarda ishonch uyg'otadi. Konferensiyalardagi chiqishlaringiz, dars jarayonlari, laboratoriya ishlari, taqdirlash marosimlari — bularning barchasi ilmiy faoliyatingizning jonli hujjati.</div>
+          <a href="/cabinet#rasmlar" class="add-btn">Rasm qo'shish →</a>
+        </div>
       {% else %}
-        <div class="op-empty"><div class="ico">🖼️</div><div>Hali rasmlar qo'shilmagan.</div></div>
+        <div class="op-empty role-empty"><div style="font-size:0.88rem;color:#94a3b8;">Bu olim hali rasm qo'shmagan</div></div>
       {% endif %}
     </div>
 
@@ -630,6 +637,29 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <a href="/kafedra/test-savollari/?scholar_id={{ profile.id }}" class="gen-btn">✅ Test savollari</a>
         <a href="/kafedra/" class="gen-btn">Barchasi →</a>
       </div>
+    </div>
+    {% endif %}
+
+    {% if not current_user.is_authenticated %}
+    <div class="olz-dual-cta">
+      <h3 class="olz-dual-cta__title">Siz ham o'z profilingizni yarating</h3>
+      <div class="olz-dual-cta__grid">
+        <div class="olz-dual-cta__card">
+          <div class="olz-dual-cta__icon">🎓</div>
+          <h4>PhD/DSc olim bo'lsangiz</h4>
+          <p>Ilmiy merosingizni saqlang, shogirdlaringizni ko'rsating, ilmiy shajarangizni tuzing.</p>
+        </div>
+        <div class="olz-dual-cta__card">
+          <div class="olz-dual-cta__icon">📚</div>
+          <h4>Magistratura talabasimisiz?</h4>
+          <p>Portfoliongizni hozirdan boshlab yaratib boring — kelajakda katta yordam beradi.</p>
+        </div>
+      </div>
+      <a href="{{ url_for('auth.login') }}?next={{ request.path|urlencode }}"
+         class="olz-dual-cta__btn"
+         onclick="if(typeof ym==='function' && typeof YM_ID!=='undefined') ym(YM_ID, 'reachGoal', 'cta_click_profile');">
+        Ro'yxatdan o'tish
+      </a>
     </div>
     {% endif %}
 

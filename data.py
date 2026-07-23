@@ -719,7 +719,9 @@ def dissertatsiyalar_page():
     yo'naltiradi), shuning uchun aynan shu UI ochiq manzilda beriladi. Freemium
     gate (dashboard.html + /api/dashboard/search) mehmonga faqat filtrsiz
     1-sahifani ko'rsatadi, qolganiga modal chiqaradi."""
-    return render_template('dashboard.html')
+    from app import get_homepage_stats
+    dissertations_count = get_homepage_stats().get('dissertations', 0)
+    return render_template('dashboard.html', dissertations_count=dissertations_count)
 
 
 @data_bp.route('/filters')

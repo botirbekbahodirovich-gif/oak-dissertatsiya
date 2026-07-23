@@ -697,6 +697,85 @@
             color: #333;
         }
     }
+
+    /* ── Kontekstual CTA banner (partials/cta_banner.html) ── */
+    .olz-cta {
+      border: 1px solid var(--oak-border);
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--oak-surface) 0%, var(--oak-surface-2) 100%);
+      padding: 20px 24px;
+      margin: 20px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      transition: box-shadow 0.2s ease;
+    }
+    [data-bs-theme="light"] .olz-cta {
+      background: linear-gradient(135deg, var(--oak-surface-light) 0%, var(--oak-surface-2-light) 100%);
+      box-shadow: 0 1px 3px rgba(15,23,42,0.05);
+    }
+    .olz-cta:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.22); }
+    [data-bs-theme="light"] .olz-cta:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
+    .olz-cta__inner { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .olz-cta__icon { font-size: 32px; flex-shrink: 0; }
+    .olz-cta__content { flex: 1; min-width: 240px; }
+    .olz-cta__title { font-size: 1.05rem; font-weight: 700; color: var(--oak-text); margin: 0 0 6px; letter-spacing: -0.01em; }
+    [data-bs-theme="light"] .olz-cta__title { color: var(--oak-text-light); }
+    .olz-cta__body { font-size: 0.85rem; color: var(--oak-muted); margin: 0; line-height: 1.5; }
+    [data-bs-theme="light"] .olz-cta__body { color: var(--oak-muted-light); }
+    .olz-cta__btn {
+      display: inline-flex; align-items: center; padding: 10px 20px;
+      background: var(--oak-accent); color: #fff; border-radius: 8px;
+      text-decoration: none; font-weight: 600; font-size: 0.85rem; white-space: nowrap;
+    }
+    .olz-cta__btn:hover { background: #3b8ce8; color: #fff; text-decoration: none; }
+    .olz-cta--profile { background: linear-gradient(135deg, rgba(250,204,21,0.08) 0%, var(--oak-surface) 100%); }
+    [data-bs-theme="light"] .olz-cta--profile { background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); }
+    .olz-cta--action { background: linear-gradient(135deg, var(--oak-accent-soft) 0%, var(--oak-surface) 100%); }
+    [data-bs-theme="light"] .olz-cta--action { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
+    @media (max-width: 640px) {
+      .olz-cta__inner { flex-direction: column; align-items: flex-start; }
+      .olz-cta__btn { width: 100%; justify-content: center; }
+    }
+
+    /* ── Olim profili: dual-CTA (ro'yxatdan o'tish taklifi) ── */
+    .olz-dual-cta {
+      border: 1px solid var(--oak-border);
+      border-radius: 12px;
+      padding: 32px;
+      margin: 40px 0 24px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(250,204,21,0.06) 0%, var(--oak-surface) 60%);
+    }
+    [data-bs-theme="light"] .olz-dual-cta { background: linear-gradient(180deg, #fefce8 0%, #ffffff 60%); }
+    .olz-dual-cta__title { font-size: 1.3rem; font-weight: 700; color: var(--oak-text); margin: 0 0 24px; }
+    [data-bs-theme="light"] .olz-dual-cta__title { color: var(--oak-text-light); }
+    .olz-dual-cta__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 640px; margin: 0 auto 24px; text-align: left; }
+    .olz-dual-cta__card { padding: 20px; background: var(--oak-surface-2); border-radius: 10px; border: 1px solid var(--oak-border); }
+    [data-bs-theme="light"] .olz-dual-cta__card { background: var(--oak-surface-2-light); border-color: var(--oak-border-light); }
+    .olz-dual-cta__icon { font-size: 28px; margin-bottom: 8px; }
+    .olz-dual-cta__card h4 { font-size: 0.95rem; font-weight: 700; margin: 0 0 6px; color: var(--oak-text); }
+    [data-bs-theme="light"] .olz-dual-cta__card h4 { color: var(--oak-text-light); }
+    .olz-dual-cta__card p { font-size: 0.82rem; color: var(--oak-muted); margin: 0; line-height: 1.5; }
+    [data-bs-theme="light"] .olz-dual-cta__card p { color: var(--oak-muted-light); }
+    .olz-dual-cta__btn {
+      display: inline-block; padding: 12px 28px; background: var(--oak-accent); color: #fff;
+      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem;
+    }
+    .olz-dual-cta__btn:hover { background: #3b8ce8; color: #fff; text-decoration: none; }
+    @media (max-width: 640px) {
+      .olz-dual-cta { padding: 20px; }
+      .olz-dual-cta__grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Login sahifasi: kontekstual xabar ── */
+    .olz-context-msg {
+      background: var(--oak-accent-soft);
+      border-left: 3px solid var(--oak-accent);
+      padding: 12px 16px;
+      margin: 0 0 20px;
+      border-radius: 4px;
+    }
+    .olz-context-msg p { margin: 0; color: var(--oak-text); font-size: 0.85rem; line-height: 1.5; }
+    [data-bs-theme="light"] .olz-context-msg p { color: var(--oak-text-light); }
   </style>
   {% block extra_head %}{% endblock %}
   <style>
@@ -739,6 +818,7 @@
 {% endif %}
 
 <!-- Yandex.Metrika counter -->
+<script>window.YM_ID = 110348117;</script>
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
         m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -746,10 +826,16 @@
         for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
         k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
     })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110348117', 'ym');
-    ym(110348117, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+    ym(YM_ID, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
 </script>
 <noscript><div><img src="https://mc.yandex.ru/watch/110348117" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <!-- /Yandex.Metrika counter -->
+{% if session.pop('just_registered', False) %}
+<script>if (typeof ym === 'function' && typeof YM_ID !== 'undefined') { ym(YM_ID, 'reachGoal', 'registration_complete'); }</script>
+{% endif %}
+{% if session.pop('just_logged_in', False) %}
+<script>if (typeof ym === 'function' && typeof YM_ID !== 'undefined') { ym(YM_ID, 'reachGoal', 'login'); }</script>
+{% endif %}
 </head>
 <body>
   {% if request.path != '/' %}
