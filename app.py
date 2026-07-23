@@ -508,6 +508,9 @@ app.jinja_env.filters["avatar_url"] = avatar_url
 app.jinja_env.globals["DEFAULT_AVATAR"] = DEFAULT_AVATAR
 app.jinja_env.filters["normalize_patronymic"] = normalize_patronymic
 
+from utils.jinja_filters import register_filters
+register_filters(app)
+
 
 def olim_url(olim_name, slug=None):
     """Olimga kanonik havola: slug bo'lsa /@slug, aks holda /olim/<name>.
@@ -1106,6 +1109,9 @@ def _run_startup_migrations():
                 )
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_universities_name ON universities (LOWER(name))")
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_universities_name "
+                        "ON universities USING gin (lower(name) gin_trgm_ops)")
             for _uc, _ut in (
                 ('instagram', 'VARCHAR(200)'), ('facebook', 'VARCHAR(200)'),
                 ('youtube', 'VARCHAR(200)'), ('rector_photo_url', 'VARCHAR(500)'),
@@ -1196,6 +1202,9 @@ def _run_startup_migrations():
             # Unique index on name enables ON CONFLICT (name) for seeding/admin add.
             cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_journals_name ON journals (name)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_name ON journals (LOWER(name))")
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_journals_name "
+                        "ON journals USING gin (lower(name) gin_trgm_ops)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_category ON journals (category)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_journals_specialty ON journals (specialty_codes)")
             for _jc, _jt in (
@@ -3732,12 +3741,20 @@ def _sitemap_lastmod(value):
 
 
 def _sitemap_urlset(entries):
-    """(loc, lastmod, changefreq, priority) ro'yxati → <urlset> XML. 40k limit qat'iy."""
+    """(loc, lastmod, changefreq, priority) ro'yxati → <urlset> XML. 40k limit qat'iy.
+
+    Har URL uchun kiril/lotin hreflang alternate qo'shiladi (Google/Yandex
+    ikkalasi ham qo'llaydi) — sahifa mazmuni o'zgarmaydi, bu faqat SEO signali."""
     from xml.sax.saxutils import escape
     parts = ['<?xml version="1.0" encoding="UTF-8"?>',
-             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+             'xmlns:xhtml="http://www.w3.org/1999/xhtml">']
     for loc, lastmod, freq, pri in entries[:SITEMAP_MAX_URLS]:
-        row = f"  <url><loc>{escape(loc)}</loc>"
+        esc_loc = escape(loc)
+        row = f"  <url><loc>{esc_loc}</loc>"
+        row += (f'<xhtml:link rel="alternate" hreflang="uz-Cyrl" href="{esc_loc}"/>'
+                f'<xhtml:link rel="alternate" hreflang="uz-Latn" href="{esc_loc}?latin=1"/>'
+                f'<xhtml:link rel="alternate" hreflang="x-default" href="{esc_loc}"/>')
         if lastmod:
             row += f"<lastmod>{lastmod}</lastmod>"
         if freq:
@@ -3968,6 +3985,7 @@ def robots_txt():
         "Disallow: /login\n"
         "Disallow: /register\n"
         "Disallow: /notifications\n"
+        "Allow: /*?latin=*\n"
         "\n"
         f"Sitemap: {SITE_BASE}/sitemap.xml\n"
     )

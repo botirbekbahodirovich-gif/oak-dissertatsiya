@@ -38,6 +38,7 @@ from flask_login import login_required, current_user
 
 from app import csrf
 from data import get_connection
+from utils.search_helper import build_search_clause, build_search_clause_simple
 
 try:
     import psycopg2.extras as psycopg2_extras
@@ -192,6 +193,12 @@ def _ensure_schema(cur):
     try:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_conf_title_trgm "
                     "ON conferences USING GIN (title gin_trgm_ops)")
+        # utils.search_helper.build_search_clause fuzzy qatlami lower(title)/
+        # lower(organizer) bo'yicha solishtiradi — shu ustunlarga mos indeks.
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_conferences_title "
+                    "ON conferences USING gin (lower(title) gin_trgm_ops)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_conferences_organizer "
+                    "ON conferences USING gin (lower(organizer) gin_trgm_ops)")
     except Exception:
         pass  # pg_trgm yo'q muhitda ILIKE indekssiz ishlayveradi
     cur.execute("""
@@ -366,8 +373,11 @@ def _build_where(scope, args, uid):
 
     q = (args.get('search') or '').strip()
     if q:
-        where.append("(title ILIKE %s OR organizer ILIKE %s OR city ILIKE %s)")
-        params += [f'%{q}%'] * 3
+        # Kiril<->lotin + pg_trgm fuzzy (idx_trgm_conferences_title/_organizer)
+        search_where, search_params, _order, _order_params = build_search_clause(
+            q, ['title', 'organizer', 'city'])
+        where.append(search_where)
+        params += search_params
 
     def _multi(name, col):
         vals = [v for v in args.getlist(name) if v]
@@ -1060,8 +1070,9 @@ def admin_conferences():
     moderation = request.args.get('moderation') or ''
     where, params = ["TRUE"], []
     if q:
-        where.append("(title ILIKE %s OR organizer ILIKE %s)")
-        params += [f'%{q}%'] * 2
+        search_where, search_params = build_search_clause_simple(q, ['title', 'organizer'])
+        where.append(search_where)
+        params += search_params
     if scope in SCOPES:
         where.append("scope = %s")
         params.append(scope)

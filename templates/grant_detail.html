@@ -1,6 +1,18 @@
 {% extends "base.html" %}
 {% block title %}{{ g.display_title }} — Grant — Olimlar.uz{% endblock %}
 {% block meta_description %}{{ g.display_title }} — {{ g.organization }}. Muddat: {{ g.deadline_uz or 'ochiq' }}. Talablar, hujjatlar ro'yxati va ariza strategiyasi.{% endblock %}
+{% block seo_extra %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{{ seo_meta(
+    title=g.display_title,
+    description=(g.display_title ~ ' — ' ~ g.organization ~ '. Muddat: ' ~ (g.deadline_uz or 'ochiq') ~ '.')[:250],
+    schema_type='Grant',
+    extra_schema={
+        'funder': {'@type': 'Organization', 'name': g.organization},
+        'sameAs': g.application_url
+    }
+) }}
+{% endblock %}
 
 {% block extra_head %}
 <style>

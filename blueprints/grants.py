@@ -39,6 +39,7 @@ from flask import (Blueprint, jsonify, request, render_template,
 from flask_login import login_required, current_user
 
 from app import csrf
+from utils.search_helper import build_search_clause
 
 grants_bp = Blueprint('grants', __name__)
 
@@ -235,6 +236,12 @@ def _ensure_schema(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_grants_fields "
                 "ON grants USING GIN(scientific_fields)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_grants_tags ON grants USING GIN(tags)")
+    # Fuzzy/kiril-lotin qidiruv uchun (utils.search_helper.build_search_clause)
+    cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_grants_title "
+                "ON grants USING gin (lower(title) gin_trgm_ops)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_trgm_grants_org "
+                "ON grants USING gin (lower(COALESCE(organization, provider, '')) gin_trgm_ops)")
     _schema_ready = True
 
 
@@ -281,32 +288,6 @@ def _card(row):
     }
 
 
-def _search_variants(q):
-    """Latin↔Cyrillic best-effort variants so 'Germaniya' finds 'Германия'."""
-    from institutions import transliterate, KIRILL_TO_LATIN
-    out = {q}
-    out.add(transliterate(q))  # cyr → lat
-    rev = {}
-    for cyr, lat in KIRILL_TO_LATIN.items():
-        if lat and lat not in rev:
-            rev[lat] = cyr
-    # lat → cyr: greedy longest-first replacement
-    s, low = '', q.lower()
-    i = 0
-    keys = sorted(rev, key=len, reverse=True)
-    while i < len(low):
-        for k in keys:
-            if k and low.startswith(k, i):
-                s += rev[k]
-                i += len(k)
-                break
-        else:
-            s += low[i]
-            i += 1
-    out.add(s)
-    return [v for v in out if v]
-
-
 def _query_grants(cur, args, user_id=None):
     """Shared filter/sort/paginate logic for /grants and /api/grants."""
     where, params = ['is_active IS NOT FALSE'], []
@@ -337,14 +318,11 @@ def _query_grants(cur, args, user_id=None):
         params.extend([field, field + '%', f'%{field}%'])
     q = (args.get('search') or args.get('q') or '').strip()
     if q:
-        ors, likes = [], []
-        for v in _search_variants(q)[:3]:
-            like = f'%{v}%'
-            ors.append('(title ILIKE %s OR title_uz ILIKE %s OR '
-                       'COALESCE(organization, provider) ILIKE %s OR country ILIKE %s)')
-            likes.extend([like] * 4)
-        where.append('(' + ' OR '.join(ors) + ')')
-        params.extend(likes)
+        # Kiril<->lotin + pg_trgm fuzzy (idx_trgm_grants_title/_org — grants.py _ensure_schema)
+        search_where, search_params, _order, _order_params = build_search_clause(
+            q, ['title', 'title_uz', 'COALESCE(organization, provider)', 'country'])
+        where.append(search_where)
+        params.extend(search_params)
     if args.get('featured'):
         where.append('is_featured = TRUE')
 

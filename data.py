@@ -285,16 +285,26 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
         # Pre-lowercase both variants so GIN trigram index on LOWER(TRIM(field)) is used
         sl = f"%{search.lower()}%"
         sc = f"%{latin_to_cyrillic(search).lower()}%"
+        # Xato harf/harf almashinuvi uchun qo'shimcha qatlam (Atajanov<->Atajonov
+        # kabi) — faqat ism ustunlarida (olim, ilmiy_rahbar), 3+ belgi so'rovda.
+        # idx_trgm_olim / idx_trgm_rahbar allaqachon mavjud (app.py _ensure_schema).
+        fuzzy = len(search) >= 3
         if scope == 'olim':
-            clauses.append(
-                "(LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s)"
-            )
-            params.extend([sl, sc])
+            clause = "(LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s"
+            p = [sl, sc]
+            if fuzzy:
+                clause += " OR similarity(LOWER(TRIM(olim)), LOWER(%s)) > 0.3"
+                p.append(search)
+            clauses.append(clause + ")")
+            params.extend(p)
         elif scope == 'rahbar':
-            clauses.append(
-                "(LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s)"
-            )
-            params.extend([sl, sc])
+            clause = "(LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s"
+            p = [sl, sc]
+            if fuzzy:
+                clause += " OR similarity(LOWER(TRIM(ilmiy_rahbar)), LOWER(%s)) > 0.3"
+                p.append(search)
+            clauses.append(clause + ")")
+            params.extend(p)
         elif scope == 'opponent':
             clauses.append(
                 "(LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR "
@@ -310,7 +320,7 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
             )
             params.extend([sl, sc, sl, sc, sl, sc])
         else:  # all
-            clauses.append(
+            clause = (
                 "(LOWER(TRIM(olim)) LIKE %s OR LOWER(TRIM(olim)) LIKE %s OR "
                 "LOWER(TRIM(mavzu)) LIKE %s OR LOWER(TRIM(mavzu)) LIKE %s OR "
                 "LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR LOWER(TRIM(ilmiy_rahbar)) LIKE %s OR "
@@ -319,9 +329,15 @@ def _build_filter_clause(search, daraja, muassasa, ixtisoslik,
                 "LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR LOWER(TRIM(COALESCE(ixtisoslik_nomi,''))) LIKE %s OR "
                 "LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_1,''))) LIKE %s OR "
                 "LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_2,''))) LIKE %s OR "
-                "LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s)"
+                "LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s OR LOWER(TRIM(COALESCE(opponent_3,''))) LIKE %s"
             )
-            params.extend([sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc])
+            p = [sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc, sl, sc]
+            if fuzzy:
+                clause += (" OR similarity(LOWER(TRIM(olim)), LOWER(%s)) > 0.3"
+                           " OR similarity(LOWER(TRIM(ilmiy_rahbar)), LOWER(%s)) > 0.3")
+                p.extend([search, search])
+            clauses.append(clause + ")")
+            params.extend(p)
     elif search:
         clauses.append("FALSE")
     if daraja:

@@ -2,6 +2,18 @@
 {% block title %}{{ uni.latin_name or uni.name }} — Olimlar.uz{% endblock %}
 {% block meta_description %}{{ uni.latin_name or uni.name }} — {{ stats.total }} ta dissertatsiya, {{ stats.olimlar }} ta olim. {{ uni.city }}, {{ uni.region }}. Olimlar.uz{% endblock %}
 {% block og_title %}{{ uni.latin_name or uni.name }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{{ seo_meta(
+    title=uni.latin_name or uni.name,
+    description=((uni.latin_name or uni.name) ~ ' — ' ~ stats.total ~ ' ta dissertatsiya, ' ~ stats.olimlar ~ ' ta olim. ' ~ (uni.city or uni.region or ''))[:250],
+    schema_type='CollegeOrUniversity',
+    extra_schema={
+        'alternateName': uni.name if uni.latin_name and uni.latin_name != uni.name else None,
+        'address': {'@type': 'PostalAddress', 'addressLocality': uni.city, 'addressRegion': uni.region}
+    }
+) }}
+{% endblock %}
 
 {% block extra_head %}
 <style>

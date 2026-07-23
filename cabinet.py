@@ -690,6 +690,10 @@ def search_olim():
     variants = get_search_variants(q)
     like_clause = " OR ".join(["LOWER(TRIM(olim)) LIKE %s"] * len(variants))
     like_params = [f"%{v.lower()}%" for v in variants]
+    # Xato harf/harf almashinuvi uchun qo'shimcha qatlam (idx_trgm_olim mavjud)
+    if len(q) >= 3:
+        like_clause += " OR similarity(LOWER(TRIM(olim)), LOWER(%s)) > 0.3"
+        like_params = like_params + [q]
     results = []
     try:
         conn = get_connection()
@@ -776,6 +780,10 @@ def search_advisor():
     variants = get_search_variants(q)
     like_clause = " OR ".join(["LOWER(TRIM(ilmiy_rahbar)) LIKE %s"] * len(variants))
     like_params = [f"%{v.lower()}%" for v in variants]
+    # Xato harf/harf almashinuvi uchun qo'shimcha qatlam (idx_trgm_rahbar mavjud)
+    if len(q) >= 3:
+        like_clause += " OR similarity(LOWER(TRIM(ilmiy_rahbar)), LOWER(%s)) > 0.3"
+        like_params = like_params + [q]
     results = []
     try:
         conn = get_connection()

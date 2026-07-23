@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ c.title }} | Olimlar.uz{% endblock %}
 {% block meta_description %}{{ meta_description }}{% endblock %}
+{% block seo_extra %}
+<link rel="alternate" hreflang="uz-Cyrl" href="https://olimlar.uz{{ request.path }}">
+<link rel="alternate" hreflang="uz-Latn" href="https://olimlar.uz{{ request.path }}?latin=1">
+<link rel="alternate" hreflang="x-default" href="https://olimlar.uz{{ request.path }}">
+{% endblock %}
 
 {% block extra_head %}
 <style>

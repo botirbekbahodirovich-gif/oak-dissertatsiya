@@ -7,6 +7,22 @@
 </div>
 {% endmacro %}
 {% block title %}{{ row.Olim_short or row.Olim or 'Dissertatsiya' }} — Olimlar.uz{% endblock %}
+{% block meta_description %}{{ (row.Olim ~ ' — ' ~ (row.Mavzu or '') ~ '. ' ~ (row.Muassasa or ''))[:250] }}{% endblock %}
+{% block meta_keywords %}{{ row.Olim }}, {{ row.Ixtisoslik }}, dissertatsiya, {{ row.Daraja }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block seo_extra %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{{ seo_meta(
+    title=row.Mavzu or (row.Olim ~ ' — dissertatsiya'),
+    description=(row.Olim ~ ' — ' ~ (row.Mavzu or '') ~ '. ' ~ (row.Muassasa or ''))[:250],
+    schema_type='ScholarlyArticle',
+    extra_schema={
+        'author': {'@type': 'Person', 'name': row.Olim, 'alternateName': row.Olim | to_latin},
+        'datePublished': row.Sana,
+        'publisher': {'@type': 'Organization', 'name': row.Muassasa}
+    }
+) }}
+{% endblock %}
 {% block extra_head %}
 <style>
   .back-link { color: var(--oak-muted); font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; transition: color 0.15s; }

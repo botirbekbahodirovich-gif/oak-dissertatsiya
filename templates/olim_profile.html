@@ -3,6 +3,11 @@
 {% block title %}{{ olim_name }} — Olimlar.uz{% endblock %}
 {% block meta_description %}{{ olim_name }} — ilmiy profil. {{ dissertations|length }} ta dissertatsiya, {{ shogirdlar|length }} ta shogird. Olimlar.uz{% endblock %}
 {% block og_title %}{{ olim_name }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}
+<link rel="alternate" hreflang="uz-Cyrl" href="https://olimlar.uz{{ request.path }}">
+<link rel="alternate" hreflang="uz-Latn" href="https://olimlar.uz{{ request.path }}?latin=1">
+<link rel="alternate" hreflang="x-default" href="https://olimlar.uz{{ request.path }}">
+{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -207,6 +212,7 @@
 {
   "@context": "https://schema.org", "@type": "Person",
   "name": {{ olim_name|tojson }},
+  "alternateName": {{ (olim_name | to_latin) | tojson }},
   "url": "https://www.olimlar.uz{{ ('/@' ~ profile.slug) if (profile and profile.slug) else ('/olim/' ~ olim_name|urlencode) }}"
   {%- if profile and profile.institution %}, "affiliation": {"@type": "Organization", "name": {{ profile.institution|tojson }}}{% endif %}
   {%- set _same = [] %}

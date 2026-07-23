@@ -36,6 +36,7 @@ from flask_login import login_required, current_user
 
 from data import get_connection, clean_olim_name
 from app import csrf
+from utils.search_helper import matches_query
 
 olimlar_catalog_bp = Blueprint('olimlar_catalog', __name__)
 
@@ -340,18 +341,6 @@ _SORT_KEYS = {
 }
 
 
-def _translit_variants(q):
-    """Qidiruv uchun lotin↔kirill variantlari (ikki yo'nalishda).
-
-    Ismlar bazada FAQAT kirilda saqlanadi — shuning uchun lotin→kiril
-    yo'nalishi asosiy (masalan "aliyev" → "алиев" topilishi uchun)."""
-    from utils.transliterate import get_search_variants
-    try:
-        return {v.lower() for v in get_search_variants(q) if v}
-    except Exception:
-        return {q.lower()} if q else set()
-
-
 def _apply_filters(data, f):
     q = (f.get('q') or '').strip().lower()
     ixt = (f.get('ixtisoslik') or '').strip()
@@ -364,12 +353,12 @@ def _apply_filters(data, f):
 
     items = data
     if q:
-        variants = _translit_variants(q)
+        # Kiril<->lotin + fuzzy (harf almashinuvi: Atajanov/Atajonov kabi) —
+        # xotiradagi keshlangan ro'yxat ustida, shuning uchun pg_trgm emas,
+        # utils.search_helper.matches_query (difflib-asosli).
         items = [s for s in items
-                 if any(v in s['name'].lower() or v in s['display'].lower()
-                        or any(v in (sp or '').lower() for sp in s['specialty_names'])
-                        or any(v in (i or '').lower() for i in s['institutions'])
-                        for v in variants)]
+                 if matches_query(q, s['name'], s['display'],
+                                  *s['specialty_names'], *s['institutions'])]
     if ixt:
         items = [s for s in items if any(ixt in (c or '') for c in s['specialties'])]
     if viloyat:
