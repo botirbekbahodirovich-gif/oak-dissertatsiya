@@ -317,6 +317,18 @@
             .uname-chip:hover { background:rgba(59,130,246,0.3); }
           </style>
 
+          <!-- Foydalanuvchi turi -->
+          <div class="uname-box" style="margin-bottom:18px;">
+            <label class="uname-lbl">Foydalanuvchi turi</label>
+            <form method="POST" action="{{ url_for('cabinet.update_user_type') }}">
+              <select name="user_type" class="cab-select" onchange="this.form.submit()">
+                <option value="researcher" {% if user.user_type == 'researcher' %}selected{% endif %}>🎓 Izlanuvchi / Tadqiqotchi</option>
+                <option value="student" {% if user.user_type == 'student' %}selected{% endif %}>📚 Talaba</option>
+                <option value="regular" {% if user.user_type == 'regular' %}selected{% endif %}>👤 Oddiy foydalanuvchi</option>
+              </select>
+            </form>
+          </div>
+
           <!-- Avatar -->
           <div class="avatar-edit-section">
             <div class="current-avatar" id="avatarPreview">

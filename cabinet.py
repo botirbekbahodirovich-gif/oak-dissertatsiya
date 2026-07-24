@@ -27,6 +27,21 @@ cabinet_bp = Blueprint('cabinet', __name__)
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
+_user_type_ready = False
+
+
+def _ensure_user_type_column(cur):
+    """cabinet_users.user_type — 'researcher' | 'student' | 'regular' | 'unknown'
+    (default). Drives the post-registration welcome_choose_type gate."""
+    global _user_type_ready
+    if _user_type_ready:
+        return
+    cur.execute("ALTER TABLE cabinet_users ADD COLUMN IF NOT EXISTS "
+                "user_type VARCHAR(20) DEFAULT 'unknown'")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cabinet_users_type ON cabinet_users(user_type)")
+    _user_type_ready = True
+
+
 def current_cabinet_user():
     uid = session.get('cabinet_user_id')
     if not uid:
@@ -35,10 +50,13 @@ def current_cabinet_user():
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                _ensure_user_type_column(cur)
                 cur.execute(
-                    "SELECT id, email, telegram_username, telegram_first_name, olim_name "
+                    "SELECT id, email, telegram_username, telegram_first_name, olim_name, "
+                    "COALESCE(user_type, 'unknown') "
                     "FROM cabinet_users WHERE id = %s", (uid,))
                 r = cur.fetchone()
+            conn.commit()
         finally:
             conn.close()
     except Exception:
@@ -46,7 +64,7 @@ def current_cabinet_user():
     if not r:
         return None
     return {"id": r[0], "email": r[1], "telegram_username": r[2],
-            "telegram_first_name": r[3], "olim_name": r[4]}
+            "telegram_first_name": r[3], "olim_name": r[4], "user_type": r[5]}
 
 
 def cabinet_login_required(view):
@@ -167,6 +185,57 @@ def cabinet():
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
+@cabinet_bp.route('/cabinet/xush-kelibsiz')
+@cabinet_login_required
+def welcome_choose_type():
+    """Bosqich 2 — ro'yxatdan o'tgach onboarding formasidan oldin foydalanuvchi
+    turini so'raydi (izlanuvchi / talaba / oddiy). Tur allaqachon tanlangan
+    bo'lsa — to'g'ridan-to'g'ri onboarding ga o'tkazadi."""
+    user = current_cabinet_user()
+    if user and user.get('user_type') and user['user_type'] != 'unknown':
+        return redirect(url_for('cabinet.onboarding'))
+    return render_template('cabinet_welcome_choose_type.html')
+
+
+@cabinet_bp.route('/cabinet/xush-kelibsiz/set-type', methods=['POST'])
+@cabinet_login_required
+def set_user_type():
+    user_type = request.form.get('user_type')
+    if user_type not in ('researcher', 'student', 'regular'):
+        return redirect(url_for('cabinet.welcome_choose_type'))
+    uid = session.get('cabinet_user_id')
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_user_type_column(cur)
+            cur.execute("UPDATE cabinet_users SET user_type = %s WHERE id = %s", (user_type, uid))
+        conn.commit()
+    finally:
+        conn.close()
+    if user_type == 'regular':
+        return redirect(url_for('home'))
+    return redirect(url_for('cabinet.onboarding'))
+
+
+@cabinet_bp.route('/cabinet/api/user-type', methods=['POST'])
+@cabinet_login_required
+def update_user_type():
+    """Kabinet sozlamalaridan foydalanuvchi turini keyinroq o'zgartirish."""
+    user_type = request.form.get('user_type')
+    if user_type not in ('researcher', 'student', 'regular'):
+        return redirect(url_for('cabinet.cabinet'))
+    uid = session.get('cabinet_user_id')
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_user_type_column(cur)
+            cur.execute("UPDATE cabinet_users SET user_type = %s WHERE id = %s", (user_type, uid))
+        conn.commit()
+    finally:
+        conn.close()
+    return redirect(url_for('cabinet.cabinet'))
+
+
 @cabinet_bp.route('/cabinet/onboarding')
 @cabinet_login_required
 def onboarding():
@@ -174,6 +243,8 @@ def onboarding():
     search-olim / claim / profile-save endpoints; on finish sets
     profile_completed and lands the user in the full cabinet."""
     user = current_cabinet_user()
+    if user and (not user.get('user_type') or user['user_type'] == 'unknown'):
+        return redirect(url_for('cabinet.welcome_choose_type'))
     olim_name = (user or {}).get('olim_name') or ''
     profile = {}
     try:
@@ -188,8 +259,13 @@ def onboarding():
             conn.close()
     except Exception:
         pass
+    # 'Talaba' tanlaganlar uchun ilmiy daraja Magistrant bo'lib old-tanlanadi
+    # (mavjud daraja radiolari Magistrant/Magistr ni allaqachon qamraydi —
+    # alohida talaba formasi kerak emas).
+    default_degree = 'Magistrant' if (user or {}).get('user_type') == 'student' else ''
     return render_template('cabinet_onboarding.html', user=user, profile=profile,
                            olim_name=olim_name, degree_choices=_DEGREE_CHOICES,
+                           default_degree=default_degree,
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
@@ -265,7 +341,7 @@ def register():
                             new_id = cur.fetchone()[0]
                             conn.commit()
                             _set_session(new_id, None)
-                            return redirect(url_for('cabinet.onboarding'))
+                            return redirect(url_for('cabinet.welcome_choose_type'))
                 finally:
                     conn.close()
             except Exception:
@@ -318,7 +394,7 @@ def telegram():
             conn.close()
     except Exception as e:
         return jsonify({"success": False, "error": f"Xatolik: {e}"}), 200
-    return jsonify({"success": True, "redirect": "/cabinet/onboarding" if is_new else "/cabinet"})
+    return jsonify({"success": True, "redirect": "/cabinet/xush-kelibsiz" if is_new else "/cabinet"})
 
 
 # ── Google OAuth ─────────────────────────────────────────────────────────────
@@ -400,7 +476,7 @@ def google_callback():
                     new_id = cur.fetchone()[0]
                     conn.commit()
                     _set_session(new_id, None)
-                    dest = '/cabinet/onboarding'
+                    dest = '/cabinet/xush-kelibsiz'
                     # Seed an olim_profiles row (olim_name is NOT NULL UNIQUE).
                     try:
                         parts = name.split(' ', 1)

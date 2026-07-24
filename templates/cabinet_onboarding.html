@@ -91,8 +91,8 @@
       <h3><span class="ob-step">1</span>To'liq ismingiz</h3>
       <p class="desc">Ism-familiyangizni kiriting — bazadan dissertatsiyangizni avtomatik topamiz.</p>
       <div class="ob-grid">
-        <div class="ob-group"><label>Familiya</label><input class="ob-input auto-capitalize" id="ob-last" type="text" value="{{ profile.last_name or '' }}" placeholder="Karimov"></div>
-        <div class="ob-group"><label>Ism</label><input class="ob-input auto-capitalize" id="ob-first" type="text" value="{{ profile.first_name or '' }}" placeholder="Aziz"></div>
+        <div class="ob-group"><label>Familiya</label><input class="ob-input auto-capitalize" id="ob-last" type="text" value="{{ profile.last_name or session.pop('prefill_familiya', '') }}" placeholder="Karimov"></div>
+        <div class="ob-group"><label>Ism</label><input class="ob-input auto-capitalize" id="ob-first" type="text" value="{{ profile.first_name or session.pop('prefill_ism', '') }}" placeholder="Aziz"></div>
         <div class="ob-group"><label>Otasining ismi</label><input class="ob-input auto-capitalize" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
       </div>
       <div class="ob-group" style="margin-top:10px;">
@@ -117,7 +117,7 @@
     <div class="ob-card">
       <h3><span class="ob-step">2</span>Ilmiy darajangiz</h3>
       <p class="desc">Hozirgi holatingizga mos variantni tanlang.</p>
-      {% set _cur = profile.academic_degree or '' %}
+      {% set _cur = profile.academic_degree or default_degree|default('') %}
       <div class="ob-degrees">
         {% set degs = [
           ('Magistrant','Magistrant','hozir o\'qiyapman'),

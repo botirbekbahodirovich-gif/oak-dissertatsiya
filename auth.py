@@ -187,9 +187,15 @@ def google_callback():
     nxt = session.pop('main_google_next', '/') or '/'
     session.pop('main_google_state', None)
     session['just_registered' if created else 'just_logged_in'] = True
-    # New accounts complete their scholar profile first (cabinet onboarding
+    if created:
+        # Onboarding formasidagi ism-familiya maydonlarini oldindan to'ldirish
+        # uchun (faqat cabinet.py o'z Google oqimi orqali olim_profiles ni
+        # allaqachon to'ldirmagan hollarda ishlatiladi — bir marta, session.pop).
+        session['prefill_ism'] = (info.get('given_name') or '').strip().title()
+        session['prefill_familiya'] = (info.get('family_name') or '').strip().title()
+    # New accounts choose their user type first (cabinet onboarding gate
     # bridges the main-site session in via _bridge_from_main).
-    return redirect('/cabinet/onboarding' if created else nxt)
+    return redirect('/cabinet/xush-kelibsiz' if created else nxt)
 
 
 def _unique_username(cur, base):
@@ -322,6 +328,9 @@ def telegram_login():
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
     session['just_registered' if is_new else 'just_logged_in'] = True
+    if is_new:
+        session['prefill_ism'] = (data.get('first_name') or '').strip().title()
+        session['prefill_familiya'] = (data.get('last_name') or '').strip().title()
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     dest = _post_login_dest('/')
-    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})
+    return jsonify({'success': True, 'redirect': '/cabinet/xush-kelibsiz' if is_new else dest})

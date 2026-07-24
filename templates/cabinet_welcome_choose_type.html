@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Xush kelibsiz — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
+.wct { background: #0f172a; color: #e2e8f0; min-height: 92vh; padding: 0 0 60px; }
+.wct-hero { background: linear-gradient(135deg,#1e3a8a 0%,#6366f1 100%); padding: 40px 20px 32px; text-align: center; }
+.wct-hero h1 { font-size: 1.8rem; font-weight: 800; color: #fff; margin: 0 0 8px; }
+.wct-hero p { color: rgba(255,255,255,0.9); margin: 0; font-size: 0.98rem; max-width: 520px; margin: 0 auto; line-height: 1.6; }
+.wct-wrap { max-width: 900px; margin: -18px auto 0; padding: 0 18px; }
+
+.wct-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0 24px; }
+.wct-card { position: relative; cursor: pointer; display: block; }
+.wct-card input { position: absolute; opacity: 0; pointer-events: none; }
+.wct-card__inner { padding: 22px 18px; background: #1e293b; border: 1.5px solid #334155; border-radius: 14px; height: 100%; transition: all 0.15s ease; }
+.wct-card:hover .wct-card__inner { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+.wct-card input:checked + .wct-card__inner { border-color: #3b82f6; background: rgba(59,130,246,0.14); box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.wct-card__icon { font-size: 36px; margin-bottom: 10px; }
+.wct-card__inner h3 { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
+.wct-card__inner p { font-size: 0.84rem; color: #94a3b8; margin: 0 0 12px; }
+.wct-card__hint { font-size: 0.78rem; color: #64748b; line-height: 1.5; padding-top: 10px; border-top: 1px solid #334155; }
+
+.wct-footer { text-align: center; }
+.wct-btn { padding: 13px 36px; background: #3b82f6; color: #fff; border: none; border-radius: 11px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+.wct-btn:hover { background: #2563eb; }
+.wct-btn:disabled { opacity: 0.5; cursor: default; }
+.wct-skip { display: block; margin-top: 16px; color: #94a3b8; font-size: 0.88rem; text-decoration: none; }
+.wct-skip:hover { color: #cbd5e1; }
+
+@media (max-width: 720px) {
+  .wct-grid { grid-template-columns: 1fr; }
+  .wct-hero h1 { font-size: 1.4rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wct">
+  <div class="wct-hero">
+    <h1>👋 Xush kelibsiz!</h1>
+    <p>Siz uchun eng mos xizmatlarni ko'rsatishimiz uchun kim ekaningizni bilishimiz kerak.</p>
+  </div>
+
+  <div class="wct-wrap">
+    <form method="POST" action="{{ url_for('cabinet.set_user_type') }}" id="wct-form">
+      <div class="wct-grid">
+
+        <label class="wct-card">
+          <input type="radio" name="user_type" value="researcher" required>
+          <div class="wct-card__inner">
+            <div class="wct-card__icon">🎓</div>
+            <h3>Izlanuvchi / Tadqiqotchi</h3>
+            <p>PhD, DSc, doktorant yoki magistr</p>
+            <div class="wct-card__hint">Bazadan dissertatsiyangizni topamiz va profilingizni bog'laymiz</div>
+          </div>
+        </label>
+
+        <label class="wct-card">
+          <input type="radio" name="user_type" value="student" required>
+          <div class="wct-card__inner">
+            <div class="wct-card__icon">📚</div>
+            <h3>Talaba</h3>
+            <p>Bakalavriat yoki magistratura talabasi</p>
+            <div class="wct-card__hint">Portfoliongizni hozirdan boshlab yaratib boring — kelajakda katta yordam beradi</div>
+          </div>
+        </label>
+
+        <label class="wct-card">
+          <input type="radio" name="user_type" value="regular" required>
+          <div class="wct-card__inner">
+            <div class="wct-card__icon">👤</div>
+            <h3>Oddiy foydalanuvchi</h3>
+            <p>Ma'lumot ko'rish uchun kirdim</p>
+            <div class="wct-card__hint">Barcha dissertatsiyalar, olimlar va konferensiyalarni ko'rish</div>
+          </div>
+        </label>
+
+      </div>
+
+      <div class="wct-footer">
+        <button type="submit" class="wct-btn" id="wct-submit" disabled>Davom etish →</button>
+        <a href="{{ url_for('home') }}"
+           class="wct-skip"
+           onclick="if(typeof ym==='function' && typeof YM_ID!=='undefined') ym(YM_ID, 'reachGoal', 'welcome_skip');">
+          Hozircha o'tkazib yuborish
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('input[name="user_type"]').forEach(function (r) {
+  r.addEventListener('change', function () {
+    document.getElementById('wct-submit').disabled = false;
+    if (typeof ym === 'function' && typeof YM_ID !== 'undefined') {
+      ym(YM_ID, 'reachGoal', 'welcome_selected_' + this.value);
+    }
+  });
+});
+</script>
+{% endblock %}
