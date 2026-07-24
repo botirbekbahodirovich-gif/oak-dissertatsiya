@@ -25,6 +25,10 @@ if not session_secret:
     print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
           "Set SESSION_SECRET in the environment for stable sessions/CSRF in production.",
           flush=True)
+database_url = os.environ.get("DATABASE_URL", "").strip()
+if IS_PRODUCTION and not database_url:
+    raise RuntimeError("DATABASE_URL production uchun majburiy")
+
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
 
@@ -1644,7 +1648,7 @@ def _seed_courses():
         pass
 
 
-if APP_ENV != "testing":
+if APP_ENV == "development":
     _run_startup_migrations()
     _seed_blog_posts()
     _seed_courses()
