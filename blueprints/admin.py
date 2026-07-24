@@ -6,8 +6,7 @@ under the 'admin' blueprint (e.g. url_for('admin.admin_yangiliklar')).
 
 Shared helpers and module constants still live in app.py and are imported lazily
 inside each view (matching the auth.py / cabinet.py pattern) to avoid circular
-imports. `csrf` is imported at module load — it is defined in app.py before the
-blueprints are registered, so this is safe.
+imports remain lazy so blueprint registration stays safe.
 """
 import os
 from datetime import datetime, timezone
@@ -17,7 +16,6 @@ from flask import (
 )
 from flask_login import login_required, current_user
 
-from app import csrf
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -426,7 +424,6 @@ def admin_acquisition():
 
 
 @admin_bp.route('/admin/api/block-user', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_block_user():
     from app import _require_admin
@@ -474,7 +471,6 @@ def admin_block_user():
 
 
 @admin_bp.route('/admin/api/unblock-user', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_unblock_user():
     from app import _require_admin
@@ -500,7 +496,6 @@ def admin_unblock_user():
 
 
 @admin_bp.route('/admin/api/broadcast', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_broadcast():
     from app import _require_admin
@@ -543,7 +538,6 @@ def admin_broadcast():
 
 
 @admin_bp.route('/admin/api/broadcast/delete/<int:id>', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_broadcast_delete(id):
     from app import _require_admin

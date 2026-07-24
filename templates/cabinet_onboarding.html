@@ -173,7 +173,7 @@
     setTimeout(function () { t.className = 'ob-toast ' + (ok ? 'ok' : 'err'); }, 2600);
   }
   function post(url, body) {
-    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+    return fetch(url, { method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body || {}) })
       .then(function (r) { return r.json(); });
   }
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }

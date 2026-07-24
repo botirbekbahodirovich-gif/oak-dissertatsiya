@@ -515,7 +515,7 @@ function blockUser(ip) {
   var reason = prompt("Sabab (ixtiyoriy):", "");
   fetch('/admin/api/block-user', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ip_address: ip, duration: duration, reason: reason || '' })
   })
     .then(function (r) { return r.json(); })
@@ -529,7 +529,7 @@ function unblockUser(ip) {
   if (!confirm('Blokdan chiqarilsinmi: ' + ip + '?')) return;
   fetch('/admin/api/unblock-user', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ip_address: ip })
   })
     .then(function (r) { return r.json(); })
@@ -544,7 +544,7 @@ function sendBroadcast() {
   if (!msg) return alert('Xabar matni kiriting');
   fetch('/admin/api/broadcast', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({
       message: msg,
       type: document.getElementById('broadcastType').value,
@@ -566,7 +566,7 @@ function deleteBroadcast(id) {
   if (!confirm("Xabar o'chirilsinmi?")) return;
   fetch('/admin/api/broadcast/delete/' + id, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' })
   })
     .then(function (r) { return r.json(); })
     .then(function (data) {

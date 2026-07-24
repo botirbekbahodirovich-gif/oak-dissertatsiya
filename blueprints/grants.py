@@ -38,7 +38,6 @@ from flask import (Blueprint, jsonify, request, render_template,
                    redirect, abort, flash, session)
 from flask_login import login_required, current_user
 
-from app import csrf
 from utils.search_helper import build_search_clause
 
 grants_bp = Blueprint('grants', __name__)
@@ -610,7 +609,6 @@ def api_grants_v2():
 
 
 @grants_bp.route('/api/grants/<int:grant_id>/track', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_track(grant_id):
     from data import get_connection
@@ -646,7 +644,6 @@ def api_track(grant_id):
 
 
 @grants_bp.route('/api/grants/<int:grant_id>/update-status', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_update_status(grant_id):
     from data import get_connection
@@ -774,7 +771,6 @@ def api_grants_legacy():
 
 
 @grants_bp.route('/api/v1/grants/track', methods=['POST'])
-@csrf.exempt
 @login_required
 def track_grant_legacy():
     data = request.get_json(silent=True) or {}

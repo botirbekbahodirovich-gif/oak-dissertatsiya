@@ -156,7 +156,10 @@
         <a class="cab-nav-link" href="/cabinet/saqlangan">💾 Saqlangan <span id="saved-nav-count" class="cab-nav-badge" style="display:none;"></span></a>
         <a class="cab-nav-link" href="/cabinet/maqolalar">📄 Saqlangan maqolalar</a>
       </nav>
-      <div class="cab-logout"><a href="/cabinet/api/logout">↩ Chiqish</a></div>
+      <div class="cab-logout"><form method="post" action="/cabinet/api/logout">
+        {{ csrf_token()|safe }}
+        <button type="submit" class="btn btn-link p-0">↩ Chiqish</button>
+      </form></div>
     </aside>
 
     <main class="cab-main">
@@ -804,7 +807,7 @@ function toast(msg, ok) {
   setTimeout(function () { t.className = 'cab-toast ' + (ok ? 'ok' : 'err'); }, 2600);
 }
 function post(url, body) {
-  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+  return fetch(url, { method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body || {}) })
     .then(function (r) { return r.json(); });
 }
 
@@ -951,7 +954,7 @@ function uploadAvatar(input) {
   var formData = new FormData();
   formData.append('photo', file);
   toast('Yuklanmoqda…', true);
-  fetch('/cabinet/api/avatar/upload', { method: 'POST', body: formData })
+  fetch('/cabinet/api/avatar/upload', { method: 'POST', headers: window.oakCsrfHeaders(), body: formData })
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (data.success) { location.reload(); }
@@ -961,7 +964,7 @@ function uploadAvatar(input) {
 }
 function removeAvatar() {
   if (!confirm("Rasmni o'chirmoqchimisiz?")) return;
-  fetch('/cabinet/api/avatar/remove', { method: 'POST' })
+  fetch('/cabinet/api/avatar/remove', { method: 'POST', headers: window.oakCsrfHeaders() })
     .then(function (r) { return r.json(); })
     .then(function (data) { if (data.success) location.reload(); else toast(data.error || 'Xatolik', false); });
 }
@@ -1011,10 +1014,7 @@ function unclaimProfile() {
   if (!confirm("'" + name + "' profilini kabinetingizdan ajratmoqchimisiz?\n\nBu amalni keyinroq qaytarib biriktirish mumkin.")) return;
   fetch('/cabinet/api/unclaim', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': (document.querySelector('input[name=csrf_token]') || {}).value || ''
-    },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ olim_name: name })
   })
   .then(function (r) { return r.json(); })
@@ -1032,10 +1032,9 @@ function unclaimDissertation(btn, olimName) {
   if (!confirm("'" + olimName + "' nomli dissertatsiyani profilingizdan ajratmoqchimisiz?\n\nBu amalni bekor qilib bo'lmaydi.")) return;
   btn.disabled = true;
   btn.textContent = '⏳...';
-  var csrfToken = (document.querySelector('input[name=csrf_token]') || {}).value || '';
   fetch('/cabinet/api/unclaim', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ olim_name: olimName })
   })
   .then(function (r) { return r.json(); })

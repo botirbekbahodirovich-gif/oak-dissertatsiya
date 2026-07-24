@@ -527,7 +527,7 @@ def _login_main_user(email, name=None):
     login_user(User(row[0], row[1], row[2]), remember=True)
 
 
-@cabinet_bp.route('/cabinet/api/logout', methods=['POST', 'GET'])
+@cabinet_bp.route('/cabinet/api/logout', methods=['POST'])
 def logout():
     session.pop('cabinet_user_id', None)
     session.pop('cabinet_olim_name', None)
