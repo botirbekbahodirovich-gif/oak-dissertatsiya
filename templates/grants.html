@@ -76,6 +76,12 @@
   var codeInput = document.getElementById('codeFilter');
   var timer = null;
 
+  function esc(value) {
+    var node = document.createElement('div');
+    node.textContent = value == null ? '' : String(value);
+    return node.innerHTML;
+  }
+
   function fmtCountdown(deadline) {
     if (!deadline) return { text: 'Muddat belgilanmagan', safe: true };
     var end = new Date(deadline + 'T23:59:59').getTime();
@@ -90,14 +96,14 @@
     var cd = fmtCountdown(g.application_deadline);
     var ft = (g.funding_type || '').toLowerCase();
     return '<div class="grant-card">' +
-      '<h3><a href="/grants/' + g.id + '">' + (g.title || '') + '</a></h3>' +
+      '<h3><a href="/grants/' + encodeURIComponent(g.id) + '">' + esc(g.title) + '</a></h3>' +
       '<div class="grant-meta">' +
-        (g.country ? '<span class="g-tag">' + g.country + '</span>' : '') +
-        (g.academic_level ? '<span class="g-tag">' + g.academic_level + '</span>' : '') +
-        (g.funding_type ? '<span class="g-tag ' + ft + '">' + g.funding_type + '</span>' : '') +
+        (g.country ? '<span class="g-tag">' + esc(g.country) + '</span>' : '') +
+        (g.academic_level ? '<span class="g-tag">' + esc(g.academic_level) + '</span>' : '') +
+        (g.funding_type ? '<span class="g-tag ' + esc(ft) + '">' + esc(g.funding_type) + '</span>' : '') +
       '</div>' +
       '<div class="g-countdown' + (cd.safe ? ' safe' : '') + '" data-deadline="' +
-        (g.application_deadline || '') + '">' + cd.text + '</div>' +
+        esc(g.application_deadline) + '">' + esc(cd.text) + '</div>' +
     '</div>';
   }
 

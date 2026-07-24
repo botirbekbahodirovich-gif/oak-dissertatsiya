@@ -779,21 +779,27 @@ if (claimSearch) {
       fetch('/cabinet/api/search-olim?q=' + encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (d) {
         var box = document.getElementById('claim-results');
         var rows = d.results || [];
-        box.innerHTML = rows.map(function (it) {
-          var nm = it.name.replace(/'/g, "\\'");
-          var deg = it.daraja === 'PHD' ? '<span class="sr-deg phd">PhD</span>'
-                  : (it.daraja === 'DSC' ? '<span class="sr-deg dsc">DSc</span>' : '');
-          return '<div class="sr-card"><div style="min-width:0;"><div class="sr-name"></div>' +
-                 '<div class="sr-mavzu"></div>' +
-                 '<div class="sr-count">' + deg + it.count + ' ta dissertatsiya</div></div>' +
-                 '<button class="cab-btn" onclick="claimName(\'' + nm + '\')">Bu men ✓</button></div>';
-        }).join('');
-        var cards = box.querySelectorAll('.sr-card');
-        rows.forEach(function (it, i) {
-          cards[i].querySelector('.sr-name').textContent = it.name;
-          var mv = cards[i].querySelector('.sr-mavzu');
-          var txt = (it.mavzu || '').slice(0, 90);
-          mv.textContent = txt ? (txt + (it.mavzu.length > 90 ? '…' : '')) : '';
+        box.replaceChildren();
+        rows.forEach(function (it) {
+          var card = document.createElement('div'); card.className = 'sr-card';
+          var info = document.createElement('div'); info.style.minWidth = '0';
+          var person = document.createElement('div'); person.className = 'sr-name';
+          person.textContent = it.name || '';
+          var topic = document.createElement('div'); topic.className = 'sr-mavzu';
+          var topicText = (it.mavzu || '').slice(0, 90);
+          topic.textContent = topicText ? topicText + (it.mavzu.length > 90 ? '…' : '') : '';
+          var count = document.createElement('div'); count.className = 'sr-count';
+          if (it.daraja === 'PHD' || it.daraja === 'DSC') {
+            var degree = document.createElement('span');
+            degree.className = 'sr-deg ' + it.daraja.toLowerCase();
+            degree.textContent = it.daraja === 'PHD' ? 'PhD' : 'DSc';
+            count.appendChild(degree);
+          }
+          count.appendChild(document.createTextNode(String(it.count || 0) + ' ta dissertatsiya'));
+          var claim = document.createElement('button'); claim.className = 'cab-btn';
+          claim.textContent = 'Bu men ✓';
+          claim.addEventListener('click', function () { claimName(it.name || ''); });
+          info.append(person, topic, count); card.append(info, claim); box.appendChild(card);
         });
         if (!rows.length) box.innerHTML = '<p class="desc">Natija topilmadi.</p>';
       });

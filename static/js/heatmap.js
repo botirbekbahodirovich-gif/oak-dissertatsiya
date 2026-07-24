@@ -44,7 +44,10 @@
 
   function showTooltip(e, name) {
     var r = byName[name] || { total: 0 };
-    tooltip.innerHTML = '<b>' + name + '</b><br>' + (r.total || 0) + ' ta dissertatsiya';
+    var title = document.createElement('b');
+    title.textContent = name;
+    tooltip.replaceChildren(title, document.createElement('br'),
+      document.createTextNode(String(r.total || 0) + ' ta dissertatsiya'));
     tooltip.style.display = 'block';
     tooltip.style.left = (e.clientX + 14) + 'px';
     tooltip.style.top = (e.clientY + 14) + 'px';
@@ -77,11 +80,26 @@
 
   // ── Region detail panel ──
   var sparkChart = null;
-  function rowList(items) {
-    if (!items || !items.length) return '<li><span style="color:#64748b">Ma\'lumot yo\'q</span></li>';
-    return items.map(function (it) {
-      return '<li><span>' + it.name + '</span><span>' + it.count + '</span></li>';
-    }).join('');
+  function renderList(container, items) {
+    container.replaceChildren();
+    if (!items || !items.length) {
+      var emptyItem = document.createElement('li');
+      var emptyText = document.createElement('span');
+      emptyText.style.color = '#64748b';
+      emptyText.textContent = "Ma'lumot yo'q";
+      emptyItem.appendChild(emptyText);
+      container.appendChild(emptyItem);
+      return;
+    }
+    items.forEach(function (it) {
+      var row = document.createElement('li');
+      var label = document.createElement('span');
+      var count = document.createElement('span');
+      label.textContent = it.name == null ? '' : String(it.name);
+      count.textContent = it.count == null ? '0' : String(it.count);
+      row.append(label, count);
+      container.appendChild(row);
+    });
   }
 
   function showDetail(name) {
@@ -92,8 +110,8 @@
     document.getElementById('rd-total').textContent = r.total;
     document.getElementById('rd-phd').textContent = r.phd;
     document.getElementById('rd-dsc').textContent = r.dsc;
-    document.getElementById('rd-unis').innerHTML = rowList(r.top_universities);
-    document.getElementById('rd-specs').innerHTML = rowList(r.top_specialties);
+    renderList(document.getElementById('rd-unis'), r.top_universities);
+    renderList(document.getElementById('rd-specs'), r.top_specialties);
     panel.style.display = 'block';
 
     var years = r.years || [];
