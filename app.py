@@ -17,9 +17,11 @@ APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "developm
 IS_PRODUCTION = APP_ENV == "production"
 # Production requires a configured session secret; development may use an ephemeral fallback.
 import secrets as _secrets
-session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+session_secret = os.environ.get("SESSION_SECRET")
 if not session_secret and IS_PRODUCTION:
     raise RuntimeError("SESSION_SECRET production uchun majburiy")
+if not session_secret:
+    session_secret = os.environ.get("SECRET_KEY")
 if not session_secret:
     session_secret = _secrets.token_hex(32)
     print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "

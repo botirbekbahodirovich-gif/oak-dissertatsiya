@@ -338,7 +338,7 @@ print(json.dumps({
         # Empty existing values prevent python-dotenv from inheriting a parent
         # workspace's ignored .env while exercising the missing-secret path.
         env["SESSION_SECRET"] = ""
-        env["SECRET_KEY"] = ""
+        env["SECRET_KEY"] = "legacy-alias-must-not-bypass-production-guard"
         env["DATABASE_URL"] = "postgresql://127.0.0.1:1/phase0"
         result = subprocess.run(
             [sys.executable, "-c", "import app"],
