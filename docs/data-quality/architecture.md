@@ -1,8 +1,20 @@
 # Data quality & normalization architecture — Phase 1 audit + design
 
-Branch: `audit/data-quality-phase-1` · Worktree: `.data-quality-phase-1-worktree`
+Origin: Phase 1 data-quality audit + design (branch `audit/data-quality-phase-1`),
+now integrated onto the security/onboarding release base.
 Scope: read-only audit + additive design. No production writes, no migrations
 applied, no auto-merges, nothing in `app.py` touched.
+
+**Status legend** — every design item below is one of:
+
+- **IMPLEMENTED** — code shipped on this branch (see §3, §5 "Ships").
+- **PROPOSED** — schema/design agreed in principle, not built.
+- **DRAFT — DO NOT APPLY** — SQL exists only under `migrations/drafts/`,
+  never wired into any apply path (§2).
+- **HUMAN REVIEW REQUIRED** — needs a person to sign off before it runs
+  (all merges/candidate matches; §4.2).
+- **DEFERRED** — explicitly out of scope for this phase (§5 "Designed,
+  not built"). This document never claims more is built than actually is.
 
 ## 1. Audit summary
 
@@ -24,15 +36,15 @@ of most of the reported problems.
 
 ```
 oak.uz announcement page
-  → scraper.py:101  parse_announcement()      regex field extraction
-  → scraper.py:430  _extract_olim-equivalent  name-from-title regex, 3-tier fallback
-  → scraper.py:128  ixtisoslik_shifrlari       re.findall ALL specialty codes (kept)
-  → scraper.py:280/367 db_save_one() / new_items.json → send_to_site.py
-  → data.py:1885    import_oak()              X-API-KEY, per-item extract + validate
-       data.py:1701 _extract_olim()           name regex (duplicated from scraper.py)
-       data.py:1739 _extract_mavzu()          strips trailing "... NN.NN.NN" from topic
-       data.py:1753 _extract_ixtisoslik()     keeps only the FIRST code (others dropped!)
-       data.py:1760 _validate_ingest_record() only rejects the grossest failure ('нинг' in olim)
+  → scraper.py  parse_announcement()      regex field extraction
+  → scraper.py  _extract_olim-equivalent  name-from-title regex, 3-tier fallback
+  → scraper.py  ixtisoslik_shifrlari       re.findall ALL specialty codes (kept)
+  → scraper.py db_save_one() / new_items.json → send_to_site.py
+  → data.py    import_oak()              X-API-KEY, per-item extract + validate
+       data.py _extract_olim()           name regex (duplicated from scraper.py)
+       data.py _extract_mavzu()          strips trailing "... NN.NN.NN" from topic
+       data.py _extract_ixtisoslik()     keeps only the FIRST code (others dropped!)
+       data.py _validate_ingest_record() only rejects the grossest failure ('нинг' in olim)
   → INSERT ... ON CONFLICT (oak_id) DO UPDATE
   → dissertations (Postgres)
 ```
@@ -103,14 +115,14 @@ soni", pulling from **3 structurally different sources**:
 
 | Site | What it counts | Method | Source |
 |---|---|---|---|
-| `app.py:1641 get_homepage_stats()` | olim, muassasa | `COUNT(DISTINCT NULLIF(TRIM(col),''))` | `dissertations` raw strings |
-| `analytics.py:29 stats_json()` | olim, muassasa | same shape, separate cache | `dissertations` raw strings |
-| `blueprints/olimlar_catalog.py:461` | scholars = **advisors** (`ilmiy_rahbar`, not `olim`!) | `GROUP BY TRIM(ilmiy_rahbar)`, `data_quality='complete'` filter | `dissertations` + `institution_map` join |
-| `blueprints/content.py:371` | olimlar, rahbarlar | `COUNT(DISTINCT col)`, **no TRIM** | `dissertations` raw (untrimmed) |
-| `blueprints/univer.py:360` | active_advisors | `COUNT(DISTINCT TRIM(ilmiy_rahbar))`, **last 4 years only** | `dissertations`, time-windowed |
-| `app.py:4157 get_university_dissertation_stats()` | olimlar per uni | `COUNT(DISTINCT olim)`, no TRIM, keyword `LIKE` match | `dissertations` + curated `universities` |
-| `app.py:4190`/`content.py:217` `/universities` | muassasalar (`len(items)`) | union of `institution_map` rows + curated `universities`, fuzzy-merged | two tables merged in Python |
-| `blueprints/ranking.py:548` | scholars/institutions | `COUNT(*)` on manually-uploaded snapshot tables | **entirely disconnected** dataset |
+| `app.py get_homepage_stats()` | olim, muassasa | `COUNT(DISTINCT NULLIF(TRIM(col),''))` | `dissertations` raw strings |
+| `analytics.py stats_json()` | olim, muassasa | same shape, separate cache | `dissertations` raw strings |
+| `blueprints/olimlar_catalog.py` | scholars = **advisors** (`ilmiy_rahbar`, not `olim`!) | `GROUP BY TRIM(ilmiy_rahbar)`, `data_quality='complete'` filter | `dissertations` + `institution_map` join |
+| `blueprints/content.py` | olimlar, rahbarlar | `COUNT(DISTINCT col)`, **no TRIM** | `dissertations` raw (untrimmed) |
+| `blueprints/univer.py` | active_advisors | `COUNT(DISTINCT TRIM(ilmiy_rahbar))`, **last 4 years only** | `dissertations`, time-windowed |
+| `app.py get_university_dissertation_stats()` | olimlar per uni | `COUNT(DISTINCT olim)`, no TRIM, keyword `LIKE` match | `dissertations` + curated `universities` |
+| `app.py`/`content.py` `/universities` | muassasalar (`len(items)`) | union of `institution_map` rows + curated `universities`, fuzzy-merged | two tables merged in Python |
+| `blueprints/ranking.py` | scholars/institutions | `COUNT(*)` on manually-uploaded snapshot tables | **entirely disconnected** dataset |
 
 Root causes: (a) "olim" sometimes means dissertation author, sometimes
 advisor; (b) `TRIM`/`NULLIF` applied inconsistently before `DISTINCT`; (c)
@@ -132,11 +144,11 @@ reinvention. Wiring that in is out of scope for this phase (it touches
 snapshot, not a computed h-index; `blueprints/reyting.py` — the legacy
 internal scorer):
 - Shogird/dissertation mislabeling: **not present in any live route.**
-  Found only in `templates/home_legacy.html:475-476`, a dead template not
+  Found only in `templates/home_legacy.html`, a dead template not
   wired to any route — real evidence the bug pattern existed, but not
   currently user-facing.
 - No name-validity filter before ranking: **confirmed**
-  (`ranking.py:633-640` only checks for emptiness — no bracket/HTML/
+  (`ranking.py` only checks for emptiness — no bracket/HTML/
   punctuation-only rejection anywhere in the file).
 - Duplicate scholars ranked separately: **confirmed** — `scholar_name` is
   `UNIQUE(snapshot_id, scholar_name)` (exact-string dedup only,
@@ -157,31 +169,31 @@ unrelated single-topic similarity tool):
   of 30 clusters, and a document assigned to one cluster is excluded from all
   later ones. `unclustered` is already surfaced as a first-class metric.
 
-**Gender statistics** (`app.py:160 detect_gender()`):
+**Gender statistics** (`app.py detect_gender()`):
 - Heuristic: patronymic suffix (`-овна/-евна/.../-қизи` → female,
   `-ович/-евич/.../-ўғли` → male) → surname suffix (`-ова/-ева/... ` →
   female, `-ов/-ев/...` len>3 → male) → hardcoded 26-name Cyrillic-only
   first-name list → `'unknown'`.
 - No confidence score anywhere (`grep` for "confidence"/"ishonch": zero hits).
 - No per-record "taxminiy" disclaimer: **confirmed** —
-  `olim_profile.html:228-230`/`cabinet.html:134-135` render a bare icon with
+  `olim_profile.html`/`cabinet.html` render a bare icon with
   no tooltip/label for the uncertainty.
 - "No unknown category": **partially confirmed** — the aggregate `/stats`
   page *does* track and display an "❓ Aniqlanmagan" bucket
-  (`app.py:1791 compute_gender_stats()`, `stats.html:292`); it's the
+  (`app.py compute_gender_stats()`, `stats.html`); it's the
   per-record display and per-record confidence that are missing.
 
 ### 1.6 A third, previously-unlisted bug class: region detection (feeds issue #4)
 
 Three **independent** region-detection implementations exist, none shared:
 
-1. `migrate_institutions.py:71 detect_region()` — 13-region keyword table,
+1. `migrate_institutions.py detect_region()` — 13-region keyword table,
    returns `None` on no match (comment: *"so we never mislabel a non-Tashkent
    institution as Tashkent"*).
-2. `app.py:816 detect_uni_city_region()` — a near-duplicate keyword table used
+2. `app.py detect_uni_city_region()` — a near-duplicate keyword table used
    only when seeding `universities.city/region`, but **defaults to
    `return 'Toshkent', 'Toshkent'`** when nothing matches (line 834).
-3. `app.py:4039 detect_region()` (heatmap) — a third, differently-structured
+3. `app.py detect_region()` (heatmap) — a third, differently-structured
    keyword dict (`UZ_REGIONS`), **also defaults to `'Toshkent'`** when nothing
    matches.
 
@@ -194,6 +206,9 @@ implementations #2 and #3 every time, via their silent fallback default — this
 is the precise, reproducible root cause of complaint #4.
 
 ## 2. Proposed schema — canonical entities, aliases, audit trail
+
+**Status: PROPOSED · SQL is DRAFT — DO NOT APPLY**
+(`migrations/drafts/2026_phase1_canonical_entities.sql`; never auto-applied).
 
 Design principles (mirroring what already works in `institution_map`/
 `institution_renames`):
@@ -407,7 +422,7 @@ Index: `idx_entity_merge_audit_entity (entity_type, source_entity_id)`.
 those aliases back to `source_entity_id`, clear `merged_into_id` on the
 source entity, insert an `'unmerge'` row referencing the original.
 
-## 3. Normalization functions (implemented, `utils/data_quality/`)
+## 3. Normalization functions — **Status: IMPLEMENTED** (`utils/data_quality/`)
 
 Pure, dependency-free, unit-tested — no DB, no Flask. Institution
 normalization is **imported from the existing `institutions.py`**, not
@@ -517,7 +532,7 @@ same two-step discipline `merge_universities.py`'s AUTO_MERGE tier already
 uses (`apply_merges.py` must be invoked separately, with its own dry-run/
 backup gate).
 
-### 4.2 Human review process (designed, UI not built this phase)
+### 4.2 Human review process — **Status: HUMAN REVIEW REQUIRED · UI DEFERRED**
 
 1. Dry-run script (`scripts/data_quality_audit.py`) populates
    `data_quality_issues` with `status='open'`.

@@ -13,6 +13,54 @@
 --   - source_records is insert-only (ON CONFLICT DO NOTHING at the
 --     application layer) — never UPDATEd, so it always holds the first
 --     value ever captured.
+--
+-- Purpose: stand up the canonical researcher/institution/specialty entity
+-- model + alias/audit tables that Phase 2 normalization would populate. It
+-- creates NEW tables only; it does not migrate or rewrite any existing data.
+--
+-- Pre-check (run manually FIRST, read-only, before ever applying):
+--     -- none of these names may already exist with a different shape:
+--     SELECT table_name FROM information_schema.tables
+--     WHERE table_schema = 'public' AND table_name IN (
+--       'canonical_researchers','researcher_aliases','canonical_institutions',
+--       'institution_aliases','specialties','specialty_aliases',
+--       'normalization_runs','data_quality_issues','source_records',
+--       'entity_merge_audit');
+--     -- referenced existing tables must exist (FK targets):
+--     SELECT to_regclass('public.olim_profiles'), to_regclass('public.institution_map');
+--   If any target table above already exists, STOP and diff its columns
+--   against this file before applying — CREATE TABLE IF NOT EXISTS will
+--   silently keep a pre-existing, differently-shaped table.
+--
+-- Rollback strategy (manual, reverse creation order so FKs drop cleanly):
+--     DROP TABLE IF EXISTS entity_merge_audit, source_records,
+--       data_quality_issues, normalization_runs, specialty_aliases,
+--       specialties, institution_aliases, canonical_institutions,
+--       researcher_aliases, canonical_researchers CASCADE;
+--   (CASCADE also removes the fk_canonical_researchers_primary_institution
+--   constraint added below.)
+--
+-- Data-loss risk: LOW on apply — additive tables only, no writes to existing
+-- data. The rollback above uses CASCADE and will delete any rows accumulated
+-- in these tables, so only roll back before Phase 2 starts populating them.
+--
+-- Re-run caveat: every CREATE ... uses IF NOT EXISTS and is idempotent EXCEPT
+-- the `ALTER TABLE canonical_researchers ADD CONSTRAINT ...` below, which has
+-- no IF NOT EXISTS and errors on a second run — guard it or drop the
+-- constraint first when re-applying by hand.
+--
+-- HUMAN REVIEW REQUIRED before this is ever promoted out of drafts/:
+--   a DBA must confirm the FK targets, index names, and CHECK constraints
+--   against the live production schema, and decide the researcher/institution
+--   merge policy (see canonical-entity rules — no automatic destructive
+--   merges; ambiguous matches go to review_status = 'needs_review').
+--
+-- Unknowns vs. current production schema (verify on the server, not locally):
+--   - exact column set/types of olim_profiles(id) and institution_map(id)
+--     as FK targets;
+--   - whether any of the table names above collide with server-only tables
+--     not present in this repo;
+--   - collation/citext expectations for the *_normalized_key columns.
 -- ============================================================================
 
 -- ── 1. canonical_researchers ────────────────────────────────────────────────
