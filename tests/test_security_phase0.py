@@ -171,6 +171,7 @@ class SecurityPhase0Tests(unittest.TestCase):
             r"postgres(?:ql)?://[^\s:@]+:[^\s@]+@",
         )
         self.assertIn('DATABASE_URL="${DATABASE_URL:-}"', deploy)
+        self.assertIn("APP_ENV=production", deploy)
 
     def test_cabinet_post_without_csrf_is_rejected(self):
         with self.client.session_transaction() as session:
