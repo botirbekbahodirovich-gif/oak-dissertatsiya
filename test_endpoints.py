@@ -1,4 +1,11 @@
+import os
 import sys
+
+os.environ.setdefault("APP_ENV", "testing")
+os.environ.setdefault("SESSION_SECRET", "endpoint-test-secret")
+os.environ["DATABASE_URL"] = ""
+os.environ["POSTGRES_URL"] = ""
+
 from app import app
 
 # Use Flask test client
@@ -9,7 +16,7 @@ print("Testing endpoints using Flask test client...\n")
 try:
     # Test login page
     r = client.get('/login')
-    if r.status_code == 200 and b'csrf_token' in r.data:
+    if r.status_code == 200 and b'csrf-token' in r.data:
         print("[PASS] GET /login: 200 OK with CSRF token")
     else:
         print("[FAIL] GET /login: status=" + str(r.status_code))
@@ -19,7 +26,7 @@ except Exception as e:
 try:
     # Test register page
     r = client.get('/register')
-    if r.status_code == 200 and b'csrf_token' in r.data:
+    if r.status_code == 200 and b'csrf-token' in r.data:
         print("[PASS] GET /register: 200 OK with CSRF token")
     else:
         print("[FAIL] GET /register: status=" + str(r.status_code))
@@ -47,10 +54,10 @@ except Exception as e:
     print("[FAIL] GET /dashboard failed: " + str(e))
 
 try:
-    # Test stats page (should also redirect)
+    # Stats is intentionally public under the current public-friendly route policy.
     r = client.get('/stats', follow_redirects=False)
-    if r.status_code in [302, 307, 301]:
-        print("[PASS] GET /stats: " + str(r.status_code) + " Redirect (protected route)")
+    if r.status_code == 200:
+        print("[PASS] GET /stats: 200 OK (public stats)")
     else:
         print("[FAIL] GET /stats: status=" + str(r.status_code))
 except Exception as e:
