@@ -356,22 +356,22 @@ def telegram():
     """Telegram Login Widget callback for the cabinet (separate from main-site login)."""
     raw = request.get_json(silent=True) or {}
     if not TELEGRAM_BOT_TOKEN:
-        return jsonify({"success": False, "error": "TELEGRAM_BOT_TOKEN sozlanmagan"}), 200
+        return jsonify({"success": False, "error": "Telegram login vaqtincha mavjud emas."}), 503
     try:
         data = dict(raw)
         check_hash = data.pop('hash', '')
         if not check_hash:
-            return jsonify({"success": False, "error": "Hash mavjud emas"}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash ma'lumoti to'liq emas."}), 400
         data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
         secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
         computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(computed, check_hash):
-            return jsonify({"success": False, "error": "Tasdiqlash amalga oshmadi"}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash amalga oshmadi"}), 401
         if time.time() - int(data.get('auth_date', 0)) > 86400:
-            return jsonify({"success": False, "error": "Muddati o'tgan"}), 200
+            return jsonify({"success": False, "error": "Muddati o'tgan"}), 401
         tg_id = int(data.get('id', 0))
         if not tg_id:
-            return jsonify({"success": False, "error": "Telegram ID topilmadi"}), 200
+            return jsonify({"success": False, "error": "Telegram ID topilmadi"}), 400
         username = (data.get('username') or '').strip()
         first_name = (data.get('first_name') or '').strip()
         is_new = False
@@ -939,7 +939,7 @@ def claim():
     data = request.get_json(silent=True) or {}
     name = (data.get('olim_name') or '').strip()
     if not name:
-        return jsonify({"ok": False, "error": "Ism kiritilmagan"}), 200
+        return jsonify({"ok": False, "error": "Ism kiritilmagan"}), 400
     pr = None
     try:
         conn = get_connection()
@@ -949,7 +949,7 @@ def claim():
                 cur.execute("SELECT id, cabinet_user_id FROM olim_profiles WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))", (name,))
                 row = cur.fetchone()
                 if row and row[1] and row[1] != user['id']:
-                    return jsonify({"ok": False, "error": "Bu profil boshqa foydalanuvchi tomonidan band qilingan."}), 200
+                    return jsonify({"ok": False, "error": "Bu profil boshqa foydalanuvchi tomonidan band qilingan."}), 409
                 if row:
                     cur.execute("UPDATE olim_profiles SET cabinet_user_id = %s WHERE id = %s", (user['id'], row[0]))
                 else:
@@ -1025,7 +1025,7 @@ def unclaim():
 def _insert_item(table, fields, form):
     name = _olim_name()
     if not name:
-        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 200
+        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 409
     vals = [name] + [(_clean(form.get(f))) for f in fields]
     cols = ['olim_name'] + fields
     placeholders = ", ".join(["%s"] * len(cols))
@@ -1146,7 +1146,7 @@ def ish_add():
     f = _form()
     name = _olim_name()
     if not name:
-        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 200
+        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 409
     is_current = bool(f.get('is_current'))
     end_date = None if is_current else _clean(f.get('end_date'))
     try:

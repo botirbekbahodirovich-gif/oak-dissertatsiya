@@ -3477,7 +3477,7 @@ def course_subscribe():
     data = request.get_json(silent=True) or request.form
     email = (data.get("email") or "").strip().lower()
     if not email or "@" not in email or len(email) > 255:
-        return jsonify({"success": False, "error": "Email noto'g'ri"}), 200
+        return jsonify({"success": False, "error": "Email noto'g'ri"}), 400
     try:
         conn = get_connection()
         try:
@@ -3489,7 +3489,8 @@ def course_subscribe():
         finally:
             conn.close()
     except Exception:
-        return jsonify({"success": False, "error": "Xatolik yuz berdi"}), 200
+        log_exception(app.logger, "Kurs obunasini saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Obunani saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "message": "Rahmat! Sizga xabar beramiz."})
 
 
