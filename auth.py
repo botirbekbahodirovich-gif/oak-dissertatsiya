@@ -196,7 +196,7 @@ def telegram_login():
     raw = request.get_json(silent=True) or {}
 
     if not TELEGRAM_BOT_TOKEN:
-        return jsonify({'success': False, 'error': 'TELEGRAM_BOT_TOKEN sozlanmagan'}), 200
+        return jsonify({'success': False, 'error': 'Telegram login vaqtincha mavjud emas.'}), 503
 
     try:
         # Work on a copy so we don't mutate the original dict
@@ -204,7 +204,7 @@ def telegram_login():
         check_hash = data.pop('hash', '')
 
         if not check_hash:
-            return jsonify({'success': False, 'error': 'Hash mavjud emas'}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash ma'lumoti to'liq emas."}), 400
 
         data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
         secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
@@ -213,16 +213,16 @@ def telegram_login():
         if not hmac.compare_digest(computed, check_hash):
             return jsonify({
                 'success': False,
-                'error': "Bot domain sozlanmagan: @BotFather da /setdomain buyrug'ini bering"
-            }), 200
+                'error': "Telegram orqali tasdiqlash amalga oshmadi."
+            }), 401
 
         if time.time() - int(data.get('auth_date', 0)) > 86400:
-            return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 200
+            return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 401
 
         tg_id = int(data.get('id', 0))
 
         if not tg_id:
-            return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 200
+            return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 400
 
         is_new = False
         conn = get_connection()
