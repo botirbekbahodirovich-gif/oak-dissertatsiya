@@ -1249,8 +1249,9 @@ def _seed_blog_posts():
         pass
 
 
-_run_startup_migrations()
-_seed_blog_posts()
+if APP_ENV != "testing":
+    _run_startup_migrations()
+    _seed_blog_posts()
 
 
 def _placeholder_news():
