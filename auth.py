@@ -165,9 +165,11 @@ def google_callback():
         # allaqachon to'ldirmagan hollarda ishlatiladi — bir marta, session.pop).
         session['prefill_ism'] = (info.get('given_name') or '').strip().title()
         session['prefill_familiya'] = (info.get('family_name') or '').strip().title()
-    # New accounts choose their user type first (cabinet onboarding gate
-    # bridges the main-site session in via _bridge_from_main).
-    return redirect('/cabinet/xush-kelibsiz' if created else nxt)
+    # New accounts complete their scholar profile first via the single
+    # canonical onboarding flow (user-type is chosen by the tab bar at the top
+    # of that page). The cabinet onboarding gate bridges the main-site session
+    # in via _bridge_from_main.
+    return redirect('/cabinet/onboarding' if created else nxt)
 
 
 def _unique_username(cur, base):
@@ -305,4 +307,4 @@ def telegram_login():
         session['prefill_familiya'] = (data.get('last_name') or '').strip().title()
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     dest = _post_login_dest('/')
-    return jsonify({'success': True, 'redirect': '/cabinet/xush-kelibsiz' if is_new else dest})
+    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})
