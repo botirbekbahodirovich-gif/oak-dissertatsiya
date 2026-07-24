@@ -23,7 +23,8 @@
     ) }}
 #}
 {% macro cta_banner(variant='search', title='', body='', cta_text='', cta_href='', show_only_anon=True, icon='') %}
-  {% if not show_only_anon or not current_user.is_authenticated %}
+  {% set _user = current_user if current_user is defined else none %}
+  {% if not show_only_anon or not (_user and _user.is_authenticated) %}
   <div class="olz-cta olz-cta--{{ variant }}">
     <div class="olz-cta__inner">
       {% if icon %}<div class="olz-cta__icon">{{ icon }}</div>{% endif %}
