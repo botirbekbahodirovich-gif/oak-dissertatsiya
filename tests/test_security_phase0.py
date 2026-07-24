@@ -151,6 +151,14 @@ class SecurityPhase0Tests(unittest.TestCase):
         self.assertIn("ON users (telegram_id)", migration)
         self.assertIn("WHERE telegram_id IS NOT NULL", migration)
 
+    def test_deploy_script_has_no_embedded_database_credentials(self):
+        deploy = (ROOT / "deploy" / "deploy.sh").read_text()
+        self.assertNotRegex(
+            deploy,
+            r"postgres(?:ql)?://[^\s:@]+:[^\s@]+@",
+        )
+        self.assertIn('DATABASE_URL="${DATABASE_URL:-}"', deploy)
+
     def test_cabinet_post_without_csrf_is_rejected(self):
         with self.client.session_transaction() as session:
             session["cabinet_user_id"] = 10
