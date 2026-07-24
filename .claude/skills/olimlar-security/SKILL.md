@@ -34,12 +34,14 @@ secret/env handling, or exception messages returned to the client.
   webhook, verified by its own signature check").
 - External-identity login (Telegram, Google, any future provider) must
   key off that provider's immutable numeric account id, never fall back
-  to matching by `username`/display name/guessed email. If you find code
-  that falls back to a username/email match when the id lookup misses,
-  that's the bug to avoid replicating, not the intended pattern. Don't
-  silently rewrite it as a drive-by inside an unrelated task — run
-  `git worktree list` first in case another agent's branch is already
-  addressing it, and don't read or modify a worktree that isn't yours.
+  to matching by `username`/display name/guessed email. This is now
+  **implemented**: `auth.py` `telegram_login()` and `cabinet.py`
+  `telegram()`/`google_callback()` link accounts only by the immutable
+  `users.telegram_id` (unique partial index `uq_users_telegram_id`,
+  migration `001_add_users_telegram_id.sql`); the username/email fallback
+  was removed and is covered by `tests/test_security_phase0.py` and
+  `tests/test_onboarding_identity.py`. Treat any reintroduced username/email
+  fallback as a regression to fix — don't replicate it.
 - File uploads: validate extension via `secure_filename` +
   an allow-list (see `cabinet.py` photo upload: `.jpg/.jpeg/.png/.webp`)
   at minimum. If a task adds a new upload surface, prefer also checking
@@ -70,6 +72,9 @@ secret/env handling, or exception messages returned to the client.
   registration still succeed.
 - `python3.12 -u test_endpoints.py` — checks `/login`/`/register` still
   return CSRF tokens.
+- `APP_ENV=testing python3.12 -m unittest tests.test_security_phase0 tests.test_onboarding_identity`
+  — the Phase 0 security + Telegram-identity/onboarding regression suites
+  (CSRF enforcement, immutable-id linking, exception sanitization).
 - For an auth-flow change, manually trace: does this path check
   `is_admin` correctly, is CSRF still enforced, is the identifier used
   for lookup immutable?

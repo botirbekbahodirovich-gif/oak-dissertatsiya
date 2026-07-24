@@ -26,7 +26,12 @@ change.
 1. Confirm there is no migration framework/runner in this repo —
    `migrations/*.sql` files are applied by hand against the server DB.
    Never wire one into `app.py` startup.
-2. Name the file `add_<feature>.sql` following the existing pattern.
+2. Name the file `add_<feature>.sql` following the older pattern, or the
+   newer numbered `NNN_<feature>.sql` convention used by the security
+   release migrations (`001_add_users_telegram_id.sql`,
+   `002_create_import_audit_log.sql`). Design-only schema that must never
+   be auto-applied goes under `migrations/drafts/` instead (see step 7),
+   not next to the real applied migrations.
 3. Write it additive-first: new nullable column, new table, new index —
    avoid `DROP`/`ALTER ... TYPE`/non-nullable-without-default changes to
    existing columns unless the task explicitly requires it.
@@ -41,9 +46,13 @@ change.
    `-- rollback: ALTER TABLE ... DROP COLUMN ...`).
 6. Check for an existing unique constraint, FK, or index on the target
    table before adding a new one that might conflict or duplicate.
-7. If the migration is a work-in-progress that must not be applied yet,
-   mark the top of the file clearly: `-- DRAFT — DO NOT APPLY`. Never
-   reference a DRAFT migration elsewhere as already-applied schema.
+7. If the migration is a design draft that must not be applied yet, put it
+   under `migrations/drafts/` and mark the top clearly:
+   `-- DRAFT — DO NOT APPLY` (see the Phase 1 canonical-entity draft
+   `migrations/drafts/2026_phase1_canonical_entities.sql` for the expected
+   header: purpose, pre-check query, rollback, data-loss risk, human-review
+   requirement, and unknowns vs. production schema). Never reference a DRAFT
+   migration elsewhere as already-applied schema.
 8. Never touch production or staging DB from this task — write the
    `.sql` file only, don't execute it against a live connection unless
    explicitly instructed.

@@ -1,14 +1,15 @@
 ---
 name: olimlar-testing
-description: How to verify a Python change in this repo — no pytest suite, ad-hoc smoke scripts, WSL python3.12, no APP_ENV=testing DB guard.
+description: How to verify a Python change in this repo — stdlib unittest suite under tests/ (no pytest), ad-hoc smoke scripts, WSL python3.12, APP_ENV=testing DB guard.
 ---
 
 # olimlar-testing
 
 ## When to use
 
-After any code change, before reporting a task done. Also read before
-proposing a "run the test suite" step — there isn't a formal one.
+After any code change, before reporting a task done. There is now a small
+stdlib `unittest` suite under `tests/` (still no pytest); run it in addition
+to the targeted checks below.
 
 ## Read first
 
@@ -28,11 +29,16 @@ proposing a "run the test suite" step — there isn't a formal one.
    individual assertions can fail for reasons unrelated to your change
    (e.g. a route that needs the real DB), so read the failure, don't
    just trust the exit code.
-4. Only reach for a broader manual check (multiple routes, DB-backed
+4. Run the full unit suite (mocked, no DB — safe to run every time):
+   `APP_ENV=testing python3.12 -m unittest discover -s tests`
+   Covers Phase 0 security, Telegram identity + onboarding, `create_admin`,
+   staging infra, and the data-quality helpers. Extend the relevant
+   `tests/test_*.py` when you add behaviour; keep the suite green.
+5. Only reach for a broader manual check (multiple routes, DB-backed
    flow) when the change touches shared/high-risk code (`app.py`,
    `data.py`, `auth.py`, a migration, a shared template) — not for every
    small change.
-5. `git diff --check` for whitespace/line-ending problems before
+6. `git diff --check` for whitespace/line-ending problems before
    finishing.
 
 ## Environment
@@ -41,11 +47,11 @@ proposing a "run the test suite" step — there isn't a formal one.
   `wsl.exe -d Ubuntu-24.04 -- bash -c 'cd /home/botirbek/oak-dissertatsiya/<dir> && python3.12 ...'`
   `venv/`, `.venv/`, `wsl_venv/` are all broken for this project
   (Windows Python 3.14 has no pandas wheel; `wsl_venv/` has no pip).
-- There is no `APP_ENV=testing` guard and no test-only DB — any script
-  or route that calls `data.get_connection()` hits the real configured
-  Postgres. Don't run DB-writing scripts/routes as part of "testing"
-  unless that's explicitly the point of the task and explicitly
-  instructed.
+- With `APP_ENV=testing` set, `data.get_connection()` refuses real
+  connections, so the `unittest` suite can never reach a live DB. Outside
+  that guard, any script or route calling `data.get_connection()` hits the
+  real configured Postgres — don't run DB-writing scripts/routes as part of
+  "testing" unless that's explicitly the point of the task and instructed.
 - Local `.env` Neon credentials are known stale — `import app` succeeds
   locally, but anything that actually queries the DB will fail with an
   auth error there. That failure means "needs the real server," not
@@ -61,8 +67,9 @@ proposing a "run the test suite" step — there isn't a formal one.
 
 ## Do not
 
-- Don't invent a pytest/unittest command — there is no pytest suite in
-  this repo.
+- Don't add pytest or any new test dependency — the suite is stdlib
+  `unittest` only. Run it with `python3.12 -m unittest discover -s tests`
+  (or a specific `tests.test_*` module), not `pytest`.
 - Don't invent lint/type-check/build commands — none are configured
   (no `pyproject.toml`, `.flake8`, or `mypy.ini`).
 - Don't run a DB-writing script "just to see" during verification.

@@ -57,7 +57,8 @@ Dockerfile/railway.json/vercel.json for alternate hosting.
 | `scripts/` | One-off/maintenance scripts: `create_tables.py`, `apply_institution_merges.py`, `flag_data_quality.py`, `merge_universities.py`, `daily_scraper.py`, `grant_scraper.py`, `seed_grants.py`, scraper scripts | Most are DB-write scripts — check for `--apply`/dry-run flags before running (see DB section) |
 | `migrations/` | Additive `.sql` files, one per feature (`add_conferences.sql`, `add_payments.sql`, etc.) — no migration runner/framework, applied manually | Never apply from a task unless explicitly asked; additive only |
 | `deploy/` | `deploy.sh` (GCE provisioning), `olimlar.service` (systemd), `olimlar.uz.conf` (nginx), cron files | Never run or edit for a task unless explicitly asked. **Invariant: no deploy script, git remote, or other tracked file may ever contain a real credential** — secrets are environment variables only (`.env`, gitignored). If you ever find a hardcoded credential in a tracked file (here or elsewhere), don't copy or quote its value anywhere, including in your own report — flag its location as a finding instead. |
-| `test_endpoints.py`, `test_import.py`, `run_smoke.py` | Ad-hoc smoke scripts using Flask's `test_client()` — no pytest suite exists | See Testing section |
+| `tests/` | Stdlib `unittest` suite (no pytest): Phase 0 security, Telegram identity + onboarding, `create_admin`, staging infra, data-quality helpers — run via `APP_ENV=testing python3.12 -m unittest discover -s tests` | Keep green; extend rather than replace |
+| `test_endpoints.py`, `test_import.py`, `run_smoke.py` | Older ad-hoc smoke scripts using Flask's `test_client()` (complement, not replaced by, `tests/`) | See Testing section |
 | `.github/workflows/` | `daily.yml` (scraper), `reminders.yml` (Smart Eslatmalar dispatch, needs `REMINDERS_API_KEY`), `conferences.yml` | Don't edit without being asked |
 | `requirements.txt` | Flask 3.1, Flask-Caching, pandas 2.2.3, flask-login, bcrypt, Flask-WTF (CSRF), psycopg2-binary, groq, gunicorn, bleach, python-docx, Pillow | No lockfile beyond this; check before adding a new dependency |
 
@@ -142,9 +143,14 @@ New feature code: prefer a new file in `blueprints/` over adding to
   numeric account id** (or a column derived 1:1 from it) — never by
   `username`, display name, or an email guessed from either. Matching on
   a mutable, attacker-influenceable field lets one user's login attach
-  to a different person's account. If you find code that falls back to
-  a username/email match when the id lookup misses, that's a bug to fix
-  or flag, not a pattern to extend.
+  to a different person's account. This invariant is now **implemented**:
+  `auth.py` `telegram_login()` and `cabinet.py` `telegram()`/`google_callback()`
+  bind Telegram accounts only by the immutable numeric `users.telegram_id`
+  (unique partial index `uq_users_telegram_id`, migration
+  `001_add_users_telegram_id.sql`); the old username/email fallback has been
+  removed. Keep it that way — if you ever see a username/email fallback
+  reintroduced when the id lookup misses, that's a regression to fix, not a
+  pattern to extend.
 - **CSRF**: `Flask-WTF`'s `CSRFProtect` is initialized once on `app` in
   `app.py`, with `generate_csrf()` injected into templates as
   `csrf_token()`. **Invariant: a browser write route (anything a
@@ -266,16 +272,21 @@ when you didn't.
   works locally, but anything hitting `get_connection()` (routes,
   scripts) needs the real server. Don't interpret a local DB auth
   failure as a code bug without checking this first.
-- If a migration draft is explicitly marked "DRAFT — DO NOT APPLY",
-  leave it untouched and don't reference it elsewhere as already-applied
-  schema.
+- Two kinds of file live under `migrations/` and must not be confused:
+  real applied release migrations (numbered `NNN_*.sql`, e.g.
+  `001_add_users_telegram_id.sql`, `002_create_import_audit_log.sql`, plus
+  the older `add_<feature>.sql` files) versus **design drafts** under
+  `migrations/drafts/` (e.g. the Phase 1 canonical-entity schema). Anything
+  in `migrations/drafts/` is `DRAFT — DO NOT APPLY`: it is never wired into
+  any apply script and must not be described elsewhere as already-applied
+  schema. Leave drafts untouched unless a task explicitly promotes one.
 
 ## Testing & verification
 
-There is no pytest suite — verification is ad-hoc scripts plus manual
-checks. Real, working commands (run from the repo root inside WSL, since
-the Windows-side Python venvs in this repo are broken for this project —
-see below):
+There is now a small **stdlib `unittest` suite** under `tests/` (no pytest
+dependency is added) alongside the older ad-hoc smoke scripts. Real,
+working commands (run from the repo root inside WSL, since the Windows-side
+Python venvs in this repo are broken for this project — see below):
 
 | Command | When | Needs DB? | Writes? |
 |---|---|---|---|
@@ -283,7 +294,8 @@ see below):
 | `python3.12 -c "import app"` | Confirms the app still boots (imports, blueprint registration, CSRF init) | No (import-time only; routes hitting the DB will fail separately) | No |
 | `python3.12 test_import.py` | Same import check, prints pass/fail | No | No |
 | `python3.12 -u test_endpoints.py` | Flask `test_client()` smoke test of a few public routes (`/login`, `/register`, `/`, `/dashboard`) | Partially — some assertions may fail/short-circuit if a route touches the DB | No |
-| `python3.12 scripts/flag_data_quality.py` (no `--apply`) | Dry-run report for data-quality changes | Yes | No (report only) |
+| `APP_ENV=testing python3.12 -m unittest discover -s tests` | Full unit suite: Phase 0 security, Telegram identity + onboarding, `create_admin`, staging infra, and data-quality helpers | No (mocked; `APP_ENV=testing` blocks real connections) | No |
+| `python3.12 scripts/data_quality_audit.py` (default) | Read-only dry-run data-quality audit; writes a report file only, never the DB (falls back to the sample CSV when no DB is reachable) | Optional (read-only) | Report file only |
 | `python3.12 scripts/apply_institution_merges.py <plan.csv>` (no `--apply`) | Dry-run preview of an institution merge plan | Yes | No |
 
 Run Python via WSL, not the repo's own venvs:
@@ -292,11 +304,13 @@ Run Python via WSL, not the repo's own venvs:
 Python 3.14 has no pandas wheel, and `wsl_venv/` has no pip). The system
 `python3.12` already has flask/pandas/psycopg2/dotenv etc. installed.
 
-There's no configured `APP_ENV=testing` DB guard — treat any script or
-route that calls `get_connection()` as touching the real configured DB,
-and don't run it unless that's intended and the credentials are known
-(local `.env` creds are stale; assume server-only unless told
-otherwise).
+There is now an `APP_ENV=testing` DB guard: with `APP_ENV=testing` set,
+`get_connection()` refuses real connections, so the `unittest` suite can
+never reach a live DB (the suites also set empty `DATABASE_URL`/`POSTGRES_URL`
+and mock the cursor). Outside testing, still treat any script or route that
+calls `get_connection()` as touching the real configured DB — don't run it
+unless that's intended and the credentials are known (local `.env` creds are
+stale; assume server-only unless told otherwise).
 
 No lint/format/type-check tooling is configured in this repo (no
 `pyproject.toml`, no `.flake8`, no `mypy.ini`) — don't invent commands
