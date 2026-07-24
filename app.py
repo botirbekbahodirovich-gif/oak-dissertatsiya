@@ -952,6 +952,7 @@ def _run_startup_migrations():
                     email TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     is_admin BOOLEAN DEFAULT FALSE,
+                    telegram_id BIGINT,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
@@ -1518,6 +1519,10 @@ def _run_startup_migrations():
             # mandatory post-registration popup for geography analytics.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS visit_count INTEGER DEFAULT 0")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id BIGINT")
+            cur.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_telegram_id "
+                "ON users(telegram_id) WHERE telegram_id IS NOT NULL")
             # Acquisition-source survey (see migrations/add_acquisition_survey.sql):
             # one-time post-signup "Bizni qayerdan bildingiz?" attribution modal.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_source VARCHAR(32)")

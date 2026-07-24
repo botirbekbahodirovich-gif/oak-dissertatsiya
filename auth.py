@@ -4,7 +4,6 @@ import hashlib
 import time
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
-import bcrypt
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -56,35 +55,6 @@ def login():
     if nxt:
         session['login_next'] = nxt
     return render_template('login.html', error=None, registered=registered)
-
-
-@auth_bp.route('/login/password', methods=['POST'])
-def password_login():
-    from app import User
-    username = request.form.get('username', '').strip()
-    password = request.form.get('password', '').encode()
-    try:
-        conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, username, email, password_hash, COALESCE(is_admin, FALSE) "
-                "FROM users WHERE username = %s",
-                (username,))
-            row = cur.fetchone()
-        conn.close()
-        if row and row[3]:
-            # password_hash may come back as str (text) or bytes/memoryview (bytea).
-            stored = row[3]
-            hash_bytes = bytes(stored) if isinstance(stored, (bytes, bytearray, memoryview)) else stored.encode()
-            if bcrypt.checkpw(password, hash_bytes):
-                session.permanent = True
-                login_user(User(row[0], row[1], row[2], row[4]), remember=True)
-                session['just_logged_in'] = True
-                session.modified = True
-                return redirect(_post_login_dest(url_for('index')))
-        return render_template('login.html', error='Login yoki parol xato')
-    except Exception:
-        return render_template('login.html', error='Xatolik yuz berdi')
 
 
 @auth_bp.route('/register')
@@ -270,9 +240,7 @@ def telegram_login():
         if time.time() - int(data.get('auth_date', 0)) > 86400:
             return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 200
 
-        tg_id    = str(data.get('id', ''))
-        username = (data.get('username') or f"tg_{tg_id}").strip()
-        email    = f"{tg_id}@telegram.uz"
+        tg_id = int(data.get('id', 0))
 
         if not tg_id:
             return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 200
@@ -281,28 +249,29 @@ def telegram_login():
         conn = get_connection()
         try:
             cur = conn.cursor()
-            # Look up by telegram email to handle username changes
-            cur.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+            # Bind only by Telegram's immutable, signed ID. Display usernames are
+            # mutable and must never be used for account linking.
+            cur.execute(
+                "SELECT id, username, email FROM users WHERE telegram_id = %s",
+                (tg_id,))
             user_row = cur.fetchone()
 
             if not user_row:
-                # Also check by username in case email lookup misses
-                cur.execute("SELECT id, username, email FROM users WHERE username = %s", (username,))
-                user_row = cur.fetchone()
-
-            if not user_row:
+                username = f"tg_{tg_id}"
+                email = f"telegram_{tg_id}@auth.local"
                 cur.execute(
-                    "INSERT INTO users (username, email, password_hash, is_admin) "
-                    "VALUES (%s, %s, %s, %s) RETURNING id",
-                    (username, email, 'telegram_auth', False)
+                    "INSERT INTO users "
+                    "(username, email, password_hash, is_admin, telegram_id) "
+                    "VALUES (%s, %s, %s, %s, %s) "
+                    "RETURNING id, username, email",
+                    (username, email, 'telegram_auth', False, tg_id)
                 )
-                user_id = cur.fetchone()[0]
+                user_row = cur.fetchone()
                 conn.commit()
                 is_new = True
-            else:
-                user_id = user_row[0]
-                username = user_row[1]
-                email    = user_row[2] or email
+            user_id = user_row[0]
+            username = user_row[1]
+            email = user_row[2]
 
             # Har login bo'lganda tashriflar sonini oshiramiz (so'rovnoma gate'i uchun).
             cur.execute(
