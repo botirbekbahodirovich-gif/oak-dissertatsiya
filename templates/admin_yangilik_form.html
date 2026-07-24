@@ -140,7 +140,13 @@ function imgTab(which) {
 }
 function _setPreview(src) {
   var box = document.getElementById('imagePreview');
-  box.innerHTML = src ? '<img src="' + src + '" alt="">' : '';
+  box.replaceChildren();
+  if (src) {
+    var image = document.createElement('img');
+    image.alt = '';
+    image.src = src;
+    box.appendChild(image);
+  }
 }
 function previewUrl() {
   if (!document.getElementById('imageFileInput').files.length) {
