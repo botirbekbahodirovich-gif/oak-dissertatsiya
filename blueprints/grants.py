@@ -34,9 +34,10 @@ import json
 import re
 from datetime import date, datetime
 
-from flask import (Blueprint, jsonify, request, render_template,
+from flask import (Blueprint, current_app, jsonify, request, render_template,
                    redirect, abort, flash, session)
 from flask_login import login_required, current_user
+from security import log_exception
 
 from utils.search_helper import build_search_clause
 
@@ -604,8 +605,9 @@ def api_grants_v2():
             conn.close()
         return jsonify({'grants': cards, 'total': total, 'page': page,
                         'pages': pages, 'has_next': page < pages})
-    except Exception as e:
-        return jsonify({'grants': [], 'total': 0, 'error': str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Grant ma'lumotlarini yuklab bo'lmadi")
+        return jsonify({'grants': [], 'total': 0, 'error': "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @grants_bp.route('/api/grants/<int:grant_id>/track', methods=['POST'])
@@ -639,8 +641,9 @@ def api_track(grant_id):
         return jsonify({'success': True,
                         'status': None if untrack else status,
                         'tracked': not untrack})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Grant amali bajarilmadi")
+        return jsonify({'success': False, 'error': "Amalni bajarib bo'lmadi."}), 500
 
 
 @grants_bp.route('/api/grants/<int:grant_id>/update-status', methods=['POST'])
@@ -676,8 +679,9 @@ def api_update_status(grant_id):
         if not updated:
             return jsonify({'success': False, 'error': 'not tracked'}), 404
         return jsonify({'success': True, 'status': status})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Grant amali bajarilmadi")
+        return jsonify({'success': False, 'error': "Amalni bajarib bo'lmadi."}), 500
 
 
 @grants_bp.route('/api/grants/my-tracked')
@@ -808,8 +812,9 @@ def track_grant_legacy():
         finally:
             conn.close()
         return jsonify({'ok': True, 'status': status})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Grant amali bajarilmadi")
+        return jsonify({'ok': False, 'error': "Amalni bajarib bo'lmadi."}), 500
 
 
 @grants_bp.route('/api/v1/grants/reminders')
@@ -1012,8 +1017,9 @@ def admin_grants_add():
                 conn.close()
             flash("Grant qo'shildi!", 'success')
             return redirect('/admin/grants')
-        except Exception as e:
-            flash('Xatolik: ' + str(e), 'error')
+        except Exception:
+            log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+            flash("Amalni bajarib bo'lmadi.", 'error')
             return render_template('admin/grant_form.html', item=_form_render_view(v),
                                    edit_mode=False,
                                    funding_types=FUNDING_TYPES, levels=LEVELS)
@@ -1051,8 +1057,9 @@ def admin_grants_edit(id):
                 conn.close()
             flash('Grant yangilandi.', 'success')
             return redirect('/admin/grants')
-        except Exception as e:
-            flash('Xatolik: ' + str(e), 'error')
+        except Exception:
+            log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+            flash("Amalni bajarib bo'lmadi.", 'error')
             return redirect(f'/admin/grants/edit/{id}')
     item = None
     try:
@@ -1090,8 +1097,9 @@ def admin_grants_delete(id):
         finally:
             conn.close()
         flash("Grant o'chirildi (nofaol qilindi).", 'success')
-    except Exception as e:
-        flash('Xatolik: ' + str(e), 'error')
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", 'error')
     return redirect('/admin/grants')
 
 
@@ -1113,8 +1121,9 @@ def admin_grants_toggle_featured(id):
         finally:
             conn.close()
         flash('Featured: ' + ('yoqildi ⭐' if r and r[0] else "o'chirildi"), 'success')
-    except Exception as e:
-        flash('Xatolik: ' + str(e), 'error')
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", 'error')
     return redirect('/admin/grants')
 
 
@@ -1138,6 +1147,7 @@ def admin_grants_seed():
             conn.close()
         flash(f'Seed: {added} ta yangi grant qo\'shildi '
               f'({len(SEED_GRANTS)} tadan).', 'success')
-    except Exception as e:
-        flash('Xatolik: ' + str(e), 'error')
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", 'error')
     return redirect('/admin/grants')

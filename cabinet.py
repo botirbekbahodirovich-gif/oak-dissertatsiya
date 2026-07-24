@@ -394,8 +394,9 @@ def telegram():
                     is_new = True
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Xatolik: {e}"}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet Telegram login bajarilmadi")
+        return jsonify({"success": False, "error": "Tizimga kirib bo'lmadi."}), 500
     return jsonify({"success": True, "redirect": "/cabinet/xush-kelibsiz" if is_new else "/cabinet"})
 
 
@@ -501,8 +502,8 @@ def google_callback():
 
         session.pop('google_next', None)
         return redirect(dest)
-    except Exception as e:
-        print(f"Google OAuth error: {e}")
+    except Exception:
+        log_exception(current_app.logger, "Cabinet Google OAuth callback bajarilmadi")
         return redirect('/cabinet/login?error=google')
 
 
@@ -664,8 +665,9 @@ def profile_save():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -727,9 +729,9 @@ def avatar_upload():
         if old and old[0]:
             _delete_local_avatar(old[0])
     except UploadTooLarge as exc:
-        return jsonify({"success": False, "error": str(exc)}), 413
+        return jsonify({"success": False, "error": exc.public_message}), 413
     except UploadValidationError as exc:
-        return jsonify({"success": False, "error": str(exc)}), 422
+        return jsonify({"success": False, "error": exc.public_message}), 422
     except Exception:
         if saved_path and os.path.isfile(saved_path):
             os.remove(saved_path)
@@ -755,8 +757,9 @@ def avatar_remove():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"success": True})
 
 
@@ -963,8 +966,9 @@ def claim():
             session['cabinet_olim_name'] = name
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     profile = {}
     if pr:
         profile = dict(zip(
@@ -1011,8 +1015,9 @@ def unclaim():
                 session['cabinet_olim_name'] = new_primary or ''
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"success": True, "message": "Dissertatsiya ajratildi"})
 
 
@@ -1033,8 +1038,9 @@ def _insert_item(table, fields, form):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True, "id": new_id})
 
 
@@ -1051,8 +1057,9 @@ def _edit_item(table, fields, item_id, form):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -1067,8 +1074,9 @@ def _delete_item(table, item_id):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -1154,8 +1162,9 @@ def ish_add():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True, "id": new_id})
 
 
@@ -1178,8 +1187,9 @@ def ish_edit(id):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 

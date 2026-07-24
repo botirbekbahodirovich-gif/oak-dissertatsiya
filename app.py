@@ -33,7 +33,7 @@ if IS_PRODUCTION:
 else:
     os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
 
-from security import init_security
+from security import init_security, log_exception
 init_security(app, IS_PRODUCTION)
 
 
@@ -411,8 +411,9 @@ def set_region():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(app.logger, "Hududni saqlab bo'lmadi")
+        return jsonify({"ok": False, "error": "Hududni saqlab bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -2249,8 +2250,10 @@ def api_collaboration():
             return jsonify(_collab_full())
         if name:
             return jsonify(_collab_search(name))
-    except Exception as e:
-        return jsonify({"nodes": [], "edges": [], "stats": {}, "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Hamkorlik grafigini qurib bo'lmadi")
+        return jsonify({"nodes": [], "edges": [], "stats": {},
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
     return jsonify({"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}})
 
 
@@ -2432,9 +2435,11 @@ def topic_clustering():
 def api_clustering():
     try:
         return jsonify(_clustering_public(_clustering_build()))
-    except Exception as e:
+    except Exception:
+        log_exception(app.logger, "Klaster ma'lumotlarini qurib bo'lmadi")
         return jsonify({"clusters": [], "total_clusters": 0, "clustered": 0,
-                        "unclustered": 0, "total": 0, "error": str(e)})
+                        "unclustered": 0, "total": 0,
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route("/clustering/<int:cluster_id>")
@@ -2605,8 +2610,10 @@ def api_mavzu_tahlili():
                     })
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"results": [], "total": 0, "keywords_used": keywords, "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Mavzu tahlili qidiruvi bajarilmadi")
+        return jsonify({"results": [], "total": 0, "keywords_used": keywords,
+                        "error": "Qidiruvni bajarib bo'lmadi."}), 500
     return jsonify({"results": results, "total": len(results), "keywords_used": keywords})
 
 
@@ -2618,14 +2625,14 @@ def api_mavzu_tahlili_ai():
     mavzu = (body.get("mavzu") or "").strip()
     similar = body.get("similar_topics") or []
     if not mavzu:
-        return jsonify({"error": "Mavzu kiritilmagan"}), 200
+        return jsonify({"error": "Mavzu kiritilmagan"}), 400
     if not GROQ_API_KEY:
         return jsonify({
             "uniqueness_score": 5,
             "analysis": "AI tahlil hozircha mavjud emas (Groq API kaliti sozlanmagan). "
                         "Quyidagi o'xshash mavzular ro'yxatini ko'rib chiqing.",
             "suggestions": [], "angles": [],
-        })
+        }), 503
     similar_list = "\n".join(f"- {t}" for t in similar[:10])
     user_prompt = (
         f"Taklif qilinayotgan mavzu: {mavzu}\n\n"
@@ -2662,9 +2669,11 @@ def api_mavzu_tahlili_ai():
         data.setdefault("suggestions", [])
         data.setdefault("angles", [])
         return jsonify(data)
-    except Exception as e:
-        return jsonify({"uniqueness_score": 5, "analysis": f"AI tahlilda xatolik: {e}",
-                        "suggestions": [], "angles": []}), 200
+    except Exception:
+        log_exception(app.logger, "Groq AI tahlili bajarilmadi")
+        return jsonify({"uniqueness_score": 5,
+                        "analysis": "AI xizmati vaqtincha ishlamayapti.",
+                        "suggestions": [], "angles": []}), 502
 
 
 @app.route("/api/notifications/count")
@@ -3161,10 +3170,12 @@ def _genealogy_children(name):
 def api_genealogy(name):
     try:
         return jsonify(_genealogy_tree(name))
-    except Exception as e:
+    except Exception:
+        log_exception(app.logger, "Genealogiya daraxtini qurib bo'lmadi")
         return jsonify({"name": name, "degree": None, "direct_students": 0,
                         "avatar": avatar_url(name), "children": [],
-                        "total_nodes": 0, "truncated": False, "error": str(e)})
+                        "total_nodes": 0, "truncated": False,
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route('/api/genealogy/expand/<path:name>')
@@ -3172,8 +3183,10 @@ def api_genealogy_expand(name):
     """Immediate children only (1 level) for live lazy-loading of the tree."""
     try:
         return jsonify(_genealogy_children(name))
-    except Exception as e:
-        return jsonify({"name": name, "children": [], "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Genealogiya avlodlarini yuklab bo'lmadi")
+        return jsonify({"name": name, "children": [],
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route('/genealogy/<path:name>')
@@ -3251,8 +3264,9 @@ def admin_fix_names():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(app.logger, "Admin nomlarni tuzatish amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
     return jsonify({"ok": True, "distinct_names_fixed": fixed_names,
                     "rows_updated": fixed_rows, "samples": samples})
@@ -3268,10 +3282,10 @@ def _save_news_image():
     try:
         saved = save_safe_image(f, upload_dir, "news")
     except UploadValidationError as exc:
-        flash(str(exc), "error")
+        flash(exc.public_message, "error")
         return None
     except Exception:
-        app.logger.exception("Yangilik rasmini saqlab bo'lmadi")
+        log_exception(app.logger, "Yangilik rasmini saqlab bo'lmadi")
         flash("Rasmni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/news/{saved}"
@@ -3720,8 +3734,9 @@ def survey_submit_api():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(app.logger, "So'rovnoma javobini saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Javobni saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "group_number": group_number})
 
 
@@ -4349,10 +4364,10 @@ def _save_university_logo():
     try:
         saved = save_safe_image(f, upload_dir, "university_logo")
     except UploadValidationError as exc:
-        flash(str(exc), "error")
+        flash(exc.public_message, "error")
         return None
     except Exception:
-        app.logger.exception("Universitet logosini saqlab bo'lmadi")
+        log_exception(app.logger, "Universitet logosini saqlab bo'lmadi")
         flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/university_logos/{saved}"
@@ -4421,10 +4436,10 @@ def _save_journal_logo():
     try:
         saved = save_safe_image(f, upload_dir, "journal_logo")
     except UploadValidationError as exc:
-        flash(str(exc), "error")
+        flash(exc.public_message, "error")
         return None
     except Exception:
-        app.logger.exception("Jurnal logosini saqlab bo'lmadi")
+        log_exception(app.logger, "Jurnal logosini saqlab bo'lmadi")
         flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/journal_logos/{saved}"

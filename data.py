@@ -12,10 +12,11 @@ GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
 # Shared secret for the scraper → VPS import endpoint (/api/v1/import-oak).
 SITE_API_KEY = os.environ.get('SITE_API_KEY', '')
-from flask import (Blueprint, jsonify, request, send_file, render_template,
-                   abort, redirect, Response)
+from flask import (Blueprint, current_app, jsonify, request, send_file,
+                   render_template, abort, redirect, Response)
 from flask_login import login_required
 from extensions import cache
+from security import log_exception
 try:
     import psycopg2
     import psycopg2.extras as psycopg2_extras
@@ -1859,7 +1860,8 @@ def oak_ingest():
         conn.commit()
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
     finally:
         conn.close()
 
@@ -1981,7 +1983,8 @@ def import_oak():
         conn.commit()
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
     finally:
         conn.close()
 
@@ -2102,7 +2105,8 @@ def scholar_tree(scholar_id):
     try:
         return jsonify(_build_scholar_tree(root[0]))
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
 
 
 @data_bp.route('/api/v1/scholar/tree/by-name/<path:name>', methods=['GET'])
@@ -2111,7 +2115,8 @@ def scholar_tree_by_name(name):
     try:
         return jsonify(_build_scholar_tree(name))
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
 
 
 # ---------------------------------------------------------------------------
@@ -2197,7 +2202,8 @@ def network_graph():
                 " LIMIT %s", tuple(params) + (limit,))
             rows = cur.fetchall()
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
     finally:
         conn.close()
 
@@ -2300,7 +2306,8 @@ def fix_existing_data():
         conn.commit()
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        log_exception(current_app.logger, "Data API amali bajarilmadi")
+        return jsonify({'error': "Ichki server xatosi."}), 500
     finally:
         conn.close()
 

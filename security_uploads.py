@@ -38,6 +38,10 @@ _OLE_SIGNATURE = bytes.fromhex("D0CF11E0A1B11AE1")
 class UploadValidationError(ValueError):
     """The upload does not match the expected safe format."""
 
+    def __init__(self, public_message):
+        self.public_message = public_message
+        super().__init__(public_message)
+
 
 class UploadTooLarge(UploadValidationError):
     """The upload exceeds its bounded processing limit."""

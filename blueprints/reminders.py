@@ -32,9 +32,10 @@ import hmac
 import os
 from datetime import date
 
-from flask import (Blueprint, jsonify, request, render_template, redirect,
-                   flash, session)
+from flask import (Blueprint, current_app, jsonify, request, render_template,
+                   redirect, flash, session)
 from flask_login import login_required, current_user
+from security import log_exception
 
 from app import csrf
 
@@ -332,8 +333,9 @@ def process_reminders():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Eslatmalarni qayta ishlash bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True, "processed": processed, "sent": sent})
 
 
@@ -571,8 +573,9 @@ def admin_reminder_add():
         finally:
             conn.close()
         flash("Eslatma qo'shildi!", "success")
-    except Exception as e:
-        flash("Xatolik: " + str(e), "error")
+    except Exception:
+        log_exception(current_app.logger, "Admin eslatma amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/reminders')
 
 
@@ -606,8 +609,9 @@ def admin_reminder_edit(id):
         finally:
             conn.close()
         flash("Eslatma yangilandi.", "success")
-    except Exception as e:
-        flash("Xatolik: " + str(e), "error")
+    except Exception:
+        log_exception(current_app.logger, "Admin eslatma amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/reminders')
 
 
@@ -627,8 +631,9 @@ def admin_reminder_delete(id):
         finally:
             conn.close()
         flash("Eslatma o'chirildi.", "success")
-    except Exception as e:
-        flash("Xatolik: " + str(e), "error")
+    except Exception:
+        log_exception(current_app.logger, "Admin eslatma amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/reminders')
 
 
@@ -655,8 +660,9 @@ def admin_reminder_send_now(id):
         finally:
             conn.close()
         flash(f"Yuborildi: {sent} ta xabar.", "success")
-    except Exception as e:
-        flash("Xatolik: " + str(e), "error")
+    except Exception:
+        log_exception(current_app.logger, "Admin eslatma amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/reminders')
 
 
@@ -686,8 +692,9 @@ def admin_reminder_resend(id):
         finally:
             conn.close()
         flash(f"Qayta yuborildi: {sent} ta xabar.", "success")
-    except Exception as e:
-        flash("Xatolik: " + str(e), "error")
+    except Exception:
+        log_exception(current_app.logger, "Admin eslatma amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/reminders')
 
 

@@ -12,9 +12,11 @@ import os
 from datetime import datetime, timezone
 
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, jsonify, abort, flash
+    Blueprint, current_app, render_template, request, redirect, url_for,
+    jsonify, abort, flash
 )
 from flask_login import login_required, current_user
+from security import log_exception
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -466,8 +468,9 @@ def admin_block_user():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/unblock-user', methods=['POST'])
@@ -491,8 +494,9 @@ def admin_unblock_user():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/broadcast', methods=['POST'])
@@ -533,8 +537,9 @@ def admin_broadcast():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/broadcast/delete/<int:id>', methods=['POST'])
@@ -552,8 +557,9 @@ def admin_broadcast_delete(id):
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/user-activity/<identifier>')
@@ -1388,7 +1394,7 @@ def admin_university_gallery_add(id):
         except UploadValidationError:
             continue
         except Exception:
-            current_app.logger.exception("Universitet galereyasi rasmini saqlab bo'lmadi")
+            log_exception(current_app.logger, "Universitet galereyasi rasmini saqlab bo'lmadi")
             continue
     if not saved_urls:
         flash("Rasm yuklanmadi (JPG/PNG/WEBP).", "error")
