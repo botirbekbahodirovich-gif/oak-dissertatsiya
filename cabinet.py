@@ -330,8 +330,7 @@ GOOGLE_REDIRECT_URI = os.environ.get(
 GOOGLE_SCOPES = ['openid',
                  'https://www.googleapis.com/auth/userinfo.email',
                  'https://www.googleapis.com/auth/userinfo.profile']
-# Allow HTTP for local dev (Railway/Cloudflare terminates TLS in production).
-os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+# OAuth transport policy is configured centrally in app.py.
 
 
 @cabinet_bp.route('/auth/google/login')

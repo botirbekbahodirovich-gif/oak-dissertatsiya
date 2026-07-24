@@ -74,8 +74,7 @@ GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 GOOGLE_SCOPES = ['openid',
                  'https://www.googleapis.com/auth/userinfo.email',
                  'https://www.googleapis.com/auth/userinfo.profile']
-# Local dev (http) uchun ruxsat — production da nginx/TLS terminatsiya qiladi.
-os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+# OAuth transport policy is configured centrally in app.py.
 
 
 def _google_redirect_uri():

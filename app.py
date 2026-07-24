@@ -13,19 +13,26 @@ app = Flask(__name__)
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 load_dotenv()
-# Session secret: prefer SESSION_SECRET, then SECRET_KEY (common alias). If
-# neither is configured, fall back to an ephemeral key so the app still boots
-# (e.g. before env vars are wired on a fresh host) — but warn loudly, because an
-# ephemeral key breaks sessions/CSRF across restarts and across Gunicorn workers.
-import secrets as _secrets
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "development").lower()
+IS_PRODUCTION = APP_ENV == "production"
+
 session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+if not session_secret and IS_PRODUCTION:
+    raise RuntimeError("SESSION_SECRET yoki SECRET_KEY production uchun majburiy")
 if not session_secret:
+    import secrets as _secrets
     session_secret = _secrets.token_hex(32)
-    print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
-          "Set SESSION_SECRET in the environment for stable sessions/CSRF in production.",
-          flush=True)
+    print("WARNING: development uchun vaqtinchalik session secret ishlatilmoqda.", flush=True)
+
+if IS_PRODUCTION:
+    os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
+else:
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
+from security import init_security
+init_security(app, IS_PRODUCTION)
 
 # Ensure the news image upload directory exists.
 try:
@@ -401,10 +408,13 @@ app.config.update(
     SESSION_PERMANENT=True,
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),   # login 7 kun saqlanadi
     REMEMBER_COOKIE_DURATION=timedelta(days=7),
+    REMEMBER_COOKIE_SECURE=IS_PRODUCTION,
     REMEMBER_COOKIE_HTTPONLY=True,
     REMEMBER_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    PREFERRED_URL_SCHEME="https" if IS_PRODUCTION else "http",
 )
 
 # ── Fix 5.3: sanitized Supabase avatar path + patronymic normalization ──────
