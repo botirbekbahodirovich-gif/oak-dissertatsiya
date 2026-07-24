@@ -1,10 +1,12 @@
 import os
 import io
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, current_app, render_template, request, jsonify
 from flask_login import login_required, current_user
 import pandas as pd
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from extensions import cache
+from security import admin_required
 load_dotenv()
 try:
     import psycopg2
@@ -32,14 +34,36 @@ def get_connection():
     return _get_connection()
 
 
+def _audit_import(file_name, imported_rows, result):
+    """Persist a minimal import audit event without storing file contents."""
+    safe_name = secure_filename(file_name or '')[:255] or 'unnamed'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO import_audit_log "
+                    "(user_id, file_name, imported_rows, result) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (int(current_user.get_id()), safe_name,
+                     max(0, int(imported_rows or 0)), result))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        current_app.logger.exception("Import audit logini yozib bo'lmadi")
+
+
 @upload_bp.route('/upload', methods=['GET'])
 @login_required
+@admin_required
 def upload_page():
     return render_template('upload.html')
 
 
 @upload_bp.route('/upload', methods=['POST'])
 @login_required
+@admin_required
 def upload_csv():
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "Fayl tanlanmagan."}), 400
@@ -78,8 +102,10 @@ def upload_csv():
         cur.close()
         conn.close()
     except Exception as e:
+        _audit_import(file.filename, 0, 'failure')
         return jsonify({"success": False, "error": f"Ma'lumotlar bazasiga yozishda xatolik: {e}"}), 500
 
+    _audit_import(file.filename, inserted, 'success')
     return jsonify({
         "success": True,
         "rows": inserted,
@@ -143,10 +169,8 @@ def _read_file(file) -> pd.DataFrame:
 
 @upload_bp.route('/admin/clear-and-upload', methods=['POST'])
 @login_required
+@admin_required
 def clear_and_upload():
-    if not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Admin only'}), 403
-
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'Fayl tanlanmagan.'}), 400
     file = request.files['file']
@@ -199,8 +223,10 @@ def clear_and_upload():
         conn.commit()
         conn.close()
     except Exception as e:
+        _audit_import(file.filename, 0, 'failure')
         return jsonify({'success': False, 'error': f"DB xatolik: {e}"}), 500
 
+    _audit_import(file.filename, len(rows), 'success')
     cache.clear()
     return jsonify({
         'success': True,
