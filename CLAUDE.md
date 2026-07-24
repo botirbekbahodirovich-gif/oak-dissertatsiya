@@ -1,88 +1,62 @@
-Project: OAK AI - CIS Academic Intelligence Platform
+Before every task, read and follow `AGENTS.md` — it's the shared source of
+truth for architecture, security, data-quality, DB, testing, and git rules
+for this repo. This file is only a fast Claude Code session-start checklist.
 
-System status: The platform has evolved past v0.1. Current state is v0.2+ —
-a full academic intelligence platform, not just a dissertation table viewer.
+## Session start
 
-Tech stack:
-- Flask (blueprint-based)
-- PostgreSQL (migrating to, via psycopg2) + SQLite (legacy users.db)
-- pandas
-- Jinja2 + Bootstrap
-- Groq AI (topic analysis)
-- Gunicorn + nginx + systemd (Google Cloud VPS / GCE deploy)
+1. Read `AGENTS.md` (skip if already read this session).
+2. `git status --short --branch` — confirm branch/worktree.
+3. Confirm you're not on `main` and not inside another agent's worktree
+   (see "Git & parallel agents" in `AGENTS.md`).
+4. If the task matches one, read the relevant
+   `.claude/skills/<name>/SKILL.md`.
+5. Before opening a large file (`app.py` especially), `rg`/grep for the
+   route or function first — never read it end-to-end.
+6. Production DB, deploy, push, merge, or migration-apply only with
+   explicit user instruction in this task.
 
-Current features (v0.2+):
-- User authentication (register, login, logout) + Telegram / Google OAuth
-- User Cabinets — researcher self-registration and profiles (`cabinet.py`)
-- CSV upload and validation for dissertations
-- Paginated, filterable dissertation views + CSV export
-- Advanced Analytics: Groq AI topic analysis, heatmaps, clustering, comparison, trends
-- Academic Lineage Trees — supervisor/student genealogy graph (`static/js/genealogy.js`)
-- Collaboration graph
-- Content: blog, news (yangiliklar), vacancies, courses, journals, university profiles, top scholars
-- Grants module: filterable listing, tracking, admin CRUD (`blueprints/grants.py`)
-- Smart Reminders (Smart Eslatmalar): deadline-aware alerts over site + Telegram,
-  targeted by degree/region/ixtisoslik, daily cron via GitHub Actions
-  (`blueprints/reminders.py`, `.github/workflows/reminders.yml` — needs the
-  REMINDERS_API_KEY secret in server .env + GitHub)
-- Notification preferences: per-user ON/OFF toggles (notification_prefs table,
-  key-value; API in `blueprints/notifications.py`, UI in cabinet)
-- Himoya auto-match: new OAK imports notify scholars with matching ixtisoslik
-  (site + Telegram, 3/day cap) — hook in `data.py` import_oak
-- Advisor pages: /rahbar-topish directory + /rahbar/<slug> profiles
-  (`blueprints/advisors.py`, 10-min cached aggregation over dissertations;
-  invite CTA bridges to Konstruktor `?invite=` prefill)
-- Ixtisoslik obunasi: specialty_subscriptions (max 5/user, site+Telegram
-  toggles) — new-defense alerts on OAK import (`blueprints/subscriptions.py`,
-  second hook in import_oak; chat id in users.telegram_chat_id, set at
-  Telegram login, or derived from `<id>@telegram.uz` e-mails)
-- Public /reminders page (filter tabs) + upcoming-deadlines widget
-  (`templates/_reminders_widget.html` on home, dashboard, cabinet)
-- Admin Dashboard: user blocking, broadcasts, surveys, full content management
-- PWA support: manifest.json, service worker (sw.js), offline mode
-- SEO: sitemap.xml, robots.txt, OG images
-- CSRF protection and secret management via `.env`
+## Repository fast map
 
-File structure:
-- `app.py` — Bootstrap, shared utilities, blueprint registration, and main routes
-- `auth.py` — Authentication (login, register, logout, OAuth)
-- `cabinet.py` — User cabinet / researcher profiles (olim_profiles is the home
-  of scholar attributes: degree, region, ixtisoslik — never duplicate onto users)
-- `data.py` — CSV loading, caching, filtering, data endpoints, OAK import API
-- `analytics.py` — Analytics API endpoints
-- `upload.py` — Upload endpoints and validation
-- `blueprints/` — admin.py, content.py, notifications.py (alerts + prefs),
-  grants.py, reminders.py (smart reminders + dispatch), advisors.py (rahbar
-  pages), subscriptions.py (ixtisoslik obunasi + dispatch)
-- `templates/` — Jinja2 templates (50+: home, dashboard, stats, genealogy,
-  clustering, heatmap, blog, admin_*, cabinet, reminders, etc.)
-- `static/` — js (genealogy, heatmap, collaboration), PWA assets, uploads;
-  brand mark: `static/images/logo-mark.png` (white, for dark/gradient bg),
-  `logo.png` (2480px white master), gradient-tiled favicon/icon-192/512
-- `data/dissertatsiyalar.csv` — Source data CSV
-- `users.db` — legacy SQLite user DB (untracked from git; PII — never commit)
-- `deploy/` — GCE native deploy (Gunicorn + systemd + nginx + certbot)
-- `Dockerfile`, `nginx.conf` — containerized deploy
-- `requirements.txt` — Python dependencies
+- `app.py` — bootstrap + most blueprint registrations + shrinking legacy routes (grep, don't read whole)
+- `auth.py`, `cabinet.py`, `data.py`, `upload.py`, `analytics.py` — core modules
+- `blueprints/` — feature blueprints (see `AGENTS.md` table)
+- `utils/` — search, transliteration, jinja filters — reuse before writing new
+- `migrations/*.sql` — additive, manual, no runner
+- `scripts/` — maintenance scripts, mostly dry-run-by-default with `--apply`
+- `deploy/` — never touch; credentials must never be hardcoded here — env vars only
 
-Rules / Conventions
-- CRITICAL: `app.py` is currently a 212KB monolith with ~79 routes. Never read
-  or rewrite the whole `app.py` file unless explicitly ordered. Focus only on
-  the modular blueprints (auth, cabinet, data, analytics, upload).
-- UI text stays in Uzbek.
-- All secrets must be stored in `.env` and never committed.
-- Never commit virtual environments (venv/, .venv/, wsl_venv/), get-pip.py,
-  or any *.db file (users.db holds PII).
-- Line endings: the repo is normalized to LF via .gitattributes — editors on
-  Windows (\\wsl$ paths) must not reintroduce CRLF.
-- Commit after each task.
+## Fast verification
 
-Contact: repo maintainer
+Run via WSL (`wsl.exe -d Ubuntu-24.04 -- bash -c 'cd /home/botirbek/oak-dissertatsiya/<dir> && ...'`),
+not the repo's own venvs (all three are broken for this project):
 
+```
+python3.12 -m py_compile <changed files>   # syntax check, no DB
+python3.12 -c "import app"                 # app still boots, no DB
+python3.12 -u test_endpoints.py            # smoke test a few public routes
+```
 
-## Future roadmap
-- Complete PostgreSQL migration for reliable storage and proper indexing.
-- Add semantic search with embeddings and vector DB (e.g., FAISS or Pinecone).
-- Implement RAG chatbot for guided literature queries.
-- Expand opponent/advisor graph for supervisors and examiners.
-- Add multi-language UI and content (UZ/EN/RU) with i18n support.
+Full list and caveats in `AGENTS.md` → Testing & verification.
+
+## High-risk areas
+
+auth.py (external-identity linking must use immutable provider IDs only
+— see `AGENTS.md`), admin routes, upload.py, CSRF exemptions in app.py,
+app.py startup/config, data.py `get_connection()`, migrations/,
+institution/researcher merge logic, shared templates/partials.
+
+## Do not
+
+- Don't read or rewrite all of `app.py`.
+- Don't commit, push, merge, rebase, force-push, deploy, or restart a
+  service without explicit instruction for that action.
+- Don't apply a migration or run a DB-writing script without explicit
+  instruction.
+- Don't touch another agent's worktree or amend its commits.
+- Don't add a blanket `csrf.exempt()` on a new blueprint.
+- Don't default an unmatched region to "Toshkent" or auto-merge
+  researchers/institutions.
+- Don't invent lint/type-check/build commands — none are configured.
+- Don't hardcode or quote credentials anywhere in `deploy/` — env vars only.
+- Don't duplicate scholar attributes onto `users` — they belong on
+  `olim_profiles`.
