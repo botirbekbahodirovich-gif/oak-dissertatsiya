@@ -23,6 +23,7 @@ os.environ["POSTGRES_URL"] = ""
 import app as app_module
 import auth
 import cabinet
+import data as data_module
 
 
 class FakeTelegramCursor:
@@ -151,6 +152,18 @@ class SecurityPhase0Tests(unittest.TestCase):
         self.assertIn("ON users (telegram_id)", migration)
         self.assertIn("WHERE telegram_id IS NOT NULL", migration)
 
+    def test_phase0_migrations_are_transactional_and_document_rollback(self):
+        for migration_name in (
+            "001_add_users_telegram_id.sql",
+            "002_create_import_audit_log.sql",
+        ):
+            migration = (ROOT / "migrations" / migration_name).read_text()
+            self.assertTrue(migration.lstrip().startswith("BEGIN;"))
+            self.assertIn("\nCOMMIT;", migration)
+            self.assertIn("-- Rollback", migration)
+            self.assertIn("-- BEGIN;", migration)
+            self.assertIn("-- COMMIT;", migration)
+
     def test_deploy_script_has_no_embedded_database_credentials(self):
         deploy = (ROOT / "deploy" / "deploy.sh").read_text()
         self.assertNotRegex(
@@ -238,14 +251,15 @@ print(json.dumps({
     'hsts': response.headers.get('Strict-Transport-Security', ''),
     'csp': response.headers.get('Content-Security-Policy', ''),
     'nosniff': response.headers.get('X-Content-Type-Options', ''),
+    'http_status': app.test_client().get('/login', base_url='http://localhost').status_code,
 }))
 """
         env = os.environ.copy()
         env.update(
             APP_ENV="production",
             SESSION_SECRET="phase-0-production-test-secret",
+            DATABASE_URL="postgresql://127.0.0.1:1/phase0",
         )
-        env["DATABASE_URL"] = ""
         env["POSTGRES_URL"] = ""
         result = subprocess.run(
             [sys.executable, "-c", script],
@@ -263,6 +277,7 @@ print(json.dumps({
         self.assertTrue(details["hsts"])
         self.assertTrue(details["csp"])
         self.assertEqual(details["nosniff"], "nosniff")
+        self.assertEqual(details["http_status"], 400)
 
     def test_production_refuses_missing_session_secret(self):
         env = os.environ.copy()
@@ -271,6 +286,7 @@ print(json.dumps({
         # workspace's ignored .env while exercising the missing-secret path.
         env["SESSION_SECRET"] = ""
         env["SECRET_KEY"] = ""
+        env["DATABASE_URL"] = "postgresql://127.0.0.1:1/phase0"
         result = subprocess.run(
             [sys.executable, "-c", "import app"],
             cwd=ROOT,
@@ -281,6 +297,70 @@ print(json.dumps({
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("production uchun majburiy", result.stderr)
+
+    def test_production_refuses_missing_database_url(self):
+        env = os.environ.copy()
+        env.update(
+            APP_ENV="production",
+            SESSION_SECRET="phase-0-production-test-secret",
+            SECRET_KEY="",
+            DATABASE_URL="",
+            POSTGRES_URL="",
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", "import app"],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("DATABASE_URL production uchun majburiy", result.stderr)
+
+    def test_production_startup_does_not_connect_or_run_migrations(self):
+        script = r"""
+import json
+import psycopg2
+from psycopg2 import pool
+
+calls = []
+def forbidden_connection(*args, **kwargs):
+    calls.append([args, kwargs])
+    raise RuntimeError('database connection attempted during production startup')
+
+psycopg2.connect = forbidden_connection
+pool.ThreadedConnectionPool = forbidden_connection
+import app
+print(json.dumps({'connection_attempts': len(calls)}))
+"""
+        env = os.environ.copy()
+        env.update(
+            APP_ENV="production",
+            SESSION_SECRET="phase-0-production-test-secret",
+            DATABASE_URL="postgresql://127.0.0.1:1/phase0",
+            POSTGRES_URL="",
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        details = json.loads(result.stdout.strip().splitlines()[-1])
+        self.assertEqual(details["connection_attempts"], 0)
+
+    def test_testing_environment_blocks_external_database_connections(self):
+        external_dsn = "postgresql://external.example.invalid/phase0"
+        with patch.dict(
+            os.environ,
+            {"APP_ENV": "testing", "DATABASE_URL": external_dsn},
+        ):
+            with self.assertRaisesRegex(RuntimeError, "disabled in testing"):
+                data_module.get_connection()
 
     def test_database_exception_is_not_returned_to_client(self):
         marker = "secret_table constraint db_password"
