@@ -1,0 +1,37 @@
+# Example only. Replace __STAGING_USER__ and __STAGING_GROUP__, then install as
+# /etc/systemd/system/olimlar-staging.service on the staging host.
+[Unit]
+Description=Olimlar.uz staging Gunicorn
+After=network-online.target
+Wants=network-online.target
+ConditionPathIsDirectory=/opt/olimlar-staging/.git
+
+[Service]
+Type=simple
+User=__STAGING_USER__
+Group=__STAGING_GROUP__
+WorkingDirectory=/opt/olimlar-staging
+EnvironmentFile=/opt/olimlar-staging/.env.staging
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/olimlar-staging/venv/bin/gunicorn app:app --bind 127.0.0.1:8001 --workers 2 --threads 2 --timeout 120
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+UMask=0027
+
+# Keep staging logs separate from the production service.
+LogsDirectory=olimlar-staging
+LogsDirectoryMode=0750
+StandardOutput=append:/var/log/olimlar-staging/app.log
+StandardError=append:/var/log/olimlar-staging/error.log
+SyslogIdentifier=olimlar-staging
+
+# Low-risk systemd hardening that preserves local upload/cache writes.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

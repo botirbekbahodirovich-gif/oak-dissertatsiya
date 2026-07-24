@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Safe staging deployment example. It is dry-run only unless --execute is
+# explicitly supplied. It never runs database migrations.
+set -euo pipefail
+
+APP_DIR="${STAGING_APP_DIR:-/opt/olimlar-staging}"
+SERVICE="${STAGING_SERVICE:-olimlar-staging}"
+STAGING_HOST="${STAGING_HOST:-staging.olimlar.uz}"
+PYTHON_BIN="${STAGING_PYTHON:-${APP_DIR}/venv/bin/python}"
+PIP_BIN="${STAGING_PIP:-${APP_DIR}/venv/bin/pip}"
+
+REVIEWED_SHA=""
+EXECUTE=false
+RESTART=false
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  deploy-staging.sh.example --sha <40-character-reviewed-SHA> [--execute] [--restart]
+
+Default mode validates the staging guardrails and prints a secret-free plan.
+--execute is required to test and check out the reviewed commit.
+--restart additionally permits restarting only olimlar-staging.
+Database migrations are always manual.
+USAGE
+}
+
+fail() {
+  printf 'ERROR: %s\n' "$1" >&2
+  exit 1
+}
+
+print_presence() {
+  local name="$1"
+  if [[ -n "${!name:-}" ]]; then
+    printf '%s=set\n' "$name"
+  else
+    printf '%s=not-set\n' "$name"
+    return 1
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --sha)
+      [[ $# -ge 2 ]] || fail "--sha requires a value"
+      REVIEWED_SHA="$2"
+      shift 2
+      ;;
+    --execute)
+      EXECUTE=true
+      shift
+      ;;
+    --restart)
+      RESTART=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument"
+      ;;
+  esac
+done
+
+[[ "$REVIEWED_SHA" =~ ^[0-9a-fA-F]{40}$ ]] ||
+  fail "a full 40-character reviewed SHA is required"
+
+# Reject known production identifiers and any target lacking an explicit
+# staging marker. Overrides exist only for isolated staging installations.
+[[ "$APP_DIR" != "/opt/olimlar-uz" ]] || fail "production app path rejected"
+[[ "$APP_DIR" == *staging* ]] || fail "app path must contain a staging marker"
+[[ "$SERVICE" != "olimlar" ]] || fail "production service rejected"
+[[ "$SERVICE" == *staging* ]] || fail "service must contain a staging marker"
+[[ "$STAGING_HOST" == "staging.olimlar.uz" ]] ||
+  fail "only staging.olimlar.uz is accepted"
+
+env_ok=true
+print_presence APP_ENV || env_ok=false
+print_presence DATABASE_URL || env_ok=false
+print_presence SESSION_SECRET || env_ok=false
+[[ "$env_ok" == true ]] || fail "required staging environment is incomplete"
+[[ "${APP_ENV}" == "production" ]] || fail "APP_ENV must be production"
+
+if [[ "$RESTART" == true && "$EXECUTE" != true ]]; then
+  fail "--restart requires --execute"
+fi
+
+printf 'target_path=%s\n' "$APP_DIR"
+printf 'target_service=%s\n' "$SERVICE"
+printf 'target_host=%s\n' "$STAGING_HOST"
+printf 'reviewed_sha=%s\n' "$REVIEWED_SHA"
+printf 'migration_mode=manual-only\n'
+
+if [[ "$EXECUTE" != true ]]; then
+  printf 'execution=disabled\n'
+  printf 'restart=disabled\n'
+  exit 0
+fi
+
+[[ -d "$APP_DIR/.git" ]] || fail "staging checkout is missing"
+[[ -x "$PYTHON_BIN" ]] || fail "staging Python is missing"
+[[ -x "$PIP_BIN" ]] || fail "staging pip is missing"
+[[ -z "$(git -C "$APP_DIR" status --porcelain)" ]] ||
+  fail "staging checkout is dirty"
+git -C "$APP_DIR" cat-file -e "${REVIEWED_SHA}^{commit}" 2>/dev/null ||
+  fail "reviewed SHA is not available locally; fetch it explicitly first"
+
+# Test the exact commit from an archive before changing the deployed checkout.
+TEST_DIR="$(mktemp -d /tmp/olimlar-staging-release.XXXXXX)"
+cleanup() {
+  case "$TEST_DIR" in
+    /tmp/olimlar-staging-release.*) rm -rf -- "$TEST_DIR" ;;
+    *) printf 'WARNING: temporary test directory was not removed\n' >&2 ;;
+  esac
+}
+trap cleanup EXIT
+git -C "$APP_DIR" diff --check "${REVIEWED_SHA}^!"
+git -C "$APP_DIR" archive "$REVIEWED_SHA" | tar -x -C "$TEST_DIR"
+
+(
+  cd "$TEST_DIR"
+  # Validate the configured staging DB using SELECT-only checks from the exact
+  # reviewed release. Driver errors are redacted and the DSN is never printed.
+  "$PYTHON_BIN" scripts/check_staging_environment.py
+  env -u DATABASE_URL -u POSTGRES_URL -u SESSION_SECRET \
+    APP_ENV=testing PYTHONDONTWRITEBYTECODE=1 \
+    "$PYTHON_BIN" -m unittest -v tests.test_security_phase0
+  env -u DATABASE_URL -u POSTGRES_URL -u SESSION_SECRET \
+    APP_ENV=testing PYTHONDONTWRITEBYTECODE=1 \
+    "$PYTHON_BIN" -m unittest -v tests.test_create_admin
+  env -u DATABASE_URL -u POSTGRES_URL -u SESSION_SECRET \
+    APP_ENV=testing PYTHONDONTWRITEBYTECODE=1 \
+    "$PYTHON_BIN" test_endpoints.py
+  env -u DATABASE_URL -u POSTGRES_URL -u SESSION_SECRET \
+    APP_ENV=testing PYTHONDONTWRITEBYTECODE=1 \
+    "$PYTHON_BIN" test_import.py
+  "$PYTHON_BIN" -m compileall -q .
+  bash -n deploy/deploy-staging.sh.example
+)
+
+git -C "$APP_DIR" switch --detach "$REVIEWED_SHA"
+"$PIP_BIN" install -r "$APP_DIR/requirements.txt"
+printf 'checkout=updated-to-reviewed-sha\n'
+printf 'migrations=not-run\n'
+
+if [[ "$RESTART" == true ]]; then
+  [[ "$SERVICE" == "olimlar-staging" ]] ||
+    fail "restart is restricted to olimlar-staging"
+  systemctl restart olimlar-staging
+  printf 'restart=olimlar-staging\n'
+else
+  printf 'restart=disabled\n'
+fi
