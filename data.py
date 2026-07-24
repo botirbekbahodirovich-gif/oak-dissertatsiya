@@ -1,4 +1,5 @@
 import os
+import hmac
 import re
 import csv
 import io
@@ -1785,7 +1786,7 @@ def _validate_ingest_record(oak_id: str, olim: str, daraja: str,
 @data_bp.route('/api/oak/ingest', methods=['POST'])
 def oak_ingest():
     auth = request.headers.get('Authorization', '')
-    if not OAK_API_KEY or auth != f'Bearer {OAK_API_KEY}':
+    if not OAK_API_KEY or not hmac.compare_digest(auth, f'Bearer {OAK_API_KEY}'):
         return jsonify({'error': 'Unauthorized'}), 401
 
     payload = request.get_json(silent=True) or {}
@@ -1886,7 +1887,7 @@ def oak_ingest():
 @data_bp.route('/api/v1/import-oak', methods=['POST'])
 def import_oak():
     api_key = request.headers.get('X-API-KEY', '')
-    if not SITE_API_KEY or api_key != SITE_API_KEY:
+    if not SITE_API_KEY or not hmac.compare_digest(api_key, SITE_API_KEY):
         return jsonify({'error': 'Unauthorized'}), 401
 
     payload = request.get_json(silent=True) or {}

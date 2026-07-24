@@ -378,7 +378,6 @@ def inject_visit_count():
 
 
 @app.route('/api/profile/set-region', methods=['POST'])
-@csrf.exempt
 def set_region():
     """Persist the region chosen in the mandatory popup, to whichever profile
     (main user / cabinet user) the visitor is logged into."""
@@ -751,7 +750,6 @@ def load_user(user_id):
 
 from auth import auth_bp
 from data import data_bp, query_dissertations
-csrf.exempt(data_bp)
 from analytics import analytics_bp
 from upload import upload_bp
 from cabinet import cabinet_bp
@@ -825,6 +823,9 @@ csrf.exempt(app.view_functions['payments.pay_create'])
 csrf.exempt(app.view_functions['auth.telegram_login'])
 # Cabinet Telegram callback has the same HMAC verification boundary.
 csrf.exempt(app.view_functions['cabinet.telegram'])
+# Machine-to-machine imports authenticate with high-entropy header API keys.
+csrf.exempt(app.view_functions['data.oak_ingest'])
+csrf.exempt(app.view_functions['data.import_oak'])
 
 
 # ── University seed data + detection ────────────────────────────────────────
@@ -2562,7 +2563,6 @@ def _compare_ixtisosliklar():
 
 
 @app.route("/api/mavzu-tahlili", methods=["POST"])
-@csrf.exempt
 def api_mavzu_tahlili():
     from data import get_connection, latin_to_cyrillic, clean_olim_name
     body = request.get_json(silent=True) or {}
@@ -2618,7 +2618,6 @@ def api_mavzu_tahlili():
 
 
 @app.route("/api/mavzu-tahlili/ai", methods=["POST"])
-@csrf.exempt
 def api_mavzu_tahlili_ai():
     from data import GROQ_API_KEY
     body = request.get_json(silent=True) or {}
@@ -3473,7 +3472,6 @@ def _blog_form_values():
 
 
 @app.route("/api/course-subscribe", methods=["POST"])
-@csrf.exempt
 def course_subscribe():
     from data import get_connection
     data = request.get_json(silent=True) or request.form
@@ -3655,7 +3653,6 @@ def course_interest_toggle(course_id):
 #  User feedback survey — rotating question groups, popup, analytics
 # ════════════════════════════════════════════════════════════════════
 @app.route('/api/survey/questions')
-@csrf.exempt
 def survey_questions_api():
     from data import get_connection
     answered = request.args.get('answered', '')
@@ -3686,7 +3683,6 @@ def survey_questions_api():
 
 
 @app.route('/api/survey/submit', methods=['POST'])
-@csrf.exempt
 def survey_submit_api():
     from flask import session
     from data import get_connection
