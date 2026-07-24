@@ -126,6 +126,8 @@ class _PooledConn:
 
 
 def get_connection():
+    if (os.environ.get('APP_ENV') or '').strip().lower() == 'testing':
+        raise RuntimeError('Database connections are disabled in testing.')
     if not psycopg2:
         raise RuntimeError('psycopg2 is required for PostgreSQL support.')
     p = _get_pool()

@@ -24,6 +24,10 @@ if not session_secret:
     session_secret = _secrets.token_hex(32)
     print("WARNING: development uchun vaqtinchalik session secret ishlatilmoqda.", flush=True)
 
+database_url = os.environ.get("DATABASE_URL", "").strip()
+if IS_PRODUCTION and not database_url:
+    raise RuntimeError("DATABASE_URL production uchun majburiy")
+
 if IS_PRODUCTION:
     os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
 else:
@@ -719,7 +723,7 @@ def _run_startup_migrations():
                     email TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     is_admin BOOLEAN DEFAULT FALSE,
-                    telegram_id BIGINT UNIQUE,
+                    telegram_id BIGINT,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
@@ -1249,7 +1253,7 @@ def _seed_blog_posts():
         pass
 
 
-if APP_ENV != "testing":
+if APP_ENV == "development":
     _run_startup_migrations()
     _seed_blog_posts()
 
