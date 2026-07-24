@@ -35,6 +35,8 @@ from datetime import date
 from flask import (Blueprint, current_app, jsonify, request, render_template,
                    redirect, flash, session)
 from flask_login import login_required, current_user
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
 from security import log_exception
 
 from app import csrf
@@ -298,17 +300,26 @@ def _fetch_reminder(cur, id):
 # ── Scheduler entry point (daily cron / GitHub Actions) ─────────────────────
 
 @reminders_bp.route('/api/v1/reminders/process', methods=['POST'])
-@csrf.exempt
+@csrf.exempt  # machine-to-machine route; admin sessions are validated below
 def process_reminders():
     """Fire every active reminder whose deadline is exactly N days away
     (N ∈ reminder_days_before). Auth: admin session OR X-API-Key header
     matching REMINDERS_API_KEY from .env (for cron)."""
     api_key = os.environ.get('REMINDERS_API_KEY', '')
-    provided = request.headers.get('X-API-Key') or request.args.get('key') or ''
+    provided = request.headers.get('X-API-Key') or ''
+    valid_api_key = bool(
+        api_key and provided and hmac.compare_digest(provided, api_key)
+    )
     is_admin = (getattr(current_user, 'is_authenticated', False)
                 and getattr(current_user, 'is_admin', False))
-    if not (is_admin or (api_key and provided and hmac.compare_digest(provided, api_key))):
-        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    if not valid_api_key:
+        if not is_admin:
+            return jsonify({"ok": False, "error": "unauthorized"}), 403
+        try:
+            validate_csrf(request.headers.get('X-CSRFToken')
+                          or request.form.get('csrf_token'))
+        except ValidationError:
+            return jsonify({"ok": False, "error": "csrf_failed"}), 400
     from data import get_connection
     processed = sent = 0
     try:
