@@ -13,12 +13,13 @@ app = Flask(__name__)
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 load_dotenv()
-# Session secret: prefer SESSION_SECRET, then SECRET_KEY (common alias). If
-# neither is configured, fall back to an ephemeral key so the app still boots
-# (e.g. before env vars are wired on a fresh host) — but warn loudly, because an
-# ephemeral key breaks sessions/CSRF across restarts and across Gunicorn workers.
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "development").lower()
+IS_PRODUCTION = APP_ENV == "production"
+# Production requires a configured session secret; development may use an ephemeral fallback.
 import secrets as _secrets
 session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+if not session_secret and IS_PRODUCTION:
+    raise RuntimeError("SESSION_SECRET is required when APP_ENV=production")
 if not session_secret:
     session_secret = _secrets.token_hex(32)
     print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
@@ -26,6 +27,15 @@ if not session_secret:
           flush=True)
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
+
+if IS_PRODUCTION:
+    os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
+else:
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
+from security import init_security
+init_security(app, IS_PRODUCTION)
+
 
 # ── Error logging ───────────────────────────────────────────────────────────
 # Under Gunicorn, app.logger has no handlers by default, so tracebacks vanish
@@ -443,9 +453,12 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),   # login 7 kun saqlanadi
     REMEMBER_COOKIE_DURATION=timedelta(days=7),
     REMEMBER_COOKIE_HTTPONLY=True,
+    REMEMBER_COOKIE_SECURE=IS_PRODUCTION,
     REMEMBER_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
     SESSION_COOKIE_SAMESITE="Lax",
+    PREFERRED_URL_SCHEME="https" if IS_PRODUCTION else "http",
 )
 
 # ── Fix 5.3: sanitized Supabase avatar path + patronymic normalization ──────
