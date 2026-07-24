@@ -18,7 +18,6 @@ from flask import (Blueprint, jsonify, request, render_template,
                    redirect, abort, flash)
 from flask_login import login_required, current_user
 
-from app import csrf
 
 grants_bp = Blueprint('grants', __name__)
 
@@ -191,7 +190,6 @@ def grant_detail(id):
 # ── Retention tracking ──────────────────────────────────────────────────────
 
 @grants_bp.route('/api/v1/grants/track', methods=['POST'])
-@csrf.exempt
 @login_required
 def track_grant():
     from data import get_connection

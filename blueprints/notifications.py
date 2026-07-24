@@ -31,7 +31,6 @@ lazy-imported inside views (auth.py / cabinet.py pattern) to avoid circular impo
 from flask import Blueprint, jsonify, request, session
 from flask_login import login_required, current_user
 
-from app import csrf
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -210,7 +209,6 @@ def active_notifications():
 # ── Public: acknowledge / dismiss a notice ──────────────────────────────────
 
 @notifications_bp.route('/api/v1/notifications/dismiss', methods=['POST'])
-@csrf.exempt
 @login_required
 def dismiss_notification():
     from data import get_connection
@@ -254,7 +252,6 @@ _LEVELS = ('info', 'warning', 'success', 'danger')
 
 
 @notifications_bp.route('/admin/api/notifications/broadcast', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_post_broadcast():
     from app import _require_admin
@@ -285,7 +282,6 @@ def admin_post_broadcast():
 
 
 @notifications_bp.route('/admin/api/notifications/alert', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_post_alert():
     from app import _require_admin
@@ -322,7 +318,6 @@ def admin_post_alert():
 # ── Notification preferences (cabinet toggle panel) ──────────────────────────
 
 @notifications_bp.route('/api/v1/notifications/prefs', methods=['GET', 'POST'])
-@csrf.exempt
 def notification_prefs():
     from data import get_connection
     try:

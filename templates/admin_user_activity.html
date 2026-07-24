@@ -183,7 +183,7 @@ function blockThisUser() {
   var reason = (document.getElementById('blockReason').value || '').trim();
   fetch('/admin/api/block-user', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ip_address: BLOCK_IP, duration: duration, reason: reason })
   })
   .then(function (r) { return r.json(); })
@@ -198,7 +198,7 @@ function unblockUser(ip) {
   if (!confirm('Blokdan chiqarilsinmi: ' + ip + '?')) return;
   fetch('/admin/api/unblock-user', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ip_address: ip })
   })
   .then(function (r) { return r.json(); })

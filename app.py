@@ -122,7 +122,10 @@ def parse_referrer(ref):
 
 @app.context_processor
 def _inject_csrf_token():
-    return dict(csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf())
+    return dict(
+        csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf(),
+        csrf_token_value=generate_csrf,
+    )
 
 
 _FEMALE_NAMES = {
@@ -536,7 +539,6 @@ csrf.exempt(data_bp)
 from analytics import analytics_bp
 from upload import upload_bp
 from cabinet import cabinet_bp
-csrf.exempt(cabinet_bp)
 from blueprints.admin import admin_bp
 from blueprints.content import content_bp
 from blueprints.notifications import notifications_bp
@@ -556,6 +558,8 @@ app.register_blueprint(reminders_bp)
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
+# Cabinet Telegram callback has the same HMAC verification boundary.
+csrf.exempt(app.view_functions['cabinet.telegram'])
 
 
 # ── University seed data + detection ────────────────────────────────────────

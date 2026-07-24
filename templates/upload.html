@@ -72,7 +72,7 @@
     const formData = new FormData(); formData.append('file', selectedFile);
     btnSubmit.disabled = true;
     try {
-      const res = await fetch('/upload', { method:'POST', body: formData });
+      const res = await fetch('/upload', { method:'POST', headers: window.oakCsrfHeaders(), body: formData });
       const data = await res.json();
       if (data.success) { updateStatus('success', `Yuklandi: ${data.rows.toLocaleString('uz')} yozuv.`); }
       else { updateStatus('error', data.error || 'Yuklashda xatolik yuz berdi.'); }
@@ -122,7 +122,7 @@
     btnBulk.disabled = true;
     btnBulk.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Yuklanmoqda...';
     try {
-      const res = await fetch('/admin/clear-and-upload', { method: 'POST', body: formData });
+      const res = await fetch('/admin/clear-and-upload', { method: 'POST', headers: window.oakCsrfHeaders(), body: formData });
       const data = await res.json();
       if (data.success) {
         updateBulkStatus('success', data.message || `O'chirildi: ${data.deleted}, Qo'shildi: ${data.added}`);

@@ -110,7 +110,7 @@
     var btn = e.target.closest('button[data-status]');
     if (!btn) return;
     fetch('/api/v1/grants/track', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ grant_id: parseInt(track.getAttribute('data-grant')),
                              status: btn.getAttribute('data-status') })
     }).then(function (r) { return r.json(); }).then(function (d) {

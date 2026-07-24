@@ -40,6 +40,7 @@
     <div class="cab-divider" style="display:flex;align-items:center;gap:12px;color:#64748b;font-size:0.82rem;margin:0 0 18px;">yoki email orqali</div>
 
     <form method="post" action="/cabinet/register">
+      {{ csrf_token()|safe }}
       <div class="cab-group">
         <label>Email</label>
         <input class="cab-input" type="email" name="email" placeholder="email@example.com" required>

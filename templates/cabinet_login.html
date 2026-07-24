@@ -46,6 +46,7 @@
     <div class="cab-divider">yoki</div>
 
     <form method="post" action="/cabinet/login{% if next %}?next={{ next|urlencode }}{% endif %}">
+      {{ csrf_token()|safe }}
       <div class="cab-group">
         <label>Email</label>
         <input class="cab-input" type="email" name="email" placeholder="email@example.com" required>
