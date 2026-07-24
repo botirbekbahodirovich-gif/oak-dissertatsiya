@@ -56,7 +56,7 @@ def _audit_import(file_name, imported_rows, result):
         finally:
             conn.close()
     except Exception:
-        current_app.logger.exception("Import audit logini yozib bo'lmadi")
+        log_exception(current_app.logger, "Import audit logini yozib bo'lmadi")
 
 
 @upload_bp.route('/upload', methods=['GET'])
@@ -79,9 +79,9 @@ def upload_csv():
         _, raw = validate_tabular_upload(file, {'csv'})
         df = pd.read_csv(io.BytesIO(raw), dtype=str)
     except UploadTooLarge as exc:
-        return jsonify({"success": False, "error": str(exc)}), 413
+        return jsonify({"success": False, "error": exc.public_message}), 413
     except UploadValidationError as exc:
-        return jsonify({"success": False, "error": str(exc)}), 422
+        return jsonify({"success": False, "error": exc.public_message}), 422
     except Exception:
         log_exception(current_app.logger, "CSV faylni o'qib bo'lmadi")
         return jsonify({"success": False, "error": "CSV faylni o'qib bo'lmadi."}), 422
@@ -188,9 +188,9 @@ def clear_and_upload():
         extension, raw = validate_tabular_upload(file, {'csv', 'xlsx'})
         df = _read_file(extension, raw)
     except UploadTooLarge as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 413
+        return jsonify({'success': False, 'error': exc.public_message}), 413
     except UploadValidationError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 422
+        return jsonify({'success': False, 'error': exc.public_message}), 422
     except Exception:
         log_exception(current_app.logger, "Import faylini o'qib bo'lmadi")
         return jsonify({'success': False, 'error': "Faylni o'qib bo'lmadi."}), 422

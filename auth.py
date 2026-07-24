@@ -2,9 +2,11 @@ import os
 import hmac
 import hashlib
 import time
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
+from flask import (Blueprint, current_app, render_template, request, redirect,
+                   url_for, jsonify, session)
 from flask_login import current_user, login_user, logout_user, login_required
 from dotenv import load_dotenv
+from security import log_exception
 load_dotenv()
 
 TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', 'send_kod_bot')
@@ -117,8 +119,8 @@ def google_callback():
         google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
                            authorization_response=request.url)
         info = google.get(GOOGLE_USERINFO_URL).json()
-    except Exception as e:
-        print("Main Google OAuth error: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Main Google OAuth callback bajarilmadi")
         return render_template('login.html',
                                error="Google bilan kirishda xatolik yuz berdi.", registered=None)
 
@@ -130,8 +132,8 @@ def google_callback():
 
     try:
         user, created = _find_or_create_google_user(email, name)
-    except Exception as e:
-        print("Main Google user upsert error: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Google foydalanuvchisini saqlab bo'lmadi")
         return render_template('login.html',
                                error="Google bilan kirishda xatolik yuz berdi.", registered=None)
 
@@ -259,8 +261,9 @@ def telegram_login():
         finally:
             conn.close()
 
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"Xatolik: {str(e)}"}), 200
+    except Exception:
+        log_exception(current_app.logger, "Telegram login bajarilmadi")
+        return jsonify({'success': False, 'error': "Tizimga kirib bo'lmadi."}), 500
 
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)

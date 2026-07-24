@@ -14,9 +14,10 @@ Shared helpers are lazy-imported inside views to avoid circular imports.
 """
 import json
 
-from flask import (Blueprint, jsonify, request, render_template,
+from flask import (Blueprint, current_app, jsonify, request, render_template,
                    redirect, abort, flash)
 from flask_login import login_required, current_user
+from security import log_exception
 
 
 grants_bp = Blueprint('grants', __name__)
@@ -220,8 +221,9 @@ def track_grant():
         finally:
             conn.close()
         return jsonify({"ok": True, "status": status})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Grant amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 # ── Proactive deadline reminders (global session modal feed) ────────────────
@@ -383,8 +385,9 @@ def admin_grants_add():
             flash("Yangi grant qo'shildi.")
         finally:
             conn.close()
-    except Exception as e:
-        flash("Xatolik: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/grants')
 
 
@@ -440,8 +443,9 @@ def admin_grants_edit(id):
             flash("Grant yangilandi.")
         finally:
             conn.close()
-    except Exception as e:
-        flash("Xatolik: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/grants')
 
 
@@ -460,6 +464,7 @@ def admin_grants_delete(id):
             flash("Grant o'chirildi.")
         finally:
             conn.close()
-    except Exception as e:
-        flash("Xatolik: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Admin grant amali bajarilmadi")
+        flash("Amalni bajarib bo'lmadi.", "error")
     return redirect('/admin/grants')
