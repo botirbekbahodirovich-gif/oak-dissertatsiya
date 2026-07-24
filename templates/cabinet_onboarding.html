@@ -69,12 +69,104 @@
 @media (max-width: 620px) {
   .ob-grid, .ob-degrees { grid-template-columns: 1fr; }
 }
+
+/* ── Foydalanuvchi turi — kichik tab bar (onboarding tepasida) ── */
+.olz-type-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 720px;
+  margin: 14px auto 0;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.olz-type-tabs__label {
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.olz-type-tabs__buttons {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.olz-type-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.olz-type-tab:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+.olz-type-tab:disabled { opacity: 0.6; cursor: default; }
+.olz-type-tab.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #93c5fd;
+}
+.olz-type-tab__icon { font-size: 14px; }
+.olz-type-tabs__skip {
+  color: rgba(255,255,255,0.5);
+  font-size: 12px;
+  text-decoration: none;
+  margin-left: auto;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.olz-type-tabs__skip:hover { color: rgba(255,255,255,0.8); }
+
+@media (max-width: 640px) {
+  .olz-type-tabs {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .olz-type-tabs__label { margin: 0 0 4px 0; }
+  .olz-type-tabs__buttons { justify-content: center; }
+  .olz-type-tabs__skip { margin: 4px 0 0 0; text-align: center; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="ob-toast" class="ob-toast"></div>
 <div class="ob">
+  {% if current_user_type == 'unknown' or not current_user_type %}
+  <div class="olz-type-tabs" id="type-tabs-bar">
+    <div class="olz-type-tabs__label">Kim ekaningizni tanlang:</div>
+    <div class="olz-type-tabs__buttons">
+      <button type="button" class="olz-type-tab" data-type="researcher">
+        <span class="olz-type-tab__icon">🎓</span><span class="olz-type-tab__label">Izlanuvchi</span>
+      </button>
+      <button type="button" class="olz-type-tab" data-type="student">
+        <span class="olz-type-tab__icon">📚</span><span class="olz-type-tab__label">Talaba</span>
+      </button>
+      <button type="button" class="olz-type-tab" data-type="regular">
+        <span class="olz-type-tab__icon">👤</span><span class="olz-type-tab__label">Oddiy</span>
+      </button>
+    </div>
+    <a href="{{ url_for('home') }}" class="olz-type-tabs__skip"
+       onclick="if(typeof ym==='function' && typeof YM_ID!=='undefined') ym(YM_ID, 'reachGoal', 'welcome_skip');">
+      O'tkazib yuborish →
+    </a>
+  </div>
+  {% endif %}
   <div class="ob-hero">
     <h1>👋 Xush kelibsiz! Profilingizni to'ldiring</h1>
     <p>Bu ma'lumotlar ilmiy portfoliongizni to'ldiradi va sizni bazadagi dissertatsiyangiz bilan bog'laydi</p>
@@ -304,6 +396,51 @@
     document.getElementById('ob-linked').classList.add('show');
   }
   updateProgress();
+
+  // ── foydalanuvchi turi tab bar ──
+  document.querySelectorAll('.olz-type-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var type = this.dataset.type;
+      var tabs = document.querySelectorAll('.olz-type-tab');
+      tabs.forEach(function (b) { b.disabled = true; });
+
+      if (typeof ym === 'function' && typeof YM_ID !== 'undefined') {
+        ym(YM_ID, 'reachGoal', 'welcome_selected_' + type);
+      }
+
+      var formData = new FormData();
+      formData.append('user_type', type);
+      fetch('/cabinet/api/user-type', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+        credentials: 'same-origin'
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw new Error(d.error || 'failed');
+
+        if (d.redirect) { window.location.href = d.redirect; return; }
+
+        tabs.forEach(function (b) { b.classList.remove('active'); b.disabled = false; });
+        btn.classList.add('active');
+
+        if (d.default_degree) {
+          var degreeRadio = document.querySelector('input[name=degree][value="' + d.default_degree + '"]');
+          if (degreeRadio) {
+            degreeRadio.checked = true;
+            degreeRadio.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+
+        setTimeout(function () {
+          var bar = document.getElementById('type-tabs-bar');
+          if (bar) { bar.style.transition = 'opacity 0.4s'; bar.style.opacity = '0.6'; }
+        }, 800);
+      }).catch(function (e) {
+        console.error('user_type set failed:', e);
+        tabs.forEach(function (b) { b.disabled = false; });
+      });
+    });
+  });
 })();
 </script>
 {% endblock %}

@@ -190,41 +190,25 @@ def cabinet():
 @cabinet_bp.route('/cabinet/xush-kelibsiz')
 @cabinet_login_required
 def welcome_choose_type():
-    """Bosqich 2 — ro'yxatdan o'tgach onboarding formasidan oldin foydalanuvchi
-    turini so'raydi (izlanuvchi / talaba / oddiy). Tur allaqachon tanlangan
-    bo'lsa — to'g'ridan-to'g'ri onboarding ga o'tkazadi."""
-    user = current_cabinet_user()
-    if user and user.get('user_type') and user['user_type'] != 'unknown':
-        return redirect(url_for('cabinet.onboarding'))
-    return render_template('cabinet_welcome_choose_type.html')
-
-
-@cabinet_bp.route('/cabinet/xush-kelibsiz/set-type', methods=['POST'])
-@cabinet_login_required
-def set_user_type():
-    user_type = request.form.get('user_type')
-    if user_type not in ('researcher', 'student', 'regular'):
-        return redirect(url_for('cabinet.welcome_choose_type'))
-    uid = session.get('cabinet_user_id')
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            _ensure_user_type_column(cur)
-            cur.execute("UPDATE cabinet_users SET user_type = %s WHERE id = %s", (user_type, uid))
-        conn.commit()
-    finally:
-        conn.close()
-    if user_type == 'regular':
-        return redirect(url_for('home'))
+    """Backward compatibility — foydalanuvchi turi endi onboarding sahifasi
+    tepasidagi kichik tab bar orqali tanlanadi (katta alohida sahifa emas).
+    Eski havolalar/redirectlar yagona kanonik onboarding oqimiga yo'naltiriladi."""
     return redirect(url_for('cabinet.onboarding'))
 
 
 @cabinet_bp.route('/cabinet/api/user-type', methods=['POST'])
 @cabinet_login_required
 def update_user_type():
-    """Kabinet sozlamalaridan foydalanuvchi turini keyinroq o'zgartirish."""
+    """Foydalanuvchi turini o'rnatish/o'zgartirish. Ikki chaqiruvchisi bor:
+    - Kabinet sozlamalari (oddiy <form> submit, to'liq sahifa reload) — 302 kutadi.
+    - Onboarding tab bar (fetch, X-Requested-With: XMLHttpRequest) — JSON kutadi.
+    Har ikkala yo'l ham CSRF himoyasi ostida (global fetch shim X-CSRFToken
+    qo'shadi; form submit esa csrf_token maydonini yuboradi)."""
     user_type = request.form.get('user_type')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if user_type not in ('researcher', 'student', 'regular'):
+        if is_ajax:
+            return jsonify({'ok': False, 'error': 'invalid'}), 400
         return redirect(url_for('cabinet.cabinet'))
     uid = session.get('cabinet_user_id')
     conn = get_connection()
@@ -235,6 +219,14 @@ def update_user_type():
         conn.commit()
     finally:
         conn.close()
+    if is_ajax:
+        default_degrees = {'researcher': None, 'student': 'Magistrant', 'regular': None}
+        return jsonify({
+            'ok': True,
+            'user_type': user_type,
+            'default_degree': default_degrees.get(user_type),
+            'redirect': url_for('home') if user_type == 'regular' else None
+        })
     return redirect(url_for('cabinet.cabinet'))
 
 
@@ -245,8 +237,6 @@ def onboarding():
     search-olim / claim / profile-save endpoints; on finish sets
     profile_completed and lands the user in the full cabinet."""
     user = current_cabinet_user()
-    if user and (not user.get('user_type') or user['user_type'] == 'unknown'):
-        return redirect(url_for('cabinet.welcome_choose_type'))
     olim_name = (user or {}).get('olim_name') or ''
     profile = {}
     try:
@@ -268,6 +258,7 @@ def onboarding():
     return render_template('cabinet_onboarding.html', user=user, profile=profile,
                            olim_name=olim_name, degree_choices=_DEGREE_CHOICES,
                            default_degree=default_degree,
+                           current_user_type=(user or {}).get('user_type', 'unknown'),
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
@@ -397,7 +388,7 @@ def telegram():
     except Exception:
         log_exception(current_app.logger, "Cabinet Telegram login bajarilmadi")
         return jsonify({"success": False, "error": "Tizimga kirib bo'lmadi."}), 500
-    return jsonify({"success": True, "redirect": "/cabinet/xush-kelibsiz" if is_new else "/cabinet"})
+    return jsonify({"success": True, "redirect": "/cabinet/onboarding" if is_new else "/cabinet"})
 
 
 # ── Google OAuth ─────────────────────────────────────────────────────────────
@@ -478,7 +469,7 @@ def google_callback():
                     new_id = cur.fetchone()[0]
                     conn.commit()
                     _set_session(new_id, None)
-                    dest = '/cabinet/xush-kelibsiz'
+                    dest = '/cabinet/onboarding'
                     # Seed an olim_profiles row (olim_name is NOT NULL UNIQUE).
                     try:
                         parts = name.split(' ', 1)
