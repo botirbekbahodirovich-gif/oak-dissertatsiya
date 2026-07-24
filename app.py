@@ -1644,9 +1644,10 @@ def _seed_courses():
         pass
 
 
-_run_startup_migrations()
-_seed_blog_posts()
-_seed_courses()
+if APP_ENV != "testing":
+    _run_startup_migrations()
+    _seed_blog_posts()
+    _seed_courses()
 
 
 def _placeholder_news():
