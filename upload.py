@@ -6,7 +6,12 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from extensions import cache
-from security import admin_required
+from security import admin_required, log_exception
+from security_uploads import (
+    UploadTooLarge,
+    UploadValidationError,
+    validate_tabular_upload,
+)
 load_dotenv()
 try:
     import psycopg2
@@ -70,12 +75,16 @@ def upload_csv():
     file = request.files['file']
     if not file.filename:
         return jsonify({"success": False, "error": "Fayl nomi bo'sh."}), 400
-    if not file.filename.lower().endswith('.csv'):
-        return jsonify({"success": False, "error": "Faqat CSV fayl qabul qilinadi."}), 400
     try:
-        df = pd.read_csv(file, dtype=str)
-    except Exception as e:
-        return jsonify({"success": False, "error": f"CSV o'qishda xatolik: {e}"}), 400
+        _, raw = validate_tabular_upload(file, {'csv'})
+        df = pd.read_csv(io.BytesIO(raw), dtype=str)
+    except UploadTooLarge as exc:
+        return jsonify({"success": False, "error": str(exc)}), 413
+    except UploadValidationError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 422
+    except Exception:
+        log_exception(current_app.logger, "CSV faylni o'qib bo'lmadi")
+        return jsonify({"success": False, "error": "CSV faylni o'qib bo'lmadi."}), 422
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         return jsonify({
@@ -101,9 +110,10 @@ def upload_csv():
         inserted = len(values)
         cur.close()
         conn.close()
-    except Exception as e:
+    except Exception:
+        log_exception(current_app.logger, "CSV importida ma'lumotlar bazasi xatosi")
         _audit_import(file.filename, 0, 'failure')
-        return jsonify({"success": False, "error": f"Ma'lumotlar bazasiga yozishda xatolik: {e}"}), 500
+        return jsonify({"success": False, "error": "Importni saqlab bo'lmadi."}), 500
 
     _audit_import(file.filename, inserted, 'success')
     return jsonify({
@@ -159,10 +169,8 @@ def _ensure_extra_columns(conn):
     conn.commit()
 
 
-def _read_file(file) -> pd.DataFrame:
-    name = (file.filename or '').lower()
-    raw = file.read()
-    if name.endswith('.xlsx') or name.endswith('.xls'):
+def _read_file(extension, raw) -> pd.DataFrame:
+    if extension == 'xlsx':
         return pd.read_excel(io.BytesIO(raw), dtype=str)
     return pd.read_csv(io.BytesIO(raw), dtype=str)
 
@@ -176,14 +184,16 @@ def clear_and_upload():
     file = request.files['file']
     if not file.filename:
         return jsonify({'success': False, 'error': "Fayl nomi bo'sh."}), 400
-    ext = (file.filename or '').lower().rsplit('.', 1)[-1]
-    if ext not in ('csv', 'xlsx', 'xls'):
-        return jsonify({'success': False, 'error': 'Faqat .csv yoki .xlsx qabul qilinadi.'}), 400
-
     try:
-        df = _read_file(file)
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"Fayl o'qishda xatolik: {e}"}), 400
+        extension, raw = validate_tabular_upload(file, {'csv', 'xlsx'})
+        df = _read_file(extension, raw)
+    except UploadTooLarge as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 413
+    except UploadValidationError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 422
+    except Exception:
+        log_exception(current_app.logger, "Import faylini o'qib bo'lmadi")
+        return jsonify({'success': False, 'error': "Faylni o'qib bo'lmadi."}), 422
 
     # Rename columns to DB names
     df = df.rename(columns=_COL_MAP)
@@ -222,9 +232,10 @@ def clear_and_upload():
 
         conn.commit()
         conn.close()
-    except Exception as e:
+    except Exception:
+        log_exception(current_app.logger, "Bulk importida ma'lumotlar bazasi xatosi")
         _audit_import(file.filename, 0, 'failure')
-        return jsonify({'success': False, 'error': f"DB xatolik: {e}"}), 500
+        return jsonify({'success': False, 'error': "Importni saqlab bo'lmadi."}), 500
 
     _audit_import(file.filename, len(rows), 'success')
     cache.clear()

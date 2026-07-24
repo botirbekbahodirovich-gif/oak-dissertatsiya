@@ -1372,9 +1372,8 @@ def admin_university_gallery_add(id):
     from app import _require_admin
     _require_admin()
     from data import get_connection
-    from werkzeug.utils import secure_filename
-    import time as _time
     from flask import current_app
+    from security_uploads import UploadValidationError, save_safe_image
     files = request.files.getlist('images')
     caption = (request.form.get('caption') or '').strip() or None
     upload_dir = os.path.join(current_app.static_folder, "uploads", "university_gallery")
@@ -1383,15 +1382,13 @@ def admin_university_gallery_add(id):
     for f in files:
         if not f or not f.filename:
             continue
-        fname = secure_filename(f.filename)
-        ext = os.path.splitext(fname)[1].lower()
-        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-            continue
-        saved = f"{id}_{int(_time.time()*1000)}_{fname}"
         try:
-            f.save(os.path.join(upload_dir, saved))
+            saved = save_safe_image(f, upload_dir, f"university_{id}")
             saved_urls.append(f"/static/uploads/university_gallery/{saved}")
+        except UploadValidationError:
+            continue
         except Exception:
+            current_app.logger.exception("Universitet galereyasi rasmini saqlab bo'lmadi")
             continue
     if not saved_urls:
         flash("Rasm yuklanmadi (JPG/PNG/WEBP).", "error")

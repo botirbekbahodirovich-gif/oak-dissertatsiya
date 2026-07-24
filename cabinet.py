@@ -11,11 +11,13 @@ import time
 from functools import wraps
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   jsonify, session)
+                   jsonify, session, current_app)
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 from data import get_connection
+from security import log_exception
+from security_uploads import UploadTooLarge, UploadValidationError, save_safe_image
 from utils.links import normalize_telegram, normalize_orcid, normalize_scholar, normalize_url
 from utils.transliterate import get_search_variants
 
@@ -707,30 +709,32 @@ def avatar_upload():
     file = request.files.get('photo')
     if not file or not file.filename:
         return jsonify({"success": False, "error": "Fayl tanlanmagan"}), 400
-    from werkzeug.utils import secure_filename
-    ext = os.path.splitext(secure_filename(file.filename))[1].lower()
-    if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
-        return jsonify({"success": False, "error": "Faqat JPG, PNG, WEBP qabul qilinadi"}), 400
+    saved_path = None
     try:
-        os.makedirs(_AVATAR_DIR, exist_ok=True)
-        filename = f"avatar_{user_id}_{int(time.time())}{ext}"
-        file.save(os.path.join(_AVATAR_DIR, filename))
+        filename = save_safe_image(file, _AVATAR_DIR, f"avatar_{user_id}")
+        saved_path = os.path.join(_AVATAR_DIR, filename)
         photo_url = f"/static/uploads/avatars/{filename}"
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                # Drop the previous locally-stored avatar, if any.
                 cur.execute("SELECT photo_url FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1",
                             (user_id,))
                 old = cur.fetchone()
-                if old and old[0]:
-                    _delete_local_avatar(old[0])
                 _set_profile_photo(cur, user_id, photo_url)
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        if old and old[0]:
+            _delete_local_avatar(old[0])
+    except UploadTooLarge as exc:
+        return jsonify({"success": False, "error": str(exc)}), 413
+    except UploadValidationError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 422
+    except Exception:
+        if saved_path and os.path.isfile(saved_path):
+            os.remove(saved_path)
+        log_exception(current_app.logger, "Avatarni saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Avatarni saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "photo_url": photo_url})
 
 
