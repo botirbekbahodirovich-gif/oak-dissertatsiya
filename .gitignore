@@ -17,3 +17,11 @@ ENV/
 .idea/
 .vscode/
 flask_cache/
+# Local databases, secrets, and generated runtime state
+*.db
+.env
+.env.*
+!.env.example
+last_state.json
+__pycache__/
+*.pyc
