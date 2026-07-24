@@ -19,7 +19,7 @@ IS_PRODUCTION = APP_ENV == "production"
 import secrets as _secrets
 session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
 if not session_secret and IS_PRODUCTION:
-    raise RuntimeError("SESSION_SECRET is required when APP_ENV=production")
+    raise RuntimeError("SESSION_SECRET production uchun majburiy")
 if not session_secret:
     session_secret = _secrets.token_hex(32)
     print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
