@@ -1,5 +1,8 @@
 .env
 *.env
+.env.*
+!.env.example
+last_state.json
 # Scraper run output (regenerated every run; not source of truth)
 new_items.json
 wsl_venv/
