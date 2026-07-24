@@ -405,6 +405,7 @@ login_manager.login_message = "Iltimos, tizimga kiring."
 
 # ── Fix 5.2: durable session/token lifecycle ────────────────────────────────
 app.config.update(
+    MAX_CONTENT_LENGTH=20 * 1024 * 1024,
     SESSION_PERMANENT=True,
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),   # login 7 kun saqlanadi
     REMEMBER_COOKIE_DURATION=timedelta(days=7),
@@ -2928,24 +2929,20 @@ def admin_fix_names():
 
 
 def _save_news_image():
-    """Save an uploaded news image to static/uploads/news/ and return its web path, or None."""
+    """Validate and re-encode an uploaded news image, or return None."""
     f = request.files.get("image_file")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    if not fname:
-        return None
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "news")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "news")
+    except UploadValidationError as exc:
+        flash(str(exc), "error")
+        return None
     except Exception:
+        app.logger.exception("Yangilik rasmini saqlab bo'lmadi")
+        flash("Rasmni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/news/{saved}"
 
@@ -3605,22 +3602,20 @@ def _find_university(cur, term):
 
 
 def _save_university_logo():
-    """Save an uploaded university logo and return its web path, or None."""
+    """Validate and re-encode an uploaded university logo, or return None."""
     f = request.files.get("logo")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "university_logos")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "university_logo")
+    except UploadValidationError as exc:
+        flash(str(exc), "error")
+        return None
     except Exception:
+        app.logger.exception("Universitet logosini saqlab bo'lmadi")
+        flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/university_logos/{saved}"
 
@@ -3682,18 +3677,16 @@ def _save_journal_logo():
     f = request.files.get("logo")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "journal_logos")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "journal_logo")
+    except UploadValidationError as exc:
+        flash(str(exc), "error")
+        return None
     except Exception:
+        app.logger.exception("Jurnal logosini saqlab bo'lmadi")
+        flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/journal_logos/{saved}"
 
