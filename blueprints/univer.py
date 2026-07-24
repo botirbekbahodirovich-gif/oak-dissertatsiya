@@ -1148,7 +1148,6 @@ def _add_staff(cur, canonical, ident, role, title, invited_by, max_staff):
 
 
 @univer_bp.route('/univer/api/staff/add', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_staff_add():
     canonical = _owner_or_403()
@@ -1189,7 +1188,6 @@ def _staff_row_for_update(cur, sid, canonical):
 
 
 @univer_bp.route('/univer/api/staff/<int:sid>/role', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_staff_role(sid):
     canonical = _owner_or_403()
@@ -1211,7 +1209,6 @@ def api_staff_role(sid):
 
 
 @univer_bp.route('/univer/api/staff/<int:sid>/suspend', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_staff_suspend(sid):
     canonical = _owner_or_403()
@@ -1235,7 +1232,6 @@ def api_staff_suspend(sid):
 # ═══════════ MAXFIYLIK: "Universitetim faolligimni ko'rmasin" ═══════════════
 
 @univer_bp.route('/univer/api/privacy', methods=['GET', 'POST'])
-@csrf.exempt
 @login_required
 def api_privacy():
     """Doktorant o'zini universitet monitoringidan yashirishi mumkin
@@ -1301,7 +1297,6 @@ def univer_invite_landing(token):
 
 
 @univer_bp.route('/univer/invite/<token>/respond', methods=['POST'])
-@csrf.exempt
 @login_required
 def univer_invite_respond(token):
     conn = _conn()
@@ -1597,7 +1592,6 @@ def admin_license_staff_action(lid, sid):
 
 @univer_bp.route('/admin/universities/licenses/<int:lid>/invite-link',
                  methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_license_invite_link(lid):
     """7 kunlik bir martalik xodim taklif havolasi (pilotlar uchun).
@@ -1703,7 +1697,6 @@ def _conf_form_vals(data):
 
 
 @univer_bp.route('/univer/api/conferences/add', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_uni_conference_add():
     canonical = _manager_or_403()
@@ -1757,7 +1750,6 @@ def _own_conference_or_403(cur, canonical, cid):
 
 
 @univer_bp.route('/univer/api/conferences/<int:cid>/update', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_uni_conference_update(cid):
     canonical = _manager_or_403()
@@ -1788,7 +1780,6 @@ def api_uni_conference_update(cid):
 
 
 @univer_bp.route('/univer/api/conferences/<int:cid>/toggle', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_uni_conference_toggle(cid):
     """O'z (tasdiqlangan) konferensiyasini yashirish/qayta yoqish.
@@ -1864,7 +1855,6 @@ def univer_journals_page():
 
 
 @univer_bp.route('/univer/api/journals/request', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_uni_journal_request():
     """"Jurnal qo'shish so'rovi" — pending journals qatori (is_active=FALSE,
@@ -1974,7 +1964,6 @@ def _doctorant_invites(canonical):
 
 
 @univer_bp.route('/univer/api/doktorant/invites', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_doctorant_invites():
     """Bulk taklif: har qatorda bitta email (maks. 50). Har biriga 7 kunlik
@@ -2028,7 +2017,6 @@ def api_doctorant_invites():
 
 
 @univer_bp.route('/univer/api/digest-pref', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_digest_pref():
     """Xodimning o'z kunlik digest toggle'i (university_staff.digest_enabled)."""
@@ -2435,7 +2423,6 @@ def _report_docx(latin, period_label, sections, data):
 # ═══════════ OMMAVIY PROFIL TAHRIRI (litsenziya perki, Part 2) ═══════════════
 
 @univer_bp.route('/univer/api/public-profile', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_public_profile():
     """Ommaviy /university/<name> sahifasidagi tavsif/veb-sayt/logo/email —

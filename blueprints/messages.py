@@ -15,6 +15,8 @@ import uuid
 from flask import (Blueprint, jsonify, request, render_template, redirect,
                    abort, current_app)
 from flask_login import login_required, current_user
+from flask_wtf.csrf import validate_csrf
+from wtforms.validators import ValidationError
 
 from app import csrf
 
@@ -266,7 +268,6 @@ def thread(conversation_id):
 # ── APIs ─────────────────────────────────────────────────────────────────────
 
 @messages_bp.route('/api/messages/start', methods=['POST'])
-@csrf.exempt
 @login_required
 def start_conversation():
     data = request.get_json(silent=True) or {}
@@ -365,7 +366,6 @@ def _notify_participants(cur, conversation_id, body_snippet):
 
 
 @messages_bp.route('/api/messages/<int:conversation_id>/send', methods=['POST'])
-@csrf.exempt
 @login_required
 def send_message(conversation_id):
     body = ((request.get_json(silent=True) or {}).get('body') or '').strip()
@@ -397,7 +397,6 @@ def send_message(conversation_id):
 
 
 @messages_bp.route('/api/messages/<int:conversation_id>/upload', methods=['POST'])
-@csrf.exempt
 @login_required
 def upload_attachment(conversation_id):
     f = request.files.get('file')
@@ -528,9 +527,16 @@ def messages_cleanup():
     provided = request.headers.get('X-API-Key') or request.args.get('key') or ''
     is_admin = (getattr(current_user, 'is_authenticated', False)
                 and getattr(current_user, 'is_admin', False))
-    ok = is_admin or any(k and provided and hmac.compare_digest(provided, k) for k in keys)
-    if not ok:
-        return jsonify({'success': False, 'error': 'unauthorized'}), 403
+    valid_api_key = any(
+        k and provided and hmac.compare_digest(provided, k) for k in keys
+    )
+    if not valid_api_key:
+        if not is_admin:
+            return jsonify({'success': False, 'error': 'unauthorized'}), 403
+        try:
+            validate_csrf(request.headers.get('X-CSRFToken') or request.form.get('csrf_token'))
+        except ValidationError:
+            return jsonify({'success': False, 'error': 'csrf_failed'}), 400
     conn = _conn()
     try:
         with conn.cursor() as cur:

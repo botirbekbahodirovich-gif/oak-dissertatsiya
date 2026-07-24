@@ -1047,6 +1047,29 @@
       out['X-CSRFToken'] = window.oakCsrfToken;
       return out;
     };
+    // Protect every same-origin browser write, including latest-main modules
+    // that use fetch directly instead of oakCsrfHeaders.
+    (function (nativeFetch) {
+      window.fetch = function (input, init) {
+        var options = Object.assign({}, init || {});
+        var method = String(options.method || (input && input.method) || 'GET').toUpperCase();
+        if (!/^(GET|HEAD|OPTIONS|TRACE)$/.test(method)) {
+          var rawUrl = typeof input === 'string' ? input
+            : ((input && input.url) || String(input || window.location.href));
+          var target = new URL(rawUrl || window.location.href, window.location.href);
+          if (target.origin === window.location.origin) {
+            var baseHeaders = options.headers || (input && input.headers) || {};
+            var headers = new Headers(baseHeaders);
+            if (window.oakCsrfToken && !headers.has('X-CSRFToken')) {
+              headers.set('X-CSRFToken', window.oakCsrfToken);
+            }
+            options.headers = headers;
+            options.credentials = options.credentials || 'same-origin';
+          }
+        }
+        return nativeFetch.call(this, input, options);
+      };
+    })(window.fetch);
     (function() {
       const root = document.documentElement;
       const btn = document.getElementById('theme-toggle');

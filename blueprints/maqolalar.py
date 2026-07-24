@@ -347,7 +347,6 @@ def maqolalar_page():
 
 
 @maqolalar_bp.route('/api/maqolalar/search', methods=['POST'])
-@csrf.exempt
 def api_search():
     # login_required o'rniga qo'lda tekshiruv — fetch uchun toza 401 JSON
     # (Flask-Login redirect'i JSON so'rovni buzadi).
@@ -487,7 +486,6 @@ def api_search():
 
 
 @maqolalar_bp.route('/api/maqolalar/bookmark', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_bookmark_toggle():
     """Saqlash/olib tashlash (toggle) — metadata mijozdan keladi (OpenAlex

@@ -818,10 +818,8 @@ app.register_blueprint(maqolalar_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(kafedra_bp)
 
-# ATMOS callback server-to-server keladi (imzo + pay/get bilan himoyalangan),
-# pay/create esa JSON fetch (login_required) — ikkalasida CSRF token yo'q.
+# ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])
-csrf.exempt(app.view_functions['payments.pay_create'])
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
@@ -3614,7 +3612,6 @@ def courses():
 
 @app.route("/api/courses/<int:course_id>/interest", methods=["POST"])
 @login_required
-@csrf.exempt
 def course_interest_toggle(course_id):
     from data import get_connection
     try:

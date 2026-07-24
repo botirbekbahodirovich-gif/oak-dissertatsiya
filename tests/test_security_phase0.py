@@ -204,6 +204,58 @@ class SecurityPhase0Tests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_latest_main_browser_write_without_csrf_is_rejected(self):
+        self.login(2)
+        response = self.client.post("/api/courses/1/interest", json={})
+        self.assertEqual(response.status_code, 400)
+
+    def test_machine_route_admin_session_still_requires_csrf(self):
+        self.login(2)
+        response = self.client.post("/api/v1/messages/cleanup")
+        self.assertEqual(response.status_code, 400)
+
+    def test_only_machine_callbacks_are_csrf_exempt(self):
+        allowed_decorated = {
+            "dispatch_alerts",
+            "dispatch_univer_digest",
+            "messages_cleanup",
+            "process_reminders",
+        }
+        decorated = set()
+        for path in (ROOT / "blueprints").glob("*.py"):
+            source = path.read_text()
+            decorated.update(
+                re.findall(r"@csrf\.exempt[^\n]*\ndef ([A-Za-z_][A-Za-z0-9_]*)", source)
+            )
+        self.assertEqual(decorated, allowed_decorated)
+
+        app_source = (ROOT / "app.py").read_text()
+        registered = set(
+            re.findall(
+                r"csrf\.exempt\(app\.view_functions\['([^']+)'\]\)",
+                app_source,
+            )
+        )
+        self.assertEqual(
+            registered,
+            {
+                "auth.telegram_login",
+                "cabinet.telegram",
+                "data.import_oak",
+                "data.oak_ingest",
+                "payments.atmos_callback",
+            },
+        )
+
+    def test_frontend_injects_csrf_for_same_origin_writes(self):
+        base = (ROOT / "templates" / "base.html").read_text()
+        dissertation_js = (ROOT / "static" / "js" / "dissertation.js").read_text()
+        self.assertIn("window.fetch = function", base)
+        self.assertIn("target.origin === window.location.origin", base)
+        self.assertIn("headers.set('X-CSRFToken'", base)
+        self.assertNotIn("navigator.sendBeacon", dissertation_js)
+        self.assertIn("keepalive: true", dissertation_js)
+
     def test_heatmap_uses_text_nodes_for_database_labels(self):
         source = (ROOT / "static" / "js" / "heatmap.js").read_text()
         self.assertNotIn("innerHTML", source)

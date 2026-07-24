@@ -210,7 +210,6 @@ def mening_xaritam():
 
 
 @xarita_bp.route('/xarita/supervisor/set', methods=['POST'])
-@csrf.exempt
 @login_required
 def set_supervisor():
     uid = _resolve_uid()

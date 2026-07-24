@@ -566,7 +566,6 @@ def api_olimlar_ratings():
 
 
 @olimlar_catalog_bp.route('/api/olimlar/<slug>/follow', methods=['POST'])
-@csrf.exempt
 @login_required
 def api_follow(slug):
     """Kuzatish toggle. Slug → asl olim nomi keshdan topiladi."""

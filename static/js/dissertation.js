@@ -737,10 +737,20 @@
           var blob = new Blob(
             [JSON.stringify({ content: content, save_type: 'manual' })],
             { type: 'application/json' });
-          if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/save', blob);
+          fetch('/api/blocks/' + currentBlockId + '/save', {
+            method: 'POST',
+            headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
+            body: blob,
+            keepalive: true
+          });
         } catch (e2) {}
       }
-      if (navigator.sendBeacon) navigator.sendBeacon('/api/blocks/' + currentBlockId + '/unlock', '{}');
+      fetch('/api/blocks/' + currentBlockId + '/unlock', {
+        method: 'POST',
+        headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
+        body: '{}',
+        keepalive: true
+      });
       if (isDirty) {
         e.preventDefault();
         e.returnValue = '';                            // brauzer tasdiq oynasi

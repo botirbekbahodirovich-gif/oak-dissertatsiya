@@ -78,7 +78,6 @@ def should_show():
 
 
 @acquisition_survey_bp.route('/api/acquisition-survey/submit', methods=['POST'])
-@csrf.exempt
 @login_required
 def submit():
     """Record the user's chosen acquisition source. Idempotent: a second submit
@@ -123,7 +122,6 @@ def submit():
 
 
 @acquisition_survey_bp.route('/api/acquisition-survey/skip', methods=['POST'])
-@csrf.exempt
 @login_required
 def skip():
     """Mark the survey as shown (once) so it is not offered again after a skip / ×."""

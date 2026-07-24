@@ -56,7 +56,6 @@ def _total_saved(cur, uid):
 # ── API ──────────────────────────────────────────────────────────────────────
 
 @saved_bp.route('/api/saved/toggle', methods=['POST'])
-@csrf.exempt
 @login_required
 def saved_toggle():
     """Saqlangan bo'lsa o'chiradi, bo'lmasa saqlaydi. Dashboard yulduzchasi
@@ -106,7 +105,6 @@ def saved_ids():
 
 
 @saved_bp.route('/api/saved/<int:dissertation_id>/notes', methods=['POST'])
-@csrf.exempt
 @login_required
 def saved_notes(dissertation_id):
     """Saqlangan dissertatsiyaga shaxsiy eslatma (max 500 belgi). Faqat
