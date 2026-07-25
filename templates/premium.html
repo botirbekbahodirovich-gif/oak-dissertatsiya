@@ -79,7 +79,7 @@
 
 {% block content %}
 <div class="pr-hero">
-  {% if test_mode and is_admin %}<span class="pr-ribbon">TEST REJIM</span><br>{% endif %}
+  {% if test_mode and is_admin and not is_production %}<span class="pr-ribbon">TEST REJIM</span><br>{% endif %}
   <h1>Olimlar.uz <span class="pr-grad">Premium</span></h1>
   <p>Ilmiy izlanishingizni tezlashtiring: cheksiz AI mavzu tahlili, to'liq ma'lumot eksporti va Konstruktorda cheksiz loyihalar — bitta obunada.</p>
 </div>
