@@ -1,10 +1,17 @@
 import os
 import io
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, current_app, render_template, request, jsonify
 from flask_login import login_required, current_user
 import pandas as pd
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from extensions import cache
+from security import admin_required, log_exception
+from security_uploads import (
+    UploadTooLarge,
+    UploadValidationError,
+    validate_tabular_upload,
+)
 load_dotenv()
 try:
     import psycopg2
@@ -32,26 +39,52 @@ def get_connection():
     return _get_connection()
 
 
+def _audit_import(file_name, imported_rows, result):
+    """Persist a minimal import audit event without storing file contents."""
+    safe_name = secure_filename(file_name or '')[:255] or 'unnamed'
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO import_audit_log "
+                    "(user_id, file_name, imported_rows, result) "
+                    "VALUES (%s, %s, %s, %s)",
+                    (int(current_user.get_id()), safe_name,
+                     max(0, int(imported_rows or 0)), result))
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception:
+        log_exception(current_app.logger, "Import audit logini yozib bo'lmadi")
+
+
 @upload_bp.route('/upload', methods=['GET'])
 @login_required
+@admin_required
 def upload_page():
     return render_template('upload.html')
 
 
 @upload_bp.route('/upload', methods=['POST'])
 @login_required
+@admin_required
 def upload_csv():
     if 'file' not in request.files:
         return jsonify({"success": False, "error": "Fayl tanlanmagan."}), 400
     file = request.files['file']
     if not file.filename:
         return jsonify({"success": False, "error": "Fayl nomi bo'sh."}), 400
-    if not file.filename.lower().endswith('.csv'):
-        return jsonify({"success": False, "error": "Faqat CSV fayl qabul qilinadi."}), 400
     try:
-        df = pd.read_csv(file, dtype=str)
-    except Exception as e:
-        return jsonify({"success": False, "error": f"CSV o'qishda xatolik: {e}"}), 400
+        _, raw = validate_tabular_upload(file, {'csv'})
+        df = pd.read_csv(io.BytesIO(raw), dtype=str)
+    except UploadTooLarge as exc:
+        return jsonify({"success": False, "error": exc.public_message}), 413
+    except UploadValidationError as exc:
+        return jsonify({"success": False, "error": exc.public_message}), 422
+    except Exception:
+        log_exception(current_app.logger, "CSV faylni o'qib bo'lmadi")
+        return jsonify({"success": False, "error": "CSV faylni o'qib bo'lmadi."}), 422
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         return jsonify({
@@ -77,9 +110,12 @@ def upload_csv():
         inserted = len(values)
         cur.close()
         conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Ma'lumotlar bazasiga yozishda xatolik: {e}"}), 500
+    except Exception:
+        log_exception(current_app.logger, "CSV importida ma'lumotlar bazasi xatosi")
+        _audit_import(file.filename, 0, 'failure')
+        return jsonify({"success": False, "error": "Importni saqlab bo'lmadi."}), 500
 
+    _audit_import(file.filename, inserted, 'success')
     return jsonify({
         "success": True,
         "rows": inserted,
@@ -133,33 +169,31 @@ def _ensure_extra_columns(conn):
     conn.commit()
 
 
-def _read_file(file) -> pd.DataFrame:
-    name = (file.filename or '').lower()
-    raw = file.read()
-    if name.endswith('.xlsx') or name.endswith('.xls'):
+def _read_file(extension, raw) -> pd.DataFrame:
+    if extension == 'xlsx':
         return pd.read_excel(io.BytesIO(raw), dtype=str)
     return pd.read_csv(io.BytesIO(raw), dtype=str)
 
 
 @upload_bp.route('/admin/clear-and-upload', methods=['POST'])
 @login_required
+@admin_required
 def clear_and_upload():
-    if not getattr(current_user, 'is_admin', False):
-        return jsonify({'success': False, 'error': 'Admin only'}), 403
-
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'Fayl tanlanmagan.'}), 400
     file = request.files['file']
     if not file.filename:
         return jsonify({'success': False, 'error': "Fayl nomi bo'sh."}), 400
-    ext = (file.filename or '').lower().rsplit('.', 1)[-1]
-    if ext not in ('csv', 'xlsx', 'xls'):
-        return jsonify({'success': False, 'error': 'Faqat .csv yoki .xlsx qabul qilinadi.'}), 400
-
     try:
-        df = _read_file(file)
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"Fayl o'qishda xatolik: {e}"}), 400
+        extension, raw = validate_tabular_upload(file, {'csv', 'xlsx'})
+        df = _read_file(extension, raw)
+    except UploadTooLarge as exc:
+        return jsonify({'success': False, 'error': exc.public_message}), 413
+    except UploadValidationError as exc:
+        return jsonify({'success': False, 'error': exc.public_message}), 422
+    except Exception:
+        log_exception(current_app.logger, "Import faylini o'qib bo'lmadi")
+        return jsonify({'success': False, 'error': "Faylni o'qib bo'lmadi."}), 422
 
     # Rename columns to DB names
     df = df.rename(columns=_COL_MAP)
@@ -198,9 +232,12 @@ def clear_and_upload():
 
         conn.commit()
         conn.close()
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"DB xatolik: {e}"}), 500
+    except Exception:
+        log_exception(current_app.logger, "Bulk importida ma'lumotlar bazasi xatosi")
+        _audit_import(file.filename, 0, 'failure')
+        return jsonify({'success': False, 'error': "Importni saqlab bo'lmadi."}), 500
 
+    _audit_import(file.filename, len(rows), 'success')
     cache.clear()
     return jsonify({
         'success': True,

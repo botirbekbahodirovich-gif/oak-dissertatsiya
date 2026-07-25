@@ -237,7 +237,7 @@ function subscribeCourse(ev) {
   if (!email) return false;
   btn.disabled = true;
   fetch('/api/course-subscribe', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ email: email })
   }).then(function (r) { return r.json(); }).then(function (d) {
     if (d.success) {

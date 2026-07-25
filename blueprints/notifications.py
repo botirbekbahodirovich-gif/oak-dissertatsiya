@@ -28,10 +28,10 @@ Schema is created lazily on first request (idempotent CREATE IF NOT EXISTS), so 
 database is self-sufficient without touching app.py's init block. Shared helpers are
 lazy-imported inside views (auth.py / cabinet.py pattern) to avoid circular imports.
 """
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 from flask_login import login_required, current_user
+from security import log_exception
 
-from app import csrf
 
 notifications_bp = Blueprint('notifications', __name__)
 
@@ -210,7 +210,6 @@ def active_notifications():
 # ── Public: acknowledge / dismiss a notice ──────────────────────────────────
 
 @notifications_bp.route('/api/v1/notifications/dismiss', methods=['POST'])
-@csrf.exempt
 @login_required
 def dismiss_notification():
     from data import get_connection
@@ -244,8 +243,9 @@ def dismiss_notification():
         finally:
             conn.close()
         return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Bildirishnoma amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 # ── Admin: draft + POST notices ─────────────────────────────────────────────
@@ -254,7 +254,6 @@ _LEVELS = ('info', 'warning', 'success', 'danger')
 
 
 @notifications_bp.route('/admin/api/notifications/broadcast', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_post_broadcast():
     from app import _require_admin
@@ -280,12 +279,12 @@ def admin_post_broadcast():
         finally:
             conn.close()
         return jsonify({"ok": True, "id": new_id})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Bildirishnoma amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @notifications_bp.route('/admin/api/notifications/alert', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_post_alert():
     from app import _require_admin
@@ -315,14 +314,14 @@ def admin_post_alert():
         finally:
             conn.close()
         return jsonify({"ok": True, "id": new_id})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Bildirishnoma amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 # ── Notification preferences (cabinet toggle panel) ──────────────────────────
 
 @notifications_bp.route('/api/v1/notifications/prefs', methods=['GET', 'POST'])
-@csrf.exempt
 def notification_prefs():
     from data import get_connection
     try:
@@ -357,5 +356,6 @@ def notification_prefs():
         return jsonify({"success": True, "prefs": prefs,
                         "has_telegram": bool(row[0]),
                         "has_email": bool(row[1] and str(row[1]).strip())})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Bildirishnoma sozlamasi saqlanmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500

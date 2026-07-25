@@ -13,19 +13,35 @@ app = Flask(__name__)
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 load_dotenv()
-# Session secret: prefer SESSION_SECRET, then SECRET_KEY (common alias). If
-# neither is configured, fall back to an ephemeral key so the app still boots
-# (e.g. before env vars are wired on a fresh host) — but warn loudly, because an
-# ephemeral key breaks sessions/CSRF across restarts and across Gunicorn workers.
+APP_ENV = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "development").lower()
+IS_PRODUCTION = APP_ENV == "production"
+# Production requires a configured session secret; development may use an ephemeral fallback.
 import secrets as _secrets
-session_secret = os.environ.get("SESSION_SECRET") or os.environ.get("SECRET_KEY")
+session_secret = os.environ.get("SESSION_SECRET")
+if not session_secret and IS_PRODUCTION:
+    raise RuntimeError("SESSION_SECRET production uchun majburiy")
+if not session_secret:
+    session_secret = os.environ.get("SECRET_KEY")
 if not session_secret:
     session_secret = _secrets.token_hex(32)
     print("WARNING: SESSION_SECRET/SECRET_KEY not set — using an EPHEMERAL key. "
           "Set SESSION_SECRET in the environment for stable sessions/CSRF in production.",
           flush=True)
+database_url = os.environ.get("DATABASE_URL", "").strip()
+if IS_PRODUCTION and not database_url:
+    raise RuntimeError("DATABASE_URL production uchun majburiy")
+
 app.secret_key = session_secret
 csrf = CSRFProtect(app)
+
+if IS_PRODUCTION:
+    os.environ.pop('OAUTHLIB_INSECURE_TRANSPORT', None)
+else:
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+
+from security import init_security, log_exception
+init_security(app, IS_PRODUCTION)
+
 
 # ── Error logging ───────────────────────────────────────────────────────────
 # Under Gunicorn, app.logger has no handlers by default, so tracebacks vanish
@@ -146,7 +162,10 @@ def parse_referrer(ref):
 
 @app.context_processor
 def _inject_csrf_token():
-    return dict(csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf())
+    return dict(
+        csrf_token=lambda: '<input type="hidden" name="csrf_token" value="%s">' % generate_csrf(),
+        csrf_token_value=generate_csrf,
+    )
 
 
 _FEMALE_NAMES = {
@@ -365,7 +384,6 @@ def inject_visit_count():
 
 
 @app.route('/api/profile/set-region', methods=['POST'])
-@csrf.exempt
 def set_region():
     """Persist the region chosen in the mandatory popup, to whichever profile
     (main user / cabinet user) the visitor is logged into."""
@@ -398,8 +416,9 @@ def set_region():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(app.logger, "Hududni saqlab bo'lmadi")
+        return jsonify({"ok": False, "error": "Hududni saqlab bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -436,13 +455,17 @@ login_manager.login_message = "Iltimos, tizimga kiring."
 
 # ── Fix 5.2: durable session/token lifecycle ────────────────────────────────
 app.config.update(
+    MAX_CONTENT_LENGTH=20 * 1024 * 1024,
     SESSION_PERMANENT=True,
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),   # login 7 kun saqlanadi
     REMEMBER_COOKIE_DURATION=timedelta(days=7),
     REMEMBER_COOKIE_HTTPONLY=True,
+    REMEMBER_COOKIE_SECURE=IS_PRODUCTION,
     REMEMBER_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
     SESSION_COOKIE_SAMESITE="Lax",
+    PREFERRED_URL_SCHEME="https" if IS_PRODUCTION else "http",
 )
 
 # ── Fix 5.3: sanitized Supabase avatar path + patronymic normalization ──────
@@ -733,11 +756,9 @@ def load_user(user_id):
 
 from auth import auth_bp
 from data import data_bp, query_dissertations
-csrf.exempt(data_bp)
 from analytics import analytics_bp
 from upload import upload_bp
 from cabinet import cabinet_bp
-csrf.exempt(cabinet_bp)
 from blueprints.admin import admin_bp
 from blueprints.content import content_bp
 from blueprints.notifications import notifications_bp
@@ -799,13 +820,16 @@ app.register_blueprint(maqolalar_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(kafedra_bp)
 
-# ATMOS callback server-to-server keladi (imzo + pay/get bilan himoyalangan),
-# pay/create esa JSON fetch (login_required) — ikkalasida CSRF token yo'q.
+# ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])
-csrf.exempt(app.view_functions['payments.pay_create'])
 
 # Telegram login uses HMAC hash verification — no CSRF token needed
 csrf.exempt(app.view_functions['auth.telegram_login'])
+# Cabinet Telegram callback has the same HMAC verification boundary.
+csrf.exempt(app.view_functions['cabinet.telegram'])
+# Machine-to-machine imports authenticate with high-entropy header API keys.
+csrf.exempt(app.view_functions['data.oak_ingest'])
+csrf.exempt(app.view_functions['data.import_oak'])
 
 
 # ── University seed data + detection ────────────────────────────────────────
@@ -952,9 +976,23 @@ def _run_startup_migrations():
                     email TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     is_admin BOOLEAN DEFAULT FALSE,
+                    telegram_id BIGINT,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS import_audit_log (
+                    id BIGSERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    file_name VARCHAR(255) NOT NULL,
+                    imported_rows INTEGER NOT NULL DEFAULT 0,
+                    result VARCHAR(20) NOT NULL
+                        CHECK (result IN ('success', 'failure')),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_import_audit_created "
+                        "ON import_audit_log(created_at DESC)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS dissertations (
                     id SERIAL PRIMARY KEY,
@@ -1518,6 +1556,10 @@ def _run_startup_migrations():
             # mandatory post-registration popup for geography analytics.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS region VARCHAR(100)")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS visit_count INTEGER DEFAULT 0")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id BIGINT")
+            cur.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_telegram_id "
+                "ON users(telegram_id) WHERE telegram_id IS NOT NULL")
             # Acquisition-source survey (see migrations/add_acquisition_survey.sql):
             # one-time post-signup "Bizni qayerdan bildingiz?" attribution modal.
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS acquisition_source VARCHAR(32)")
@@ -1606,9 +1648,10 @@ def _seed_courses():
         pass
 
 
-_run_startup_migrations()
-_seed_blog_posts()
-_seed_courses()
+if APP_ENV == "development":
+    _run_startup_migrations()
+    _seed_blog_posts()
+    _seed_courses()
 
 
 def _placeholder_news():
@@ -2213,8 +2256,10 @@ def api_collaboration():
             return jsonify(_collab_full())
         if name:
             return jsonify(_collab_search(name))
-    except Exception as e:
-        return jsonify({"nodes": [], "edges": [], "stats": {}, "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Hamkorlik grafigini qurib bo'lmadi")
+        return jsonify({"nodes": [], "edges": [], "stats": {},
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
     return jsonify({"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}})
 
 
@@ -2396,9 +2441,11 @@ def topic_clustering():
 def api_clustering():
     try:
         return jsonify(_clustering_public(_clustering_build()))
-    except Exception as e:
+    except Exception:
+        log_exception(app.logger, "Klaster ma'lumotlarini qurib bo'lmadi")
         return jsonify({"clusters": [], "total_clusters": 0, "clustered": 0,
-                        "unclustered": 0, "total": 0, "error": str(e)})
+                        "unclustered": 0, "total": 0,
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route("/clustering/<int:cluster_id>")
@@ -2521,7 +2568,6 @@ def _compare_ixtisosliklar():
 
 
 @app.route("/api/mavzu-tahlili", methods=["POST"])
-@csrf.exempt
 def api_mavzu_tahlili():
     from data import get_connection, latin_to_cyrillic, clean_olim_name
     body = request.get_json(silent=True) or {}
@@ -2569,27 +2615,28 @@ def api_mavzu_tahlili():
                     })
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"results": [], "total": 0, "keywords_used": keywords, "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Mavzu tahlili qidiruvi bajarilmadi")
+        return jsonify({"results": [], "total": 0, "keywords_used": keywords,
+                        "error": "Qidiruvni bajarib bo'lmadi."}), 500
     return jsonify({"results": results, "total": len(results), "keywords_used": keywords})
 
 
 @app.route("/api/mavzu-tahlili/ai", methods=["POST"])
-@csrf.exempt
 def api_mavzu_tahlili_ai():
     from data import GROQ_API_KEY
     body = request.get_json(silent=True) or {}
     mavzu = (body.get("mavzu") or "").strip()
     similar = body.get("similar_topics") or []
     if not mavzu:
-        return jsonify({"error": "Mavzu kiritilmagan"}), 200
+        return jsonify({"error": "Mavzu kiritilmagan"}), 400
     if not GROQ_API_KEY:
         return jsonify({
             "uniqueness_score": 5,
             "analysis": "AI tahlil hozircha mavjud emas (Groq API kaliti sozlanmagan). "
                         "Quyidagi o'xshash mavzular ro'yxatini ko'rib chiqing.",
             "suggestions": [], "angles": [],
-        })
+        }), 503
     similar_list = "\n".join(f"- {t}" for t in similar[:10])
     user_prompt = (
         f"Taklif qilinayotgan mavzu: {mavzu}\n\n"
@@ -2626,9 +2673,11 @@ def api_mavzu_tahlili_ai():
         data.setdefault("suggestions", [])
         data.setdefault("angles", [])
         return jsonify(data)
-    except Exception as e:
-        return jsonify({"uniqueness_score": 5, "analysis": f"AI tahlilda xatolik: {e}",
-                        "suggestions": [], "angles": []}), 200
+    except Exception:
+        log_exception(app.logger, "Groq AI tahlili bajarilmadi")
+        return jsonify({"uniqueness_score": 5,
+                        "analysis": "AI xizmati vaqtincha ishlamayapti.",
+                        "suggestions": [], "angles": []}), 502
 
 
 @app.route("/api/notifications/count")
@@ -3125,10 +3174,12 @@ def _genealogy_children(name):
 def api_genealogy(name):
     try:
         return jsonify(_genealogy_tree(name))
-    except Exception as e:
+    except Exception:
+        log_exception(app.logger, "Genealogiya daraxtini qurib bo'lmadi")
         return jsonify({"name": name, "degree": None, "direct_students": 0,
                         "avatar": avatar_url(name), "children": [],
-                        "total_nodes": 0, "truncated": False, "error": str(e)})
+                        "total_nodes": 0, "truncated": False,
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route('/api/genealogy/expand/<path:name>')
@@ -3136,8 +3187,10 @@ def api_genealogy_expand(name):
     """Immediate children only (1 level) for live lazy-loading of the tree."""
     try:
         return jsonify(_genealogy_children(name))
-    except Exception as e:
-        return jsonify({"name": name, "children": [], "error": str(e)})
+    except Exception:
+        log_exception(app.logger, "Genealogiya avlodlarini yuklab bo'lmadi")
+        return jsonify({"name": name, "children": [],
+                        "error": "Ma'lumotni yuklab bo'lmadi."}), 500
 
 
 @app.route('/genealogy/<path:name>')
@@ -3215,32 +3268,29 @@ def admin_fix_names():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(app.logger, "Admin nomlarni tuzatish amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
     return jsonify({"ok": True, "distinct_names_fixed": fixed_names,
                     "rows_updated": fixed_rows, "samples": samples})
 
 
 def _save_news_image():
-    """Save an uploaded news image to static/uploads/news/ and return its web path, or None."""
+    """Validate and re-encode an uploaded news image, or return None."""
     f = request.files.get("image_file")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    if not fname:
-        return None
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "news")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "news")
+    except UploadValidationError as exc:
+        flash(exc.public_message, "error")
+        return None
     except Exception:
+        log_exception(app.logger, "Yangilik rasmini saqlab bo'lmadi")
+        flash("Rasmni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/news/{saved}"
 
@@ -3427,13 +3477,12 @@ def _blog_form_values():
 
 
 @app.route("/api/course-subscribe", methods=["POST"])
-@csrf.exempt
 def course_subscribe():
     from data import get_connection
     data = request.get_json(silent=True) or request.form
     email = (data.get("email") or "").strip().lower()
     if not email or "@" not in email or len(email) > 255:
-        return jsonify({"success": False, "error": "Email noto'g'ri"}), 200
+        return jsonify({"success": False, "error": "Email noto'g'ri"}), 400
     try:
         conn = get_connection()
         try:
@@ -3445,7 +3494,8 @@ def course_subscribe():
         finally:
             conn.close()
     except Exception:
-        return jsonify({"success": False, "error": "Xatolik yuz berdi"}), 200
+        log_exception(app.logger, "Kurs obunasini saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Obunani saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "message": "Rahmat! Sizga xabar beramiz."})
 
 
@@ -3564,7 +3614,6 @@ def courses():
 
 @app.route("/api/courses/<int:course_id>/interest", methods=["POST"])
 @login_required
-@csrf.exempt
 def course_interest_toggle(course_id):
     from data import get_connection
     try:
@@ -3609,7 +3658,6 @@ def course_interest_toggle(course_id):
 #  User feedback survey — rotating question groups, popup, analytics
 # ════════════════════════════════════════════════════════════════════
 @app.route('/api/survey/questions')
-@csrf.exempt
 def survey_questions_api():
     from data import get_connection
     answered = request.args.get('answered', '')
@@ -3640,7 +3688,6 @@ def survey_questions_api():
 
 
 @app.route('/api/survey/submit', methods=['POST'])
-@csrf.exempt
 def survey_submit_api():
     from flask import session
     from data import get_connection
@@ -3688,8 +3735,9 @@ def survey_submit_api():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(app.logger, "So'rovnoma javobini saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Javobni saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "group_number": group_number})
 
 
@@ -4308,22 +4356,20 @@ def _find_university(cur, term):
 
 
 def _save_university_logo():
-    """Save an uploaded university logo and return its web path, or None."""
+    """Validate and re-encode an uploaded university logo, or return None."""
     f = request.files.get("logo")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "university_logos")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "university_logo")
+    except UploadValidationError as exc:
+        flash(exc.public_message, "error")
+        return None
     except Exception:
+        log_exception(app.logger, "Universitet logosini saqlab bo'lmadi")
+        flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/university_logos/{saved}"
 
@@ -4386,18 +4432,16 @@ def _save_journal_logo():
     f = request.files.get("logo")
     if not f or not f.filename:
         return None
-    from werkzeug.utils import secure_filename
-    import time as _time
-    fname = secure_filename(f.filename)
-    ext = os.path.splitext(fname)[1].lower()
-    if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"):
-        return None
+    from security_uploads import UploadValidationError, save_safe_image
     upload_dir = os.path.join(app.static_folder, "uploads", "journal_logos")
-    os.makedirs(upload_dir, exist_ok=True)
-    saved = f"{int(_time.time())}_{fname}"
     try:
-        f.save(os.path.join(upload_dir, saved))
+        saved = save_safe_image(f, upload_dir, "journal_logo")
+    except UploadValidationError as exc:
+        flash(exc.public_message, "error")
+        return None
     except Exception:
+        log_exception(app.logger, "Jurnal logosini saqlab bo'lmadi")
+        flash("Logoni saqlab bo'lmadi.", "error")
         return None
     return f"/static/uploads/journal_logos/{saved}"
 

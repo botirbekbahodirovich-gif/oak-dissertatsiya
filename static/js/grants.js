@@ -13,10 +13,21 @@
     d.textContent = s == null ? '' : s;
     return d.innerHTML;
   }
+  function safeImageUrl(value) {
+    if (!value) return '';
+    try {
+      var parsed = new URL(value, window.location.origin);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+      return parsed.href;
+    } catch (_error) {
+      return '';
+    }
+  }
+
   function postJSON(url, body) {
     return fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body || {})
     }).then(function (r) { return r.json(); });
   }
@@ -82,6 +93,7 @@
 
   /* ── card renderer (grants.html macro'sining JS aksi) ────────────────── */
   function renderCard(g) {
+    var coverUrl = safeImageUrl(g.cover_image_url);
     var urgent = g.days_remaining !== null && g.days_remaining >= 0 && g.days_remaining < 7;
     var color = g.days_remaining > 7 ? '#4ade80' : (g.days_remaining >= 3 ? '#fbbf24' : '#f87171');
     var pct = Math.min(100, Math.max(5, 100 - Math.floor(g.days_remaining * 100 / 60)));
@@ -106,7 +118,7 @@
       (g.duration ? '<span>📅 ' + esc(g.duration) + '</span>' : '');
     var tracked = !!g.track_status;
     return '<div class="gr-card' + (urgent ? ' urgent' : '') + (g.expired ? ' expired' : '') + '" data-grant-id="' + g.id + '">' +
-      '<div class="gr-cover"' + (g.cover_image_url ? ' style="background-image:url(\'' + esc(g.cover_image_url) + '\');"' : '') + '>' + badge + '</div>' +
+      '<div class="gr-cover"' + (coverUrl ? ' data-cover="' + esc(coverUrl) + '"' : '') + '>' + badge + '</div>' +
       '<div class="gr-body">' +
       '<div class="gr-org">🏛️ ' + esc(g.organization || '—') + '</div>' +
       '<div class="gr-title-l"><a href="/grants/' + encodeURIComponent(g.slug) + '">📌 ' + esc(g.display_title || g.title) + '</a></div>' +
@@ -125,6 +137,10 @@
     var empty = document.getElementById('gr-empty');
     if (!grid) return;
     grid.innerHTML = items.map(renderCard).join('');
+    grid.querySelectorAll('.gr-cover[data-cover]').forEach(function (element) {
+      var cover = element.getAttribute('data-cover');
+      element.style.backgroundImage = 'url("' + cover.replace(/"/g, '%22') + '")';
+    });
     if (empty) empty.style.display = items.length ? 'none' : '';
   }
 

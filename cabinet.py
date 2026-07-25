@@ -11,11 +11,13 @@ import time
 from functools import wraps
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   jsonify, session)
+                   jsonify, session, current_app)
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
 from data import get_connection
+from security import log_exception
+from security_uploads import UploadTooLarge, UploadValidationError, save_safe_image
 from utils.links import normalize_telegram, normalize_orcid, normalize_scholar, normalize_url
 from utils.transliterate import get_search_variants
 
@@ -188,41 +190,25 @@ def cabinet():
 @cabinet_bp.route('/cabinet/xush-kelibsiz')
 @cabinet_login_required
 def welcome_choose_type():
-    """Bosqich 2 — ro'yxatdan o'tgach onboarding formasidan oldin foydalanuvchi
-    turini so'raydi (izlanuvchi / talaba / oddiy). Tur allaqachon tanlangan
-    bo'lsa — to'g'ridan-to'g'ri onboarding ga o'tkazadi."""
-    user = current_cabinet_user()
-    if user and user.get('user_type') and user['user_type'] != 'unknown':
-        return redirect(url_for('cabinet.onboarding'))
-    return render_template('cabinet_welcome_choose_type.html')
-
-
-@cabinet_bp.route('/cabinet/xush-kelibsiz/set-type', methods=['POST'])
-@cabinet_login_required
-def set_user_type():
-    user_type = request.form.get('user_type')
-    if user_type not in ('researcher', 'student', 'regular'):
-        return redirect(url_for('cabinet.welcome_choose_type'))
-    uid = session.get('cabinet_user_id')
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            _ensure_user_type_column(cur)
-            cur.execute("UPDATE cabinet_users SET user_type = %s WHERE id = %s", (user_type, uid))
-        conn.commit()
-    finally:
-        conn.close()
-    if user_type == 'regular':
-        return redirect(url_for('home'))
+    """Backward compatibility — foydalanuvchi turi endi onboarding sahifasi
+    tepasidagi kichik tab bar orqali tanlanadi (katta alohida sahifa emas).
+    Eski havolalar/redirectlar yagona kanonik onboarding oqimiga yo'naltiriladi."""
     return redirect(url_for('cabinet.onboarding'))
 
 
 @cabinet_bp.route('/cabinet/api/user-type', methods=['POST'])
 @cabinet_login_required
 def update_user_type():
-    """Kabinet sozlamalaridan foydalanuvchi turini keyinroq o'zgartirish."""
+    """Foydalanuvchi turini o'rnatish/o'zgartirish. Ikki chaqiruvchisi bor:
+    - Kabinet sozlamalari (oddiy <form> submit, to'liq sahifa reload) — 302 kutadi.
+    - Onboarding tab bar (fetch, X-Requested-With: XMLHttpRequest) — JSON kutadi.
+    Har ikkala yo'l ham CSRF himoyasi ostida (global fetch shim X-CSRFToken
+    qo'shadi; form submit esa csrf_token maydonini yuboradi)."""
     user_type = request.form.get('user_type')
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if user_type not in ('researcher', 'student', 'regular'):
+        if is_ajax:
+            return jsonify({'ok': False, 'error': 'invalid'}), 400
         return redirect(url_for('cabinet.cabinet'))
     uid = session.get('cabinet_user_id')
     conn = get_connection()
@@ -233,6 +219,14 @@ def update_user_type():
         conn.commit()
     finally:
         conn.close()
+    if is_ajax:
+        default_degrees = {'researcher': None, 'student': 'Magistrant', 'regular': None}
+        return jsonify({
+            'ok': True,
+            'user_type': user_type,
+            'default_degree': default_degrees.get(user_type),
+            'redirect': url_for('home') if user_type == 'regular' else None
+        })
     return redirect(url_for('cabinet.cabinet'))
 
 
@@ -243,8 +237,6 @@ def onboarding():
     search-olim / claim / profile-save endpoints; on finish sets
     profile_completed and lands the user in the full cabinet."""
     user = current_cabinet_user()
-    if user and (not user.get('user_type') or user['user_type'] == 'unknown'):
-        return redirect(url_for('cabinet.welcome_choose_type'))
     olim_name = (user or {}).get('olim_name') or ''
     profile = {}
     try:
@@ -266,6 +258,7 @@ def onboarding():
     return render_template('cabinet_onboarding.html', user=user, profile=profile,
                            olim_name=olim_name, degree_choices=_DEGREE_CHOICES,
                            default_degree=default_degree,
+                           current_user_type=(user or {}).get('user_type', 'unknown'),
                            telegram_bot_username=TELEGRAM_BOT_USERNAME)
 
 
@@ -354,22 +347,22 @@ def telegram():
     """Telegram Login Widget callback for the cabinet (separate from main-site login)."""
     raw = request.get_json(silent=True) or {}
     if not TELEGRAM_BOT_TOKEN:
-        return jsonify({"success": False, "error": "TELEGRAM_BOT_TOKEN sozlanmagan"}), 200
+        return jsonify({"success": False, "error": "Telegram login vaqtincha mavjud emas."}), 503
     try:
         data = dict(raw)
         check_hash = data.pop('hash', '')
         if not check_hash:
-            return jsonify({"success": False, "error": "Hash mavjud emas"}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash ma'lumoti to'liq emas."}), 400
         data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
         secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
         computed = hmac.new(secret, data_check.encode(), hashlib.sha256).hexdigest()
         if not hmac.compare_digest(computed, check_hash):
-            return jsonify({"success": False, "error": "Tasdiqlash amalga oshmadi"}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash amalga oshmadi"}), 401
         if time.time() - int(data.get('auth_date', 0)) > 86400:
-            return jsonify({"success": False, "error": "Muddati o'tgan"}), 200
+            return jsonify({"success": False, "error": "Muddati o'tgan"}), 401
         tg_id = int(data.get('id', 0))
         if not tg_id:
-            return jsonify({"success": False, "error": "Telegram ID topilmadi"}), 200
+            return jsonify({"success": False, "error": "Telegram ID topilmadi"}), 400
         username = (data.get('username') or '').strip()
         first_name = (data.get('first_name') or '').strip()
         is_new = False
@@ -392,9 +385,10 @@ def telegram():
                     is_new = True
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": f"Xatolik: {e}"}), 200
-    return jsonify({"success": True, "redirect": "/cabinet/xush-kelibsiz" if is_new else "/cabinet"})
+    except Exception:
+        log_exception(current_app.logger, "Cabinet Telegram login bajarilmadi")
+        return jsonify({"success": False, "error": "Tizimga kirib bo'lmadi."}), 500
+    return jsonify({"success": True, "redirect": "/cabinet/onboarding" if is_new else "/cabinet"})
 
 
 # ── Google OAuth ─────────────────────────────────────────────────────────────
@@ -408,8 +402,7 @@ GOOGLE_REDIRECT_URI = os.environ.get(
 GOOGLE_SCOPES = ['openid',
                  'https://www.googleapis.com/auth/userinfo.email',
                  'https://www.googleapis.com/auth/userinfo.profile']
-# Allow HTTP for local dev (Railway/Cloudflare terminates TLS in production).
-os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+# OAuth transport policy is configured centrally in app.py.
 
 
 @cabinet_bp.route('/auth/google/login')
@@ -476,7 +469,7 @@ def google_callback():
                     new_id = cur.fetchone()[0]
                     conn.commit()
                     _set_session(new_id, None)
-                    dest = '/cabinet/xush-kelibsiz'
+                    dest = '/cabinet/onboarding'
                     # Seed an olim_profiles row (olim_name is NOT NULL UNIQUE).
                     try:
                         parts = name.split(' ', 1)
@@ -500,8 +493,8 @@ def google_callback():
 
         session.pop('google_next', None)
         return redirect(dest)
-    except Exception as e:
-        print(f"Google OAuth error: {e}")
+    except Exception:
+        log_exception(current_app.logger, "Cabinet Google OAuth callback bajarilmadi")
         return redirect('/cabinet/login?error=google')
 
 
@@ -527,7 +520,7 @@ def _login_main_user(email, name=None):
     login_user(User(row[0], row[1], row[2]), remember=True)
 
 
-@cabinet_bp.route('/cabinet/api/logout', methods=['POST', 'GET'])
+@cabinet_bp.route('/cabinet/api/logout', methods=['POST'])
 def logout():
     session.pop('cabinet_user_id', None)
     session.pop('cabinet_olim_name', None)
@@ -663,8 +656,9 @@ def profile_save():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -708,30 +702,32 @@ def avatar_upload():
     file = request.files.get('photo')
     if not file or not file.filename:
         return jsonify({"success": False, "error": "Fayl tanlanmagan"}), 400
-    from werkzeug.utils import secure_filename
-    ext = os.path.splitext(secure_filename(file.filename))[1].lower()
-    if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
-        return jsonify({"success": False, "error": "Faqat JPG, PNG, WEBP qabul qilinadi"}), 400
+    saved_path = None
     try:
-        os.makedirs(_AVATAR_DIR, exist_ok=True)
-        filename = f"avatar_{user_id}_{int(time.time())}{ext}"
-        file.save(os.path.join(_AVATAR_DIR, filename))
+        filename = save_safe_image(file, _AVATAR_DIR, f"avatar_{user_id}")
+        saved_path = os.path.join(_AVATAR_DIR, filename)
         photo_url = f"/static/uploads/avatars/{filename}"
         conn = get_connection()
         try:
             with conn.cursor() as cur:
-                # Drop the previous locally-stored avatar, if any.
                 cur.execute("SELECT photo_url FROM olim_profiles WHERE cabinet_user_id = %s LIMIT 1",
                             (user_id,))
                 old = cur.fetchone()
-                if old and old[0]:
-                    _delete_local_avatar(old[0])
                 _set_profile_photo(cur, user_id, photo_url)
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        if old and old[0]:
+            _delete_local_avatar(old[0])
+    except UploadTooLarge as exc:
+        return jsonify({"success": False, "error": exc.public_message}), 413
+    except UploadValidationError as exc:
+        return jsonify({"success": False, "error": exc.public_message}), 422
+    except Exception:
+        if saved_path and os.path.isfile(saved_path):
+            os.remove(saved_path)
+        log_exception(current_app.logger, "Avatarni saqlab bo'lmadi")
+        return jsonify({"success": False, "error": "Avatarni saqlab bo'lmadi."}), 500
     return jsonify({"success": True, "photo_url": photo_url})
 
 
@@ -752,8 +748,9 @@ def avatar_remove():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"success": True})
 
 
@@ -933,7 +930,7 @@ def claim():
     data = request.get_json(silent=True) or {}
     name = (data.get('olim_name') or '').strip()
     if not name:
-        return jsonify({"ok": False, "error": "Ism kiritilmagan"}), 200
+        return jsonify({"ok": False, "error": "Ism kiritilmagan"}), 400
     pr = None
     try:
         conn = get_connection()
@@ -943,7 +940,7 @@ def claim():
                 cur.execute("SELECT id, cabinet_user_id FROM olim_profiles WHERE LOWER(TRIM(olim_name))=LOWER(TRIM(%s))", (name,))
                 row = cur.fetchone()
                 if row and row[1] and row[1] != user['id']:
-                    return jsonify({"ok": False, "error": "Bu profil boshqa foydalanuvchi tomonidan band qilingan."}), 200
+                    return jsonify({"ok": False, "error": "Bu profil boshqa foydalanuvchi tomonidan band qilingan."}), 409
                 if row:
                     cur.execute("UPDATE olim_profiles SET cabinet_user_id = %s WHERE id = %s", (user['id'], row[0]))
                 else:
@@ -960,8 +957,9 @@ def claim():
             session['cabinet_olim_name'] = name
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     profile = {}
     if pr:
         profile = dict(zip(
@@ -1008,8 +1006,9 @@ def unclaim():
                 session['cabinet_olim_name'] = new_primary or ''
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"success": True, "message": "Dissertatsiya ajratildi"})
 
 
@@ -1017,7 +1016,7 @@ def unclaim():
 def _insert_item(table, fields, form):
     name = _olim_name()
     if not name:
-        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 200
+        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 409
     vals = [name] + [(_clean(form.get(f))) for f in fields]
     cols = ['olim_name'] + fields
     placeholders = ", ".join(["%s"] * len(cols))
@@ -1030,8 +1029,9 @@ def _insert_item(table, fields, form):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True, "id": new_id})
 
 
@@ -1048,8 +1048,9 @@ def _edit_item(table, fields, item_id, form):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -1064,8 +1065,9 @@ def _delete_item(table, item_id):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 
@@ -1135,7 +1137,7 @@ def ish_add():
     f = _form()
     name = _olim_name()
     if not name:
-        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 200
+        return jsonify({"ok": False, "error": "Avval dissertatsiyangizni biriktiring."}), 409
     is_current = bool(f.get('is_current'))
     end_date = None if is_current else _clean(f.get('end_date'))
     try:
@@ -1151,8 +1153,9 @@ def ish_add():
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True, "id": new_id})
 
 
@@ -1175,8 +1178,9 @@ def ish_edit(id):
             conn.commit()
         finally:
             conn.close()
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 200
+    except Exception:
+        log_exception(current_app.logger, "Cabinet amali bajarilmadi")
+        return jsonify({"ok": False, "error": "Amalni bajarib bo'lmadi."}), 500
     return jsonify({"ok": True})
 
 

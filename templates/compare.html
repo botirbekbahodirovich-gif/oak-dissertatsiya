@@ -186,7 +186,7 @@ function analyze() {
   document.getElementById('ai-body').innerHTML = '<div class="ai-loading"><span class="spinner"></span> AI tahlil qilmoqda...</div>';
 
   fetch('/api/mavzu-tahlili', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ mavzu: mavzu, keywords: kws, ixtisoslik: ix })
   }).then(function (r) { return r.json(); }).then(function (d) {
     allResults = d.results || []; shownCount = 0;
@@ -275,7 +275,7 @@ function showMore() {
 
 function runAI(mavzu, similar) {
   fetch('/api/mavzu-tahlili/ai', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ mavzu: mavzu, similar_topics: similar })
   }).then(function (r) { return r.json(); }).then(function (d) {
     var score = d.uniqueness_score || 0;

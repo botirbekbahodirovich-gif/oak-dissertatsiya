@@ -6,18 +6,18 @@ under the 'admin' blueprint (e.g. url_for('admin.admin_yangiliklar')).
 
 Shared helpers and module constants still live in app.py and are imported lazily
 inside each view (matching the auth.py / cabinet.py pattern) to avoid circular
-imports. `csrf` is imported at module load — it is defined in app.py before the
-blueprints are registered, so this is safe.
+imports remain lazy so blueprint registration stays safe.
 """
 import os
 from datetime import datetime, timezone
 
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, jsonify, abort, flash
+    Blueprint, current_app, render_template, request, redirect, url_for,
+    jsonify, abort, flash
 )
 from flask_login import login_required, current_user
+from security import log_exception
 
-from app import csrf
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -426,7 +426,6 @@ def admin_acquisition():
 
 
 @admin_bp.route('/admin/api/block-user', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_block_user():
     from app import _require_admin
@@ -469,12 +468,12 @@ def admin_block_user():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/unblock-user', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_unblock_user():
     from app import _require_admin
@@ -495,12 +494,12 @@ def admin_unblock_user():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/broadcast', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_broadcast():
     from app import _require_admin
@@ -538,12 +537,12 @@ def admin_broadcast():
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/api/broadcast/delete/<int:id>', methods=['POST'])
-@csrf.exempt
 @login_required
 def admin_broadcast_delete(id):
     from app import _require_admin
@@ -558,8 +557,9 @@ def admin_broadcast_delete(id):
         finally:
             conn.close()
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+    except Exception:
+        log_exception(current_app.logger, "Admin amali bajarilmadi")
+        return jsonify({"success": False, "error": "Amalni bajarib bo'lmadi."}), 500
 
 
 @admin_bp.route('/admin/user-activity/<identifier>')
@@ -1378,9 +1378,8 @@ def admin_university_gallery_add(id):
     from app import _require_admin
     _require_admin()
     from data import get_connection
-    from werkzeug.utils import secure_filename
-    import time as _time
     from flask import current_app
+    from security_uploads import UploadValidationError, save_safe_image
     files = request.files.getlist('images')
     caption = (request.form.get('caption') or '').strip() or None
     upload_dir = os.path.join(current_app.static_folder, "uploads", "university_gallery")
@@ -1389,15 +1388,13 @@ def admin_university_gallery_add(id):
     for f in files:
         if not f or not f.filename:
             continue
-        fname = secure_filename(f.filename)
-        ext = os.path.splitext(fname)[1].lower()
-        if ext not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
-            continue
-        saved = f"{id}_{int(_time.time()*1000)}_{fname}"
         try:
-            f.save(os.path.join(upload_dir, saved))
+            saved = save_safe_image(f, upload_dir, f"university_{id}")
             saved_urls.append(f"/static/uploads/university_gallery/{saved}")
+        except UploadValidationError:
+            continue
         except Exception:
+            log_exception(current_app.logger, "Universitet galereyasi rasmini saqlab bo'lmadi")
             continue
     if not saved_urls:
         flash("Rasm yuklanmadi (JPG/PNG/WEBP).", "error")

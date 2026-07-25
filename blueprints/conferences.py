@@ -736,7 +736,6 @@ def get_upcoming_conferences(limit=3):
 # ── bookmark (user_bookmarks UX aksi) ────────────────────────────────────────
 
 @conferences_bp.route('/api/v1/conferences/bookmark', methods=['POST'])
-@csrf.exempt
 @login_required
 def conference_bookmark():
     data = request.get_json(silent=True) or {}
@@ -771,7 +770,6 @@ def conference_bookmark():
 # ── Roadmap integratsiyasi ───────────────────────────────────────────────────
 
 @conferences_bp.route('/api/v1/conferences/roadmap', methods=['POST'])
-@csrf.exempt
 @login_required
 def conference_to_roadmap():
     """Katalogdagi konferensiyani foydalanuvchining faol Roadmap rejasiga

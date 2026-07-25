@@ -126,7 +126,6 @@ def list_subscriptions():
 
 
 @subs_bp.route('/api/v1/subscriptions', methods=['POST'])
-@csrf.exempt
 @login_required
 def add_subscription():
     data = request.get_json(silent=True) or {}
@@ -164,7 +163,6 @@ def add_subscription():
 
 
 @subs_bp.route('/api/v1/subscriptions/remove', methods=['POST'])
-@csrf.exempt
 @login_required
 def remove_subscription():
     data = request.get_json(silent=True) or {}
@@ -189,7 +187,6 @@ def remove_subscription():
 
 
 @subs_bp.route('/api/v1/subscriptions/toggle', methods=['POST'])
-@csrf.exempt
 @login_required
 def toggle_subscription():
     data = request.get_json(silent=True) or {}

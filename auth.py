@@ -2,10 +2,11 @@ import os
 import hmac
 import hashlib
 import time
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
+from flask import (Blueprint, current_app, render_template, request, redirect,
+                   url_for, jsonify, session)
 from flask_login import current_user, login_user, logout_user, login_required
-import bcrypt
 from dotenv import load_dotenv
+from security import log_exception
 load_dotenv()
 
 TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', 'send_kod_bot')
@@ -58,35 +59,6 @@ def login():
     return render_template('login.html', error=None, registered=registered)
 
 
-@auth_bp.route('/login/password', methods=['POST'])
-def password_login():
-    from app import User
-    username = request.form.get('username', '').strip()
-    password = request.form.get('password', '').encode()
-    try:
-        conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, username, email, password_hash, COALESCE(is_admin, FALSE) "
-                "FROM users WHERE username = %s",
-                (username,))
-            row = cur.fetchone()
-        conn.close()
-        if row and row[3]:
-            # password_hash may come back as str (text) or bytes/memoryview (bytea).
-            stored = row[3]
-            hash_bytes = bytes(stored) if isinstance(stored, (bytes, bytearray, memoryview)) else stored.encode()
-            if bcrypt.checkpw(password, hash_bytes):
-                session.permanent = True
-                login_user(User(row[0], row[1], row[2], row[4]), remember=True)
-                session['just_logged_in'] = True
-                session.modified = True
-                return redirect(_post_login_dest(url_for('index')))
-        return render_template('login.html', error='Login yoki parol xato')
-    except Exception:
-        return render_template('login.html', error='Xatolik yuz berdi')
-
-
 @auth_bp.route('/register')
 def register():
     # Ro'yxatdan o'tish formasi olib tashlandi — faqat Telegram / Google tugmalari.
@@ -122,7 +94,7 @@ GOOGLE_SCOPES = ['openid',
                  'https://www.googleapis.com/auth/userinfo.email',
                  'https://www.googleapis.com/auth/userinfo.profile']
 # Local dev (http) uchun ruxsat — production da nginx/TLS terminatsiya qiladi.
-os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+# OAuth transport policy is configured centrally in app.py.
 
 
 def _google_redirect_uri():
@@ -163,8 +135,8 @@ def google_callback():
         google.fetch_token(GOOGLE_TOKEN_URL, client_secret=GOOGLE_CLIENT_SECRET,
                            authorization_response=request.url)
         info = google.get(GOOGLE_USERINFO_URL).json()
-    except Exception as e:
-        print("Main Google OAuth error: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Main Google OAuth callback bajarilmadi")
         return render_template('login.html',
                                error="Google bilan kirishda xatolik yuz berdi.", registered=None)
 
@@ -176,8 +148,8 @@ def google_callback():
 
     try:
         user, created = _find_or_create_google_user(email, name)
-    except Exception as e:
-        print("Main Google user upsert error: " + str(e))
+    except Exception:
+        log_exception(current_app.logger, "Google foydalanuvchisini saqlab bo'lmadi")
         return render_template('login.html',
                                error="Google bilan kirishda xatolik yuz berdi.", registered=None)
 
@@ -193,9 +165,11 @@ def google_callback():
         # allaqachon to'ldirmagan hollarda ishlatiladi — bir marta, session.pop).
         session['prefill_ism'] = (info.get('given_name') or '').strip().title()
         session['prefill_familiya'] = (info.get('family_name') or '').strip().title()
-    # New accounts choose their user type first (cabinet onboarding gate
-    # bridges the main-site session in via _bridge_from_main).
-    return redirect('/cabinet/xush-kelibsiz' if created else nxt)
+    # New accounts complete their scholar profile first via the single
+    # canonical onboarding flow (user-type is chosen by the tab bar at the top
+    # of that page). The cabinet onboarding gate bridges the main-site session
+    # in via _bridge_from_main.
+    return redirect('/cabinet/onboarding' if created else nxt)
 
 
 def _unique_username(cur, base):
@@ -247,7 +221,7 @@ def telegram_login():
     raw = request.get_json(silent=True) or {}
 
     if not TELEGRAM_BOT_TOKEN:
-        return jsonify({'success': False, 'error': 'TELEGRAM_BOT_TOKEN sozlanmagan'}), 200
+        return jsonify({'success': False, 'error': 'Telegram login vaqtincha mavjud emas.'}), 503
 
     try:
         # Work on a copy so we don't mutate the original dict
@@ -255,7 +229,7 @@ def telegram_login():
         check_hash = data.pop('hash', '')
 
         if not check_hash:
-            return jsonify({'success': False, 'error': 'Hash mavjud emas'}), 200
+            return jsonify({"success": False, "error": "Tasdiqlash ma'lumoti to'liq emas."}), 400
 
         data_check = '\n'.join(f"{k}={v}" for k, v in sorted(data.items()))
         secret = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
@@ -264,45 +238,44 @@ def telegram_login():
         if not hmac.compare_digest(computed, check_hash):
             return jsonify({
                 'success': False,
-                'error': "Bot domain sozlanmagan: @BotFather da /setdomain buyrug'ini bering"
-            }), 200
+                'error': "Telegram orqali tasdiqlash amalga oshmadi."
+            }), 401
 
         if time.time() - int(data.get('auth_date', 0)) > 86400:
-            return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 200
+            return jsonify({'success': False, 'error': "Tasdiqlash muddati o'tgan, qayta urinib ko'ring"}), 401
 
-        tg_id    = str(data.get('id', ''))
-        username = (data.get('username') or f"tg_{tg_id}").strip()
-        email    = f"{tg_id}@telegram.uz"
+        tg_id = int(data.get('id', 0))
 
         if not tg_id:
-            return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 200
+            return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 400
 
         is_new = False
         conn = get_connection()
         try:
             cur = conn.cursor()
-            # Look up by telegram email to handle username changes
-            cur.execute("SELECT id, username, email FROM users WHERE email = %s", (email,))
+            # Bind only by Telegram's immutable, signed ID. Display usernames are
+            # mutable and must never be used for account linking.
+            cur.execute(
+                "SELECT id, username, email FROM users WHERE telegram_id = %s",
+                (tg_id,))
             user_row = cur.fetchone()
 
             if not user_row:
-                # Also check by username in case email lookup misses
-                cur.execute("SELECT id, username, email FROM users WHERE username = %s", (username,))
-                user_row = cur.fetchone()
-
-            if not user_row:
+                username = f"tg_{tg_id}"
+                email = f"telegram_{tg_id}@auth.local"
                 cur.execute(
-                    "INSERT INTO users (username, email, password_hash, is_admin) "
-                    "VALUES (%s, %s, %s, %s) RETURNING id",
-                    (username, email, 'telegram_auth', False)
+                    "INSERT INTO users "
+                    "(username, email, password_hash, is_admin, telegram_id) "
+                    "VALUES (%s, %s, %s, %s, %s) "
+                    "RETURNING id, username, email",
+                    (username, email, 'telegram_auth', False, tg_id)
                 )
-                user_id = cur.fetchone()[0]
+                user_row = cur.fetchone()
                 conn.commit()
                 is_new = True
-            else:
-                user_id = user_row[0]
-                username = user_row[1]
-                email    = user_row[2] or email
+            user_id = user_row[0]
+            username = user_row[1]
+            email = user_row[2]
 
             # Har login bo'lganda tashriflar sonini oshiramiz (so'rovnoma gate'i uchun).
             cur.execute(
@@ -322,8 +295,9 @@ def telegram_login():
         finally:
             conn.close()
 
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"Xatolik: {str(e)}"}), 200
+    except Exception:
+        log_exception(current_app.logger, "Telegram login bajarilmadi")
+        return jsonify({'success': False, 'error': "Tizimga kirib bo'lmadi."}), 500
 
     session.permanent = True
     login_user(User(user_id, username, email), remember=True)
@@ -333,4 +307,4 @@ def telegram_login():
         session['prefill_familiya'] = (data.get('last_name') or '').strip().title()
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     dest = _post_login_dest('/')
-    return jsonify({'success': True, 'redirect': '/cabinet/xush-kelibsiz' if is_new else dest})
+    return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})

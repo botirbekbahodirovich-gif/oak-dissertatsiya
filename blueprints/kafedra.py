@@ -322,7 +322,6 @@ def sample_download(doc_type):
 
 
 @kafedra_bp.route('/<doc_type>/generate', methods=['POST'])
-@csrf.exempt
 @login_required
 def generate(doc_type):
     if doc_type not in DOCUMENT_TYPES:

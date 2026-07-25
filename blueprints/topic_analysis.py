@@ -15,7 +15,7 @@ Konvensiyalar (grants/reminders blueprint'lari kabi):
 
 Routes:
   GET  /mavzu/tahlil          — sahifa (oxirgi tahlillar bilan).
-  POST /mavzu/tahlil/run      — tahlilni bajarish (JSON, @csrf.exempt).
+  POST /mavzu/tahlil/run      — tahlilni bajarish (JSON, CSRF protected).
   GET  /mavzu/tahlil/history  — oxirgi 5 tahlil (JSON).
 """
 import os
@@ -443,7 +443,6 @@ def tahlil_page():
 
 
 @topic_bp.route('/tahlil/run', methods=['POST'])
-@csrf.exempt
 @login_required
 def tahlil_run():
     data = request.get_json(silent=True) or {}

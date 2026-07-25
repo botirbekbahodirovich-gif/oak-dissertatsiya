@@ -717,7 +717,6 @@ def _accept_collaborator_token(cur, diss_id, created_by, can_comment, can_edit, 
 # ═════════════════════════════ ADVISOR LINKING ══════════════════════════════
 
 @dissertation_bp.route('/api/advisor/invite', methods=['POST'])
-@csrf.exempt
 @login_required
 def advisor_invite():
     data = request.get_json(silent=True) or {}
@@ -776,7 +775,6 @@ def advisor_invite():
 
 
 @dissertation_bp.route('/api/advisor/respond', methods=['POST'])
-@csrf.exempt
 @login_required
 def advisor_respond():
     data = request.get_json(silent=True) or {}
@@ -861,7 +859,6 @@ def advisor_my_links():
 
 
 @dissertation_bp.route('/api/advisor/remove/<int:link_id>', methods=['POST'])
-@csrf.exempt
 @login_required
 def advisor_remove(link_id):
     conn = _conn()
@@ -891,7 +888,6 @@ def advisor_remove(link_id):
 # ═════════════════════════ INVITE VIA SHAREABLE LINK ════════════════════════
 
 @dissertation_bp.route('/api/advisor/invite-link', methods=['POST'])
-@csrf.exempt
 @login_required
 def advisor_invite_link():
     """Bir martalik taklif havolasini yaratadi (advisor/student). 7 kun amal."""
@@ -948,7 +944,6 @@ def invite_landing(token):
 
 
 @dissertation_bp.route('/invite/<token>/respond', methods=['POST'])
-@csrf.exempt
 @login_required
 def invite_respond(token):
     action = (request.get_json(silent=True) or {}).get('action')
@@ -1036,7 +1031,6 @@ def collaborator_list(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/collaborators/invite', methods=['POST'])
-@csrf.exempt
 @login_required
 def collaborator_invite(id):
     data = request.get_json(silent=True) or {}
@@ -1097,7 +1091,6 @@ def collaborator_invite(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/collaborators/invite-link', methods=['POST'])
-@csrf.exempt
 @login_required
 def collaborator_invite_link(id):
     data = request.get_json(silent=True) or {}
@@ -1126,7 +1119,6 @@ def collaborator_invite_link(id):
 
 
 @dissertation_bp.route('/api/collaborators/<int:cid>/permissions', methods=['POST'])
-@csrf.exempt
 @login_required
 def collaborator_permissions(cid):
     data = request.get_json(silent=True) or {}
@@ -1156,7 +1148,6 @@ def collaborator_permissions(cid):
 
 
 @dissertation_bp.route('/api/collaborators/<int:cid>/remove', methods=['POST'])
-@csrf.exempt
 @login_required
 def collaborator_remove(cid):
     conn = _conn()
@@ -1176,7 +1167,6 @@ def collaborator_remove(cid):
 
 
 @dissertation_bp.route('/api/collaborators/respond', methods=['POST'])
-@csrf.exempt
 @login_required
 def collaborator_respond():
     data = request.get_json(silent=True) or {}
@@ -1326,7 +1316,6 @@ def workspace_list():
 
 
 @dissertation_bp.route('/api/dissertation/create', methods=['POST'])
-@csrf.exempt
 @login_required
 def project_create():
     data = request.get_json(silent=True) or {}
@@ -1374,7 +1363,6 @@ def project_create():
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/update', methods=['POST'])
-@csrf.exempt
 @login_required
 def project_update(id):
     data = request.get_json(silent=True) or {}
@@ -1397,7 +1385,6 @@ def project_update(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/assign-advisor', methods=['POST'])
-@csrf.exempt
 @login_required
 def project_assign_advisor(id):
     data = request.get_json(silent=True) or {}
@@ -1426,7 +1413,6 @@ def project_assign_advisor(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/archive', methods=['POST'])
-@csrf.exempt
 @login_required
 def project_archive(id):
     conn = _conn()
@@ -1460,7 +1446,6 @@ def blocks_tree(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/blocks/create', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_create(id):
     data = request.get_json(silent=True) or {}
@@ -1509,7 +1494,6 @@ def block_create(id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/rename', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_rename(block_id):
     data = request.get_json(silent=True) or {}
@@ -1537,7 +1521,6 @@ def block_rename(block_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/delete', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_delete(block_id):
     conn = _conn()
@@ -1560,7 +1543,6 @@ def _subtree_height(node):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/reorder', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_reorder(block_id):
     data = request.get_json(silent=True) or {}
@@ -1708,7 +1690,6 @@ def editor_page(id, block_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/save', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_save(block_id):
     data = request.get_json(silent=True) or {}
@@ -1778,7 +1759,6 @@ def block_save(block_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/lock', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_lock(block_id):
     conn = _conn()
@@ -1802,7 +1782,6 @@ def block_lock(block_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/unlock', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_unlock(block_id):
     conn = _conn()
@@ -1866,7 +1845,6 @@ def version_content(block_id, version_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/restore/<int:version_id>', methods=['POST'])
-@csrf.exempt
 @login_required
 def version_restore(block_id, version_id):
     conn = _conn()
@@ -1911,7 +1889,6 @@ _IMG_TYPES = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp'}
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/upload-image', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_upload_image(block_id):
     f = request.files.get('image')
@@ -1998,7 +1975,6 @@ def annotations_list(block_id):
 
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/annotations/create', methods=['POST'])
-@csrf.exempt
 @login_required
 def annotation_create(block_id):
     data = request.get_json(silent=True) or {}
@@ -2057,7 +2033,6 @@ def _get_annotation_or_403(cur, aid):
 
 
 @dissertation_bp.route('/api/annotations/<int:id>/reply', methods=['POST'])
-@csrf.exempt
 @login_required
 def annotation_reply(id):
     body = ((request.get_json(silent=True) or {}).get('body') or '').strip()
@@ -2082,7 +2057,6 @@ def annotation_reply(id):
 
 
 @dissertation_bp.route('/api/annotations/<int:id>/resolve', methods=['POST'])
-@csrf.exempt
 @login_required
 def annotation_resolve(id):
     conn = _conn()
@@ -2107,7 +2081,6 @@ def annotation_resolve(id):
 
 
 @dissertation_bp.route('/api/annotations/<int:id>/reopen', methods=['POST'])
-@csrf.exempt
 @login_required
 def annotation_reopen(id):
     conn = _conn()
@@ -2126,7 +2099,6 @@ def annotation_reopen(id):
 
 
 @dissertation_bp.route('/api/annotations/<int:id>/delete', methods=['POST'])
-@csrf.exempt
 @login_required
 def annotation_delete(id):
     conn = _conn()
@@ -2149,7 +2121,6 @@ def annotation_delete(id):
 # ═════════════════════════════ REVIEW LOOP ══════════════════════════════════
 
 @dissertation_bp.route('/api/blocks/<int:block_id>/review-status', methods=['POST'])
-@csrf.exempt
 @login_required
 def block_review_status(block_id):
     status = (request.get_json(silent=True) or {}).get('status')
@@ -2177,7 +2148,6 @@ def block_review_status(block_id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/submit-for-review', methods=['POST'])
-@csrf.exempt
 @login_required
 def submit_for_review(id):
     conn = _conn()
@@ -2203,7 +2173,6 @@ def submit_for_review(id):
 
 
 @dissertation_bp.route('/api/dissertation/<int:id>/finish-review', methods=['POST'])
-@csrf.exempt
 @login_required
 def finish_review(id):
     """Rahbar sessiyani yakunlaganda: BITTA jamlangan xabar (spam o'rniga)."""
@@ -2272,7 +2241,6 @@ def diss_notifications():
 
 
 @dissertation_bp.route('/api/diss-notifications/mark-read', methods=['POST'])
-@csrf.exempt
 @login_required
 def diss_notifications_mark_read():
     data = request.get_json(silent=True) or {}

@@ -1,0 +1,40 @@
+# Example only. Replace the two TLS path placeholders after obtaining a
+# staging.olimlar.uz certificate. This file never points to the production
+# Gunicorn port.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name staging.olimlar.uz;
+
+    return 308 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name staging.olimlar.uz;
+
+    ssl_certificate __STAGING_FULLCHAIN_PATH__;
+    ssl_certificate_key __STAGING_PRIVATE_KEY_PATH__;
+
+    client_max_body_size 20M;
+
+    location /static/ {
+        alias /opt/olimlar-staging/static/;
+        expires 1h;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_connect_timeout 30s;
+        proxy_send_timeout 120s;
+        proxy_read_timeout 120s;
+    }
+}

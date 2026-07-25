@@ -560,7 +560,6 @@ def _scaffold_constructor(cur, user_id, title, degree, specialty):
 
 
 @roadmap_bp.route('/api/reja/create', methods=['POST'])
-@csrf.exempt
 @login_required
 def plan_create():
     data = request.get_json(silent=True) or {}
@@ -604,7 +603,6 @@ def plan_create():
 
 
 @roadmap_bp.route('/api/reja/update', methods=['POST'])
-@csrf.exempt
 @login_required
 def plan_update():
     data = request.get_json(silent=True) or {}
@@ -636,7 +634,6 @@ def plan_update():
 # ── API: nashrlar CRUD ───────────────────────────────────────────────────────
 
 @roadmap_bp.route('/api/reja/pub/add', methods=['POST'])
-@csrf.exempt
 @login_required
 def pub_add():
     data = request.get_json(silent=True) or {}
@@ -670,7 +667,6 @@ def pub_add():
 
 
 @roadmap_bp.route('/api/reja/pub/<int:pid>/update', methods=['POST'])
-@csrf.exempt
 @login_required
 def pub_update(pid):
     data = request.get_json(silent=True) or {}
@@ -690,7 +686,6 @@ def pub_update(pid):
 
 
 @roadmap_bp.route('/api/reja/pub/<int:pid>/delete', methods=['POST'])
-@csrf.exempt
 @login_required
 def pub_delete(pid):
     conn = _conn()
@@ -709,7 +704,6 @@ def pub_delete(pid):
 # ── API: uchrashuvlar CRUD ───────────────────────────────────────────────────
 
 @roadmap_bp.route('/api/reja/meeting/add', methods=['POST'])
-@csrf.exempt
 @login_required
 def meeting_add():
     data = request.get_json(silent=True) or {}
@@ -734,7 +728,6 @@ def meeting_add():
 
 
 @roadmap_bp.route('/api/reja/meeting/<int:mid>/toggle', methods=['POST'])
-@csrf.exempt
 @login_required
 def meeting_toggle(mid):
     conn = _conn()
@@ -751,7 +744,6 @@ def meeting_toggle(mid):
 
 
 @roadmap_bp.route('/api/reja/meeting/<int:mid>/delete', methods=['POST'])
-@csrf.exempt
 @login_required
 def meeting_delete(mid):
     conn = _conn()
@@ -770,7 +762,6 @@ def meeting_delete(mid):
 # ── API: konferensiyalar CRUD ────────────────────────────────────────────────
 
 @roadmap_bp.route('/api/reja/conf/add', methods=['POST'])
-@csrf.exempt
 @login_required
 def conf_add():
     data = request.get_json(silent=True) or {}
@@ -799,7 +790,6 @@ def conf_add():
 
 
 @roadmap_bp.route('/api/reja/conf/<int:cid>/status', methods=['POST'])
-@csrf.exempt
 @login_required
 def conf_status(cid):
     data = request.get_json(silent=True) or {}
@@ -820,7 +810,6 @@ def conf_status(cid):
 
 
 @roadmap_bp.route('/api/reja/conf/<int:cid>/delete', methods=['POST'])
-@csrf.exempt
 @login_required
 def conf_delete(cid):
     conn = _conn()
