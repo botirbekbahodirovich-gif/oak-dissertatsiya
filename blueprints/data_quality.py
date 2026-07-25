@@ -1,0 +1,237 @@
+"""Admin Data Quality dashboard blueprint.
+
+Routes (all admin-only + CSRF-protected via the app-wide CSRFProtect):
+
+    GET  /admin/data-quality                     dashboard
+    GET  /admin/data-quality/export.csv          streaming CSV export
+    POST /admin/data-quality/scan                trigger a (bounded) persist scan
+    POST /admin/data-quality/issue/<id>/resolve  resolve / ignore an issue
+    POST /admin/data-quality/duplicate/<id>/review  confirm / reject a candidate
+
+Business logic lives in data_quality.* services; this file only does auth,
+request parsing, and rendering. No raw HTML is rendered from data values, no
+Telegram/user-private data is shown (the dissertations table has none), and the
+listing is server-side filtered + paginated (no N+1).
+"""
+
+from __future__ import annotations
+
+import csv
+import io
+from functools import wraps
+
+from flask import (Blueprint, Response, abort, flash, redirect, render_template,
+                   request, url_for)
+from flask_login import current_user, login_required
+
+from security import log_exception
+
+data_quality_bp = Blueprint("data_quality", __name__)
+
+PER_PAGE = 50
+# A synchronous web request must not scan all 28k+ rows; full scans use the CLI.
+MAX_DASHBOARD_SCAN = 3000
+DEFAULT_DASHBOARD_SCAN = 1000
+
+
+def _admin_only(fn):
+    @wraps(fn)
+    @login_required
+    def wrapper(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            abort(403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def _filters_from_request():
+    keys = ("issue_code", "severity", "status", "run_id", "record_id",
+            "organization", "year", "specialty")
+    out = {}
+    for k in keys:
+        v = (request.args.get(k) or "").strip()
+        if v:
+            out[k] = v
+    # numeric coercions where the repository expects ints
+    for k in ("run_id", "record_id"):
+        if k in out:
+            try:
+                out[k] = int(out[k])
+            except ValueError:
+                out.pop(k, None)
+    return out
+
+
+@data_quality_bp.route("/admin/data-quality")
+@_admin_only
+def dashboard():
+    from data import get_connection
+    from data_quality import repository as repo
+    from data_quality.quality_service import QualityReportService
+
+    page = max(1, request.args.get("page", 1, type=int))
+    filters = _filters_from_request()
+
+    conn = get_connection()
+    try:
+        if not repo.dq_tables_exist(conn):
+            return render_template("admin_data_quality.html", tables_ready=False,
+                                   summary=None, issues=[], duplicates=[],
+                                   filters=filters, page=1, total_pages=1,
+                                   total_issues=0)
+
+        summary = QualityReportService(conn).dashboard_summary(
+            filters.get("run_id"))
+        total_issues = repo.count_issues(conn, filters)
+        total_pages = max(1, (total_issues + PER_PAGE - 1) // PER_PAGE)
+        page = min(page, total_pages)
+        issues = repo.list_issues(conn, filters, PER_PAGE, (page - 1) * PER_PAGE)
+        duplicates = repo.list_duplicates(
+            conn, request.args.get("dup_status", "pending"), 50, 0)
+        return render_template(
+            "admin_data_quality.html", tables_ready=True, summary=summary,
+            issues=issues, duplicates=duplicates, filters=filters, page=page,
+            total_pages=total_pages, total_issues=total_issues)
+    except Exception as exc:  # noqa: BLE001
+        log_exception(exc)
+        abort(500)
+    finally:
+        conn.close()
+
+
+@data_quality_bp.route("/admin/data-quality/scan", methods=["POST"])
+@_admin_only
+def trigger_scan():
+    from data import get_connection
+    from data_quality.config import get_config
+    from data_quality.quality_service import DataQualityService
+
+    limit = request.form.get("limit", DEFAULT_DASHBOARD_SCAN, type=int) or DEFAULT_DASHBOARD_SCAN
+    limit = max(1, min(limit, MAX_DASHBOARD_SCAN))
+
+    conn = get_connection()
+    try:
+        result = DataQualityService(conn, get_config()).scan(
+            mode="persist", limit=limit)
+        if result.status == "completed":
+            flash(f"Skaner tugadi: {result.summary.checked_records} yozuv tekshirildi, "
+                  f"{result.summary.issue_count} muammo, "
+                  f"{result.summary.duplicate_count} dublikat nomzod.", "success")
+        else:
+            flash("Skanerlashda xatolik yuz berdi.", "danger")
+    except Exception as exc:  # noqa: BLE001
+        log_exception(exc)
+        flash("Skanerlashda xatolik yuz berdi.", "danger")
+    finally:
+        conn.close()
+    return redirect(url_for("data_quality.dashboard"))
+
+
+@data_quality_bp.route("/admin/data-quality/issue/<int:issue_id>/resolve",
+                       methods=["POST"])
+@_admin_only
+def resolve_issue(issue_id):
+    from data import get_connection
+    from data_quality import repository as repo
+
+    status = request.form.get("status", "resolved")
+    if status not in ("resolved", "ignored", "open"):
+        abort(400)
+    conn = get_connection()
+    try:
+        repo.resolve_issue(conn, issue_id, getattr(current_user, "id", None), status)
+        conn.commit()
+        flash("Muammo holati yangilandi.", "success")
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        log_exception(exc)
+        flash("Amalni bajarib bo‘lmadi.", "danger")
+    finally:
+        conn.close()
+    return redirect(request.referrer or url_for("data_quality.dashboard"))
+
+
+@data_quality_bp.route("/admin/data-quality/duplicate/<int:dup_id>/review",
+                       methods=["POST"])
+@_admin_only
+def review_duplicate(dup_id):
+    from data import get_connection
+    from data_quality import repository as repo
+
+    status = request.form.get("status")
+    # NOTE: 'merged' is intentionally NOT accepted here — merge is Phase 2.
+    if status not in ("confirmed", "rejected", "pending"):
+        abort(400)
+    conn = get_connection()
+    try:
+        repo.review_duplicate(conn, dup_id, status, getattr(current_user, "id", None))
+        conn.commit()
+        flash("Dublikat nomzod holati yangilandi.", "success")
+    except Exception as exc:  # noqa: BLE001
+        conn.rollback()
+        log_exception(exc)
+        flash("Amalni bajarib bo‘lmadi.", "danger")
+    finally:
+        conn.close()
+    return redirect(request.referrer or url_for("data_quality.dashboard"))
+
+
+@data_quality_bp.route("/admin/data-quality/export.csv")
+@_admin_only
+def export_csv():
+    from data import get_connection
+    from data_quality import repository as repo
+    from data_quality.config import get_config
+
+    filters = _filters_from_request()
+    cap = get_config().max_export_rows
+
+    def generate():
+        conn = get_connection()
+        try:
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            header = ["record_id", "issue_code", "severity", "field",
+                      "description", "original_value", "normalized_preview",
+                      "status", "detected_at"]
+            writer.writerow(header)
+            yield _flush(buf)
+            if not repo.dq_tables_exist(conn):
+                return
+            for row in repo.iter_issues_for_export(conn, filters, cap):
+                writer.writerow([
+                    row["record_id"],
+                    _csv_safe(row["issue_code"]),
+                    _csv_safe(row["severity"]),
+                    _csv_safe(row["field_name"]),
+                    _csv_safe(row["description"]),
+                    _csv_safe(row["original_value"]),
+                    _csv_safe(row["normalized_value"]),
+                    _csv_safe(row["status"]),
+                    row["created_at"].isoformat() if row["created_at"] else "",
+                ])
+                yield _flush(buf)
+        finally:
+            conn.close()
+
+    return Response(
+        generate(), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=data_quality_issues.csv"})
+
+
+def _flush(buf: io.StringIO) -> str:
+    data = buf.getvalue()
+    buf.seek(0)
+    buf.truncate(0)
+    return data
+
+
+def _csv_safe(value) -> str:
+    """Neutralise CSV/formula injection: prefix a leading =,+,-,@ with a quote so
+    spreadsheet apps don't execute it. Also strip control characters."""
+    if value is None:
+        return ""
+    s = str(value).replace("\r", " ").replace("\n", " ").replace("\t", " ")
+    if s and s[0] in ("=", "+", "-", "@"):
+        s = "'" + s
+    return s

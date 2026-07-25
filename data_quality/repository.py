@@ -341,18 +341,27 @@ def resolve_issue(conn, issue_id: int, resolved_by: Optional[int], status: str =
 
 
 def list_duplicates(conn, status: Optional[str], limit: int, offset: int) -> List[Dict]:
-    where, params = ("WHERE status = %s", [status]) if status not in (None, "", "all") else ("", [])
+    where, params = ("WHERE c.status = %s", [status]) if status not in (None, "", "all") else ("", [])
     params = params + [limit, offset]
     with conn.cursor() as cur:
+        # LEFT JOIN both sides so the dashboard can render the two records
+        # side-by-side without an N+1 per-candidate lookup.
         cur.execute(
-            f"""SELECT id, record_id_1, record_id_2, score, match_level, reasons,
-                       status, created_at
-                  FROM duplicate_candidates {where}
-                 ORDER BY score DESC, id ASC LIMIT %s OFFSET %s""",
+            f"""SELECT c.id, c.record_id_1, c.record_id_2, c.score, c.match_level,
+                       c.reasons, c.status, c.created_at,
+                       d1.mavzu, d1.olim, d1.sana, d1.muassasa,
+                       d2.mavzu, d2.olim, d2.sana, d2.muassasa
+                  FROM duplicate_candidates c
+                  LEFT JOIN dissertations d1 ON d1.id = c.record_id_1
+                  LEFT JOIN dissertations d2 ON d2.id = c.record_id_2
+                  {where}
+                 ORDER BY c.score DESC, c.id ASC LIMIT %s OFFSET %s""",
             params,
         )
         keys = ("id", "record_id_1", "record_id_2", "score", "match_level",
-                "reasons", "status", "created_at")
+                "reasons", "status", "created_at",
+                "r1_mavzu", "r1_olim", "r1_sana", "r1_muassasa",
+                "r2_mavzu", "r2_olim", "r2_sana", "r2_muassasa")
         return [dict(zip(keys, r)) for r in cur.fetchall()]
 
 
