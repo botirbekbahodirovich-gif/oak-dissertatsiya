@@ -90,12 +90,21 @@ AUTO_FIX_ALLOWLIST = frozenset({
 
 # Map an allowlisted consistency issue -> (column, normalizer name). The fixer
 # uses this so it never applies a normalizer to a high-risk free-text field.
+# "__field__" means "the issue's own field_name" (used by whitespace/apostrophe).
 FIX_TARGETS = {
     INCONSISTENT_DEGREE: ("daraja", "normalize_degree"),
     INCONSISTENT_WHITESPACE: ("__field__", "normalize_whitespace"),
     INCONSISTENT_APOSTROPHE: ("__field__", "normalize_apostrophes"),
     INCONSISTENT_URL: ("link", "normalize_url"),
 }
+
+# The ONLY dissertation columns the automatic fixer is ever allowed to write.
+# High-risk free-text fields (olim/author, mavzu/title, muassasa/org,
+# ilmiy_rahbar/supervisor) are deliberately excluded: even a "safe" whitespace
+# rewrite of a title or author name is treated as review-only in Phase 1
+# because those columns drive analytics grouping and public display. Fixes to
+# them must be applied by a human, never by --apply.
+AUTO_FIX_SAFE_COLUMNS = frozenset({"daraja", "link"})
 
 
 # ── Dataclasses ────────────────────────────────────────────────────────────
