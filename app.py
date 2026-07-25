@@ -293,6 +293,13 @@ def inject_auth_status():
 
 
 @app.context_processor
+def inject_env_flags():
+    """Presentation-only environment flags for templates (e.g. hiding test /
+    staging ribbons in production). No DB, auth, or business logic involved."""
+    return dict(is_production=IS_PRODUCTION, app_env=APP_ENV)
+
+
+@app.context_processor
 def inject_broadcasts():
     """Expose active admin broadcasts to every template, filtered by audience."""
     from flask import session
