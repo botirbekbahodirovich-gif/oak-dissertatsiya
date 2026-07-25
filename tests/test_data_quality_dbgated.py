@@ -13,7 +13,9 @@ import unittest
 
 TEST_DB = os.environ.get("TEST_DATABASE_URL")
 
-MIGRATION = os.path.join(os.path.dirname(__file__), "migrations",
+# This test lives in tests/, so the repo root is one level up.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MIGRATION = os.path.join(_REPO_ROOT, "migrations",
                          "004_create_data_quality_tables.sql")
 
 
