@@ -18,13 +18,13 @@ from __future__ import annotations
 
 import csv
 import io
-from functools import wraps
 
-from flask import (Blueprint, Response, abort, flash, redirect, render_template,
-                   request, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, redirect,
+                   render_template, request, url_for)
 from flask_login import current_user, login_required
 
-from security import log_exception
+# Reuse the EXISTING admin authorization + logging helpers — no new auth system.
+from security import admin_required, log_exception
 
 data_quality_bp = Blueprint("data_quality", __name__)
 
@@ -32,16 +32,6 @@ PER_PAGE = 50
 # A synchronous web request must not scan all 28k+ rows; full scans use the CLI.
 MAX_DASHBOARD_SCAN = 3000
 DEFAULT_DASHBOARD_SCAN = 1000
-
-
-def _admin_only(fn):
-    @wraps(fn)
-    @login_required
-    def wrapper(*args, **kwargs):
-        if not getattr(current_user, "is_admin", False):
-            abort(403)
-        return fn(*args, **kwargs)
-    return wrapper
 
 
 def _filters_from_request():
@@ -63,7 +53,8 @@ def _filters_from_request():
 
 
 @data_quality_bp.route("/admin/data-quality")
-@_admin_only
+@login_required
+@admin_required
 def dashboard():
     from data import get_connection
     from data_quality import repository as repo
@@ -93,14 +84,15 @@ def dashboard():
             issues=issues, duplicates=duplicates, filters=filters, page=page,
             total_pages=total_pages, total_issues=total_issues)
     except Exception as exc:  # noqa: BLE001
-        log_exception(exc)
+        log_exception(current_app.logger, "data-quality admin action failed")
         abort(500)
     finally:
         conn.close()
 
 
 @data_quality_bp.route("/admin/data-quality/scan", methods=["POST"])
-@_admin_only
+@login_required
+@admin_required
 def trigger_scan():
     from data import get_connection
     from data_quality.config import get_config
@@ -120,7 +112,7 @@ def trigger_scan():
         else:
             flash("Skanerlashda xatolik yuz berdi.", "danger")
     except Exception as exc:  # noqa: BLE001
-        log_exception(exc)
+        log_exception(current_app.logger, "data-quality admin action failed")
         flash("Skanerlashda xatolik yuz berdi.", "danger")
     finally:
         conn.close()
@@ -129,7 +121,8 @@ def trigger_scan():
 
 @data_quality_bp.route("/admin/data-quality/issue/<int:issue_id>/resolve",
                        methods=["POST"])
-@_admin_only
+@login_required
+@admin_required
 def resolve_issue(issue_id):
     from data import get_connection
     from data_quality import repository as repo
@@ -144,7 +137,7 @@ def resolve_issue(issue_id):
         flash("Muammo holati yangilandi.", "success")
     except Exception as exc:  # noqa: BLE001
         conn.rollback()
-        log_exception(exc)
+        log_exception(current_app.logger, "data-quality admin action failed")
         flash("Amalni bajarib bo‘lmadi.", "danger")
     finally:
         conn.close()
@@ -153,7 +146,8 @@ def resolve_issue(issue_id):
 
 @data_quality_bp.route("/admin/data-quality/duplicate/<int:dup_id>/review",
                        methods=["POST"])
-@_admin_only
+@login_required
+@admin_required
 def review_duplicate(dup_id):
     from data import get_connection
     from data_quality import repository as repo
@@ -169,7 +163,7 @@ def review_duplicate(dup_id):
         flash("Dublikat nomzod holati yangilandi.", "success")
     except Exception as exc:  # noqa: BLE001
         conn.rollback()
-        log_exception(exc)
+        log_exception(current_app.logger, "data-quality admin action failed")
         flash("Amalni bajarib bo‘lmadi.", "danger")
     finally:
         conn.close()
@@ -177,7 +171,8 @@ def review_duplicate(dup_id):
 
 
 @data_quality_bp.route("/admin/data-quality/export.csv")
-@_admin_only
+@login_required
+@admin_required
 def export_csv():
     from data import get_connection
     from data_quality import repository as repo

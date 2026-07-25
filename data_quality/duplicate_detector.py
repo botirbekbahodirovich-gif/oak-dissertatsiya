@@ -132,6 +132,10 @@ def _build_blocks(sigs: List[_Sig]) -> Dict[Tuple[str, str], List[int]]:
         blocks.setdefault(key, []).append(idx)
 
     for idx, s in enumerate(sigs):
+        # Same source link is an exact-duplicate signal on its own, so it must be
+        # a block key even when title/author/year differ (a corrected re-import).
+        if s.link:
+            add(("ln", s.link), idx)
         if s.year and s.specialty:
             add(("ys", s.year + "|" + s.specialty), idx)
         first_author = next(iter(sorted(s.author_tokens)), "") if s.author_tokens else ""
