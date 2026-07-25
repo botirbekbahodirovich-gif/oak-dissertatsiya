@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Ma'lumotlar sifati — Admin — Olimlar.uz{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dq-wrap { max-width: 1200px; margin: 0 auto; }
+  .dq-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+             justify-content: space-between; margin-bottom: 1.25rem; }
+  .dq-head h1 { font-size: 1.6rem; font-weight: 800; color: var(--oak-text); margin: 0; }
+  .dq-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+              margin-bottom: 1.5rem; }
+  @media (max-width: 900px) { .dq-cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .dq-cards { grid-template-columns: 1fr; } }
+  .dq-card { border: 1px solid var(--oak-border); background: var(--oak-surface);
+             border-radius: 14px; padding: 1.1rem 1.25rem; }
+  .dq-card .label { color: var(--oak-muted); font-size: 0.72rem; font-weight: 700;
+                    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.4rem; }
+  .dq-card .value { font-size: 1.9rem; font-weight: 800; color: var(--oak-text); line-height: 1.05; }
+  .dq-card .sub { color: var(--oak-muted); font-size: 0.8rem; margin-top: 0.3rem; }
+  .dq-score-ring { font-size: 2.2rem; }
+  .sev-critical { color: #dc2626; } .sev-warning { color: #d97706; } .sev-info { color: #2563eb; }
+  .dq-section { border: 1px solid var(--oak-border); background: var(--oak-surface);
+                border-radius: 14px; padding: 1.25rem; margin-bottom: 1.5rem; }
+  .dq-section h2 { font-size: 1.1rem; font-weight: 800; color: var(--oak-text); margin: 0 0 0.9rem; }
+  .dq-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .dq-table th, .dq-table td { text-align: left; padding: 0.5rem 0.6rem;
+                               border-bottom: 1px solid var(--oak-border); vertical-align: top; }
+  .dq-table th { color: var(--oak-muted); font-weight: 700; font-size: 0.74rem;
+                 text-transform: uppercase; letter-spacing: 0.3px; }
+  .dq-scroll { overflow-x: auto; }
+  .pill { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px;
+          font-size: 0.72rem; font-weight: 700; border: 1px solid var(--oak-border); }
+  .dq-filters { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: end; margin-bottom: 1rem; }
+  .dq-filters label { display: flex; flex-direction: column; font-size: 0.72rem;
+                      color: var(--oak-muted); font-weight: 700; gap: 0.2rem; }
+  .dq-filters select, .dq-filters input { padding: 0.35rem 0.5rem; border-radius: 8px;
+                      border: 1px solid var(--oak-border); background: var(--oak-bg, transparent);
+                      color: var(--oak-text); }
+  .btn-sm { padding: 0.3rem 0.7rem; border-radius: 8px; border: 1px solid var(--oak-border);
+            background: var(--oak-surface); color: var(--oak-text); font-size: 0.78rem;
+            font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .btn-danger { color: #dc2626; } .btn-ok { color: #16a34a; }
+  .dup-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: stretch; }
+  @media (max-width: 720px) { .dup-pair { grid-template-columns: 1fr; } }
+  .dup-side { border: 1px solid var(--oak-border); border-radius: 10px; padding: 0.75rem; }
+  .dup-side .t { font-weight: 700; color: var(--oak-text); font-size: 0.9rem; }
+  .dup-side .m { color: var(--oak-muted); font-size: 0.8rem; margin-top: 0.25rem; }
+  .dup-mid { display: flex; flex-direction: column; align-items: center; justify-content: center;
+             gap: 0.35rem; min-width: 90px; }
+  .muted { color: var(--oak-muted); }
+  .pager { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dq-wrap">
+
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% if msgs %}
+      {% for cat, msg in msgs %}
+        <div class="dq-section" style="padding:0.7rem 1rem;">
+          <span class="pill {{ 'sev-critical' if cat in ['danger','error'] else 'sev-info' }}">{{ msg }}</span>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="dq-head">
+    <h1>Ma'lumotlar sifati</h1>
+    <form method="POST" action="{{ url_for('data_quality.trigger_scan') }}"
+          style="display:flex; gap:0.5rem; align-items:center;">
+      {{ csrf_token()|safe }}
+      <label class="muted" style="font-size:0.78rem;">Skanerlash (max {{ 3000 }}):
+        <input type="number" name="limit" value="1000" min="1" max="3000"
+               style="width:90px; margin-left:0.4rem; padding:0.3rem; border-radius:8px;
+                      border:1px solid var(--oak-border); background:transparent; color:var(--oak-text);">
+      </label>
+      <button type="submit" class="btn-sm btn-primary">Skaner ishga tushirish</button>
+    </form>
+  </div>
+
+  {% if not tables_ready %}
+    <div class="dq-section">
+      <h2>Migratsiya kerak</h2>
+      <p class="muted">Data Quality jadvallari topilmadi. Avval
+        <code>migrations/004_create_data_quality_tables.sql</code> migratsiyasini
+        (staging bazasida) qo‘llang, so‘ng skanerlashni ishga tushiring.</p>
+    </div>
+  {% else %}
+
+  {# ── Summary cards ─────────────────────────────────────────────── #}
+  {% set score = summary.score %}
+  {% set sev = summary.severity or {} %}
+  {% set missing = namespace(n=0) %}
+  {% for b in summary.breakdown %}{% if b.issue_code.startswith('MISSING') %}{% set missing.n = missing.n + b.count %}{% endif %}{% endfor %}
+  <div class="dq-cards">
+    <div class="dq-card">
+      <div class="label">Jami yozuvlar</div>
+      <div class="value">{{ summary.total_records }}</div>
+      <div class="sub">Oxirgi skaner:
+        {% if summary.run and summary.run.completed_at %}{{ summary.run.completed_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}</div>
+    </div>
+    <div class="dq-card">
+      <div class="label">Sifat balli</div>
+      <div class="value dq-score-ring">{{ score.overall }}<span class="muted" style="font-size:1rem;">/100</span></div>
+      <div class="sub">C {{ score.dimensions.completeness }} · V {{ score.dimensions.validity }} · U {{ score.dimensions.uniqueness }}</div>
+    </div>
+    <div class="dq-card">
+      <div class="label">Muammolar</div>
+      <div class="value">{{ summary.issue_count }}</div>
+      <div class="sub">
+        <span class="sev-critical">{{ sev.get('critical', 0) }} kritik</span> ·
+        <span class="sev-warning">{{ sev.get('warning', 0) }} ogoh.</span>
+      </div>
+    </div>
+    <div class="dq-card">
+      <div class="label">Dublikat / bo‘sh</div>
+      <div class="value">{{ summary.duplicate_count }}</div>
+      <div class="sub">{{ missing.n }} ta bo‘sh maydon</div>
+    </div>
+  </div>
+
+  {# ── Issue breakdown ───────────────────────────────────────────── #}
+  <div class="dq-section">
+    <h2>Muammolar tahlili</h2>
+    <div class="dq-scroll">
+      <table class="dq-table">
+        <thead><tr><th>Kod</th><th>Jiddiylik</th><th>Soni</th><th>Ulush</th></tr></thead>
+        <tbody>
+          {% for b in summary.breakdown %}
+          <tr>
+            <td>{{ b.issue_code }}</td>
+            <td><span class="pill sev-{{ b.severity }}">{{ b.severity }}</span></td>
+            <td>{{ b.count }}</td>
+            <td>{{ ((b.count / summary.issue_count * 100) if summary.issue_count else 0) | round(1) }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Muammolar topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Duplicate candidates ──────────────────────────────────────── #}
+  <div class="dq-section">
+    <h2>Dublikat nomzodlar</h2>
+    {% for d in duplicates %}
+      <div class="dup-pair" style="margin-bottom:1rem;">
+        <div class="dup-side">
+          <div class="t">#{{ d.record_id_1 }} · {{ d.r1_mavzu or '—' }}</div>
+          <div class="m">{{ d.r1_olim or '—' }} · {{ d.r1_sana or '—' }} · {{ d.r1_muassasa or '—' }}</div>
+        </div>
+        <div class="dup-mid">
+          <span class="pill">{{ d.match_level }}</span>
+          <strong>{{ (d.score * 100) | round(0) | int }}%</strong>
+          <span class="muted" style="font-size:0.7rem; text-align:center;">
+            {{ (d.reasons or []) | join(', ') }}</span>
+          <form method="POST" action="{{ url_for('data_quality.review_duplicate', dup_id=d.id) }}">
+            {{ csrf_token()|safe }}
+            <button name="status" value="confirmed" class="btn-sm btn-ok">Tasdiqlash</button>
+            <button name="status" value="rejected" class="btn-sm btn-danger">Rad etish</button>
+          </form>
+          <button class="btn-sm" disabled title="Phase 2">Birlashtirish</button>
+        </div>
+        <div class="dup-side">
+          <div class="t">#{{ d.record_id_2 }} · {{ d.r2_mavzu or '—' }}</div>
+          <div class="m">{{ d.r2_olim or '—' }} · {{ d.r2_sana or '—' }} · {{ d.r2_muassasa or '—' }}</div>
+        </div>
+      </div>
+    {% else %}
+      <p class="muted">Dublikat nomzod yo‘q (yoki barchasi ko‘rib chiqilgan).</p>
+    {% endfor %}
+  </div>
+
+  {# ── Issues list + filters ─────────────────────────────────────── #}
+  <div class="dq-section">
+    <h2>Muammolar ro‘yxati ({{ total_issues }})</h2>
+    <form method="GET" action="{{ url_for('data_quality.dashboard') }}" class="dq-filters">
+      <label>Kod
+        <input type="text" name="issue_code" value="{{ filters.get('issue_code','') }}" placeholder="MISSING_AUTHOR">
+      </label>
+      <label>Jiddiylik
+        <select name="severity">
+          <option value="">—</option>
+          {% for s in ['critical','warning','info'] %}
+          <option value="{{ s }}" {{ 'selected' if filters.get('severity')==s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Holat
+        <select name="status">
+          <option value="">—</option>
+          {% for s in ['open','resolved','ignored','fixed'] %}
+          <option value="{{ s }}" {{ 'selected' if filters.get('status')==s }}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Run ID
+        <input type="number" name="run_id" value="{{ filters.get('run_id','') }}" style="width:90px;">
+      </label>
+      <button type="submit" class="btn-sm btn-primary">Filtrlash</button>
+      <a class="btn-sm" href="{{ url_for('data_quality.export_csv', **filters) }}">CSV eksport</a>
+    </form>
+
+    <div class="dq-scroll">
+      <table class="dq-table">
+        <thead><tr><th>ID</th><th>Yozuv</th><th>Maydon</th><th>Kod</th>
+          <th>Jiddiylik</th><th>Tavsif</th><th>Holat</th><th></th></tr></thead>
+        <tbody>
+          {% for i in issues %}
+          <tr>
+            <td>{{ i.id }}</td>
+            <td>#{{ i.record_id }}</td>
+            <td>{{ i.field_name }}</td>
+            <td>{{ i.issue_code }}</td>
+            <td><span class="pill sev-{{ i.severity }}">{{ i.severity }}</span></td>
+            <td>{{ i.description }}</td>
+            <td>{{ i.status }}</td>
+            <td>
+              {% if i.status == 'open' %}
+              <form method="POST" action="{{ url_for('data_quality.resolve_issue', issue_id=i.id) }}"
+                    style="display:inline;">
+                {{ csrf_token()|safe }}
+                <button name="status" value="resolved" class="btn-sm btn-ok">Hal</button>
+                <button name="status" value="ignored" class="btn-sm">E'tiborsiz</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="muted">Muammolar topilmadi.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pager">
+      {% if page > 1 %}
+      <a class="btn-sm" href="{{ url_for('data_quality.dashboard', page=page-1, **filters) }}">‹ Oldingi</a>
+      {% endif %}
+      <span class="muted">{{ page }} / {{ total_pages }}</span>
+      {% if page < total_pages %}
+      <a class="btn-sm" href="{{ url_for('data_quality.dashboard', page=page+1, **filters) }}">Keyingi ›</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

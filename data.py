@@ -1819,6 +1819,16 @@ def oak_ingest():
                 )
 
                 # Validate
+                if precheck_enabled:
+                    precheck_records.append({
+                        'id': len(precheck_records) + 1,
+                        'olim': olim, 'mavzu': mavzu, 'daraja': daraja,
+                        'ixtisoslik': ixtisoslik, 'muassasa': muassasa,
+                        'sana': str(item.get('Sana', '') or ''),
+                        'ilmiy_rahbar': str(item.get('Ilmiy rahbar', '') or ''),
+                        'link': str(item.get('Havola', '') or ''),
+                    })
+
                 reason = _validate_ingest_record(oak_id, olim, daraja, mavzu, muassasa)
                 if reason:
                     skipped += 1
@@ -1903,6 +1913,18 @@ def import_oak():
     skipped = 0
     skip_reasons: dict = {}
     new_defenses = []  # freshly inserted announcements → himoya_elon matching
+
+    # Optional, OFF-by-default Data Quality pre-check. When
+    # DATA_QUALITY_IMPORT_PRECHECK is disabled (the default) nothing below
+    # changes the import: precheck_enabled stays False, no records are collected
+    # and no 'precheck' key is added to the response.
+    precheck_enabled = False
+    precheck_records: list = []
+    try:
+        from data_quality.config import get_config as _dq_config
+        precheck_enabled = _dq_config().import_precheck_enabled
+    except Exception:
+        precheck_enabled = False
 
     conn = get_connection()
     try:
@@ -2016,10 +2038,24 @@ def import_oak():
         except Exception:
             pass
 
-    return jsonify({'success': True, 'inserted': inserted, 'updated': updated,
-                    'skipped': skipped, 'total': len(items),
-                    'skip_reasons': skip_reasons, 'himoya_notified': notified,
-                    'subscribers_notified': subs_notified})
+    # Data Quality pre-check summary (only when the flag is on). Purely
+    # informational — the import above already ran unchanged; this never skips
+    # or merges anything and never breaks the import if it errors.
+    precheck_summary = None
+    if precheck_enabled and precheck_records:
+        try:
+            from data_quality.import_precheck import summarize_precheck
+            precheck_summary = summarize_precheck(precheck_records)
+        except Exception:
+            precheck_summary = None
+
+    response = {'success': True, 'inserted': inserted, 'updated': updated,
+                'skipped': skipped, 'total': len(items),
+                'skip_reasons': skip_reasons, 'himoya_notified': notified,
+                'subscribers_notified': subs_notified}
+    if precheck_summary is not None:
+        response['precheck'] = precheck_summary
+    return jsonify(response)
 
 
 # ---------------------------------------------------------------------------
