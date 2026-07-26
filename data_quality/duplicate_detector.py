@@ -479,12 +479,10 @@ def _scan_block(idxs: List[int], sigs: List[_Sig], config: DataQualityConfig,
             bid = b.id
             if bid is None or aid == bid:
                 continue
-            pair = _pair_key(aid, bid)
-            if pair in seen:
-                stats.pairs_repeated += 1
-                continue
             stats.pairs_seen += 1
 
+            # Filters first: the overwhelming majority of pairs die here, and
+            # they are cheaper than building a pair key and probing the memo.
             # An identical source link is an exact match regardless of text, so
             # it must bypass every title-based filter.
             if not (a.link and a.link == b.link):
@@ -502,6 +500,10 @@ def _scan_block(idxs: List[int], sigs: List[_Sig], config: DataQualityConfig,
             # remembered pairs that turned out to *be* candidates, so every
             # near-miss was re-scored once per block key it shared — and this
             # set is what keeps a candidate from being emitted twice.
+            pair = _pair_key(aid, bid)
+            if pair in seen:
+                stats.pairs_repeated += 1
+                continue
             seen.add(pair)
             if len(seen) == _SEEN_WARN_AT:
                 log.warning("duplicates: %s pairs have reached full "
