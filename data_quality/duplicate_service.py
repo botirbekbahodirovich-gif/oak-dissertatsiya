@@ -22,12 +22,21 @@ class DuplicateDetectionService:
     def __init__(self, conn=None, config: Optional[DataQualityConfig] = None):
         self.conn = conn
         self.config = config or get_config()
+        self.last_stats = None
 
     def detect(self, records: List[Mapping]) -> List[DuplicateCandidate]:
-        """Return candidate pairs for an in-memory record set. Pure/deterministic."""
-        candidates = detector.detect_duplicates(records, self.config)
-        log.info("duplicate detection: %s records -> %s candidates",
-                 len(records), len(candidates))
+        """Return candidate pairs for an in-memory record set. Pure/deterministic.
+
+        The detector logs its own progress every few seconds and leaves the pass
+        counters on ``last_stats`` (blocks, pairs compared, filter hit rates) for
+        whoever wants to report them.
+        """
+        log.info("duplicate detection start: %s records", len(records))
+        candidates, stats = detector.detect_duplicates_with_stats(
+            records, self.config)
+        self.last_stats = stats
+        log.info("duplicate detection: %s records -> %s candidates in %.1fs",
+                 len(records), len(candidates), stats.seconds)
         return candidates
 
     def persist(self, candidates: List[DuplicateCandidate]) -> int:

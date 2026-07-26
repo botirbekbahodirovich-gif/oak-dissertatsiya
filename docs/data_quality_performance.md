@@ -26,13 +26,80 @@ sharing a block are compared (`duplicate_detector._build_blocks`):
 | first author token | same surname |
 | title first-8-chars prefix | near-identical titles cluster |
 
-Oversized blocks (`> _MAX_BLOCK_SIZE = 400`, e.g. thousands of empty-year rows)
-are **skipped** so one weak key can't dominate the run. Within a block the work
-is `k²` for block size `k`, which stays small.
+The title prefix stays at **8** characters. Uzbek is suffix-rich (`ta'lim
+tizimi` / `ta'limi tizimida`), so real duplicate titles routinely diverge inside
+characters 9–16; a 16-character primary key silently loses those pairs. 16 is
+used as the *first secondary key* instead — see below.
+
+### Bounded blocks instead of skipped blocks
+Blocks over `_MAX_BLOCK_SIZE = 500` are **split**, not dropped. `_split_block`
+walks a secondary-key ladder — 16-char title prefix → first author token → year
+→ specialty — until every work unit fits the cap. A key with no discriminating
+power inside that block is skipped and the next one is tried. Anything still
+oversized after the whole ladder is compared anyway up to
+`_HARD_BLOCK_CAP = 5000` with a `WARNING`, and only beyond that cap is it left
+out — again with a `WARNING` and a counter, never silently.
+
+This replaced the old behaviour, where a block over 400 records was skipped
+outright. Splitting can therefore only *add* candidates, never remove them.
+
+## Three filters before SequenceMatcher
+Within a block, `_scan_block` drops pairs through a ladder of filters that are
+each a provable **upper bound** on the score `_classify` would compute — so the
+candidate set is identical to the unfiltered one, only reached faster.
+
+| Layer | Cost | What it rejects |
+|---|---|---|
+| `seen` pair key | one set lookup | pairs already evaluated in another block |
+| `_max_possible_title_sim` | a few int ops | `max(2·Lmin/(Lmin+Lmax), Tmin/Tmax) < threshold` |
+| rapidfuzz `process.cdist` | one C call per block | Indel ratio below the cutoff *and* token Jaccard below it |
+| `_classify` | 1–3 `SequenceMatcher` | nothing — this is the decision |
+
+Why the rapidfuzz layer is safe: `fuzz.ratio` is the normalized **Indel**
+similarity, `2·LCS/(La+Lb)`, while `difflib.SequenceMatcher.ratio` is
+`2·M/(La+Lb)` where `M` is the Ratcliff/Obershelp match size, and `M <= LCS`
+always. So `rapidfuzz.ratio >= difflib.ratio` for every pair, and a pair under
+the rapidfuzz cutoff can never clear the difflib threshold. Verified
+empirically over 300 000 random pairs (0 violations) and re-checked on real
+titles by `tests/test_data_quality_duplicate_perf.py`
+(`test_rapidfuzz_dominates_difflib_on_corpus_pairs`).
+
+Because `_title_similarity` is `max(difflib_ratio, token_jaccard)`, a pair the
+rapidfuzz layer rejects is still checked against the token Jaccard — otherwise
+word-reordered duplicates would be lost.
+
+`_PREFILTER_MARGIN = 0.005` is subtracted from the cutoff so float rounding can
+never cost a pair.
+
+### rapidfuzz is optional
+`RAPIDFUZZ_AVAILABLE` guards both the import and the `numpy` that `cdist` needs.
+Without them the cheap bounds still apply and the output is unchanged — just
+slower. `test_identical_without_rapidfuzz` covers that path, so a host that has
+not run `pip install -r requirements.txt` yet is degraded, not broken.
 
 ## Similarity cost
 `difflib.SequenceMatcher.ratio()` is `O(len·len)` on short strings (titles), plus
-a cheap token-Jaccard. Both are stdlib — no external dependency, no C build step.
+a cheap token-Jaccard. It remains the decision function; `rapidfuzz` only
+pre-filters.
+
+## Progress and blocking visibility
+`detect_duplicates_with_stats` returns a `DetectionStats` alongside the
+candidates (pairs seen, pairs dropped per layer, pairs classified, work units,
+the 10 largest blocks). The detector logs a progress line every 5 seconds:
+
+    duplicates: blocks 340/1,200 | pairs compared: 84,000 | classified: 3,100 |
+    candidates: 12 | 15s
+
+and, at the end, a one-line summary plus the 10 largest blocks. The scan CLI
+already configures logging at `INFO`, so a `nohup`ed full scan shows progress in
+its log file.
+
+## Benchmarking
+`scripts/benchmark_duplicate_detection.py` (read-only, `TEST_DATABASE_URL`)
+times the read / validate / duplicate phases at several limits and prints a
+markdown table. `--variants full,no-rapidfuzz,legacy` attributes the speedup to
+each optimisation; `legacy` is the pre-hotfix algorithm and should only be run
+at small limits.
 
 ## Indexes
 Migration 004 adds:
