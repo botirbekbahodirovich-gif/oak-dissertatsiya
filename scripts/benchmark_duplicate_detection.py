@@ -89,7 +89,14 @@ def legacy_detect(records: List[Mapping], config: DataQualityConfig,
 def fetch_records(conn, limit: Optional[int], batch_size: int) -> Tuple[List[Dict], float]:
     started = time.monotonic()
     records = list(repo.iter_dissertations(conn, limit=limit, batch_size=batch_size))
-    return records, time.monotonic() - started
+    elapsed = time.monotonic() - started
+    # iter_dissertations uses a named (server-side) cursor; end the read
+    # transaction so the next limit can reuse the same name on this connection.
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+    return records, elapsed
 
 
 def validate_all(records: List[Dict]) -> Tuple[int, float]:

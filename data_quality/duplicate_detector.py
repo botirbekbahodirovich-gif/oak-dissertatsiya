@@ -92,12 +92,10 @@ _TITLE_SUBBLOCK_LEN = 16
 # not worth handing to the thread pool either.
 _CDIST_MIN_BLOCK = 16
 _CDIST_MIN_WORKERS = 200
-# Memoising every examined pair is what stops a pair shared by several blocks
-# from being re-scored, but the set is unbounded in principle (a 29k scan sees a
-# few million pairs). Past this many entries we stop memoising and accept the
-# re-scoring; correctness is unaffected because emitted candidates are tracked
-# separately. ~5M keys ≈ 250 MB.
-_MAX_SEEN_PAIRS = 5_000_000
+# The pair memo is keyed at the *classification* gate, so it holds one entry per
+# pair that actually reached SequenceMatcher — tens of thousands on a full scan,
+# not the ~20M pairs the blocks enumerate. Purely informational threshold.
+_SEEN_WARN_AT = 2_000_000
 # Pair keys are packed into one int; dissertation ids are Postgres `integer`.
 _ID_SHIFT = 1 << 32
 # Safety slack (in 0..1 similarity units) subtracted from the pre-filter cutoff
@@ -326,8 +324,8 @@ class DetectionStats:
     blocks_built: int = 0
     blocks_planned: int = 0
     blocks_done: int = 0
-    pairs_seen: int = 0            # distinct pairs reaching the pair loop
-    pairs_repeated: int = 0        # pair already handled in an earlier block
+    pairs_seen: int = 0            # pairs examined in the pair loop
+    pairs_repeated: int = 0        # skipped: already classified via another key
     pairs_cheap_skipped: int = 0   # dropped by the length/token bound
     pairs_rf_skipped: int = 0      # dropped by the rapidfuzz pre-filter
     pairs_classified: int = 0      # full SequenceMatcher classification
@@ -337,7 +335,6 @@ class DetectionStats:
     blocks_skipped: List[Tuple[Tuple[str, ...], int]] = field(default_factory=list)
     seconds: float = 0.0
     rapidfuzz_used: bool = False
-    memo_capped: bool = False
 
     def as_dict(self) -> Dict:
         return {
@@ -355,7 +352,6 @@ class DetectionStats:
             "skipped_blocks": len(self.blocks_skipped),
             "seconds": round(self.seconds, 3),
             "rapidfuzz_used": self.rapidfuzz_used,
-            "memo_capped": self.memo_capped,
         }
 
 
@@ -431,10 +427,9 @@ def detect_duplicates_with_stats(
     # either difflib threshold, so it can be dropped without classifying.
     cutoff = min(config.possible_threshold, config.strong_threshold) - _PREFILTER_MARGIN
 
-    # `seen` memoises every examined pair (bounded); `emitted` holds only the
-    # pairs already in `out` and is what guarantees each candidate appears once.
+    # One pair is classified at most once, however many block keys it shares.
+    # This set is also what guarantees a candidate is emitted only once.
     seen: set = set()
-    emitted: set = set()
     out: List[DuplicateCandidate] = []
     last_log = [started]
 
@@ -456,8 +451,7 @@ def detect_duplicates_with_stats(
 
     for key, idxs in plan:
         matrix = _block_matrix(idxs, sigs, cutoff)
-        _scan_block(idxs, sigs, config, cutoff, matrix, seen, emitted, out,
-                    stats, tick)
+        _scan_block(idxs, sigs, config, cutoff, matrix, seen, out, stats, tick)
         stats.blocks_done += 1
         tick()
 
@@ -468,16 +462,10 @@ def detect_duplicates_with_stats(
 
 
 def _scan_block(idxs: List[int], sigs: List[_Sig], config: DataQualityConfig,
-                cutoff: float, matrix, seen: set, emitted: set,
+                cutoff: float, matrix, seen: set,
                 out: List[DuplicateCandidate], stats: DetectionStats,
                 tick: Callable[[], None]) -> None:
     n = len(idxs)
-    memoise = len(seen) < _MAX_SEEN_PAIRS
-    if not memoise and not stats.memo_capped:
-        stats.memo_capped = True
-        log.warning("duplicates: pair memo reached %s entries — dropping the "
-                    "memo to bound memory; some pairs will be re-scored "
-                    "(results unchanged)", f"{_MAX_SEEN_PAIRS:,}")
     for i in range(n):
         if n >= _CDIST_MIN_WORKERS:
             tick()
@@ -492,16 +480,9 @@ def _scan_block(idxs: List[int], sigs: List[_Sig], config: DataQualityConfig,
             if bid is None or aid == bid:
                 continue
             pair = _pair_key(aid, bid)
-            if pair in seen or pair in emitted:
+            if pair in seen:
                 stats.pairs_repeated += 1
                 continue
-            # Mark the pair as handled BEFORE classifying: a pair that shares
-            # several block keys must be evaluated exactly once, whether or not
-            # it turns out to be a candidate. (The old code only remembered
-            # pairs that *were* candidates, so every near-miss was re-scored
-            # once per shared block.)
-            if memoise:
-                seen.add(pair)
             stats.pairs_seen += 1
 
             # An identical source link is an exact match regardless of text, so
@@ -517,10 +498,19 @@ def _scan_block(idxs: List[int], sigs: List[_Sig], config: DataQualityConfig,
                         stats.pairs_rf_skipped += 1
                         continue
 
+            # Mark the pair as handled BEFORE classifying. The old code only
+            # remembered pairs that turned out to *be* candidates, so every
+            # near-miss was re-scored once per block key it shared — and this
+            # set is what keeps a candidate from being emitted twice.
+            seen.add(pair)
+            if len(seen) == _SEEN_WARN_AT:
+                log.warning("duplicates: %s pairs have reached full "
+                            "classification — the blocking keys are weak for "
+                            "this dataset", f"{_SEEN_WARN_AT:,}")
+
             stats.pairs_classified += 1
             cand = _classify(a, b, config)
             if cand is not None:
-                emitted.add(pair)
                 out.append(cand.ordered())
                 stats.candidates += 1
 

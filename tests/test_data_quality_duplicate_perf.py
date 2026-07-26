@@ -281,7 +281,8 @@ class SeenPairTests(unittest.TestCase):
              "sana": "11.03.2020", "ilmiy_rahbar": "Rahbarov R", "link": ""},
         ]
         _cands, stats = D.detect_duplicates_with_stats(recs, CONFIG)
-        self.assertEqual(stats.pairs_seen, 1)
+        self.assertEqual(stats.pairs_classified, 1,
+                         "a non-candidate pair must not be re-scored per block")
         self.assertGreaterEqual(stats.pairs_repeated, 1,
                                 "the pair should be recognised as already handled")
 

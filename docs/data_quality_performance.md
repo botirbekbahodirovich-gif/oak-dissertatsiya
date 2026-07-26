@@ -50,7 +50,7 @@ candidate set is identical to the unfiltered one, only reached faster.
 
 | Layer | Cost | What it rejects |
 |---|---|---|
-| `seen` pair key | one set lookup | pairs already evaluated in another block |
+| `seen` pair key | one set lookup | pairs already classified via another block key |
 | `_max_possible_title_sim` | a few int ops | `max(2·Lmin/(Lmin+Lmax), Tmin/Tmax) < threshold` |
 | rapidfuzz `process.cdist` | one C call per block | Indel ratio below the cutoff *and* token Jaccard below it |
 | `_classify` | 1–3 `SequenceMatcher` | nothing — this is the decision |
@@ -67,6 +67,15 @@ titles by `tests/test_data_quality_duplicate_perf.py`
 Because `_title_similarity` is `max(difflib_ratio, token_jaccard)`, a pair the
 rapidfuzz layer rejects is still checked against the token Jaccard — otherwise
 word-reordered duplicates would be lost.
+
+The `seen` memo is keyed at the **classification gate**, not at the top of the
+pair loop. That is deliberate: a 29k scan enumerates ~20M pairs but classifies
+only tens of thousands of them, so memoising at the gate fixes the actual defect
+(re-running SequenceMatcher on a near-miss once per shared block key) for a few
+MB instead of a few hundred. It is also the set that keeps a candidate from being
+emitted twice, so nothing is ever evicted from it. Pairs the pre-filters reject
+may be re-tested in another block; that costs a handful of integer operations and
+cannot change the outcome.
 
 `_PREFILTER_MARGIN = 0.005` is subtracted from the cutoff so float rounding can
 never cost a pair.
