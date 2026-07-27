@@ -37,6 +37,48 @@ class ValidityTests(unittest.TestCase):
     def test_short_title(self):
         self.assertIn(M.SHORT_TITLE, codes({"id": 1, "mavzu": "qisqa"}))
 
+    def test_title_is_registry_code(self):
+        """OAK registry codes land in the title column; they are 19 chars, so
+        SHORT_TITLE cannot catch them."""
+        c = codes({"id": 1, "mavzu": "В2026.2.PhD/Iqt4897"})
+        self.assertIn(M.TITLE_IS_CODE, c)
+        self.assertNotIn(M.SHORT_TITLE, c)
+
+    def test_title_is_code_severity_is_critical(self):
+        issues = validate_record({"id": 1, "mavzu": "В2026.2.PhD/Iqt4897"})
+        found = [i for i in issues if i.issue_code == M.TITLE_IS_CODE]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].severity, M.SEVERITY_CRITICAL)
+        self.assertEqual(found[0].field_name, "mavzu")
+        self.assertEqual(found[0].original_value, "В2026.2.PhD/Iqt4897")
+
+    def test_title_is_code_variants(self):
+        for title in ("В2026.2.PhD/Iqt4897",      # Cyrillic prefix
+                      "B2026.2.DSc/Tex112",       # Latin prefix, DSc
+                      "2026.2.PhD/Ped9",          # no prefix
+                      "В2026.12.PhD/Fil7",        # two-digit middle group
+                      "в2026.2.phd/iqt4897",      # lowercase
+                      "  В2026.2.PhD/Iqt4897  "):  # padded
+            with self.subTest(title=title):
+                self.assertIn(M.TITLE_IS_CODE, codes({"id": 1, "mavzu": title}))
+
+    def test_title_is_code_is_never_auto_fixable(self):
+        """A code in the title column needs a human to supply the real title —
+        the safe fixer must refuse to touch it."""
+        self.assertNotIn(M.TITLE_IS_CODE, M.AUTO_FIX_ALLOWLIST)
+        issues = validate_record({"id": 1, "mavzu": "В2026.2.PhD/Iqt4897"})
+        found = next(i for i in issues if i.issue_code == M.TITLE_IS_CODE)
+        self.assertFalse(found.is_auto_fixable)
+
+    def test_real_titles_are_not_flagged_as_codes(self):
+        for title in ("Sun'iy intellekt asoslari va uni tibbiyotda qo‘llash",
+                      "Iqtisodiy tahlil metodlari va ularning modellari",
+                      "2026 yilgi islohotlar tahlili",       # starts with a year
+                      "PhD/DSc dasturlarini takomillashtirish",
+                      "В2026 yilgi natijalar"):
+            with self.subTest(title=title):
+                self.assertNotIn(M.TITLE_IS_CODE, codes({"id": 1, "mavzu": title}))
+
     def test_html_residue(self):
         self.assertIn(M.HTML_RESIDUE,
                       codes({"id": 1, "mavzu": "<b>Katta mavzu nomi bu yerda</b>"}))

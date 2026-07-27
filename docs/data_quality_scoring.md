@@ -9,7 +9,7 @@ scanner and the admin dashboard, so the two can never disagree.
 | Dimension | Default weight | Driven by |
 |---|---|---|
 | completeness | 0.30 | MISSING_* issues |
-| validity | 0.25 | INVALID_*/FUTURE_DATE/SHORT_TITLE/HTML_RESIDUE/CONTROL_CHARS/PLACEHOLDER_* |
+| validity | 0.25 | INVALID_*/FUTURE_DATE/SHORT_TITLE/TITLE_IS_CODE/HTML_RESIDUE/CONTROL_CHARS/PLACEHOLDER_* |
 | consistency | 0.20 | INCONSISTENT_* issues |
 | uniqueness | 0.15 | duplicate candidate count |
 | integrity | 0.10 | integrity issues (orphans; extensible) |
