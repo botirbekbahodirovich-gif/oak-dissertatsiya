@@ -419,34 +419,42 @@ def save_to_db(items):
     return added, skipped
 
 
+def extract_author_from_title(title):
+    """E'lon sarlavhasidan olim ismini ajratadi.
+
+    Sarlavha odatda "Фамилия Исм Отасининг фалсафа доктори (PhD) ..." shaklida
+    bo'ladi. Alohida funksiya — rescrape_broken_records.py ham shu mantiqni
+    ishlatadi (mantiq _build_record dagidan o'zgarmagan).
+    """
+    title = (title or "").strip()
+    # Kirill: "Фамилия Исм Отасининг фалсафа/фан доктори..."
+    m = re.search(
+        r'^([А-ЯЎҚҒҲа-яўқғҳёЁ\s\'\-\.]+?)нинг\s+(?:фалсафа|фан)\s+доктори',
+        title
+    )
+    if m:
+        return m.group(1).strip()
+    # Lotin: "Familiya Ism Otasinining falsafa/fan doktori..."
+    m = re.search(
+        r'^([A-Za-z\s\'\-\.]+?)ning\s+(?:falsafa|fan)\s+doktori',
+        title, re.IGNORECASE
+    )
+    if m:
+        return m.group(1).strip()
+    # Zaxira: "нинг" gacha
+    m = re.search(r'^(.+?)нинг', title)
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
 def _build_record(item, parsed, yonalish=None):
     import re
 
     # Olim ismini sarlavhadan tozalab ajratish
     title = item.get("title", "")
-    olim = ""
-    
-    # Kirill: "Фамилия Исм Отасининг фалсафа/фан доктори..."
-    m = re.search(
-        r'^([А-ЯЎҚҒҲа-яўқғҳёЁ\s\'\-\.]+?)нинг\s+(?:фалсафа|фан)\s+доктори',
-        title.strip()
-    )
-    if m:
-        olim = m.group(1).strip()
-    else:
-        # Lotin: "Familiya Ism Otasinining falsafa/fan doktori..."
-        m = re.search(
-            r'^([A-Za-z\s\'\-\.]+?)ning\s+(?:falsafa|fan)\s+doktori',
-            title.strip(), re.IGNORECASE
-        )
-        if m:
-            olim = m.group(1).strip()
-        else:
-            # Zaxira: "нинг" gacha
-            m = re.search(r'^(.+?)нинг', title)
-            if m:
-                olim = m.group(1).strip()
-    
+    olim = extract_author_from_title(title)
+
     # Daraja aniqlashtirish
     daraja = parsed.get("daraja", "")
     if not daraja:
