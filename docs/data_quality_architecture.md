@@ -6,6 +6,7 @@
                  ┌─────────────────────────────────────────────┐
   CLI / routes   │ scripts/run_data_quality_scan.py             │
                  │ scripts/apply_data_quality_fixes.py          │
+                 │ scripts/rollback_data_quality_fixes.py       │
                  │ blueprints/data_quality.py (admin dashboard) │
                  └───────────────┬─────────────────────────────┘
                                  │ (no business logic here)
@@ -47,11 +48,12 @@ allowlist.
 | `data_quality/import_precheck.py` | flag-gated import summary (pure). |
 | `data_quality/cli_common.py` | CLI connection + safe output helpers. |
 
-## Database objects (migration 004)
+## Database objects (migrations 004 + 005)
 
-- **data_quality_runs** — one row per scanner execution (status running/completed/failed, counts, JSONB metadata).
+- **data_quality_runs** — one row per scanner execution (status running/completed/failed, counts, JSONB metadata). Also holds `run_type='fix'` rows: one per fixer invocation, the unit of fix rollback.
 - **data_quality_issues** — field-level findings; `run_id`→runs ON DELETE CASCADE; polymorphic (`record_type`,`record_id`); status open/resolved/ignored/fixed.
 - **duplicate_candidates** — candidate pairs; `UNIQUE(record_type, record_id_1, record_id_2)`; status pending/confirmed/rejected/merged (merge = Phase 2).
+- **data_quality_fix_log** (005) — one row per field value actually rewritten: `run_id`→runs **ON DELETE RESTRICT** (audit rows describe real writes, so they must not cascade away), nullable `issue_id`→issues ON DELETE SET NULL, `table_name`/`column_name`, `value_before`/`value_after` (TEXT, NULL stays NULL), `applied_at`/`applied_by`, nullable `rolled_back_at`. Indexed on `run_id`, `record_id`, and partially on `run_id WHERE rolled_back_at IS NULL`.
 
 Polymorphic `record_id` has **no hard FK** to `dissertations` (the column also
 targets future record types); referential integrity is checked in code.
@@ -66,8 +68,14 @@ targets future record types); referential integrity is checked in code.
   from persisted aggregates and calls the same `scoring.compute_score`, so the UI
   score always matches the CLI.
 - **Fix (CLI):** load open allowlisted issues → recompute normalized value from
-  the *current* DB value → update only `daraja`/`link` → per-fix transaction +
-  affected-row check + audit → mark issue `fixed`.
+  the *current* DB value → per-fix transaction: write the `data_quality_fix_log`
+  row FIRST, then update only `daraja`/`link`, verify the affected-row count,
+  audit + mark the issue `fixed` → commit. Rollback on any failure, so fix and
+  log are never out of step. All fixes of a run share one `run_type='fix'` run.
+- **Rollback (CLI):** read the run's un-reverted fix-log rows newest-first →
+  per row, require the current value to still equal `value_after` (else skip +
+  warn: edited outside the fixer) → per-fix transaction: restore `value_before`,
+  stamp `rolled_back_at`, reopen the issue. Dry-run by default; `--confirm` writes.
 
 ## Security posture
 Admin dashboard reuses `security.admin_required` + Flask-Login `@login_required`

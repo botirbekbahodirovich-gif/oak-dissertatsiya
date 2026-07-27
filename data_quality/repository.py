@@ -33,6 +33,11 @@ SCAN_COLUMNS = (
 # too so a bad column name can never reach an UPDATE statement.
 _UPDATABLE_COLUMNS = frozenset({"daraja", "link"})
 
+# Tables the fixer / rollback may write. Same reasoning as _UPDATABLE_COLUMNS:
+# data_quality_fix_log stores table_name as data, and that data must never be
+# able to steer a statement at another table.
+_FIXABLE_TABLES = frozenset({"dissertations"})
+
 DUP_TABLE_TYPE = "dissertation"
 
 
@@ -159,16 +164,16 @@ def insert_duplicates(conn, candidates: Sequence[DuplicateCandidate]) -> int:
 
 
 # ── Fixer support (writes to the source table) ──────────────────────────────
-def update_record_field(conn, record_id: int, column: str, new_value) -> int:
-    """UPDATE a single allowlisted column of one dissertation. Returns affected
-    row count. Refuses any column not on the fixer allowlist."""
-    if column not in _UPDATABLE_COLUMNS:
-        raise ValueError(f"column {column!r} is not fixer-updatable")
+def update_record_field(conn, record_id: int, column: str, new_value,
+                        table_name: str = "dissertations") -> int:
+    """UPDATE a single allowlisted column of one record. Returns affected row
+    count. Refuses any table/column not on the fixer allowlist."""
+    _check_target(table_name, column)
     with conn.cursor() as cur:
-        # column is validated against a fixed allowlist above, so this f-string
-        # cannot carry untrusted input; the VALUE is always parameterized.
+        # Both identifiers are validated against fixed allowlists above, so this
+        # f-string cannot carry untrusted input; the VALUE is always parameterized.
         cur.execute(
-            f"UPDATE dissertations SET {column} = %s WHERE id = %s",
+            f"UPDATE {table_name} SET {column} = %s WHERE id = %s",
             (new_value, record_id),
         )
         return cur.rowcount
@@ -215,6 +220,120 @@ def mark_issue_fixed(conn, issue_id: int, resolved_by: Optional[int] = None) -> 
                  WHERE id = %s""",
             (resolved_by, issue_id),
         )
+
+
+def record_issue_values(conn, issue_id: int, original_value, normalized_value) -> None:
+    """Pin the exact before/after the fixer used onto the issue row (the scan
+    values may be stale by apply time)."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE data_quality_issues
+                   SET original_value = %s, normalized_value = %s
+                 WHERE id = %s""",
+            (_as_text(original_value), _as_text(normalized_value), issue_id),
+        )
+
+
+# ── Fix log (audit trail + rollback source, migration 005) ──────────────────
+FIX_LOG_KEYS = ("id", "run_id", "issue_id", "record_id", "table_name",
+                "column_name", "value_before", "value_after", "issue_code",
+                "applied_at", "applied_by", "rolled_back_at")
+
+
+def log_fix(conn, *, run_id: int, record_id: int, column_name: str,
+            value_before, value_after, table_name: str = "dissertations",
+            issue_code: Optional[str] = None, issue_id: Optional[int] = None,
+            applied_by: str = "cli") -> int:
+    """Record one field rewrite and return the new fix-log id.
+
+    MUST be called inside the same transaction as the UPDATE it describes, and
+    before it, so a failed fix can never leave a log row claiming otherwise.
+    Values are stored as TEXT; None stays SQL NULL (never the string 'None').
+    """
+    _check_target(table_name, column_name)
+    with conn.cursor() as cur:
+        cur.execute(
+            """INSERT INTO data_quality_fix_log
+                   (run_id, issue_id, record_id, table_name, column_name,
+                    value_before, value_after, issue_code, applied_by)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+               RETURNING id""",
+            (run_id, issue_id, record_id, table_name, column_name,
+             _as_text(value_before), _as_text(value_after), issue_code,
+             (applied_by or "cli")[:128]),
+        )
+        return int(cur.fetchone()[0])
+
+
+def fetch_fixes_by_run(conn, run_id: int, include_rolled_back: bool = False,
+                       limit: Optional[int] = None) -> List[Dict]:
+    """Fixes logged for one fix run, NEWEST FIRST.
+
+    Descending id is deliberate: it is reverse application order, so replaying
+    the list restores the original value even when several fixes touched the
+    same field. Already-reverted rows are excluded unless asked for.
+    """
+    sql = ("SELECT " + ", ".join(FIX_LOG_KEYS)
+           + " FROM data_quality_fix_log WHERE run_id = %s")
+    params: List = [run_id]
+    if not include_rolled_back:
+        sql += " AND rolled_back_at IS NULL"
+    sql += " ORDER BY id DESC"
+    if limit is not None:
+        sql += " LIMIT %s"
+        params.append(limit)
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return [dict(zip(FIX_LOG_KEYS, r)) for r in cur.fetchall()]
+
+
+def mark_rolled_back(conn, fix_ids: Sequence[int]) -> int:
+    """Stamp rolled_back_at on the given fixes. Returns the number of rows
+    actually stamped — already-reverted rows are left untouched, so a double
+    rollback can never claim to have reverted the same fix twice."""
+    ids = [int(i) for i in fix_ids]
+    if not ids:
+        return 0
+    with conn.cursor() as cur:
+        cur.execute(
+            """UPDATE data_quality_fix_log
+                   SET rolled_back_at = NOW()
+                 WHERE id = ANY(%s) AND rolled_back_at IS NULL""",
+            (ids,),
+        )
+        return cur.rowcount
+
+
+def fetch_current_value(conn, record_id: int, column: str,
+                        table_name: str = "dissertations"):
+    """Return ``(found, value)`` for one field. ``found`` separates "record is
+    gone" from "column is NULL" — the rollback CLI must treat those differently."""
+    _check_target(table_name, column)
+    with conn.cursor() as cur:
+        # Both identifiers are allowlist-validated above; the id is parameterized.
+        cur.execute(f"SELECT {column} FROM {table_name} WHERE id = %s", (record_id,))
+        row = cur.fetchone()
+        return (False, None) if row is None else (True, row[0])
+
+
+def fix_log_exists(conn) -> bool:
+    """True when migration 005 has been applied."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_name = 'data_quality_fix_log'""")
+        return int(cur.fetchone()[0]) == 1
+
+
+def _check_target(table_name: str, column: str) -> None:
+    if table_name not in _FIXABLE_TABLES:
+        raise ValueError(f"table {table_name!r} is not fixer-writable")
+    if column not in _UPDATABLE_COLUMNS:
+        raise ValueError(f"column {column!r} is not fixer-updatable")
+
+
+def _as_text(value) -> Optional[str]:
+    return None if value is None else str(value)
 
 
 # ── Dashboard reads / actions ───────────────────────────────────────────────
