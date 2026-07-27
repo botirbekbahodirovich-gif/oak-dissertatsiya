@@ -13,6 +13,10 @@ Design contract (enforced by test_data_quality_normalizers.py):
 The apostrophe handling matches the rest of the codebase: the Uzbek-Latin
 tutuq belgisi (in oʻ / gʻ) is unified to U+02BB (ʻ), consistent with
 ``utils/transliterate.py``.
+
+``to_latin`` is deliberately opt-in.  The field normalizers below continue to
+preserve the stored script; duplicate detection uses the transliterated form
+only in its in-memory comparison signature.
 """
 
 from __future__ import annotations
@@ -40,6 +44,23 @@ _WS_RUN = re.compile(r"\s+")
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 _HTML_TAG = re.compile(r"<[^>]+>")
 _HTML_ENTITY = re.compile(r"&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);")
+
+# Uzbek Cyrillic -> Latin. ``е`` is handled contextually in ``to_latin``:
+# Uzbek Latin writes it as ``ye`` at the start of a word and after a vowel,
+# otherwise as ``e``. Uppercase digraphs use title case because callers that
+# compare text case-fold it afterwards.
+_CYRILLIC_TO_LATIN = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d",
+    "ё": "yo", "ж": "j", "з": "z", "и": "i", "й": "y",
+    "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+    "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "x", "ц": "ts", "ч": "ch", "ш": "sh",
+    "щ": "shch", "ъ": "ʼ", "ы": "i", "ь": "", "э": "e",
+    "ю": "yu", "я": "ya",
+    "ў": "oʻ", "қ": "q", "ғ": "gʻ", "ҳ": "h",
+}
+_CYRILLIC_VOWELS = frozenset("аеёиоуўыэюяАЕЁИОУЎЫЭЮЯ")
+_CYRILLIC_SEPARATORS = frozenset("ъьЪЬ")
 
 _URL_SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.\-]*://")
 
@@ -79,6 +100,46 @@ def normalize_apostrophes(value: Optional[str]) -> str:
     # Remaining apostrophe variants that are NOT the canonical uz one -> ASCII '
     v = re.sub("[‘’ʼ`´]", "'", v)
     return v
+
+
+def to_latin(value: Optional[str]) -> str:
+    """Transliterate Uzbek Cyrillic text to Latin for comparison/search.
+
+    Latin text and non-Cyrillic characters pass through unchanged, making the
+    function idempotent. The conversion is intentionally not part of any
+    storage normalizer: callers opt in when they need a script-independent
+    comparison key.
+
+    Ambiguous Cyrillic letters follow Uzbek spelling: ``ж`` -> ``j``,
+    ``ё``/``ю``/``я`` -> ``yo``/``yu``/``ya``; ``е`` -> ``ye`` at a word
+    boundary or after a vowel/ъ/ь, otherwise ``e``.
+    """
+    v = normalize_unicode(value)
+    if not v:
+        return v
+
+    out = []
+    for index, char in enumerate(v):
+        lower = char.lower()
+        if lower == "е":
+            previous = v[index - 1] if index else ""
+            needs_y = (
+                not previous
+                or not previous.isalpha()
+                or previous in _CYRILLIC_VOWELS
+                or previous in _CYRILLIC_SEPARATORS
+            )
+            replacement = "ye" if needs_y else "e"
+        else:
+            replacement = _CYRILLIC_TO_LATIN.get(lower)
+
+        if replacement is None:
+            out.append(char)
+        elif char.isupper() and replacement:
+            out.append(replacement[0].upper() + replacement[1:])
+        else:
+            out.append(replacement)
+    return "".join(out)
 
 
 def strip_html(value: Optional[str]) -> str:
