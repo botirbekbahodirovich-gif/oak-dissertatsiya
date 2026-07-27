@@ -53,6 +53,24 @@ class PossibleTests(unittest.TestCase):
         cands = detect_duplicates(recs)
         self.assertTrue(cands)
 
+    def test_same_placeholder_supervisor_is_not_evidence(self):
+        a = rec(
+            8261,
+            mavzu="Kasbiy mobillik va pedagogik jarayonlarning nazariy asoslari",
+            olim="Sultonova A",
+            ixtisoslik="13.00.01",
+            ilmiy_rahbar="педагогика фанлари доктори (DSc)",
+        )
+        b = rec(
+            8374,
+            mavzu="Pedagogik qadriyatlar va pedagogik jarayonlarning nazariy asoslari",
+            olim="Boboxujayev B",
+            ixtisoslik="13.00.01",
+            ilmiy_rahbar="педагогика фанлари доктори (DSc)",
+        )
+
+        self.assertIsNone(compare_pair(a, b))
+
 
 class NoMatchTests(unittest.TestCase):
     def test_no_false_positive(self):

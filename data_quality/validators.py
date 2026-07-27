@@ -30,6 +30,19 @@ _SUPERVISOR_PLACEHOLDERS = (
     "ф.и.ш", "f.i.sh", "ф.и.о", "фиш",
     "ининг ф", "ининг f", "нинг ф.и", "нинг f.i",
 )
+# Some source rows contain only an academic degree where a person's name is
+# expected, e.g. "педагогика фанлари доктори (DSc)". Match the whole value so a
+# real name followed by a degree is not mistaken for a placeholder.
+_SUPERVISOR_DEGREE_ONLY = re.compile(
+    r"^(?:"
+    r"d\.?\s*sc|ph\.?\s*d"
+    r"|fan\s+doktori|фан\s+доктори"
+    r"|(?:[\wʻʼ'’‘-]+\s+)?fanlari\s+doktori"
+    r"|(?:[\wʻʼ'’‘-]+\s+)?фанлари\s+доктори"
+    r"|falsafa\s+doktori|фалсафа\s+доктори"
+    r")(?:\s*\(\s*(?:d\.?\s*sc|ph\.?\s*d)\s*\))?$",
+    re.IGNORECASE,
+)
 
 _MIN_TITLE_LEN = 12          # a real dissertation title is never this short
 # Some OAK rows carry the registry code in the title column instead of the
@@ -48,9 +61,14 @@ def _blank(v) -> bool:
     return v is None or str(v).strip() == ""
 
 
-def _is_placeholder_supervisor(v: str) -> bool:
-    low = v.lower()
-    return any(p in low for p in _SUPERVISOR_PLACEHOLDERS)
+def is_placeholder_supervisor(v) -> bool:
+    """Whether ``v`` is a template or degree-only value, not a person's name."""
+    if _blank(v):
+        return False
+    value = N.normalize_whitespace(str(v))
+    low = value.lower()
+    return (any(p in low for p in _SUPERVISOR_PLACEHOLDERS)
+            or _SUPERVISOR_DEGREE_ONLY.fullmatch(value) is not None)
 
 
 def _mk(record_id, field, code, severity, desc, original=None, normalized=None):
@@ -106,9 +124,9 @@ def validate_record(record: Mapping, today: Optional[date] = None) -> List[M.Iss
     if _blank(rahbar):
         issues.append(_mk(rid, "ilmiy_rahbar", M.MISSING_SUPERVISOR, M.SEVERITY_WARNING,
                           "Ilmiy rahbar bo‘sh"))
-    elif _is_placeholder_supervisor(str(rahbar)):
+    elif is_placeholder_supervisor(rahbar):
         issues.append(_mk(rid, "ilmiy_rahbar", M.PLACEHOLDER_SUPERVISOR, M.SEVERITY_WARNING,
-                          "Ilmiy rahbar — to‘ldirilmagan shablon (F.I.Sh)",
+                          "Ilmiy rahbar ism emas (shablon yoki ilmiy daraja)",
                           original=str(rahbar)))
     if _blank(link):
         issues.append(_mk(rid, "link", M.MISSING_URL, M.SEVERITY_INFO,

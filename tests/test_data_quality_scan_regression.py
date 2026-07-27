@@ -11,7 +11,7 @@ it ever falls below that baseline, the optimisation is wrong, not the fixture.
 
 Transliteration legitimately *raises* the duplicate count by matching
 cross-script pairs, so the duplicate assertion is a floor, not an equality.
-The set-level guarantee — every one of the original 27 pairs survives — lives
+The set-level guarantee — every one of the 26 valid baseline pairs survives — lives
 in tests/test_data_quality_duplicates.py.
 
 Changing a validator legitimately moves the *issue* numbers — when that happens,
@@ -34,14 +34,17 @@ import unittest
 TEST_DB = os.environ.get("TEST_DATABASE_URL")
 
 # ── the frozen fixture ──────────────────────────────────────────────────────
-# Measured on olimlar_staging_db. The pre-hotfix baseline was
-# issues=153 / duplicates=27 / quality=99.8 across five codes; TITLE_IS_CODE
-# added 6 findings in this window (107 across the whole table) and the score
-# still rounds to 99.8.
+# Measured on olimlar_staging_db. The original pre-hotfix count was 27, but
+# (8261, 8374) is not a duplicate: the authors and topics differ, and the pair
+# only matched because both ilmiy_rahbar values were the degree-only placeholder
+# "педагогика фанлари доктори (DSc)". Script folding in commit 3486b22 moved its
+# 0.7228 score below the 0.72 cutoff; excluding placeholder-supervisor evidence
+# makes the corrected baseline 26. TITLE_IS_CODE added 6 findings in this window
+# (107 across the whole table), while quality still rounds to 99.8.
 SCAN_LIMIT = 1000
 EXPECTED_CHECKED = 1000
 EXPECTED_ISSUES = 159
-EXPECTED_BASELINE_DUPLICATES = 27
+EXPECTED_BASELINE_DUPLICATES = 26
 EXPECTED_BASELINE_QUALITY = 99.8
 EXPECTED_BY_CODE = {
     "MISSING_ORG": 78,

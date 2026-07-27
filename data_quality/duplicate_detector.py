@@ -53,6 +53,7 @@ from difflib import SequenceMatcher
 from typing import Callable, Dict, List, Mapping, Optional, Tuple
 
 from data_quality import normalizers as N
+from data_quality import validators as V
 from data_quality.config import DataQualityConfig, get_config
 from data_quality.models import DuplicateCandidate
 
@@ -123,8 +124,11 @@ class _Sig:
         self.author_tokens = frozenset(_TOKEN.findall(self.author))
         self.org = _comparison_text(
             record.get("muassasa"), N.normalize_organization_name)
-        self.supervisor = _comparison_text(
-            record.get("ilmiy_rahbar"), N.normalize_person_name)
+        supervisor = record.get("ilmiy_rahbar")
+        self.supervisor = (
+            "" if V.is_placeholder_supervisor(supervisor)
+            else _comparison_text(supervisor, N.normalize_person_name)
+        )
         self.specialty = _first_specialty(record.get("ixtisoslik"))
         self.iso = N.normalize_date(record.get("sana"))
         self.year = self.iso[:4] if self.iso else _loose_year(record.get("sana"))
