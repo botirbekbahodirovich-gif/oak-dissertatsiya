@@ -21,6 +21,8 @@ observed in them. The source of truth is the Postgres `dissertations` table
 | data_quality | VARCHAR(20) default 'complete' | no | flag_data_quality.py | `dissertations` filters | pre-existing coarse flag (complete/missing_author/incomplete) | kept; superseded by issue table |
 | created_at | TIMESTAMP default NOW() | no | auto | ordering | — | — |
 | fan_tarmoqi, ixtisoslik_nomi, mavzu_raqami, ilmiy_kengash(_raqami), opponent_1..3, yetakchi_tashkilot, ilmiy_rahbar_daraja, yonalish, photo_url, ilmiy_rahbar_photo_url | TEXT | yes | OAK/CSV | display | sparsely populated | out of Phase-1 scope |
+| merged_into_id | INTEGER, self-FK (migration 006) | yes | `merge_duplicates.py` | listings should exclude rows where this is set | — | not yet excluded from any existing dashboard/scan query — see docs/data_quality_dissertation_fk_inventory.md §4 |
+| merged_at | TIMESTAMPTZ (migration 006) | yes | `merge_duplicates.py` | — | — | — |
 
 **No `updated_at`** on `dissertations` — the fixer therefore cannot bump a
 modified-timestamp (noted in the operations runbook).

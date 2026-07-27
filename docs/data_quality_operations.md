@@ -5,7 +5,9 @@
 > - Persist and apply are opt-in and gated by config.
 > - Never run persist/apply against the production DB from a laptop. Point
 >   `DATABASE_URL` at the target explicitly; the CLI prints `host/db` on start.
-> - Duplicates are never auto-deleted or auto-merged in Phase 1.
+> - Duplicates are never auto-merged. `merge_duplicates.py` only ever acts on
+>   candidates a human has already set to `confirmed`, defaults to a dry run,
+>   and never deletes a record — see §7a.
 
 ## Configuration (environment)
 
@@ -83,6 +85,38 @@ Confirm/reject in the dashboard, or query `duplicate_candidates` directly. A
 `pending` pair whose score/level/reasons change on re-scan is refreshed; a
 reviewed pair is left untouched.
 
+## 7a. Merge execution (confirmed pairs only)
+
+`scripts/merge_duplicates.py` — the actual write step, run separately from
+review. Requires migration 006 in addition to 004. Full design/rationale:
+`docs/data_quality_dissertation_fk_inventory.md`.
+
+```bash
+export DATABASE_URL="postgresql://…/staging_db"
+psql "$DATABASE_URL" -f migrations/006_dissertation_merge_support.sql
+
+# preview — writes NOTHING, shows exactly what --confirm would do
+python scripts/merge_duplicates.py
+
+# actually merge every 'confirmed' candidate
+python scripts/merge_duplicates.py --confirm
+
+# one specific pair, with a forced winner
+python scripts/merge_duplicates.py --candidate-id 123 --winner 456 --confirm
+```
+
+What it does, every time: picks the survivor (fewest blank fields, tie → the
+smaller id), copies the loser's non-blank fields into any *blank* winner field
+(never overwrites a value that is already there), repoints every foreign key
+into `dissertations(id)` — refusing the whole run if the live schema has grown
+one it does not recognize — and marks the loser `merged_into_id` rather than
+deleting it. One merge is one transaction: it all lands or none of it does. A
+record that is already merged (on either side) cannot be merged again, which
+also rules out merge chains. Every write is logged to `data_quality_fix_log`
+(before/after, grouped under one `data_quality_runs` row per invocation).
+
+Reports land in `docs/merge_report_<timestamp>.md` / `.csv` — dry run or not.
+
 ## 8. Rollback
 ```sql
 BEGIN;
@@ -93,7 +127,12 @@ COMMIT;
 ```
 These tables hold only derived data — dropping them loses no source records.
 Applied field fixes (degree/url normalisation) are not reverted by the drop;
-restore from a DB backup if a fix must be undone.
+restore from a DB backup if a fix must be undone. The same applies to merges:
+dropping `data_quality_fix_log` removes the audit trail, not the effect — a
+merged record's `merged_into_id` stays set, and its copied fields stay copied,
+until someone restores from a backup or writes a dedicated rollback CLI against
+the fix log (not built yet; the log is structured so that tool can be written
+without re-deriving anything).
 
 ## 9. Incident handling
 - A persist scan that dies mid-run leaves the `data_quality_runs` row in
