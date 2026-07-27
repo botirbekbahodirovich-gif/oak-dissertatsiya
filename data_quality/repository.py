@@ -13,7 +13,7 @@ fixer / request handler).
 
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Mapping, Optional, Sequence
+from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 try:
     import psycopg2.extras as _extras
@@ -363,6 +363,97 @@ def list_duplicates(conn, status: Optional[str], limit: int, offset: int) -> Lis
                 "r1_mavzu", "r1_olim", "r1_sana", "r1_muassasa",
                 "r2_mavzu", "r2_olim", "r2_sana", "r2_muassasa")
         return [dict(zip(keys, r)) for r in cur.fetchall()]
+
+
+# ── duplicate review queue ──────────────────────────────────────────────────
+# Full field set for the side-by-side comparison. One LEFT JOIN per side keeps
+# the whole page to a single query — no N+1 over 1 597 candidates.
+_REVIEW_FIELDS = ("mavzu", "olim", "ilmiy_rahbar", "muassasa", "ixtisoslik",
+                  "sana", "link")
+# exact -> strong -> possible, then by score. Written as a CASE so the ordering
+# lives with the query and cannot drift from the UI's stated default.
+_LEVEL_ORDER_SQL = ("CASE c.match_level WHEN 'exact' THEN 0 "
+                    "WHEN 'strong' THEN 1 WHEN 'possible' THEN 2 ELSE 3 END")
+
+
+def _duplicate_filter_sql(filters: Optional[Dict]) -> Tuple[str, list]:
+    """Build the WHERE clause for the review queue. Parameterized only."""
+    filters = filters or {}
+    clauses, params = [], []
+
+    status = filters.get("status")
+    if status and status != "all":
+        if status not in ("pending", "confirmed", "rejected", "merged"):
+            raise ValueError("invalid duplicate status filter")
+        clauses.append("c.status = %s")
+        params.append(status)
+
+    level = filters.get("match_level")
+    if level and level != "all":
+        if level not in ("exact", "strong", "possible"):
+            raise ValueError("invalid match_level filter")
+        clauses.append("c.match_level = %s")
+        params.append(level)
+
+    # Bucket splits the productive pile from the noisy low-score tail. The
+    # threshold is config.HIGH_YIELD_MIN_SCORE so the query and the UI label
+    # cannot drift apart.
+    bucket = filters.get("bucket")
+    if bucket in ("high", "noisy"):
+        from data_quality.config import HIGH_YIELD_MIN_SCORE
+        if bucket == "high":
+            clauses.append("(c.match_level IN ('exact', 'strong') OR c.score >= %s)")
+        else:
+            clauses.append("(c.match_level = 'possible' AND c.score < %s)")
+        params.append(HIGH_YIELD_MIN_SCORE)
+    elif bucket and bucket != "all":
+        raise ValueError("invalid bucket filter")
+
+    return ("WHERE " + " AND ".join(clauses) if clauses else ""), params
+
+
+def count_duplicates(conn, filters: Optional[Dict] = None) -> int:
+    where, params = _duplicate_filter_sql(filters)
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT COUNT(*) FROM duplicate_candidates c {where}", params)
+        return cur.fetchone()[0]
+
+
+def list_duplicates_for_review(conn, filters: Optional[Dict], limit: int,
+                               offset: int) -> List[Dict]:
+    """Candidates with both records' comparable fields, in review order."""
+    where, params = _duplicate_filter_sql(filters)
+    cols = ", ".join(f"d1.{f}" for f in _REVIEW_FIELDS)
+    cols2 = ", ".join(f"d2.{f}" for f in _REVIEW_FIELDS)
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""SELECT c.id, c.record_id_1, c.record_id_2, c.score, c.match_level,
+                       c.reasons, c.status, c.created_at, c.reviewed_at,
+                       {cols}, {cols2}
+                  FROM duplicate_candidates c
+                  LEFT JOIN dissertations d1 ON d1.id = c.record_id_1
+                  LEFT JOIN dissertations d2 ON d2.id = c.record_id_2
+                  {where}
+                 ORDER BY {_LEVEL_ORDER_SQL}, c.score DESC, c.id ASC
+                 LIMIT %s OFFSET %s""",
+            params + [limit, offset],
+        )
+        keys = (("id", "record_id_1", "record_id_2", "score", "match_level",
+                 "reasons", "status", "created_at", "reviewed_at")
+                + tuple(f"r1_{f}" for f in _REVIEW_FIELDS)
+                + tuple(f"r2_{f}" for f in _REVIEW_FIELDS))
+        return [dict(zip(keys, r)) for r in cur.fetchall()]
+
+
+def duplicate_progress(conn) -> List[Dict]:
+    """(match_level, status, count) for the progress panel — one grouped query."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT match_level, status, COUNT(*)
+                 FROM duplicate_candidates
+                GROUP BY match_level, status""")
+        return [{"match_level": r[0], "status": r[1], "count": r[2]}
+                for r in cur.fetchall()]
 
 
 def review_duplicate(conn, dup_id: int, status: str, reviewed_by: Optional[int]) -> int:

@@ -19,6 +19,13 @@ import os
 from dataclasses import dataclass
 
 
+# A `possible` duplicate candidate below this title score is the noisy tail
+# (0.72–0.86 on staging, ~575 of 1 597); at or above it the title is effectively
+# identical and the pair is worth a reviewer's time. Lives here so the SQL
+# filter (repository) and the UI label (duplicate_review) can never disagree.
+HIGH_YIELD_MIN_SCORE = 0.87
+
+
 def _env_int(name: str, default: int) -> int:
     raw = os.environ.get(name)
     if raw is None or str(raw).strip() == "":

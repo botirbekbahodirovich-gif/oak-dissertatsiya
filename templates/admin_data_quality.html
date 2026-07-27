@@ -145,7 +145,15 @@
 
   {# ── Duplicate candidates ──────────────────────────────────────── #}
   <div class="dq-section">
-    <h2>Dublikat nomzodlar</h2>
+    <div style="display:flex; gap:1rem; align-items:center; justify-content:space-between;
+                flex-wrap:wrap; margin-bottom:0.9rem;">
+      <h2 style="margin:0;">Dublikat nomzodlar</h2>
+      <a class="btn-sm btn-primary" href="{{ url_for('data_quality.duplicate_queue') }}">
+        Ko‘rib chiqish navbati →</a>
+    </div>
+    <p class="muted" style="font-size:0.8rem; margin:-0.4rem 0 0.9rem;">
+      Bu yerda faqat dastlabki 50 tasi ko‘rinadi. Filtrlash, yonma-yon solishtirish
+      va klaviatura bilan tez ko‘rish uchun navbat sahifasidan foydalaning.</p>
     {% for d in duplicates %}
       <div class="dup-pair" style="margin-bottom:1rem;">
         <div class="dup-side">
