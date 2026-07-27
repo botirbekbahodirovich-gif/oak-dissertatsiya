@@ -13,7 +13,7 @@ observed in them. The source of truth is the Postgres `dissertations` table
 | sana | TEXT | yes | OAK/CSV | trends, stats, dedup | **free text**, mixed formats, invalid/future dates | validate → ISO; never coerce ambiguous |
 | daraja | TEXT | yes | OAK/CSV | trends, filters | PhD/phd/Ph.D/falsafa doktori/DSc variants | normalize → PhD/DSc |
 | olim | TEXT | yes | OAK/CSV | search, genealogy, analytics | empty; short/suspicious names; mixed apostrophes | completeness + apostrophe (review-only) |
-| mavzu | TEXT | yes | OAK/CSV | search, display | empty; too short; HTML/control residue | completeness + validity (review-only) |
+| mavzu | TEXT | yes | OAK/CSV | search, display | empty; too short; HTML/control residue; **OAK registry code instead of the title** (`В2026.2.PhD/Iqt4897`) — 107 rows on the 29 551-row staging snapshot | completeness + validity (review-only); TITLE_IS_CODE |
 | ixtisoslik | TEXT | yes | OAK/CSV | trends, filters | code format variants (spaces/dots/dashes) | normalize NN.NN.NN |
 | muassasa | TEXT | yes | OAK/CSV | analytics grouping, universities bridge | Cyrillic/Latin spelling variants | consistency (review-only; see institution_map) |
 | ilmiy_rahbar | TEXT | yes | OAK/CSV | genealogy, advisors | empty; `Ф.И.Ш`/`F.I.Sh` placeholder templates | placeholder + missing detection |

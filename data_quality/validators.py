@@ -32,6 +32,12 @@ _SUPERVISOR_PLACEHOLDERS = (
 )
 
 _MIN_TITLE_LEN = 12          # a real dissertation title is never this short
+# Some OAK rows carry the registry code in the title column instead of the
+# title, e.g. "В2026.2.PhD/Iqt4897". Those are long enough to slip past
+# _MIN_TITLE_LEN, so they need their own check. Optional leading letter is
+# Cyrillic or Latin; IGNORECASE also covers the lowercase variants.
+_TITLE_CODE = re.compile(r"^[А-ЯЁа-яёA-Za-z]?\d{4}\.\d{1,2}\.(?:PhD|DSc)/",
+                         re.IGNORECASE)
 _HTML_HINT = re.compile(r"<[^>]+>|&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z]+);")
 _CONTROL_HINT = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 _SPECIALTY_OK = re.compile(r"^\d{2}\.\d{2}\.\d{2}$")
@@ -114,6 +120,11 @@ def validate_record(record: Mapping, today: Optional[date] = None) -> List[M.Iss
         if len(title.strip()) < _MIN_TITLE_LEN:
             issues.append(_mk(rid, "mavzu", M.SHORT_TITLE, M.SEVERITY_WARNING,
                               f"Mavzu juda qisqa (< {_MIN_TITLE_LEN} belgi)",
+                              original=title))
+        if _TITLE_CODE.match(title.strip()):
+            issues.append(_mk(rid, "mavzu", M.TITLE_IS_CODE, M.SEVERITY_CRITICAL,
+                              "Mavzu o‘rniga OAK ro‘yxat kodi yozilgan "
+                              "(masalan В2026.2.PhD/Iqt4897)",
                               original=title))
         if _HTML_HINT.search(title):
             issues.append(_mk(rid, "mavzu", M.HTML_RESIDUE, M.SEVERITY_WARNING,

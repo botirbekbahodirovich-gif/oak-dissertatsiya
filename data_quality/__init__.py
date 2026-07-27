@@ -12,7 +12,8 @@ Layers
     normalizers         -- deterministic, idempotent string normalizers
     validators          -- field validators -> Issue list
     scoring             -- 0-100 quality score (shared by CLI + dashboard)
-    duplicate_detector  -- blocking + 3-tier duplicate scoring (stdlib only)
+    duplicate_detector  -- blocking + 3-tier duplicate scoring (difflib decides;
+                           rapidfuzz is an optional pre-filter only)
     repository          -- parameterized DB access (the ONLY SQL lives here)
     quality_service     -- scan orchestration (DataQualityService / reports)
     duplicate_service   -- duplicate candidate generation + persistence
