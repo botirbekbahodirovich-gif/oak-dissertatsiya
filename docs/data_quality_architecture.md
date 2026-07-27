@@ -42,7 +42,7 @@ allowlist.
 | `data_quality/validators.py` | row → `Issue` list (completeness / validity / consistency). |
 | `data_quality/duplicate_detector.py` | blocking + 3-tier scoring (stdlib `difflib`). |
 | `data_quality/scoring.py` | single quality-score function (CLI + dashboard). |
-| `data_quality/repository.py` | all DB reads/writes. |
+| `data_quality/repository.py` | all DB reads/writes; **write scopes** (`SCOPE_AUTOFIX` = daraja/link, `SCOPE_RESCRAPE` = the OAK-fillable columns, `SCOPE_ROLLBACK` = their union) so widening one tool's reach cannot widen another's. |
 | `data_quality/quality_service.py` | scan orchestration + dashboard aggregation. |
 | `data_quality/duplicate_service.py` | duplicate detection + persistence, optional pg_trgm awareness. |
 | `data_quality/import_precheck.py` | flag-gated import summary (pure). |
@@ -72,6 +72,11 @@ targets future record types); referential integrity is checked in code.
   row FIRST, then update only `daraja`/`link`, verify the affected-row count,
   audit + mark the issue `fixed` → commit. Rollback on any failure, so fix and
   log are never out of step. All fixes of a run share one `run_type='fix'` run.
+- **Rescrape apply (CLI):** report phase (read-only, cached OAK pages) → keep
+  only `FILL` findings (`CONFLICT` never reaches the writer) → per record, one
+  transaction: re-check the field is still empty, write the fix-log row, UPDATE,
+  close the originating issue → commit. All fills share one `run_type='rescrape'`
+  run. Requires `--apply --confirm`.
 - **Rollback (CLI):** read the run's un-reverted fix-log rows newest-first →
   per row, require the current value to still equal `value_after` (else skip +
   warn: edited outside the fixer) → per-fix transaction: restore `value_before`,

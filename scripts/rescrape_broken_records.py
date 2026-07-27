@@ -1,8 +1,24 @@
-"""Buzuq yozuvlarni OAK manba sahifasidan qayta o'qish — 1-FAZA (faqat hisobot).
+"""Buzuq yozuvlarni OAK manba sahifasidan qayta o'qish va tiklash.
 
-Bu skript BAZAGA HECH NARSA YOZMAYDI. U faqat SELECT qiladi, sahifalarni
-yuklab keshlaydi, tahlil qiladi va hisobot chiqaradi. Tuzatishlarni qo'llash
-2-FAZA ishi — bu yerda UPDATE/INSERT bitta ham yo'q (test bilan tekshiriladi).
+DEFAULT REJIM — FAQAT HISOBOT (1-faza): skript faqat SELECT qiladi, sahifalarni
+yuklab keshlaydi, tahlil qiladi va hisobot chiqaradi. Bazaga hech narsa
+yozilmaydi.
+
+--apply --confirm — 2-FAZA (yozish): faqat FILL lar qo'llanadi. Ikkala bayroq
+ham majburiy; bittasi yetmaydi. Bu modulning o'zida yozuvchi SQL yo'q (test
+bilan tekshiriladi) — har bir UPDATE data_quality/repository.py orqali,
+ustunlar ro'yxati (SCOPE_RESCRAPE) bilan cheklangan holda bajariladi va
+data_quality_fix_log ga before/after bo'lib yoziladi:
+
+    * FAQAT `FILL`: baza maydoni bo'sh, sahifada qiymat bor. Mavjud qiymat
+      hech qachon ustidan yozilmaydi.
+    * `CONFLICT` hech qachon avtomatik yozilmaydi — faqat hisobotga chiqadi.
+    * Yozishdan oldin maydon HOZIR ham bo'shligi tranzaksiya ichida qayta
+      tekshiriladi (hisobot olingandan keyin kimdir to'ldirgan bo'lishi mumkin).
+    * Har bir yozuv bitta tranzaksiya: fix_log qatorlari UPDATE lardan OLDIN,
+      hammasi birga commit bo'ladi yoki hech biri.
+    * Bitta run dagi barcha o'zgarishlar run_type='rescrape' run'ni bo'lishadi;
+      oxirida rollback komandasi chop etiladi.
 
 Yozuvlar tanlash: berilgan scan run_id dagi strukturaviy nuqsonlar bo'yicha
 
@@ -29,6 +45,12 @@ Usage (server yoki WSL, repo root):
     python3 scripts/rescrape_broken_records.py --run-id 12 --refresh
     python3 scripts/rescrape_broken_records.py --inspect 44321   # kesh tahlili
 
+    # FILL larni qo'llash (keshdan ishlaydi — avval hisobotni ko'ring):
+    python3 scripts/rescrape_broken_records.py --run-id 12 --apply --confirm
+
+Qaytarish (har qanday run uchun bir xil):
+    python3 scripts/rollback_data_quality_fixes.py --run-id <rescrape run> --confirm
+
 Resume: yuklangan HTML data/rescrape_cache/<page_id>.html da qoladi va
 _fetch_log.json fetch natijalarini yozadi. Qayta ishga tushirilsa keshdagi
 sahifalar qayta yuklanmaydi (--refresh majburlaydi), 404/410 doimiy xato deb
@@ -40,6 +62,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import getpass
 import json
 import os
 import re
@@ -54,7 +77,9 @@ import requests  # noqa: E402
 from bs4 import BeautifulSoup  # noqa: E402
 
 from data_quality import normalizers as N  # noqa: E402
-from data_quality.cli_common import resolve_connection, truncate  # noqa: E402
+from data_quality import repository as repo  # noqa: E402
+from data_quality.cli_common import (  # noqa: E402
+    require_manual_transactions, resolve_connection, truncate)
 from scraper import (  # noqa: E402  — mavjud OAK parsing mantiqi
     detect_degree, extract_author_from_title, parse_announcement)
 from utils.transliterate import kiril_to_lotin  # noqa: E402
@@ -88,6 +113,16 @@ _DATE_LABEL = re.compile(
 
 MATCH, FILL, CONFLICT = "MATCH", "FILL", "CONFLICT"
 MISSING_ON_PAGE, EMPTY_BOTH = "MISSING_ON_PAGE", "EMPTY_BOTH"
+
+# 2-faza (yozish) doimiylari.
+RUN_TYPE = "rescrape"
+FIX_TABLE = "dissertations"
+SCOPE = repo.SCOPE_RESCRAPE
+# CSV/hisobotdagi qo'llash holatlari.
+APPLIED = "APPLIED"
+SKIPPED_NOT_EMPTY, SKIPPED_GONE, FAILED = "SKIPPED_NOT_EMPTY", "SKIPPED_GONE", "FAILED"
+# Manba muammosi topilmagan FILL uchun fix_log dagi kod.
+GENERIC_FILL_CODE = "RESCRAPE_FILL"
 
 
 def log(msg: str) -> None:
@@ -358,9 +393,143 @@ def fetch_rows(conn, record_ids: List[int]) -> Dict[int, Dict]:
         return {row[0]: dict(zip(cols, row)) for row in cur.fetchall()}
 
 
+def fetch_open_issues(conn, run_id: int,
+                      record_ids: List[int]) -> Dict[Tuple[int, str], Dict]:
+    """(record_id, maydon) → {'id', 'code'} — FILL qilinayotgan maydonning
+    manba muammosi. Shu tufayli qo'llashda issue 'fixed' bo'ladi, rollback esa
+    uni qayta 'open' qiladi. Faqat SELECT."""
+    if not record_ids:
+        return {}
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, record_id, field_name, issue_code "
+            "FROM data_quality_issues "
+            "WHERE run_id = %s AND record_id = ANY(%s) AND status = 'open' "
+            "ORDER BY id",
+            (run_id, list(record_ids)))
+        out: Dict[Tuple[int, str], Dict] = {}
+        for issue_id, rid, field, code in cur.fetchall():
+            out.setdefault((rid, field), {"id": issue_id, "code": code})
+        return out
+
+
+# ── qo'llash (2-faza — yagona yozish yo'li) ─────────────────────────────────
+def collect_fills(findings: List[Dict]) -> List[Dict]:
+    """Faqat FILL. CONFLICT / MATCH / MISSING_ON_PAGE / EMPTY_BOTH bu yerga
+    hech qachon tushmaydi — qo'llash mantiqiga o'tadigan yagona darvoza shu."""
+    return [f for f in findings
+            if f["status"] == FILL and str(f.get("page_value") or "").strip()]
+
+
+def _group_by_record(fills: List[Dict]) -> List[Tuple[int, List[Dict]]]:
+    grouped: Dict[int, List[Dict]] = {}
+    for f in fills:
+        grouped.setdefault(f["record_id"], []).append(f)
+    return sorted(grouped.items())
+
+
+def apply_fills(conn, fills: List[Dict], *, scan_run_id: int, target: str,
+                actor: str, issues: Dict[Tuple[int, str], Dict]) -> Dict:
+    """FILL larni qo'llaydi va har birini data_quality_fix_log ga yozadi.
+
+    Bitta YOZUV = bitta tranzaksiya: shu yozuvning barcha fix_log qatorlari
+    o'z UPDATE laridan OLDIN yoziladi va hammasi birga commit bo'ladi. Yarim
+    to'ldirilgan yozuv qolmaydi.
+
+    Yozishdan oldin maydon hozir ham bo'shligi qayta tekshiriladi: hisobot
+    olingandan beri (sahifalarni yuklash bir necha daqiqa davom etadi) kimdir
+    to'ldirgan bo'lsa, o'sha maydon o'tkazib yuboriladi — mavjud qiymat hech
+    qachon ustidan yozilmaydi.
+    """
+    by_record = _group_by_record(fills)
+    stats = {"records": len(by_record), "applied": 0, "skipped": 0,
+             "failed_records": 0, "run_id": None}
+    fix_run_id = None
+    run_uncommitted = False
+
+    for record_id, items in by_record:
+        try:
+            if fix_run_id is None:
+                # Birinchi yozuvning tranzaksiyasi ichida yaratamiz — qo'llash
+                # bo'lmasa bo'sh run qatori qolmasin.
+                fix_run_id = repo.create_run(
+                    conn, RUN_TYPE, total_records=len(by_record),
+                    metadata={"mode": "apply", "source": "oak-rescrape",
+                              "scan_run_id": scan_run_id, "target": target,
+                              "applied_by": actor})
+                run_uncommitted = True
+
+            wrote = 0
+            for item in items:
+                column, new_value = item["field"], item["page_value"]
+                found, current = repo.fetch_current_value(
+                    conn, record_id, column, table_name=FIX_TABLE, scope=SCOPE)
+                if not found:
+                    item["apply_status"] = SKIPPED_GONE
+                    log(f"  !! {record_id}: yozuv topilmadi — o'tkazildi")
+                    continue
+                if not is_effectively_empty(column, current):
+                    # Hisobotdan keyin to'ldirilgan — bu FILL emas.
+                    item["apply_status"] = SKIPPED_NOT_EMPTY
+                    log(f"  !! {record_id}.{column}: endi bo'sh emas "
+                        f"({truncate(current, 40)!r}) — o'tkazildi")
+                    continue
+
+                issue = issues.get((record_id, column))
+                repo.log_fix(conn, run_id=fix_run_id,
+                             issue_id=issue["id"] if issue else None,
+                             record_id=record_id, table_name=FIX_TABLE,
+                             column_name=column, value_before=current,
+                             value_after=new_value,
+                             issue_code=(issue["code"] if issue else GENERIC_FILL_CODE),
+                             applied_by=actor, scope=SCOPE)
+                affected = repo.update_record_field(
+                    conn, record_id, column, new_value,
+                    table_name=FIX_TABLE, scope=SCOPE)
+                if affected != 1:
+                    raise RuntimeError(f"{affected} qator o'zgardi, 1 kutilgandi")
+                if issue:
+                    repo.record_issue_values(conn, issue["id"], current, new_value)
+                    repo.mark_issue_fixed(conn, issue["id"])
+                item["apply_status"] = APPLIED
+                wrote += 1
+
+            if wrote:
+                conn.commit()
+                run_uncommitted = False
+                stats["applied"] += wrote
+            else:
+                # Yozadigan narsa qolmadi — ochilgan tranzaksiyani (va u bilan
+                # birga hali commit qilinmagan run qatorini) bekor qilamiz.
+                conn.rollback()
+                if run_uncommitted:
+                    fix_run_id, run_uncommitted = None, False
+            stats["skipped"] += sum(
+                1 for i in items
+                if i.get("apply_status") in (SKIPPED_NOT_EMPTY, SKIPPED_GONE))
+        except Exception as exc:                 # noqa: BLE001
+            conn.rollback()
+            if run_uncommitted:
+                fix_run_id, run_uncommitted = None, False
+            for item in items:
+                if item.get("apply_status") in (None, APPLIED):
+                    item["apply_status"] = FAILED
+            stats["failed_records"] += 1
+            log(f"  !! {record_id}: qo'llanmadi ({exc.__class__.__name__}) — "
+                "hech narsa yozilmadi")
+
+    if fix_run_id is not None:
+        repo.complete_run(conn, fix_run_id, status="completed",
+                          checked_records=stats["records"],
+                          issue_count=stats["applied"], duplicate_count=0)
+        conn.commit()
+    stats["run_id"] = fix_run_id
+    return stats
+
+
 # ── hisobot ─────────────────────────────────────────────────────────────────
 def build_report(findings: List[Dict], errors: List[Dict], stats: Dict,
-                 run_id: int, target: str) -> str:
+                 run_id: int, target: str, applied: Optional[Dict] = None) -> str:
     by_field: Dict[str, Dict[str, int]] = {}
     for f in findings:
         bucket = by_field.setdefault(f["field"], {})
@@ -369,13 +538,19 @@ def build_report(findings: List[Dict], errors: List[Dict], stats: Dict,
     conflicts = [f for f in findings if f["status"] == CONFLICT]
     fills = [f for f in findings if f["status"] == FILL]
 
+    banner = ("**1-FAZA: faqat o'qish va hisobot. Bazaga hech narsa yozilmadi.**"
+              if applied is None else
+              f"**2-FAZA: FILL lar qo'llandi** — {applied['applied']} ta maydon "
+              f"yozildi, run_id=`{applied['run_id']}`. CONFLICT lar "
+              "tegilmadi.")
     lines = [
         f"# Rescrape hisoboti — {datetime.now():%Y-%m-%d %H:%M}",
         "",
-        "**1-FAZA: faqat o'qish va hisobot. Bazaga hech narsa yozilmadi.**",
+        banner,
         "",
         f"* manba scan: `run_id={run_id}`",
-        f"* baza: `{target}` (faqat SELECT)",
+        f"* baza: `{target}` "
+        + ("(faqat SELECT)" if applied is None else "(FILL lar yozildi)"),
         f"* issue kodlari: {', '.join(stats['codes'])}",
         "",
         "## Umumiy",
@@ -402,9 +577,11 @@ def build_report(findings: List[Dict], errors: List[Dict], stats: Dict,
             f"{b.get(EMPTY_BOTH, 0)} |")
 
     script_only = sum(1 for f in findings if f.get("note"))
+    found_phrase = ("manbadan tiklanishi mumkin" if applied is None
+                    else "topildi (qo'llash natijasi quyida)")
     lines += [
         "",
-        f"Jami **{len(fills)}** ta bo'sh maydon manbadan tiklanishi mumkin, "
+        f"Jami **{len(fills)}** ta bo'sh maydon {found_phrase}, "
         f"**{len(conflicts)}** ta ziddiyat qo'lda ko'rib chiqilishi kerak.",
         "",
     ]
@@ -430,6 +607,41 @@ def build_report(findings: List[Dict], errors: List[Dict], stats: Dict,
     else:
         lines.append("Ziddiyat topilmadi.")
 
+    if applied is not None:
+        skipped_items = [f for f in fills
+                         if f.get("apply_status") in (SKIPPED_NOT_EMPTY,
+                                                      SKIPPED_GONE, FAILED)]
+        lines += [
+            "",
+            "## Qo'llash natijasi",
+            "",
+            "| | |",
+            "|---|---:|",
+            f"| Yozuvlar (tranzaksiyalar) | {applied['records']} |",
+            f"| Yozilgan maydonlar | **{applied['applied']}** |",
+            f"| O'tkazib yuborilgan | {applied['skipped']} |",
+            f"| Xato bergan yozuvlar | {applied['failed_records']} |",
+            f"| Rescrape run_id | `{applied['run_id']}` |",
+            "",
+            "Qaytarish:",
+            "",
+            "```bash",
+            f"python3 scripts/rollback_data_quality_fixes.py "
+            f"--run-id {applied['run_id']} --confirm",
+            "```",
+            "",
+        ]
+        if skipped_items:
+            lines += [
+                "O'tkazib yuborilganlar (hisobotdan keyin o'zgargan yoki xato):",
+                "",
+                "| id | Maydon | Sabab |", "|---|---|---|",
+            ]
+            for s in sorted(skipped_items, key=lambda x: (x["record_id"], x["field"])):
+                lines.append(f"| {s['record_id']} | {s['label']} | "
+                             f"{s['apply_status']} |")
+            lines.append("")
+
     lines += ["", "## Tiklab bo'lmaganlar", ""]
     if errors:
         lines += ["| id | page_id | Sabab |", "|---|---|---|"]
@@ -439,15 +651,28 @@ def build_report(findings: List[Dict], errors: List[Dict], stats: Dict,
     else:
         lines.append("Hammasi o'qildi.")
 
-    lines += [
-        "",
-        "## Keyingi qadam",
-        "",
-        "Bu hisobot hech narsani o'zgartirmaydi. FILL ustunini ko'rib chiqing, "
-        "CONFLICT larni qo'lda hal qiling, so'ng 2-FAZA (qo'llash) skripti "
-        "yoziladi. CSV: yonidagi `.csv` fayl.",
-        "",
-    ]
+    lines += ["", "## Keyingi qadam", ""]
+    if applied is None:
+        lines += [
+            "Bu hisobot hech narsani o'zgartirmaydi. FILL ustunini ko'rib "
+            "chiqing, CONFLICT larni qo'lda hal qiling, so'ng qo'llang:",
+            "",
+            "```bash",
+            f"python3 scripts/rescrape_broken_records.py --run-id {run_id} "
+            "--apply --confirm",
+            "```",
+            "",
+            "CSV: yonidagi `.csv` fayl (`apply_status` ustuni bilan).",
+            "",
+        ]
+    else:
+        lines += [
+            "FILL lar qo'llandi. CONFLICT lar hamon qo'lda hal qilinishi kerak "
+            "— ular avtomatik yozilmaydi. Natijani tekshirish uchun skanni "
+            "qayta ishga tushiring; noto'g'ri bo'lsa yuqoridagi rollback "
+            "komandasini ishlating.",
+            "",
+        ]
     return "\n".join(lines)
 
 
@@ -461,20 +686,21 @@ def write_csv(path: str, findings: List[Dict], errors: List[Dict]) -> None:
     with open(path, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(["record_id", "page_id", "field", "status",
-                    "db_value", "page_value", "note"])
+                    "db_value", "page_value", "note", "apply_status"])
         for x in findings:
             w.writerow([x["record_id"], x.get("page_id", ""), x["field"],
                         x["status"], x["db_value"], x["page_value"],
-                        x.get("note", "")])
+                        x.get("note", ""), x.get("apply_status", "")])
         for e in errors:
             w.writerow([e["record_id"], e.get("page_id", ""), "", "FETCH_ERROR",
-                        "", "", e["reason"]])
+                        "", "", e["reason"], ""])
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Buzuq yozuvlarni OAK sahifasidan qayta o'qish (faqat hisobot)")
+        description="Buzuq yozuvlarni OAK sahifasidan qayta o'qish "
+                    "(default: faqat hisobot; --apply --confirm: FILL larni yozadi)")
     p.add_argument("--run-id", type=int,
                    help="data_quality_issues.run_id — qaysi scan natijasi")
     p.add_argument("--codes", default=",".join(DEFAULT_CODES),
@@ -489,9 +715,22 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="keshdagi sahifadan nima ajratilganini ko'rsatish "
                         "(bazaga ulanmaydi)")
     p.add_argument("--out-dir", default=DOCS_DIR, help="hisobot papkasi")
+    p.add_argument("--apply", action="store_true",
+                   help="FILL larni bazaga yozadi (--confirm bilan birga)")
+    p.add_argument("--confirm", action="store_true",
+                   help="--apply uchun majburiy tasdiq")
+    p.add_argument("--applied-by", default=None,
+                   help="fix_log dagi ijrochi yorlig'i (default: cli:<user>)")
     p.add_argument("--database-url", default=None,
                    help="DB URL (aks holda DATA_QUALITY_/TEST_/DATABASE_URL)")
     return p
+
+
+def _default_actor() -> str:
+    try:
+        return f"cli:{getpass.getuser()}"
+    except Exception:              # cron/konteynerda login nomi bo'lmasligi mumkin
+        return "cli"
 
 
 def inspect_page(page_id: str) -> int:
@@ -523,10 +762,21 @@ def main(argv=None) -> int:
     if not args.run_id:
         print("--run-id majburiy (yoki --inspect ishlating).")
         return 2
+    if args.apply and not args.confirm:
+        print("--apply uchun --confirm ham kerak. Avval hisobot rejimida "
+              "(bayroqsiz) ishga tushiring va FILL ro'yxatini ko'rib chiqing.")
+        return 2
+    if args.confirm and not args.apply:
+        print("--confirm faqat --apply bilan ma'noga ega.")
+        return 2
 
+    apply_mode = bool(args.apply and args.confirm)
+    actor = args.applied_by or _default_actor()
     codes = tuple(c.strip() for c in args.codes.split(",") if c.strip())
     conn, target = resolve_connection(args.database_url)
-    print(f"→ Baza: {target}   (FAQAT O'QISH — hech narsa yozilmaydi)")
+    print(f"→ Baza: {target}   "
+          + ("(QO'LLASH — faqat FILL lar yoziladi)" if apply_mode
+             else "(FAQAT O'QISH — hech narsa yozilmaydi)"))
 
     try:
         if args.record_id:
@@ -548,6 +798,7 @@ def main(argv=None) -> int:
     fetch_log = load_fetch_log()
     findings: List[Dict] = []
     errors: List[Dict] = []
+    interrupted = False
     stats = {"selected": len(record_ids), "with_page": 0, "ok": 0,
              "from_cache": 0, "downloaded": 0, "codes": list(codes)}
 
@@ -601,18 +852,43 @@ def main(argv=None) -> int:
             if not cached and i < len(record_ids):
                 time.sleep(DELAY_SECONDS)
     except KeyboardInterrupt:
+        interrupted = True
         log("To'xtatildi (Ctrl+C) — shu paytgacha yig'ilgani hisobotga yoziladi. "
             "Qayta ishga tushirsangiz keshdan davom etadi.")
     finally:
         save_fetch_log(fetch_log)
 
+    # ── qo'llash (faqat --apply --confirm bilan) ────────────────────────────
+    applied = None
+    if apply_mode and interrupted:
+        log("Uzilib qolgan run — qo'llash bajarilmadi. Qayta ishga tushiring.")
+    elif apply_mode:
+        fills_to_apply = collect_fills(findings)
+        log(f"Qo'llash: {len(fills_to_apply)} ta FILL "
+            f"({sum(1 for f in findings if f['status'] == CONFLICT)} ta CONFLICT "
+            "tegilmaydi)")
+        conn, target = resolve_connection(args.database_url)
+        require_manual_transactions(conn, "apply")
+        try:
+            issues = fetch_open_issues(
+                conn, args.run_id, sorted({f["record_id"] for f in fills_to_apply}))
+            conn.rollback()          # o'qish tranzaksiyasini yopamiz
+            applied = apply_fills(conn, fills_to_apply, scan_run_id=args.run_id,
+                                  target=target, actor=actor, issues=issues)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
     os.makedirs(args.out_dir, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d")
-    md_path = os.path.join(args.out_dir, f"rescrape_report_{stamp}.md")
-    csv_path = os.path.join(args.out_dir, f"rescrape_report_{stamp}.csv")
+    prefix = "rescrape_apply" if applied is not None else "rescrape_report"
+    md_path = os.path.join(args.out_dir, f"{prefix}_{stamp}.md")
+    csv_path = os.path.join(args.out_dir, f"{prefix}_{stamp}.csv")
 
     with open(md_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(build_report(findings, errors, stats, args.run_id, target))
+        f.write(build_report(findings, errors, stats, args.run_id, target, applied))
     write_csv(csv_path, findings, errors)
 
     fills = sum(1 for f in findings if f["status"] == FILL)
@@ -620,7 +896,17 @@ def main(argv=None) -> int:
     log(f"Tayyor: {stats['ok']} ta sahifa o'qildi, {fills} ta FILL, "
         f"{conflicts} ta CONFLICT, {len(errors)} ta xato")
     print(f"\n  {md_path}\n  {csv_path}")
-    print("\n(bazaga hech narsa yozilmadi)")
+    if applied is None:
+        print("\n(bazaga hech narsa yozilmadi)")
+    else:
+        print(f"\nqo'llandi   : {applied['applied']} ta maydon "
+              f"({applied['records']} ta yozuv)")
+        print(f"o'tkazildi  : {applied['skipped']}")
+        print(f"xato        : {applied['failed_records']} ta yozuv")
+        if applied["run_id"] is not None:
+            print(f"rescrape run_id : {applied['run_id']}")
+            print(f"\nqaytarish:  python3 scripts/rollback_data_quality_fixes.py "
+                  f"--run-id {applied['run_id']} --confirm")
     return 0
 
 

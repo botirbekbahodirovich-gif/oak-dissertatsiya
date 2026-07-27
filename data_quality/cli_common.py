@@ -41,6 +41,22 @@ def _safe_target(url: str) -> str:
         return "?"
 
 
+def require_manual_transactions(conn, action: str = "write") -> None:
+    """Refuse to run a write path on an autocommit connection.
+
+    Every writer in this subsystem depends on explicit commits: the fix-log row
+    and the UPDATE it describes must land together. Under autocommit they would
+    be two separate statements, so a half state becomes possible.
+    """
+    if getattr(conn, "autocommit", False):
+        try:
+            conn.autocommit = False
+        except Exception:
+            raise SystemExit(
+                f"Refusing to {action}: connection is in autocommit mode "
+                "(the change and its fix-log row could not be made atomic).")
+
+
 def truncate(value, length: int = 60) -> str:
     """Trim a value for terminal display (never dump long/raw content)."""
     if value is None:

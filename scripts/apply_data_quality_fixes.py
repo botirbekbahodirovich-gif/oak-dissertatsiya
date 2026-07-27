@@ -45,7 +45,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data_quality import normalizers as N  # noqa: E402
 from data_quality import repository as repo  # noqa: E402
-from data_quality.cli_common import resolve_connection, truncate  # noqa: E402
+from data_quality.cli_common import (  # noqa: E402
+    require_manual_transactions, resolve_connection, truncate)
 from data_quality.config import get_config  # noqa: E402
 from data_quality.models import (  # noqa: E402
     AUTO_FIX_ALLOWLIST, AUTO_FIX_SAFE_COLUMNS, FIX_TARGETS,
@@ -98,15 +99,6 @@ def _default_actor() -> str:
         return "cli"
 
 
-def _require_manual_transactions(conn) -> None:
-    """Atomicity depends on explicit commits — refuse to run on an autocommit
-    connection, where the fix and its log row would land separately."""
-    if getattr(conn, "autocommit", False):
-        try:
-            conn.autocommit = False
-        except Exception:
-            raise SystemExit("Refusing to apply: connection is in autocommit mode "
-                             "(fix + fix-log could not be made atomic).")
 
 
 def _resolve_code(raw: str | None) -> str | None:
@@ -142,7 +134,7 @@ def main(argv=None) -> int:
     if not apply:
         print("  (preview: this run writes NOTHING to the database)")
     else:
-        _require_manual_transactions(conn)
+        require_manual_transactions(conn, "apply")
 
     fixed = skipped = considered = 0
     # Lazily created on the first real fix, inside that fix's transaction, so a

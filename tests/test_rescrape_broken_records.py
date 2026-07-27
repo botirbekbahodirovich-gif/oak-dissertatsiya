@@ -297,13 +297,13 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(rows[-1]["note"], "timeout")
 
 
-# ── phase-1 safety ──────────────────────────────────────────────────────────
+# ── SQL safety ──────────────────────────────────────────────────────────────
 def _code_string_literals(source: str):
     """Every string constant in the module except docstrings.
 
     Docstrings are excluded on purpose: this module's docstring quotes the
-    SELECT it runs and the words UPDATE/INSERT while explaining that it does
-    neither, and prose must not trip a check aimed at executable SQL.
+    SELECT it runs and the words UPDATE/INSERT while explaining where they
+    happen, and prose must not trip a check aimed at executable SQL.
     """
     import ast
     tree = ast.parse(source)
@@ -320,9 +320,13 @@ def _code_string_literals(source: str):
                 yield node.value
 
 
-class ReadOnlyTests(unittest.TestCase):
+class NoInlineWriteSqlTests(unittest.TestCase):
+    """Phase 2 added a write path, but the module still holds no SQL that
+    writes: every UPDATE/INSERT goes through data_quality/repository.py, where
+    the target table and column are checked against the SCOPE_RESCRAPE
+    allowlist. These tests fail the moment someone hand-rolls a write here."""
+
     def test_module_contains_no_write_sql(self):
-        """Phase 1 is read-only. This fails the moment someone adds a write."""
         import re
         verb = re.compile(r"\b(INSERT|UPDATE|DELETE|TRUNCATE|DROP|ALTER|CREATE)\b",
                           re.IGNORECASE)
@@ -344,10 +348,18 @@ class ReadOnlyTests(unittest.TestCase):
         for sql in executed:
             self.assertTrue(sql.strip().upper().startswith("SELECT"), sql)
 
-    def test_no_commit_is_ever_called(self):
+    def test_writes_only_reach_the_db_through_the_repository(self):
+        """The only names that may mutate a record are the repository helpers
+        (which enforce the allowlist), never a raw cursor in this module."""
+        import re
         with open(R.__file__, encoding="utf-8") as f:
             source = f.read()
-        self.assertNotIn(".commit(", source)
+        writers = re.findall(r"\brepo\.(\w+)\(", source)
+        allowed = {"create_run", "complete_run", "log_fix", "update_record_field",
+                   "fetch_current_value", "record_issue_values", "mark_issue_fixed"}
+        self.assertTrue(writers, "expected the apply path to call the repository")
+        self.assertTrue(set(writers) <= allowed,
+                        f"unexpected repository call(s): {set(writers) - allowed}")
 
 if __name__ == "__main__":
     unittest.main()

@@ -73,7 +73,34 @@ nothing to do leaves no empty row). The CLI prints that **fix run id** plus the
 ready-made rollback command; it is the unit of rollback. `--applied-by` overrides
 the actor label stored in the log (default `cli:<user>`).
 
-## 3b. Roll back applied fixes
+## 3a. Rescrape broken records from OAK (report → apply)
+```bash
+# 1) report only — writes nothing, caches the OAK pages under data/rescrape_cache/
+python scripts/rescrape_broken_records.py --run-id 12
+python scripts/rescrape_broken_records.py --run-id 12 --limit 20   # try it small first
+
+# 2) apply the FILLs (runs off the cache; both flags are required)
+python scripts/rescrape_broken_records.py --run-id 12 --apply --confirm
+```
+`--run-id` here is a **scan** run: the records are the ones that scan flagged
+with `MISSING_TITLE`, `MISSING_AUTHOR`, `MISSING_DATE`, `MISSING_SPECIALTY`,
+`PLACEHOLDER_SUPERVISOR`, `SHORT_TITLE` (override with `--codes`).
+
+Only `FILL` is ever written — DB field empty, page has a value. `CONFLICT`
+(both sides differ) is **never** written automatically; it stays in the report
+for a human. Writable columns are `RESCRAPE_FILL_COLUMNS` (mavzu, olim, sana,
+ixtisoslik, ilmiy_rahbar, muassasa, daraja); `link` is an input to the match,
+never an output.
+
+Guarantees, same shape as §3: the `data_quality_fix_log` row is written before
+its UPDATE, **one transaction per record** (a record is never half-filled), and
+the field is re-checked as still-empty inside that transaction — if someone
+filled it between the report and the apply, it is skipped (`SKIPPED_NOT_EMPTY`
+in the report/CSV), never overwritten. All fills share one
+`run_type='rescrape'` run, and the CLI prints its rollback command. Reports go
+to `docs/rescrape_apply_<date>.{md,csv}` (report mode: `rescrape_report_…`).
+
+## 3b. Roll back applied changes
 ```bash
 # dry-run is the DEFAULT — shows what would be restored, writes nothing
 python scripts/rollback_data_quality_fixes.py --run-id 42
@@ -81,14 +108,20 @@ python scripts/rollback_data_quality_fixes.py --run-id 42
 # actually restore the previous values
 python scripts/rollback_data_quality_fixes.py --run-id 42 --confirm
 ```
-`--run-id` is the **fix** run id printed by the fixer. Behaviour:
+`--run-id` is the run id printed by whichever tool wrote — `run_type='fix'`
+(§3) or `run_type='rescrape'` (§3a). One CLI undoes both: the log row carries
+table, column and before/after, and restores run under the union write scope.
+The header prints `run_type` so you can see which batch you are undoing.
+Behaviour:
 - Fixes are replayed newest-first (reverse application order), so a field fixed
   more than once ends back at its original value.
 - Per row the CURRENT value must still equal the logged `value_after`. If it
   differs, someone changed the field after the fix: the row is **skipped** with
   a warning (counted as `mismatched`) and left to a human — never overwritten.
 - A restore, its `rolled_back_at` stamp and the reopening of the originating
-  issue (`fixed` → `open`) commit together or not at all.
+  issue (`fixed` → `open`) commit together or not at all. A rescrape FILL is
+  restored to the value it had before — usually empty, or the supervisor
+  placeholder it replaced.
 - Already-reverted rows are ignored, so re-running is safe and idempotent.
 - Deliberately **not** gated by `DATA_QUALITY_AUTO_FIX_ENABLED` — you must be
   able to undo fixes after switching auto-fix back off.

@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""Undo a batch of Data Quality auto-fixes from the fix log.
+"""Undo a batch of Data Quality writes from the fix log.
 
     python scripts/rollback_data_quality_fixes.py --run-id 42            # dry-run
     python scripts/rollback_data_quality_fixes.py --run-id 42 --confirm  # revert
 
-``--run-id`` is the FIX run printed by apply_data_quality_fixes.py (the
-data_quality_runs row with run_type='fix'), i.e. one batch of applied fixes.
+``--run-id`` is the run printed by whichever tool did the writing — one batch of
+changes recorded in data_quality_fix_log. It works for ANY writer, because the
+log row carries everything a restore needs (table, column, before, after):
+
+    run_type='fix'       scripts/apply_data_quality_fixes.py (normalizer fixes)
+    run_type='rescrape'  scripts/rescrape_broken_records.py --apply (OAK FILLs)
+
+Restores run under repository.SCOPE_ROLLBACK — the union of every writer's
+allowlist — so this script never needs to know which tool produced a row.
 
 Guarantees
     * DRY-RUN IS THE DEFAULT. Without --confirm nothing is written; the run only
@@ -33,14 +40,17 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data_quality import repository as repo  # noqa: E402
-from data_quality.cli_common import resolve_connection, truncate  # noqa: E402
+from data_quality.cli_common import (  # noqa: E402
+    require_manual_transactions, resolve_connection, truncate)
+
+SCOPE = repo.SCOPE_ROLLBACK
 
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Roll back the fixes applied by one Data Quality fix run")
+        description="Roll back the changes recorded by one Data Quality run")
     p.add_argument("--run-id", type=int, required=True,
-                   help="Fix run id printed by apply_data_quality_fixes.py")
+                   help="Run id printed by the tool that applied the changes")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--dry-run", action="store_true", default=True,
                    help="Show what would be restored, write nothing (default)")
@@ -63,15 +73,6 @@ def _display(value) -> str:
     return "NULL" if value is None else repr(truncate(value))
 
 
-def _require_manual_transactions(conn) -> None:
-    if getattr(conn, "autocommit", False):
-        try:
-            conn.autocommit = False
-        except Exception:
-            raise SystemExit("Refusing to restore: connection is in autocommit "
-                             "mode (restore + rolled_back_at could not be atomic).")
-
-
 def main(argv=None) -> int:
     args = _build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -83,10 +84,16 @@ def main(argv=None) -> int:
     if not confirm:
         print("  (dry-run: this run writes NOTHING to the database)")
     else:
-        _require_manual_transactions(conn)
+        require_manual_transactions(conn, "restore")
 
     restored = skipped = mismatched = considered = eligible = 0
     try:
+        run = repo.fetch_run(conn, args.run_id)
+        if run is None:
+            print(f"  run {args.run_id} not found in data_quality_runs")
+        else:
+            print(f"  run_type={run['run_type']}   started_at={run['started_at']}")
+
         fixes = repo.fetch_fixes_by_run(conn, args.run_id, limit=args.limit)
         if not fixes:
             print("  nothing to roll back (no un-reverted fixes for this run)")
@@ -96,8 +103,8 @@ def main(argv=None) -> int:
             column, table = fix["column_name"], fix["table_name"]
             try:
                 found, current = repo.fetch_current_value(
-                    conn, fix["record_id"], column, table_name=table)
-            except ValueError as exc:  # not on the fixer allowlist any more
+                    conn, fix["record_id"], column, table_name=table, scope=SCOPE)
+            except ValueError as exc:  # not on any writer's allowlist any more
                 logging.warning("fix %s skipped: %s", fix["id"], exc)
                 skipped += 1
                 continue
@@ -128,7 +135,7 @@ def main(argv=None) -> int:
                 try:
                     affected = repo.update_record_field(
                         conn, fix["record_id"], column, fix["value_before"],
-                        table_name=table)
+                        table_name=table, scope=SCOPE)
                     if affected != 1:
                         raise RuntimeError(f"affected {affected} rows, expected 1")
                     if repo.mark_rolled_back(conn, [fix["id"]]) != 1:

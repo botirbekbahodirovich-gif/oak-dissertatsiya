@@ -33,6 +33,26 @@ SCAN_COLUMNS = (
 # too so a bad column name can never reach an UPDATE statement.
 _UPDATABLE_COLUMNS = frozenset({"daraja", "link"})
 
+# Columns the rescrape FILL writer may populate (mirrors
+# models.RESCRAPE_FILL_COLUMNS — test_rescrape_apply.py asserts they agree).
+_RESCRAPE_COLUMNS = frozenset({
+    "mavzu", "olim", "sana", "ixtisoslik", "ilmiy_rahbar", "muassasa", "daraja",
+})
+
+# Write scopes. Each writer names the scope it is entitled to, so widening one
+# tool's reach can never silently widen another's. ROLLBACK is the union: it
+# only ever restores a value that some scope was allowed to write in the first
+# place, and that fix_log recorded.
+SCOPE_AUTOFIX = "autofix"
+SCOPE_RESCRAPE = "rescrape"
+SCOPE_ROLLBACK = "rollback"
+
+_WRITE_SCOPES = {
+    SCOPE_AUTOFIX: _UPDATABLE_COLUMNS,
+    SCOPE_RESCRAPE: _RESCRAPE_COLUMNS,
+    SCOPE_ROLLBACK: _UPDATABLE_COLUMNS | _RESCRAPE_COLUMNS,
+}
+
 # Tables the fixer / rollback may write. Same reasoning as _UPDATABLE_COLUMNS:
 # data_quality_fix_log stores table_name as data, and that data must never be
 # able to steer a statement at another table.
@@ -165,10 +185,11 @@ def insert_duplicates(conn, candidates: Sequence[DuplicateCandidate]) -> int:
 
 # ── Fixer support (writes to the source table) ──────────────────────────────
 def update_record_field(conn, record_id: int, column: str, new_value,
-                        table_name: str = "dissertations") -> int:
+                        table_name: str = "dissertations",
+                        scope: str = SCOPE_AUTOFIX) -> int:
     """UPDATE a single allowlisted column of one record. Returns affected row
-    count. Refuses any table/column not on the fixer allowlist."""
-    _check_target(table_name, column)
+    count. Refuses any table/column outside the caller's write scope."""
+    _check_target(table_name, column, scope)
     with conn.cursor() as cur:
         # Both identifiers are validated against fixed allowlists above, so this
         # f-string cannot carry untrusted input; the VALUE is always parameterized.
@@ -243,14 +264,16 @@ FIX_LOG_KEYS = ("id", "run_id", "issue_id", "record_id", "table_name",
 def log_fix(conn, *, run_id: int, record_id: int, column_name: str,
             value_before, value_after, table_name: str = "dissertations",
             issue_code: Optional[str] = None, issue_id: Optional[int] = None,
-            applied_by: str = "cli") -> int:
+            applied_by: str = "cli", scope: str = SCOPE_AUTOFIX) -> int:
     """Record one field rewrite and return the new fix-log id.
 
     MUST be called inside the same transaction as the UPDATE it describes, and
     before it, so a failed fix can never leave a log row claiming otherwise.
     Values are stored as TEXT; None stays SQL NULL (never the string 'None').
+    ``scope`` must be the same one the UPDATE uses, so a tool can never log a
+    write it is not allowed to perform.
     """
-    _check_target(table_name, column_name)
+    _check_target(table_name, column_name, scope)
     with conn.cursor() as cur:
         cur.execute(
             """INSERT INTO data_quality_fix_log
@@ -305,15 +328,28 @@ def mark_rolled_back(conn, fix_ids: Sequence[int]) -> int:
 
 
 def fetch_current_value(conn, record_id: int, column: str,
-                        table_name: str = "dissertations"):
+                        table_name: str = "dissertations",
+                        scope: str = SCOPE_AUTOFIX):
     """Return ``(found, value)`` for one field. ``found`` separates "record is
     gone" from "column is NULL" — the rollback CLI must treat those differently."""
-    _check_target(table_name, column)
+    _check_target(table_name, column, scope)
     with conn.cursor() as cur:
         # Both identifiers are allowlist-validated above; the id is parameterized.
         cur.execute(f"SELECT {column} FROM {table_name} WHERE id = %s", (record_id,))
         row = cur.fetchone()
         return (False, None) if row is None else (True, row[0])
+
+
+def fetch_run(conn, run_id: int) -> Optional[Dict]:
+    """One run by id. The rollback CLI shows run_type/started_at so an operator
+    can see *which* batch they are about to undo before confirming."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT id, run_type, status, started_at, completed_at
+                 FROM data_quality_runs WHERE id = %s""", (run_id,))
+        row = cur.fetchone()
+        keys = ("id", "run_type", "status", "started_at", "completed_at")
+        return dict(zip(keys, row)) if row else None
 
 
 def fix_log_exists(conn) -> bool:
@@ -325,11 +361,14 @@ def fix_log_exists(conn) -> bool:
         return int(cur.fetchone()[0]) == 1
 
 
-def _check_target(table_name: str, column: str) -> None:
+def _check_target(table_name: str, column: str, scope: str = SCOPE_AUTOFIX) -> None:
+    columns = _WRITE_SCOPES.get(scope)
+    if columns is None:
+        raise ValueError(f"unknown write scope {scope!r}")
     if table_name not in _FIXABLE_TABLES:
-        raise ValueError(f"table {table_name!r} is not fixer-writable")
-    if column not in _UPDATABLE_COLUMNS:
-        raise ValueError(f"column {column!r} is not fixer-updatable")
+        raise ValueError(f"table {table_name!r} is not writable")
+    if column not in columns:
+        raise ValueError(f"column {column!r} is not writable in scope {scope!r}")
 
 
 def _as_text(value) -> Optional[str]:
