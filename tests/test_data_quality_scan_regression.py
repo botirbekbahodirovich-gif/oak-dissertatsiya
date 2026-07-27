@@ -5,9 +5,13 @@ single number a scan reports. This test freezes the known-good output of
 
     python3 scripts/run_data_quality_scan.py --mode report --limit 1000
 
-taken on `olimlar_staging_db` (production backup, 29 551 dissertations) BEFORE
-the hotfix. If the duplicate count moves, the optimisation is wrong, not the
-fixture.
+taken on `olimlar_staging_db` (production backup, 29 551 dissertations). The
+duplicate count was pinned from a pre-hotfix run and re-confirmed after it. If
+it ever moves, the optimisation is wrong, not the fixture.
+
+Changing a validator legitimately moves the *issue* numbers — when that happens,
+re-measure on staging and re-pin here in the same commit, so the diff shows the
+before and after.
 
 SKIPPED unless TEST_DATABASE_URL is set, and it must point at staging or a
 throwaway copy, never production. The scan runs in `report` mode, which writes
@@ -25,29 +29,23 @@ import unittest
 TEST_DB = os.environ.get("TEST_DATABASE_URL")
 
 # ── the frozen fixture ──────────────────────────────────────────────────────
+# Measured on olimlar_staging_db. The pre-hotfix baseline was
+# issues=153 / duplicates=27 / quality=99.8 across five codes; TITLE_IS_CODE
+# added 6 findings in this window (107 across the whole table) and the score
+# still rounds to 99.8.
 SCAN_LIMIT = 1000
 EXPECTED_CHECKED = 1000
 EXPECTED_DUPLICATES = 27
-# Issue totals as captured before TITLE_IS_CODE was added. That validator is a
-# new finding, not a regression, so it is accounted for separately below rather
-# than folded into these numbers.
-EXPECTED_ISSUES_EXCLUDING_NEW = 153
+EXPECTED_ISSUES = 159
+EXPECTED_QUALITY = 99.8
 EXPECTED_BY_CODE = {
     "MISSING_ORG": 78,
     "MISSING_SUPERVISOR": 62,
     "MISSING_SPECIALTY": 8,
+    "TITLE_IS_CODE": 6,
     "SHORT_TITLE": 3,
     "INCONSISTENT_APOSTROPHE": 2,
 }
-# Codes introduced after the fixture was taken. Set the expected count once it
-# has been measured on staging; until then the affected assertions report the
-# observed values instead of failing on a change that is intended.
-NEW_CODES = {
-    "TITLE_IS_CODE": None,     # ← pin the observed count here
-}
-# Quality score before TITLE_IS_CODE existed. Only meaningful while the new
-# codes contribute nothing; re-pin together with NEW_CODES.
-EXPECTED_QUALITY_EXCLUDING_NEW = 99.8
 
 
 @unittest.skipUnless(TEST_DB, "TEST_DATABASE_URL not set (staging-only test)")
@@ -82,17 +80,6 @@ class ScanRegressionTests(unittest.TestCase):
             raise AssertionError(f"scan failed: {result.error_message}")
         return result
 
-    # -- helpers -------------------------------------------------------------
-    def _new_code_counts(self):
-        by_code = dict(self.result.summary.issues_by_code)
-        return {code: by_code.get(code, 0) for code in NEW_CODES}
-
-    def _pinned_new_total(self):
-        """Expected total from the new codes, or None while unpinned."""
-        if any(v is None for v in NEW_CODES.values()):
-            return None
-        return sum(NEW_CODES.values())
-
     # -- the fixture ---------------------------------------------------------
     def test_duplicate_count_matches_fixture(self):
         """The load-bearing assertion: the hotfix must not move this number."""
@@ -103,38 +90,17 @@ class ScanRegressionTests(unittest.TestCase):
     def test_checked_records_match_fixture(self):
         self.assertEqual(self.result.summary.checked_records, EXPECTED_CHECKED)
 
-    def test_pre_existing_issue_codes_are_unchanged(self):
-        """Every code that existed when the fixture was taken keeps its count."""
-        by_code = dict(self.result.summary.issues_by_code)
-        for code in NEW_CODES:
-            by_code.pop(code, None)
-        self.assertEqual(by_code, EXPECTED_BY_CODE)
+    def test_issue_breakdown_matches_fixture(self):
+        self.assertEqual(dict(self.result.summary.issues_by_code), EXPECTED_BY_CODE)
 
     def test_issue_total_matches_fixture(self):
-        new_total = sum(self._new_code_counts().values())
-        self.assertEqual(self.result.summary.issue_count - new_total,
-                         EXPECTED_ISSUES_EXCLUDING_NEW)
-
-    def test_new_codes_match_pinned_counts(self):
-        observed = self._new_code_counts()
-        if self._pinned_new_total() is None:
-            self.skipTest(
-                "NEW_CODES not pinned yet — observed on this database: "
-                f"{observed}, quality={self.result.summary.quality_score}. "
-                "Paste those into NEW_CODES / EXPECTED_QUALITY_EXCLUDING_NEW "
-                "to freeze them.")
-        self.assertEqual(observed, dict(NEW_CODES))
+        self.assertEqual(self.result.summary.issue_count, EXPECTED_ISSUES)
+        self.assertEqual(sum(EXPECTED_BY_CODE.values()), EXPECTED_ISSUES,
+                         "fixture is internally inconsistent")
 
     def test_quality_score_matches_fixture(self):
-        observed = self.result.summary.quality_score
-        if sum(self._new_code_counts().values()) == 0:
-            self.assertAlmostEqual(observed, EXPECTED_QUALITY_EXCLUDING_NEW, places=1)
-            return
-        if self._pinned_new_total() is None:
-            self.skipTest(
-                f"quality={observed} reflects the new codes; re-pin "
-                "EXPECTED_QUALITY_EXCLUDING_NEW once NEW_CODES is set.")
-        self.assertAlmostEqual(observed, EXPECTED_QUALITY_EXCLUDING_NEW, places=1)
+        self.assertAlmostEqual(self.result.summary.quality_score,
+                               EXPECTED_QUALITY, places=1)
 
     # -- properties that must hold regardless of the fixture -----------------
     def test_scan_is_deterministic(self):
