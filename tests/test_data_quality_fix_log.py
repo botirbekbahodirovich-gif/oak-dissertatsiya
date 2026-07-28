@@ -273,9 +273,10 @@ class _FakeRepo:
         self._note("log_fix", **kw)
         return 1
 
-    def update_record_field(self, conn, record_id, column, value, table_name="dissertations"):
+    def update_record_field(self, conn, record_id, column, value,
+                            table_name="dissertations", scope=None):
         self._note("update_record_field", record_id=record_id, column=column,
-                   value=value, table_name=table_name)
+                   value=value, table_name=table_name, scope=scope)
         return self.affected
 
     def record_issue_values(self, conn, issue_id, original_value, normalized_value):
@@ -293,9 +294,16 @@ class _FakeRepo:
         self._note("fetch_fixes_by_run", run_id=run_id)
         return [dict(f) for f in self._fixes]
 
-    def fetch_current_value(self, conn, record_id, column, table_name="dissertations"):
-        self._note("fetch_current_value", record_id=record_id, column=column)
+    def fetch_current_value(self, conn, record_id, column,
+                            table_name="dissertations", scope=None):
+        self._note("fetch_current_value", record_id=record_id, column=column,
+                   scope=scope)
         return self._current
+
+    def fetch_run(self, conn, run_id):
+        self._note("fetch_run", run_id=run_id)
+        return {"id": run_id, "run_type": "fix", "status": "completed",
+                "started_at": None, "completed_at": None}
 
     def mark_rolled_back(self, conn, fix_ids):
         self._note("mark_rolled_back", fix_ids=list(fix_ids))

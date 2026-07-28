@@ -31,6 +31,30 @@ _SUPERVISOR_PLACEHOLDERS = (
     "ининг ф", "ининг f", "нинг ф.и", "нинг f.i",
 )
 
+# ilmiy_rahbar sometimes holds a DEGREE PHRASE instead of (or alongside) a
+# name — e.g. "педагогика фанлари доктори (DSc)". A real person's name never
+# contains these words, so the false-positive risk is low.
+_DEGREE_TEXT_HINT = re.compile(
+    r"\b(PhD|DSc)\b"
+    r"|фан(?:лари)?\s+доктор"
+    r"|фалсафа\s+доктор"
+    r"|фанлари\s+номзод"
+    r"|доктори\b"
+    r"|номзоди\b"
+    r"|doktori\b"
+    r"|nomzodi\b",
+    re.IGNORECASE)
+
+# Uzbek surname / patronymic endings, used to tell "this token is a name"
+# apart from "this token is degree prose" when both may be present on one
+# line. Cyrillic and Latin script both occur in the data.
+_SURNAME_SUFFIXES = ("ов", "ева", "ова", "ев", "ий", "ийна",
+                     "ov", "ova", "eva", "ev")
+_PATRONYMIC_WORDS = frozenset({
+    "огли", "ўғли", "қизи", "ogli", "o'g'li", "qizi",
+})
+_WORD = re.compile(r"[^\W\d_]+", re.UNICODE)
+
 _MIN_TITLE_LEN = 12          # a real dissertation title is never this short
 # Some OAK rows carry the registry code in the title column instead of the
 # title, e.g. "В2026.2.PhD/Iqt4897". Those are long enough to slip past
@@ -51,6 +75,20 @@ def _blank(v) -> bool:
 def _is_placeholder_supervisor(v: str) -> bool:
     low = v.lower()
     return any(p in low for p in _SUPERVISOR_PLACEHOLDERS)
+
+
+def _has_degree_text(v: str) -> bool:
+    return bool(_DEGREE_TEXT_HINT.search(v))
+
+
+def _looks_like_name(v: str) -> bool:
+    """True when at least one token in ``v`` looks like an Uzbek surname or
+    patronymic — i.e. a real name is present, not just degree prose."""
+    for tok in _WORD.findall(v):
+        low = tok.lower()
+        if low in _PATRONYMIC_WORDS or low.endswith(_SURNAME_SUFFIXES):
+            return True
+    return False
 
 
 def _mk(record_id, field, code, severity, desc, original=None, normalized=None):
@@ -106,10 +144,25 @@ def validate_record(record: Mapping, today: Optional[date] = None) -> List[M.Iss
     if _blank(rahbar):
         issues.append(_mk(rid, "ilmiy_rahbar", M.MISSING_SUPERVISOR, M.SEVERITY_WARNING,
                           "Ilmiy rahbar bo‘sh"))
-    elif _is_placeholder_supervisor(str(rahbar)):
-        issues.append(_mk(rid, "ilmiy_rahbar", M.PLACEHOLDER_SUPERVISOR, M.SEVERITY_WARNING,
-                          "Ilmiy rahbar — to‘ldirilmagan shablon (F.I.Sh)",
-                          original=str(rahbar)))
+    else:
+        rahbar_s = str(rahbar)
+        if _is_placeholder_supervisor(rahbar_s):
+            issues.append(_mk(rid, "ilmiy_rahbar", M.PLACEHOLDER_SUPERVISOR, M.SEVERITY_WARNING,
+                              "Ilmiy rahbar — to‘ldirilmagan shablon (F.I.Sh)",
+                              original=rahbar_s))
+        elif _has_degree_text(rahbar_s):
+            if _looks_like_name(rahbar_s):
+                issues.append(_mk(rid, "ilmiy_rahbar", M.SUPERVISOR_WITH_DEGREE,
+                                  M.SEVERITY_INFO,
+                                  "Ilmiy rahbar maydonida ism va ilmiy daraja bitta "
+                                  "satrda aralashgan",
+                                  original=rahbar_s))
+            else:
+                issues.append(_mk(rid, "ilmiy_rahbar", M.PLACEHOLDER_SUPERVISOR,
+                                  M.SEVERITY_WARNING,
+                                  "Ilmiy rahbar o‘rniga faqat ilmiy daraja matni "
+                                  "yozilgan (ism yo‘q)",
+                                  original=rahbar_s))
     if _blank(link):
         issues.append(_mk(rid, "link", M.MISSING_URL, M.SEVERITY_INFO,
                           "Manba havolasi (link) bo‘sh"))

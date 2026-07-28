@@ -73,6 +73,41 @@ nothing to do leaves no empty row). The CLI prints that **fix run id** plus the
 ready-made rollback command; it is the unit of rollback. `--applied-by` overrides
 the actor label stored in the log (default `cli:<user>`).
 
+## 3a. Sibling-column fills (muassasa <- ilmiy_kengash)
+`dissertations` has columns the scan never inspects (ilmiy_kengash,
+yetakchi_tashkilot, opponent_1..3, ilmiy_rahbar_daraja, …) — see
+`docs/sibling_column_analysis.md` for the field-by-field counts. Exactly ONE
+rule is approved so far:
+
+```bash
+# always preview first (writes nothing) — dry-run is the default
+python scripts/apply_sibling_column_fills.py
+
+# apply
+python scripts/apply_sibling_column_fills.py --confirm
+```
+Rule: `muassasa` blank AND `ilmiy_kengash` non-blank AND `ilmiy_kengash` does
+**not** end with «ҳузуридаги» ("...tashkiloti **huzuridagi** kengash" names the
+*council*, not the institution — that row is skipped, never guessed at). The
+value is copied **verbatim** — no fuzzy/`institution_map` matching, to keep
+data-loss risk near zero. If a later rescrape fills both `ilmiy_kengash` and
+`muassasa` independently and they disagree, that surfaces as an ordinary
+`INCONSISTENT_ORG`-style review item, not a silent overwrite.
+
+Same transactional shape as §3 (fix-log row written first, one transaction per
+record, `run_type='sibling_fill'`, rollback command printed at the end). Each
+fill also closes the record's open `MISSING_ORG` issue when one exists (purely
+for the dashboard — a missing link never blocks the fill).
+
+`PLACEHOLDER_SUPERVISOR` is now also emitted when `ilmiy_rahbar` holds ONLY a
+degree phrase ("PhD", "фанлари доктори", …) with no name token — previously
+only literal `Ф.И.Ш.`-style templates were caught. When a value has *both* a
+name and a degree phrase on one line, that is `SUPERVISOR_WITH_DEGREE`
+(info-severity, review-only — **not** on `AUTO_FIX_ALLOWLIST`, no write path
+exists for it). Both are scan-time validator changes; re-run a scan to see the
+updated counts. Name detection is a suffix heuristic (Uzbek surname/patronymic
+endings) — see `data_quality/validators.py::_looks_like_name`.
+
 ## 3b. Roll back applied fixes
 ```bash
 # dry-run is the DEFAULT — shows what would be restored, writes nothing
@@ -81,7 +116,9 @@ python scripts/rollback_data_quality_fixes.py --run-id 42
 # actually restore the previous values
 python scripts/rollback_data_quality_fixes.py --run-id 42 --confirm
 ```
-`--run-id` is the **fix** run id printed by the fixer. Behaviour:
+`--run-id` is the run id printed by whichever tool wrote — `run_type='fix'`
+(§3) or `run_type='sibling_fill'` (§3a). One CLI undoes both (it restores
+under the union of every writer's column allowlist). Behaviour:
 - Fixes are replayed newest-first (reverse application order), so a field fixed
   more than once ends back at its original value.
 - Per row the CURRENT value must still equal the logged `value_after`. If it

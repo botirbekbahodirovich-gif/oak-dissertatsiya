@@ -93,6 +93,53 @@ class ValidityTests(unittest.TestCase):
         self.assertIn(M.PLACEHOLDER_SUPERVISOR,
                       codes({"id": 1, "ilmiy_rahbar": "Ф.И.Ш"}))
 
+    def test_placeholder_supervisor_degree_only_no_name(self):
+        """Degree text with no name token is still effectively missing."""
+        for v in ("педагогика фанлари доктори (DSc)", "PhD",
+                  "фанлари номзоди", "техника фанлари доктори"):
+            with self.subTest(v=v):
+                c = codes({"id": 1, "ilmiy_rahbar": v})
+                self.assertIn(M.PLACEHOLDER_SUPERVISOR, c)
+                self.assertNotIn(M.SUPERVISOR_WITH_DEGREE, c)
+
+    def test_supervisor_with_degree_when_name_and_degree_both_present(self):
+        for v in ("Каримов Карим, техника фанлари доктори (DSc)",
+                   "Yusupov Ravshan PhD",
+                   "Тошпўлатова Дилноза, фанлари номзоди"):
+            with self.subTest(v=v):
+                c = codes({"id": 1, "ilmiy_rahbar": v})
+                self.assertIn(M.SUPERVISOR_WITH_DEGREE, c)
+                self.assertNotIn(M.PLACEHOLDER_SUPERVISOR, c)
+
+    def test_supervisor_with_degree_is_info_severity(self):
+        issues = validate_record({"id": 1, "ilmiy_rahbar":
+                                  "Каримов Карим, DSc"})
+        found = [i for i in issues if i.issue_code == M.SUPERVISOR_WITH_DEGREE]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].severity, M.SEVERITY_INFO)
+        self.assertEqual(found[0].original_value, "Каримов Карим, DSc")
+
+    def test_supervisor_with_degree_is_never_auto_fixable(self):
+        self.assertNotIn(M.SUPERVISOR_WITH_DEGREE, M.AUTO_FIX_ALLOWLIST)
+        issues = validate_record({"id": 1, "ilmiy_rahbar": "Каримов Карим, DSc"})
+        found = next(i for i in issues if i.issue_code == M.SUPERVISOR_WITH_DEGREE)
+        self.assertFalse(found.is_auto_fixable)
+
+    def test_real_name_without_degree_text_has_no_supervisor_issue(self):
+        for v in ("Юсупов Равшан Тошпўлатович", "Karimov Vali", "А.Б. Каримов",
+                  "Odilov Akmal o'g'li"):
+            with self.subTest(v=v):
+                c = codes({"id": 1, "ilmiy_rahbar": v})
+                self.assertNotIn(M.PLACEHOLDER_SUPERVISOR, c)
+                self.assertNotIn(M.SUPERVISOR_WITH_DEGREE, c)
+                self.assertNotIn(M.MISSING_SUPERVISOR, c)
+
+    def test_placeholder_template_wins_over_degree_text_check(self):
+        # A literal F.I.Sh template is not run through the degree/name split.
+        c = codes({"id": 1, "ilmiy_rahbar": "Ф.И.Ш., PhD"})
+        self.assertIn(M.PLACEHOLDER_SUPERVISOR, c)
+        self.assertNotIn(M.SUPERVISOR_WITH_DEGREE, c)
+
     def test_malformed_url(self):
         self.assertIn(M.MALFORMED_URL, codes({"id": 1, "link": "not a url"}))
 

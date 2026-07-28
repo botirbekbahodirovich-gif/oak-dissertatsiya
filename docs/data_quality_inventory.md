@@ -16,11 +16,11 @@ observed in them. The source of truth is the Postgres `dissertations` table
 | mavzu | TEXT | yes | OAK/CSV | search, display | empty; too short; HTML/control residue; **OAK registry code instead of the title** (`В2026.2.PhD/Iqt4897`) — 107 rows on the 29 551-row staging snapshot | completeness + validity (review-only); TITLE_IS_CODE |
 | ixtisoslik | TEXT | yes | OAK/CSV | trends, filters | code format variants (spaces/dots/dashes) | normalize NN.NN.NN |
 | muassasa | TEXT | yes | OAK/CSV | analytics grouping, universities bridge | Cyrillic/Latin spelling variants | consistency (review-only; see institution_map) |
-| ilmiy_rahbar | TEXT | yes | OAK/CSV | genealogy, advisors | empty; `Ф.И.Ш`/`F.I.Sh` placeholder templates | placeholder + missing detection |
+| ilmiy_rahbar | TEXT | yes | OAK/CSV | genealogy, advisors | empty; `Ф.И.Ш`/`F.I.Sh` placeholder templates; degree phrase instead of a name ("PhD", "фанлари доктори") | placeholder + missing detection; `PLACEHOLDER_SUPERVISOR` (degree text, no name) / `SUPERVISOR_WITH_DEGREE` (name + degree together, info, review-only) — see sibling_column_analysis.md |
 | link | TEXT | yes | OAK/CSV | source, dedup | empty; missing scheme | URL normalize (safe-fixable) |
 | data_quality | VARCHAR(20) default 'complete' | no | flag_data_quality.py | `dissertations` filters | pre-existing coarse flag (complete/missing_author/incomplete) | kept; superseded by issue table |
 | created_at | TIMESTAMP default NOW() | no | auto | ordering | — | — |
-| fan_tarmoqi, ixtisoslik_nomi, mavzu_raqami, ilmiy_kengash(_raqami), opponent_1..3, yetakchi_tashkilot, ilmiy_rahbar_daraja, yonalish, photo_url, ilmiy_rahbar_photo_url | TEXT | yes | OAK/CSV | display | sparsely populated | out of Phase-1 scope |
+| fan_tarmoqi, ixtisoslik_nomi, mavzu_raqami, ilmiy_kengash(_raqami), opponent_1..3, yetakchi_tashkilot, ilmiy_rahbar_daraja, yonalish, photo_url, ilmiy_rahbar_photo_url | TEXT | yes | OAK/CSV | display | sparsely populated | out of Phase-1 scope, EXCEPT `ilmiy_kengash`: `muassasa <- ilmiy_kengash` is now an approved sibling-column fill (`scripts/apply_sibling_column_fills.py`) when `ilmiy_kengash` does not end with «ҳузуридаги» — see `sibling_column_analysis.md` |
 
 **No `updated_at`** on `dissertations` — the fixer therefore cannot bump a
 modified-timestamp (noted in the operations runbook).

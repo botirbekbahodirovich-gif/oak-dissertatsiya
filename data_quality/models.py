@@ -46,6 +46,11 @@ TITLE_IS_CODE = "TITLE_IS_CODE"
 HTML_RESIDUE = "HTML_RESIDUE"
 CONTROL_CHARS = "CONTROL_CHARS"
 PLACEHOLDER_SUPERVISOR = "PLACEHOLDER_SUPERVISOR"
+# ilmiy_rahbar holds BOTH a name and a degree phrase on one line (e.g.
+# "Каримов Карим, техника фанлари доктори (DSc)"). Unlike
+# PLACEHOLDER_SUPERVISOR, a real name IS present — this is a formatting/shape
+# issue, not a missing value, and it is info-severity, review-only.
+SUPERVISOR_WITH_DEGREE = "SUPERVISOR_WITH_DEGREE"
 # Consistency (normalized value differs from original — safe to preview/fix)
 INCONSISTENT_DEGREE = "INCONSISTENT_DEGREE"
 INCONSISTENT_APOSTROPHE = "INCONSISTENT_APOSTROPHE"
@@ -73,6 +78,7 @@ ISSUE_DIMENSION = {
     HTML_RESIDUE: DIM_VALIDITY,
     CONTROL_CHARS: DIM_VALIDITY,
     PLACEHOLDER_SUPERVISOR: DIM_VALIDITY,
+    SUPERVISOR_WITH_DEGREE: DIM_VALIDITY,
     INCONSISTENT_DEGREE: DIM_CONSISTENCY,
     INCONSISTENT_APOSTROPHE: DIM_CONSISTENCY,
     INCONSISTENT_WHITESPACE: DIM_CONSISTENCY,
