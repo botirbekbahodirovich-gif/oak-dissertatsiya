@@ -30,3 +30,7 @@ output/
 
 # Kafedra hujjatlari — runtime da yaratilgan DOCX fayllar (serverda generatsiya qilinadi)
 static/generated_docs/
+
+# Rescrape keshi — OAK sahifalarining xom HTML nusxasi (o'nlab MB, qayta
+# yuklanadi). Kesh o'zi resume mexanizmi, shuning uchun serverda saqlanadi.
+data/rescrape_cache/

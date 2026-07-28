@@ -108,6 +108,21 @@ FIX_TARGETS = {
 # them must be applied by a human, never by --apply.
 AUTO_FIX_SAFE_COLUMNS = frozenset({"daraja", "link"})
 
+# Columns the rescrape FILL writer (scripts/rescrape_broken_records.py --apply)
+# may populate. Wider than AUTO_FIX_SAFE_COLUMNS on purpose — it is a different
+# operation with a different risk profile:
+#   * a FILL only ever writes into a column that is EMPTY right now (re-checked
+#     inside the write transaction), so no existing value is ever overwritten;
+#   * the value comes from the authoritative OAK announcement page for that
+#     exact record, not from a heuristic rewrite of what is already stored;
+#   * when both sides hold a value and they differ, that is a CONFLICT, and
+#     CONFLICTs are report-only — never written automatically.
+# `link` is absent deliberately: the link is how the record is matched to its
+# source page, so it is an input to the rescrape, never an output.
+RESCRAPE_FILL_COLUMNS = frozenset({
+    "mavzu", "olim", "sana", "ixtisoslik", "ilmiy_rahbar", "muassasa", "daraja",
+})
+
 
 # ── Dataclasses ────────────────────────────────────────────────────────────
 @dataclass
