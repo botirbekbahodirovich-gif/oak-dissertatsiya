@@ -3,6 +3,7 @@
 Routes (all admin-only + CSRF-protected via the app-wide CSRFProtect):
 
     GET  /admin/data-quality                     dashboard
+    GET  /admin/data-quality/duplicates          duplicate review queue
     GET  /admin/data-quality/export.csv          streaming CSV export
     POST /admin/data-quality/scan                trigger a (bounded) persist scan
     POST /admin/data-quality/issue/<id>/resolve  resolve / ignore an issue
@@ -19,8 +20,8 @@ from __future__ import annotations
 import csv
 import io
 
-from flask import (Blueprint, Response, abort, current_app, flash, redirect,
-                   render_template, request, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
+                   redirect, render_template, request, url_for)
 from flask_login import current_user, login_required
 
 # Reuse the EXISTING admin authorization + logging helpers — no new auth system.
@@ -29,6 +30,9 @@ from security import admin_required, log_exception
 data_quality_bp = Blueprint("data_quality", __name__)
 
 PER_PAGE = 50
+# Review cards are tall (two records side by side); a screenful at a time keeps
+# the page light while the keyboard flow does the paging.
+DUP_PER_PAGE = 25
 # A synchronous web request must not scan all 28k+ rows; full scans use the CLI.
 MAX_DASHBOARD_SCAN = 3000
 DEFAULT_DASHBOARD_SCAN = 1000
@@ -144,11 +148,69 @@ def resolve_issue(issue_id):
     return redirect(request.referrer or url_for("data_quality.dashboard"))
 
 
+@data_quality_bp.route("/admin/data-quality/duplicates")
+@login_required
+@admin_required
+def duplicate_queue():
+    """Review queue: 1 597 candidates are not reviewable from the dashboard's
+    50-row preview, and they are not equally worth the time — see
+    data_quality.duplicate_review for the ordering/bucket rationale."""
+    from data import get_connection
+    from data_quality import duplicate_review as review
+    from data_quality import repository as repo
+
+    page = max(1, request.args.get("page", 1, type=int))
+    filters = _duplicate_filters_from_request()
+
+    conn = get_connection()
+    try:
+        if not repo.dq_tables_exist(conn):
+            return render_template("admin_duplicate_review.html",
+                                   tables_ready=False, candidates=[],
+                                   progress=None, filters=filters, page=1,
+                                   total_pages=1, total=0)
+
+        total = repo.count_duplicates(conn, filters)
+        total_pages = max(1, (total + DUP_PER_PAGE - 1) // DUP_PER_PAGE)
+        page = min(page, total_pages)
+        rows = repo.list_duplicates_for_review(
+            conn, filters, DUP_PER_PAGE, (page - 1) * DUP_PER_PAGE)
+        candidates = [review.decorate(r) for r in rows]
+        progress = review.progress_view(repo.duplicate_progress(conn))
+        return render_template(
+            "admin_duplicate_review.html", tables_ready=True,
+            candidates=candidates, progress=progress, filters=filters,
+            page=page, total_pages=total_pages, total=total,
+            level_labels=review.LEVEL_LABEL, status_labels=review.STATUS_LABEL,
+            bucket_labels=review.BUCKET_LABEL)
+    except ValueError:
+        abort(400)                      # a hand-edited filter value
+    except Exception:  # noqa: BLE001
+        log_exception(current_app.logger, "data-quality admin action failed")
+        abort(500)
+    finally:
+        conn.close()
+
+
+def _duplicate_filters_from_request():
+    out = {}
+    for key in ("status", "match_level", "bucket"):
+        value = (request.args.get(key) or "").strip()
+        if value:
+            out[key] = value
+    out.setdefault("status", "pending")   # a queue shows unreviewed work first
+    return out
+
+
 @data_quality_bp.route("/admin/data-quality/duplicate/<int:dup_id>/review",
                        methods=["POST"])
 @login_required
 @admin_required
 def review_duplicate(dup_id):
+    """Set a candidate's status. NEVER deletes or merges the records — merge is
+    a separate, later job. Answers JSON for the keyboard-driven queue and a
+    redirect for the plain form on the dashboard, so both share one authz path.
+    """
     from data import get_connection
     from data_quality import repository as repo
 
@@ -156,14 +218,23 @@ def review_duplicate(dup_id):
     # NOTE: 'merged' is intentionally NOT accepted here — merge is Phase 2.
     if status not in ("confirmed", "rejected", "pending"):
         abort(400)
+    wants_json = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     conn = get_connection()
     try:
-        repo.review_duplicate(conn, dup_id, status, getattr(current_user, "id", None))
+        updated = repo.review_duplicate(conn, dup_id, status,
+                                        getattr(current_user, "id", None))
         conn.commit()
+        if wants_json:
+            if not updated:
+                return jsonify(ok=False, error="not_found"), 404
+            return jsonify(ok=True, id=dup_id, status=status)
         flash("Dublikat nomzod holati yangilandi.", "success")
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         conn.rollback()
         log_exception(current_app.logger, "data-quality admin action failed")
+        if wants_json:
+            return jsonify(ok=False, error="failed"), 500
         flash("Amalni bajarib bo‘lmadi.", "danger")
     finally:
         conn.close()
