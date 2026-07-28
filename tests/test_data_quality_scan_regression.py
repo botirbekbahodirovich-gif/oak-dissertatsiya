@@ -41,9 +41,11 @@ TEST_DB = os.environ.get("TEST_DATABASE_URL")
 # 0.7228 score below the 0.72 cutoff; excluding placeholder-supervisor evidence
 # makes the corrected baseline 26. TITLE_IS_CODE added 6 findings in this window
 # (107 across the whole table), while quality still rounds to 99.8.
+# 0a7646d kengaytirilgan is_placeholder_supervisor() 8 ta
+# qo'shimcha PLACEHOLDER_SUPERVISOR topdi
 SCAN_LIMIT = 1000
 EXPECTED_CHECKED = 1000
-EXPECTED_ISSUES = 159
+EXPECTED_ISSUES = 167
 EXPECTED_BASELINE_DUPLICATES = 26
 EXPECTED_BASELINE_QUALITY = 99.8
 EXPECTED_BY_CODE = {
@@ -53,6 +55,7 @@ EXPECTED_BY_CODE = {
     "TITLE_IS_CODE": 6,
     "SHORT_TITLE": 3,
     "INCONSISTENT_APOSTROPHE": 2,
+    "PLACEHOLDER_SUPERVISOR": 8,
 }
 
 
