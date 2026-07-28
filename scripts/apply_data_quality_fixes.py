@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """Safe, two-stage Data Quality fixer.
 
-    python scripts/apply_data_quality_fixes.py --preview
+    python scripts/apply_data_quality_fixes.py --preview        # or --dry-run
     python scripts/apply_data_quality_fixes.py --apply --issue-code NORMALIZE_DEGREE
     python scripts/apply_data_quality_fixes.py --apply --run-id 12
     python scripts/apply_data_quality_fixes.py --apply --record-id 123
 
 Guarantees
-    * DEFAULT IS PREVIEW. Without --apply nothing is ever written.
+    * DEFAULT IS PREVIEW (``--dry-run`` is an alias). Without --apply nothing is
+      ever written — no fix, no fix-log row, no run row.
     * Only issue codes on data_quality.models.AUTO_FIX_ALLOWLIST are touched, and
       only if the target column is on AUTO_FIX_SAFE_COLUMNS (never title/author/
       org/supervisor — those stay human-review only).
     * The new value is RECOMPUTED from the current DB value at apply time
       (idempotent + concurrency-safe), not blindly taken from an old scan.
-    * Every fix runs in its own transaction; affected-row count is verified (==1);
-      the originating issue is audited (old + new value) and marked 'fixed'.
+    * Every fix runs in ONE transaction that contains, in this order:
+          1. the data_quality_fix_log row (before/after snapshot, written FIRST)
+          2. the UPDATE itself, with the affected-row count verified (== 1)
+          3. the issue audit (old + new value) and its 'fixed' status
+      Any failure rolls the whole thing back, so there is never a fix without
+      its log row, nor a log row without its fix.
+    * All fixes of one invocation share a 'fix' run in data_quality_runs; that
+      run id is the unit of rollback:
+          python scripts/rollback_data_quality_fixes.py --run-id <id>
     * Duplicates are NEVER auto-deleted or merged here.
 
 The public issue-code aliases accepted by --issue-code map to the internal
@@ -28,6 +36,7 @@ INCONSISTENT_* codes:
 from __future__ import annotations
 
 import argparse
+import getpass
 import logging
 import os
 import sys
@@ -60,18 +69,44 @@ _ALIAS = {
 }
 
 
+FIX_TABLE = "dissertations"
+
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Apply safe, allowlisted DQ fixes")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--preview", action="store_true", help="Show fixes, write nothing (default)")
+    g.add_argument("--dry-run", action="store_true", dest="preview",
+                   help="Alias for --preview")
     g.add_argument("--apply", action="store_true", help="Actually write the fixes")
     p.add_argument("--issue-code", default=None,
                    help="Alias (NORMALIZE_*) or internal INCONSISTENT_* code")
-    p.add_argument("--run-id", type=int, default=None)
+    p.add_argument("--run-id", type=int, default=None,
+                   help="Only fix issues found by this SCAN run")
     p.add_argument("--record-id", type=int, default=None)
     p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--applied-by", default=None,
+                   help="Actor label stored in the fix log (default: cli:<user>)")
     p.add_argument("--database-url", default=None)
     return p
+
+
+def _default_actor() -> str:
+    try:
+        return f"cli:{getpass.getuser()}"
+    except Exception:  # no login name available (cron/container)
+        return "cli"
+
+
+def _require_manual_transactions(conn) -> None:
+    """Atomicity depends on explicit commits — refuse to run on an autocommit
+    connection, where the fix and its log row would land separately."""
+    if getattr(conn, "autocommit", False):
+        try:
+            conn.autocommit = False
+        except Exception:
+            raise SystemExit("Refusing to apply: connection is in autocommit mode "
+                             "(fix + fix-log could not be made atomic).")
 
 
 def _resolve_code(raw: str | None) -> str | None:
@@ -101,12 +136,19 @@ def main(argv=None) -> int:
         return 2
 
     issue_code = _resolve_code(args.issue_code)
+    actor = (args.applied_by or _default_actor())
     conn, target = resolve_connection(args.database_url)
     print(f"→ Target database: {target}   mode={'APPLY' if apply else 'PREVIEW'}")
     if not apply:
         print("  (preview: this run writes NOTHING to the database)")
+    else:
+        _require_manual_transactions(conn)
 
     fixed = skipped = considered = 0
+    # Lazily created on the first real fix, inside that fix's transaction, so a
+    # run with nothing to do leaves no empty run row behind.
+    fix_run_id = None
+    run_uncommitted = False
     try:
         issues = repo.iter_fixable_issues(
             conn, sorted(AUTO_FIX_ALLOWLIST), issue_code=issue_code,
@@ -130,7 +172,8 @@ def main(argv=None) -> int:
             normalizer = _NORMALIZERS[FIX_TARGETS[issue["issue_code"]][1]]
             new_value = normalizer(old_value)
             if new_value == old_value or new_value is None:
-                # Already normalized (or nothing to do) -> close the issue, no write.
+                # Already normalized (or nothing to do) -> close the issue, no
+                # write to the record, so nothing to log or roll back either.
                 if apply:
                     repo.resolve_issue(conn, issue["id"], None, status="resolved")
                     conn.commit()
@@ -142,26 +185,47 @@ def main(argv=None) -> int:
 
             if apply:
                 try:
+                    if fix_run_id is None:
+                        fix_run_id = repo.create_run(
+                            conn, "fix", total_records=len(issues),
+                            metadata={"mode": "apply", "target": target,
+                                      "issue_code": issue_code,
+                                      "scan_run_id": args.run_id,
+                                      "record_id": args.record_id,
+                                      "applied_by": actor})
+                        run_uncommitted = True
+                    # Audit FIRST, in the same transaction as the UPDATE: if the
+                    # UPDATE fails, the log row dies with it (no half state).
+                    repo.log_fix(conn, run_id=fix_run_id, issue_id=issue["id"],
+                                 record_id=issue["record_id"],
+                                 table_name=FIX_TABLE, column_name=column,
+                                 value_before=old_value, value_after=new_value,
+                                 issue_code=issue["issue_code"], applied_by=actor)
                     affected = repo.update_record_field(
-                        conn, issue["record_id"], column, new_value)
+                        conn, issue["record_id"], column, new_value,
+                        table_name=FIX_TABLE)
                     if affected != 1:
-                        conn.rollback()
-                        skipped += 1
-                        continue
-                    # Audit the exact before/after onto the issue row.
-                    with conn.cursor() as cur:
-                        cur.execute(
-                            "UPDATE data_quality_issues SET original_value=%s, "
-                            "normalized_value=%s WHERE id=%s",
-                            (str(old_value), str(new_value), issue["id"]))
+                        raise RuntimeError(f"affected {affected} rows, expected 1")
+                    # Pin the exact before/after onto the issue row too.
+                    repo.record_issue_values(conn, issue["id"], old_value, new_value)
                     repo.mark_issue_fixed(conn, issue["id"])
                     conn.commit()
+                    run_uncommitted = False
                     fixed += 1
                 except Exception as exc:  # noqa: BLE001
                     conn.rollback()
+                    if run_uncommitted:
+                        # The run row died with the rolled-back transaction.
+                        fix_run_id, run_uncommitted = None, False
                     logging.error("fix failed for record %s: %s",
                                   issue["record_id"], exc.__class__.__name__)
                     skipped += 1
+
+        if apply and fix_run_id is not None:
+            repo.complete_run(conn, fix_run_id, status="completed",
+                              checked_records=considered, issue_count=fixed,
+                              duplicate_count=0)
+            conn.commit()
     finally:
         try:
             conn.close()
@@ -174,6 +238,10 @@ def main(argv=None) -> int:
     print(f"skipped    : {skipped}")
     if not apply:
         print("\n(no changes written — re-run with --apply to persist)")
+    elif fix_run_id is not None:
+        print(f"fix run id : {fix_run_id}")
+        print(f"\nto undo:  python scripts/rollback_data_quality_fixes.py "
+              f"--run-id {fix_run_id} --confirm")
     return 0
 
 

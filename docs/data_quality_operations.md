@@ -23,12 +23,14 @@
 
 Missing variables fall back to the safe defaults above.
 
-## 1. Apply migration 004 (staging)
+## 1. Apply migrations 004 + 005 (staging)
 ```bash
 export DATABASE_URL="postgresql://…/staging_db"
 psql "$DATABASE_URL" -f migrations/004_create_data_quality_tables.sql
+psql "$DATABASE_URL" -f migrations/005_create_data_quality_fix_log.sql
 ```
-Idempotent — safe to re-run. Verifies three additive tables; touches no existing data.
+Both idempotent — safe to re-run. 004 adds three additive tables, 005 adds
+`data_quality_fix_log` (audit trail + rollback source). Neither touches existing data.
 
 ## 2. Scan
 ```bash
@@ -48,7 +50,7 @@ DATA_QUALITY_SCAN_ENABLED=1 python scripts/run_data_quality_scan.py --mode persi
 
 ## 3. Preview & apply fixes
 ```bash
-# always preview first (writes nothing)
+# always preview first (writes nothing) — --dry-run is an alias for --preview
 python scripts/apply_data_quality_fixes.py --preview --issue-code NORMALIZE_DEGREE
 
 # apply — allowlisted codes on safe columns only (daraja/link)
@@ -58,9 +60,47 @@ DATA_QUALITY_AUTO_FIX_ENABLED=1 \
   python scripts/apply_data_quality_fixes.py --apply --run-id 12
 ```
 Codes: `NORMALIZE_DEGREE`, `NORMALIZE_WHITESPACE`, `NORMALIZE_APOSTROPHE`,
-`NORMALIZE_URL`. Title/author/org/supervisor are **never** auto-fixed. Each fix
-runs in its own transaction; the before/after is audited onto the issue row and
-the issue is marked `fixed`. (`dissertations` has no `updated_at`, so none is bumped.)
+`NORMALIZE_URL`. Title/author/org/supervisor are **never** auto-fixed.
+(`dissertations` has no `updated_at`, so none is bumped.)
+
+Each fix runs in **one** transaction containing, in order: the
+`data_quality_fix_log` row (before/after snapshot, written *first*), the UPDATE
+with its affected-row count verified (`== 1`), then the issue audit + `fixed`
+status. Any failure rolls the whole thing back — there is never a fix without
+its log row, nor a log row without its fix.
+
+All fixes of one invocation share a `data_quality_runs` row with
+`run_type='fix'`, created lazily inside the first fix's transaction (a run with
+nothing to do leaves no empty row). The CLI prints that **fix run id** plus the
+ready-made rollback command; it is the unit of rollback. `--applied-by` overrides
+the actor label stored in the log (default `cli:<user>`).
+
+## 3b. Roll back applied fixes
+```bash
+# dry-run is the DEFAULT — shows what would be restored, writes nothing
+python scripts/rollback_data_quality_fixes.py --run-id 42
+
+# actually restore the previous values
+python scripts/rollback_data_quality_fixes.py --run-id 42 --confirm
+```
+`--run-id` is the **fix** run id printed by the fixer. Behaviour:
+- Fixes are replayed newest-first (reverse application order), so a field fixed
+  more than once ends back at its original value.
+- Per row the CURRENT value must still equal the logged `value_after`. If it
+  differs, someone changed the field after the fix: the row is **skipped** with
+  a warning (counted as `mismatched`) and left to a human — never overwritten.
+- A restore, its `rolled_back_at` stamp and the reopening of the originating
+  issue (`fixed` → `open`) commit together or not at all.
+- Already-reverted rows are ignored, so re-running is safe and idempotent.
+- Deliberately **not** gated by `DATA_QUALITY_AUTO_FIX_ENABLED` — you must be
+  able to undo fixes after switching auto-fix back off.
+
+Query the trail directly when needed:
+```sql
+SELECT id, record_id, column_name, value_before, value_after,
+       applied_at, applied_by, rolled_back_at
+  FROM data_quality_fix_log WHERE run_id = 42 ORDER BY id DESC;
+```
 
 ## 4. Admin dashboard
 `/admin/data-quality` (admin-only). Summary cards, issue breakdown, side-by-side
@@ -118,21 +158,31 @@ also rules out merge chains. Every write is logged to `data_quality_fix_log`
 Reports land in `docs/merge_report_<timestamp>.md` / `.csv` — dry run or not.
 
 ## 8. Rollback
+**Data first**: undo applied field fixes with
+`scripts/rollback_data_quality_fixes.py --run-id <fix run> --confirm` (§3b).
+Dropping the tables does **not** revert them, and once
+`data_quality_fix_log` is gone the before-values are only recoverable from a DB
+backup.
+
+**Then the schema** (only after every fix you still care about is reverted):
 ```sql
 BEGIN;
+  DROP TABLE IF EXISTS data_quality_fix_log;   -- migration 005
   DROP TABLE IF EXISTS duplicate_candidates;
   DROP TABLE IF EXISTS data_quality_issues;
   DROP TABLE IF EXISTS data_quality_runs;
 COMMIT;
 ```
 These tables hold only derived data — dropping them loses no source records.
-Applied field fixes (degree/url normalisation) are not reverted by the drop;
-restore from a DB backup if a fix must be undone. The same applies to merges:
-dropping `data_quality_fix_log` removes the audit trail, not the effect — a
-merged record's `merged_into_id` stays set, and its copied fields stay copied,
-until someone restores from a backup or writes a dedicated rollback CLI against
-the fix log (not built yet; the log is structured so that tool can be written
-without re-deriving anything).
+`data_quality_fix_log.run_id` is `ON DELETE RESTRICT`, so a `data_quality_runs`
+row with logged fixes cannot be deleted while the audit trail references it
+(delete the fix-log rows explicitly if that is really what you want). Applied
+field fixes (degree/url normalisation) are not reverted by the drop; restore
+from a DB backup if a fix must be undone. The same applies to merges: dropping
+`data_quality_fix_log` removes the audit trail, not the effect — a merged
+record's `merged_into_id` stays set, and its copied fields stay copied, until
+someone restores from a backup or runs `scripts/rollback_data_quality_fixes.py`
+against the fix log.
 
 ## 9. Incident handling
 - A persist scan that dies mid-run leaves the `data_quality_runs` row in
@@ -144,7 +194,7 @@ without re-deriving anything).
 ## 10. Production deployment
 1. Merge `feature/data-quality-phase-1` after review.
 2. `pip install -r requirements.txt` (no new deps added — stdlib only).
-3. Apply migration 004 on the production DB during a maintenance window.
+3. Apply migrations 004 and 005 on the production DB during a maintenance window.
 4. Leave `DATA_QUALITY_AUTO_FIX_ENABLED` **unset** (off). Optionally set
    `DATA_QUALITY_IMPORT_PRECHECK=1` after validating on staging.
 5. Restart Gunicorn/systemd. The new blueprint and routes load on boot.
