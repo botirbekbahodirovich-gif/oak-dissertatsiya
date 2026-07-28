@@ -48,6 +48,36 @@ class UnicodeTests(unittest.TestCase):
         self.assertEqual(N.normalize_unicode("Ўзбекистон"), "Ўзбекистон")
 
 
+class TransliterationTests(unittest.TestCase):
+    def test_uzbek_specific_letters_and_digraphs(self):
+        self.assertEqual(
+            N.to_latin("Ўзбекистон ғалабаси: Қўчқор Ҳамроев, Шаҳноза"),
+            "Oʻzbekiston gʻalabasi: Qoʻchqor Hamroyev, Shahnoza",
+        )
+
+    def test_ambiguous_letters_use_uzbek_forms(self):
+        self.assertEqual(
+            N.to_latin("Янги юридик ёндашув ва жаҳон"),
+            "Yangi yuridik yondashuv va jahon",
+        )
+        self.assertEqual(N.to_latin("Ер ва диета"), "Yer va diyeta")
+
+    def test_hard_and_soft_signs(self):
+        self.assertEqual(N.to_latin("таълим объекти"), "taʼlim obʼyekti")
+        self.assertEqual(N.to_latin("альбом"), "albom")
+
+    def test_latin_is_unchanged_and_idempotent(self):
+        latin = "Oʻzbekiston: sunʼiy intellekt va JavaScript"
+        self.assertEqual(N.to_latin(latin), latin)
+        once = N.to_latin("Қорақалпоғистон")
+        self.assertEqual(N.to_latin(once), once)
+
+    def test_empty_and_non_string_values(self):
+        self.assertEqual(N.to_latin(""), "")
+        self.assertEqual(N.to_latin(None), "")
+        self.assertEqual(N.to_latin(123), "123")
+
+
 class DegreeTests(unittest.TestCase):
     def test_phd_variants(self):
         for v in ("PhD", "phd", "Ph.D", "ph.d.", "falsafa doktori (PhD)",

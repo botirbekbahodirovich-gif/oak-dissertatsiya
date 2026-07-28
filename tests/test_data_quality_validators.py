@@ -90,6 +90,8 @@ class ValidityTests(unittest.TestCase):
         self.assertNotIn(M.INVALID_DEGREE, codes({"id": 1, "daraja": "falsafa doktori"}))
 
     def test_placeholder_supervisor(self):
+        self.assertIn(M.PLACEHOLDER_SUPERVISOR, codes(
+            {"id": 1, "ilmiy_rahbar": "педагогика фанлари доктори (DSc)"}))
         self.assertIn(M.PLACEHOLDER_SUPERVISOR,
                       codes({"id": 1, "ilmiy_rahbar": "Ф.И.Ш"}))
 

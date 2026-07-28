@@ -53,6 +53,7 @@ from difflib import SequenceMatcher
 from typing import Callable, Dict, List, Mapping, Optional, Tuple
 
 from data_quality import normalizers as N
+from data_quality import validators as V
 from data_quality.config import DataQualityConfig, get_config
 from data_quality.models import DuplicateCandidate
 
@@ -113,12 +114,21 @@ class _Sig:
 
     def __init__(self, record: Mapping):
         self.id = record.get("id")
-        self.title = _norm_lower(N.normalize_title(record.get("mavzu")))
+        # Transliteration is comparison-only: ``record`` and its DB-backed
+        # original values are never mutated. Run it before the ordinary field
+        # normalizer so Cyrillic ъ and Latin apostrophe variants canonicalize
+        # to the same final representation.
+        self.title = _comparison_text(record.get("mavzu"), N.normalize_title)
         self.title_tokens = frozenset(_TOKEN.findall(self.title))
-        self.author = _norm_lower(N.normalize_person_name(record.get("olim")))
+        self.author = _comparison_text(record.get("olim"), N.normalize_person_name)
         self.author_tokens = frozenset(_TOKEN.findall(self.author))
-        self.org = _norm_lower(N.normalize_organization_name(record.get("muassasa")))
-        self.supervisor = _norm_lower(N.normalize_person_name(record.get("ilmiy_rahbar")))
+        self.org = _comparison_text(
+            record.get("muassasa"), N.normalize_organization_name)
+        supervisor = record.get("ilmiy_rahbar")
+        self.supervisor = (
+            "" if V.is_placeholder_supervisor(supervisor)
+            else _comparison_text(supervisor, N.normalize_person_name)
+        )
         self.specialty = _first_specialty(record.get("ixtisoslik"))
         self.iso = N.normalize_date(record.get("sana"))
         self.year = self.iso[:4] if self.iso else _loose_year(record.get("sana"))
@@ -129,6 +139,11 @@ class _Sig:
 
 def _norm_lower(v) -> str:
     return (v or "").strip().lower() if isinstance(v, str) else (str(v).lower() if v else "")
+
+
+def _comparison_text(value, normalizer: Callable[[Optional[str]], str]) -> str:
+    """Return a clean, lowercase, script-independent in-memory signature."""
+    return _norm_lower(normalizer(N.to_latin(value)))
 
 
 def _first_specialty(v) -> str:
