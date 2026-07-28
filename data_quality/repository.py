@@ -13,6 +13,7 @@ fixer / request handler).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 try:
@@ -20,6 +21,7 @@ try:
 except Exception:  # pragma: no cover - import guard
     _extras = None
 
+from data_quality.merge_review import COMPLETENESS_FIELDS, MergePlan
 from data_quality.models import DuplicateCandidate, Issue
 
 # Columns read for scanning. Deliberately excludes anything PII-ish; the
@@ -609,3 +611,251 @@ def dq_tables_exist(conn) -> bool:
 def _json(obj) -> str:
     import json
     return json.dumps(obj, ensure_ascii=False)
+
+
+# ── Duplicate merge execution ────────────────────────────────────────────────
+# Hard foreign keys whose target is dissertations(id). Mirrors
+# docs/data_quality_dissertation_fk_inventory.md §1. Kept as the single source
+# of truth that merge_dissertations() repoints AND that
+# assert_no_unknown_fk_references() checks the live schema against — if this
+# tuple and the database ever disagree, the merge refuses to run rather than
+# silently missing a reference.
+KNOWN_FK_REFERENCES_TO_DISSERTATIONS: Tuple[Tuple[str, str], ...] = (
+    ("user_bookmarks", "dissertation_id"),
+    ("specialty_notifications_log", "dissertation_id"),
+)
+
+# Columns fetched for a merge: every field the winner might need filled, plus
+# the merge-state columns migration 006 adds.
+_MERGE_ROW_COLUMNS: Tuple[str, ...] = (
+    ("id",) + COMPLETENESS_FIELDS + ("merged_into_id", "merged_at"))
+
+
+def discover_fk_references_to_dissertations(conn) -> List[Tuple[str, str]]:
+    """Live discovery of every foreign key targeting dissertations(id), across
+    the whole schema, EXCLUDING dissertations' own self-referencing
+    merged_into_id. This is the runtime half of the safety net described in
+    docs/data_quality_dissertation_fk_inventory.md §5 — the static inventory
+    is what a human reads; this is what protects the data if that inventory
+    is ever out of date."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT tc.table_name, kcu.column_name
+                 FROM information_schema.table_constraints tc
+                 JOIN information_schema.key_column_usage kcu
+                   ON tc.constraint_name = kcu.constraint_name
+                  AND tc.table_schema = kcu.table_schema
+                 JOIN information_schema.constraint_column_usage ccu
+                   ON tc.constraint_name = ccu.constraint_name
+                  AND tc.table_schema = ccu.table_schema
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                  AND ccu.table_name = 'dissertations'
+                  AND ccu.column_name = 'id'
+                  AND tc.table_name <> 'dissertations'""")
+        return [(r[0], r[1]) for r in cur.fetchall()]
+
+
+def assert_no_unknown_fk_references(conn) -> None:
+    """Raises if the live database has a foreign key into dissertations(id)
+    that merge_dissertations() does not know how to repoint. Call once before
+    a merge run, never mid-merge (it is a schema check, not a per-row check)."""
+    found = set(discover_fk_references_to_dissertations(conn))
+    known = set(KNOWN_FK_REFERENCES_TO_DISSERTATIONS)
+    unknown = found - known
+    if unknown:
+        raise RuntimeError(
+            "merge refused: found foreign key(s) into dissertations(id) that "
+            f"this script does not know how to repoint: {sorted(unknown)}. "
+            "Update KNOWN_FK_REFERENCES_TO_DISSERTATIONS and "
+            "merge_dissertations() in data_quality/repository.py (and "
+            "docs/data_quality_dissertation_fk_inventory.md) before merging "
+            "anything else.")
+
+
+def fetch_confirmed_candidates(conn, candidate_id: Optional[int] = None,
+                               limit: Optional[int] = None) -> List[Dict]:
+    """Merge-eligible candidates: status='confirmed', or one specific id
+    regardless of status (so the CLI can print a clear per-candidate refusal
+    reason instead of silently skipping it)."""
+    keys = ("id", "record_id_1", "record_id_2", "score", "match_level", "status")
+    cols = ", ".join(keys)
+    params: List = []
+    if candidate_id is not None:
+        where = "WHERE id = %s"
+        params.append(candidate_id)
+    else:
+        where = "WHERE status = 'confirmed'"
+    sql = f"SELECT {cols} FROM duplicate_candidates {where} ORDER BY id"
+    if limit is not None:
+        sql += " LIMIT %s"
+        params.append(limit)
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
+        return [dict(zip(keys, r)) for r in cur.fetchall()]
+
+
+def fetch_dissertation_rows(conn, ids: Sequence[int], *,
+                            for_update: bool = False) -> Dict[int, Dict]:
+    """The columns a merge needs for the given ids. `for_update` row-locks
+    them (ascending id order — callers must pass ids already sorted, or rely on
+    the ORDER BY here, to keep lock order consistent across concurrent merges
+    and avoid deadlocks)."""
+    ids = sorted(set(ids))
+    if not ids:
+        return {}
+    cols = ", ".join(_MERGE_ROW_COLUMNS)
+    lock = " FOR UPDATE" if for_update else ""
+    with conn.cursor() as cur:
+        cur.execute(
+            f"SELECT {cols} FROM dissertations WHERE id = ANY(%s) "
+            f"ORDER BY id{lock}", (ids,))
+        return {row[0]: dict(zip(_MERGE_ROW_COLUMNS, row)) for row in cur.fetchall()}
+
+
+def _log_fix(cur, run_id: int, record_id: int, table_name: str, column_name: str,
+            value_before, value_after, applied_by: str) -> None:
+    cur.execute(
+        """INSERT INTO data_quality_fix_log
+               (run_id, record_id, table_name, column_name,
+                value_before, value_after, applied_by)
+           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+        (run_id, record_id, table_name, column_name,
+         None if value_before is None else str(value_before),
+         None if value_after is None else str(value_after), applied_by))
+
+
+@dataclass
+class MergeResult:
+    candidate_id: int
+    winner_id: int
+    loser_id: int
+    fields_filled: int = 0
+    bookmarks_repointed: int = 0
+    bookmarks_dropped: int = 0
+    subscriptions_repointed: int = 0
+    duplicate_rows_repointed: int = 0
+    duplicate_rows_dropped: int = 0
+
+
+def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
+                        reviewed_by: Optional[int] = None) -> MergeResult:
+    """Executes one merge plan. Every write in here belongs to ONE transaction
+    — this function never calls commit() or rollback(); the caller does,
+    around the whole call, so all six steps below are atomic: either every one
+    of them lands, or none does.
+
+    Assumes the caller already validated the plan with
+    data_quality.merge_review.can_merge() and holds a row lock on both records
+    (fetch_dissertation_rows(..., for_update=True)) taken before this call, in
+    the same transaction.
+    """
+    winner_id, loser_id = plan.winner_id, plan.loser_id
+    result = MergeResult(candidate_id=plan.candidate_id, winner_id=winner_id,
+                         loser_id=loser_id)
+
+    with conn.cursor() as cur:
+        # 1. Fill blank winner fields from the loser. One UPDATE + one fix_log
+        #    row per field, so the log is a precise, replayable before/after.
+        for fill in plan.fills:
+            cur.execute(
+                f"UPDATE dissertations SET {fill.field} = %s WHERE id = %s",
+                (fill.new_value, winner_id))
+            _log_fix(cur, run_id, winner_id, "dissertations", fill.field,
+                     fill.old_value, fill.new_value, applied_by)
+        result.fields_filled = len(plan.fills)
+
+        # 2. user_bookmarks: UNIQUE(user_id, dissertation_id), ON DELETE CASCADE.
+        #    A user may have bookmarked both records; repointing the loser's
+        #    bookmark onto the winner would then collide with their existing
+        #    winner bookmark. Drop the now-redundant loser-side row first (its
+        #    personal note, if any, is lost — an accepted, minor side effect of
+        #    two bookmarks resolving to one canonical record), then repoint
+        #    what remains, one row at a time so each gets its own audit entry.
+        cur.execute(
+            """DELETE FROM user_bookmarks b1
+                WHERE b1.dissertation_id = %s
+                  AND EXISTS (SELECT 1 FROM user_bookmarks b2
+                               WHERE b2.user_id = b1.user_id
+                                 AND b2.dissertation_id = %s)
+              RETURNING b1.id""",
+            (loser_id, winner_id))
+        result.bookmarks_dropped = len(cur.fetchall())
+
+        cur.execute(
+            """UPDATE user_bookmarks SET dissertation_id = %s
+                WHERE dissertation_id = %s
+              RETURNING id""",
+            (winner_id, loser_id))
+        bookmark_ids = [r[0] for r in cur.fetchall()]
+        result.bookmarks_repointed = len(bookmark_ids)
+        for bookmark_id in bookmark_ids:
+            _log_fix(cur, run_id, bookmark_id, "user_bookmarks", "dissertation_id",
+                     loser_id, winner_id, applied_by)
+
+        # 3. specialty_notifications_log: no uniqueness, plain repoint.
+        cur.execute(
+            """UPDATE specialty_notifications_log SET dissertation_id = %s
+                WHERE dissertation_id = %s
+              RETURNING id""",
+            (winner_id, loser_id))
+        log_ids = [r[0] for r in cur.fetchall()]
+        result.subscriptions_repointed = len(log_ids)
+        for log_id in log_ids:
+            _log_fix(cur, run_id, log_id, "specialty_notifications_log",
+                     "dissertation_id", loser_id, winner_id, applied_by)
+
+        # 4. duplicate_candidates: soft reference, UNIQUE(record_type,
+        #    record_id_1, record_id_2), canonical id1 < id2. Any OTHER row
+        #    pairing the loser with a third record is repointed to the winner;
+        #    a row that already represents exactly (winner, loser) — i.e. this
+        #    candidate itself, or a stray duplicate of it — is retired here
+        #    too. A collision with an existing (winner, third) row means that
+        #    pairing is already recorded, so the now-redundant row is dropped
+        #    rather than erroring.
+        cur.execute(
+            """SELECT id, record_id_1, record_id_2 FROM duplicate_candidates
+                WHERE record_type = %s AND (record_id_1 = %s OR record_id_2 = %s)
+                  AND id <> %s""",
+            (DUP_TABLE_TYPE, loser_id, loser_id, plan.candidate_id))
+        for row_id, id1, id2 in cur.fetchall():
+            third = id2 if id1 == loser_id else id1
+            if third == winner_id:
+                cur.execute(
+                    "UPDATE duplicate_candidates SET status = 'merged', "
+                    "reviewed_at = NOW() WHERE id = %s", (row_id,))
+                result.duplicate_rows_repointed += 1
+                continue
+            new1, new2 = (winner_id, third) if winner_id < third else (third, winner_id)
+            cur.execute(
+                """SELECT 1 FROM duplicate_candidates
+                    WHERE record_type = %s AND record_id_1 = %s AND record_id_2 = %s
+                      AND id <> %s""",
+                (DUP_TABLE_TYPE, new1, new2, row_id))
+            if cur.fetchone():
+                cur.execute("DELETE FROM duplicate_candidates WHERE id = %s", (row_id,))
+                result.duplicate_rows_dropped += 1
+            else:
+                _log_fix(cur, run_id, row_id, "duplicate_candidates",
+                         "record_id_1/record_id_2", f"{id1},{id2}",
+                         f"{new1},{new2}", applied_by)
+                cur.execute(
+                    "UPDATE duplicate_candidates SET record_id_1 = %s, "
+                    "record_id_2 = %s WHERE id = %s", (new1, new2, row_id))
+                result.duplicate_rows_repointed += 1
+
+        # 5. Retire the loser. NEVER deleted — merged_into_id is how a reader
+        #    (or a future rollback) finds out this row was superseded.
+        _log_fix(cur, run_id, loser_id, "dissertations", "merged_into_id",
+                 None, winner_id, applied_by)
+        cur.execute(
+            "UPDATE dissertations SET merged_into_id = %s, merged_at = NOW() "
+            "WHERE id = %s", (winner_id, loser_id))
+
+        # 6. Close out the reviewed candidate itself.
+        cur.execute(
+            """UPDATE duplicate_candidates
+                   SET status = 'merged', reviewed_by = %s, reviewed_at = NOW()
+                 WHERE id = %s""",
+            (reviewed_by, plan.candidate_id))
+
+    return result

@@ -47,6 +47,7 @@ allowlist.
 | `data_quality/duplicate_service.py` | duplicate detection + persistence, optional pg_trgm awareness. |
 | `data_quality/import_precheck.py` | flag-gated import summary (pure). |
 | `data_quality/cli_common.py` | CLI connection + safe output helpers. |
+| `data_quality/merge_review.py` | merge decision logic — winner selection, field-fill planning, merge guards (pure, no DB). |
 
 ## Database objects (migrations 004 + 005)
 
@@ -57,6 +58,22 @@ allowlist.
 
 Polymorphic `record_id` has **no hard FK** to `dissertations` (the column also
 targets future record types); referential integrity is checked in code.
+
+## Database objects (migration 006 — duplicate merge execution)
+
+- **dissertations.merged_into_id / merged_at** — nullable, self-referencing.
+  Set by `scripts/merge_duplicates.py` on the losing record of a merge; NULL
+  means "live record". The row is never deleted.
+- **data_quality_fix_log** — one row per field value actually rewritten by a
+  merge (before/after, `run_id`→runs ON DELETE RESTRICT). See
+  `docs/data_quality_dissertation_fk_inventory.md` for why this table's schema
+  is written to match the (separate, not-yet-merged) `feat/data-quality-fix-log`
+  branch's design rather than inventing a second one.
+
+Merge is triggered on `status='confirmed'` candidates only (never automatic),
+repoints every known foreign key into `dissertations(id)` — see the FK
+inventory doc — and refuses to run at all if `information_schema` reports one
+it does not recognize.
 
 ## Request/CLI flows
 
