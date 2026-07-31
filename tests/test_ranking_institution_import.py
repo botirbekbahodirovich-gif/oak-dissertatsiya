@@ -74,6 +74,27 @@ def sample_workbook():
     return payload
 
 
+def duplicate_workbook():
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append([
+        "rank", "institution_name", "category", "h_scopus", "h_wos",
+        "h_scholar", "national_h_index",
+    ])
+    for rank in range(1, 10):
+        sheet.append([
+            rank, f"Sample University {rank}", "university",
+            100 - rank, 90 - rank, 80 - rank, 70 - rank,
+        ])
+    sheet.append([
+        10, "Sample University 9", "university", 90, 80, 70, 60,
+    ])
+    payload = io.BytesIO()
+    workbook.save(payload)
+    payload.seek(0)
+    return payload
+
+
 class InstitutionImportTest(unittest.TestCase):
     def setUp(self):
         self.app = Flask(__name__)
@@ -81,16 +102,19 @@ class InstitutionImportTest(unittest.TestCase):
         self.cursor = FakeCursor()
         self.connection = FakeConnection()
 
-    def upload_sample(self):
+    def upload_workbook(self, payload=None, filename="institutions-sample-10.xlsx",
+                        source="staging-sample"):
+        if payload is None:
+            payload = sample_workbook()
         with self.app.test_request_context(
             "/admin/reyting",
             method="POST",
             data={
                 "kind": "institutions",
                 "snapshot_date": "2026-07-31",
-                "source": "staging-sample",
+                "source": source,
                 "notes": "10-row isolated test",
-                "file": (sample_workbook(), "institutions-sample-10.xlsx"),
+                "file": (payload, filename),
             },
             content_type="multipart/form-data",
         ):
@@ -106,8 +130,8 @@ class InstitutionImportTest(unittest.TestCase):
         with patch.object(ranking, "_build_uni_list", return_value=[]), patch.object(
             ranking, "_clear_ranking_cache"
         ):
-            first_messages = self.upload_sample()
-            second_messages = self.upload_sample()
+            first_messages = self.upload_workbook()
+            second_messages = self.upload_workbook()
 
         self.assertEqual(len(self.cursor.institutions), 10)
         self.assertEqual(self.cursor.snapshot_inserts, 1)
@@ -118,6 +142,21 @@ class InstitutionImportTest(unittest.TestCase):
         self.assertTrue(any("10 ta qator" in text for _, text in first_messages))
         self.assertTrue(any("allaqachon mavjud" in text for _, text in second_messages))
         self.assertFalse(any("h_index_scholars" in sql for sql, _ in self.cursor.executed_sql))
+
+    def test_institution_import_is_atomic_when_a_row_is_skipped(self):
+        with patch.object(ranking, "_build_uni_list", return_value=[]), patch.object(
+            ranking, "_clear_ranking_cache"
+        ):
+            messages = self.upload_workbook(
+                duplicate_workbook(),
+                filename="institutions-duplicate.xlsx",
+                source="staging-duplicate",
+            )
+
+        self.assertEqual(self.connection.commits, 0)
+        self.assertEqual(self.connection.rollbacks, 1)
+        self.assertEqual(self.cursor.snapshot_inserts, 1)
+        self.assertTrue(any("qisman yozilmadi" in text for _, text in messages))
 
 
 if __name__ == "__main__":

@@ -718,6 +718,20 @@ def _handle_upload(cur, conn):
             errors.append(f"{rn}-qator ({name[:40]}): {e}")
             skipped += 1
             continue
+    if kind == 'institutions' and (skipped or added == 0):
+        conn.rollback()
+        if added == 0 and skipped == 0:
+            flash("Import bekor qilindi: faylda yoziladigan tashkilot qatori yo'q.",
+                  'error')
+        else:
+            flash(
+                f"Import bekor qilindi: {skipped} ta xato yoki dublikat qator "
+                "topildi. Tashkilot snapshoti qisman yozilmadi.",
+                'error')
+        for e in errors[:15]:
+            flash(e, 'warning')
+        return
+
     conn.commit()
     _clear_ranking_cache()
 
