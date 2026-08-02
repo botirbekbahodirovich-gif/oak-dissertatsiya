@@ -294,6 +294,55 @@ def _scholars_of(snap_id):
     return items
 
 
+def _ranked_researchers(source):
+    """Normalized datasetdan source-specific TOP researcherlar."""
+    if source not in ('scopus', 'scholar'):
+        return {'date': '', 'reporting_period': '', 'items': []}
+    key = f'ranking_researchers_{source}_v1'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    rows = _safe_rows("""
+        SELECT m.rank, c.display_name, o.name, m.h_index, p.orcid,
+               op.olim_name, p.external_profile_url, p.source_author_id,
+               m.snapshot_date, m.reporting_period
+        FROM researcher_metric_snapshots m
+        JOIN canonical_researchers c ON c.id = m.researcher_id
+        JOIN researcher_external_profiles p ON p.id = m.external_profile_id
+        JOIN researcher_affiliations a
+          ON a.researcher_id = m.researcher_id
+         AND a.source = m.source
+         AND a.reporting_period = m.reporting_period
+         AND a.is_primary = TRUE
+        JOIN research_organizations o ON o.id = a.organization_id
+        LEFT JOIN olim_profiles op ON op.id = c.olim_profile_id
+        WHERE m.source = %s
+          AND m.rank IS NOT NULL
+          AND m.snapshot_date = (
+              SELECT MAX(m2.snapshot_date)
+              FROM researcher_metric_snapshots m2
+              WHERE m2.source = %s AND m2.rank IS NOT NULL
+          )
+        ORDER BY m.rank, c.display_name, p.id
+    """, (source, source))
+    items = [{
+        'rank': r[0], 'scholar_name': r[1] or '', 'cyrillic': '',
+        'institution': r[2] or '', 'h_index': r[3],
+        'h_scopus': r[3] if source == 'scopus' else None,
+        'h_wos': None,
+        'h_scholar': r[3] if source == 'scholar' else None,
+        'orcid': r[4] or '', 'olim_match': r[5] or '',
+        'external_profile_url': r[6] or '', 'source_author_id': r[7] or '',
+    } for r in rows]
+    result = {
+        'date': str(rows[0][8]) if rows else '',
+        'reporting_period': rows[0][9] if rows else '',
+        'items': items,
+    }
+    cache.set(key, result, timeout=_CACHE_TTL)
+    return result
+
+
 def _institutions_of(snap_id):
     key = f'ranking_institutions_{snap_id}_v1'
     cached = cache.get(key)
@@ -317,7 +366,8 @@ def _clear_ranking_cache():
     """Yuklash/o'chirishdan keyin barcha reyting keshlarini tozalash."""
     for k in ('ranking_latest_scholars_v1', 'ranking_latest_institutions_v1',
               'ranking_lookup_scholars_v1', 'ranking_lookup_institutions_v1',
-              'ranking_top_scholars_v1'):
+              'ranking_top_scholars_v1', 'ranking_researchers_scopus_v1',
+              'ranking_researchers_scholar_v1'):
         cache.delete(k)
     # snapshot qatorlari keshlarini keng oraliqda tozalaymiz (id'lar noma'lum)
     try:
@@ -402,6 +452,9 @@ def get_top_scholars(limit=10):
         if snap:
             sid, sdate = snap
             cached = {'date': sdate, 'items': _scholars_of(sid)[:20]}
+        else:
+            normalized = _ranked_researchers('scopus')
+            cached = {'date': normalized['date'], 'items': normalized['items'][:20]}
         cache.set('ranking_top_scholars_v1', cached, timeout=_CACHE_TTL)
     return {'date': cached['date'], 'items': cached['items'][:limit]}
 
@@ -443,6 +496,34 @@ def api_scholars():
     total = len(items)
     return jsonify({'ok': True, 'snapshot_date': sdate, 'count': total,
                     'items': items[:1000]})
+
+
+@ranking_bp.route('/api/v1/ranking/researchers')
+def api_researchers():
+    source = (request.args.get('source') or 'scopus').strip().lower()
+    if source not in ('scopus', 'scholar'):
+        return jsonify({'ok': False, 'error': "source 'scopus' yoki 'scholar' bo'lishi kerak"}), 400
+    data = _ranked_researchers(source)
+    items = data['items']
+    inst = (request.args.get('institution') or '').strip().lower()
+    search = (request.args.get('search') or '').strip().lower()
+    min_h = _to_int(request.args.get('min_h'))
+    if inst:
+        items = [s for s in items if inst in s['institution'].lower()]
+    if search:
+        items = [s for s in items
+                 if search in s['scholar_name'].lower()
+                 or search in s['institution'].lower()]
+    if min_h:
+        items = [s for s in items if (s['h_index'] or 0) >= min_h]
+    return jsonify({
+        'ok': True,
+        'source': source,
+        'snapshot_date': data['date'] or None,
+        'reporting_period': data['reporting_period'] or None,
+        'count': len(items),
+        'items': items[:1000],
+    })
 
 
 @ranking_bp.route('/api/v1/ranking/institutions')

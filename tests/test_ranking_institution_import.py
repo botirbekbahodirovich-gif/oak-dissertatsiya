@@ -176,5 +176,36 @@ class InstitutionImportTest(unittest.TestCase):
         )
 
 
+class NormalizedResearcherReadTest(unittest.TestCase):
+    def setUp(self):
+        self.app = Flask(__name__)
+
+    def test_source_specific_researcher_mapping(self):
+        rows = [(
+            1, "Sample Researcher", "Sample University", 42,
+            "0000-0001-2345-6789", None,
+            "https://www.scopus.com/authid/detail.uri?authorId=123",
+            "123", "2026-07-31", "2026-Q2",
+        )]
+        with patch.object(ranking.cache, "get", return_value=None), patch.object(
+            ranking.cache, "set"
+        ), patch.object(ranking, "_safe_rows", return_value=rows):
+            result = ranking._ranked_researchers("scopus")
+
+        self.assertEqual(result["date"], "2026-07-31")
+        self.assertEqual(result["reporting_period"], "2026-Q2")
+        self.assertEqual(result["items"][0]["h_index"], 42)
+        self.assertEqual(result["items"][0]["h_scopus"], 42)
+        self.assertIsNone(result["items"][0]["h_scholar"])
+        self.assertEqual(result["items"][0]["source_author_id"], "123")
+
+    def test_researcher_api_rejects_unknown_source(self):
+        with self.app.test_request_context("/api/v1/ranking/researchers?source=wos"):
+            response, status = ranking.api_researchers()
+
+        self.assertEqual(status, 400)
+        self.assertFalse(response.get_json()["ok"])
+
+
 if __name__ == "__main__":
     unittest.main()
