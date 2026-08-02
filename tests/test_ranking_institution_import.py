@@ -158,6 +158,23 @@ class InstitutionImportTest(unittest.TestCase):
         self.assertEqual(self.cursor.snapshot_inserts, 1)
         self.assertTrue(any("qisman yozilmadi" in text for _, text in messages))
 
+    def test_institution_match_rejects_single_generic_token(self):
+        target = "Toshkent davlat texnika universiteti"
+        unis = [(target, ranking._inst_tokens(target))]
+
+        self.assertIsNone(
+            ranking._match_uni("Toshkent tibbiyot akademiyasi", unis)
+        )
+
+    def test_institution_match_accepts_exact_normalized_name(self):
+        target = "Fargona davlat universiteti"
+        unis = [(target, ranking._inst_tokens(target))]
+
+        self.assertEqual(
+            ranking._match_uni("Fargʻona Davlat Universiteti", unis),
+            target,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

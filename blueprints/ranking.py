@@ -199,19 +199,33 @@ def _match_olim(name, by_key, by_skey):
 
 
 def _match_uni(inst_name, unis):
-    """institution_name → eng mos universities.name (token-overlap ≥ 0.6) yoki None."""
+    """institution_name → xavfsiz universities.name mosligi yoki None.
+
+    Exact normallashgan nom har doim qabul qilinadi. Fuzzy moslik esa bitta
+    umumiy shahar tokeniga tayanmasligi uchun kamida ikki ajratuvchi tokenni
+    va har ikki nom bo'yicha yetarli qamrovni talab qiladi.
+    """
+    from institutions import transliterate
+
     itoks = _inst_tokens(inst_name)
     if not itoks:
         return None
-    best, best_ratio = None, 0.0
+    inst_key = _norm(transliterate(inst_name or ''))
+    best, best_score = None, 0.0
     for name, utoks in unis:
+        if inst_key and _norm(transliterate(name or '')) == inst_key:
+            return name
         shared = itoks & utoks
-        if not shared:
+        if len(shared) < 2:
             continue
-        ratio = len(shared) / len(utoks)     # universitet tokenlari qanchalik qoplangan
-        if ratio > best_ratio:
-            best, best_ratio = name, ratio
-    return best if best_ratio >= 0.6 else None
+        target_coverage = len(shared) / len(utoks)
+        source_coverage = len(shared) / len(itoks)
+        if target_coverage < 0.6 or source_coverage < 0.5:
+            continue
+        score = len(shared) / len(itoks | utoks)
+        if score > best_score:
+            best, best_score = name, score
+    return best
 
 
 def _safe_rows(sql, params=None):
