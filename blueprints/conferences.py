@@ -28,6 +28,7 @@ Routes:
                                          GitHub Actions scraperdan keyin chaqiradi)
   /admin/conferences*                  — admin CRUD (admin/grants naqshi)
 """
+import json
 import os
 import re
 from datetime import date, datetime
@@ -249,6 +250,24 @@ def _ensure_schema(cur):
         ('ccf_rank', 'VARCHAR(8)'), ('core_rank', 'VARCHAR(8)'),
         ('doi_available', 'BOOLEAN DEFAULT FALSE'),
         ('source', 'VARCHAR(50)'),
+        # v3: xalqaro konferensiyani ishonchli baholash uchun maydonlar.
+        # JSONB ro'yxatlar manbalar orasidagi turli narx/sana tuzilmasini
+        # yo'qotmasdan saqlaydi; holat maydonlari noaniqlikni yashirmaydi.
+        ('official_url', 'TEXT'), ('source_name', 'VARCHAR(200)'),
+        ('source_type', "VARCHAR(30) DEFAULT 'aggregator'"),
+        ('organizer_verified', 'BOOLEAN DEFAULT FALSE'),
+        ('indexing_status', "VARCHAR(30) DEFAULT 'unverified'"),
+        ('indexing_evidence_url', 'TEXT'),
+        ('last_verified_at', 'TIMESTAMP'),
+        ('conference_language', 'VARCHAR(100)'),
+        ('paper_language', 'VARCHAR(100)'),
+        ('presentation_types', 'TEXT[]'), ('audience', 'TEXT[]'),
+        ('key_dates', "JSONB DEFAULT '[]'::jsonb"),
+        ('fees', "JSONB DEFAULT '[]'::jsonb"),
+        ('travel_grant_status', "VARCHAR(30) DEFAULT 'unknown'"),
+        ('travel_grant_url', 'TEXT'),
+        ('proceedings_name', 'VARCHAR(300)'),
+        ('proceedings_status', "VARCHAR(30) DEFAULT 'unverified'"),
     ):
         cur.execute(f"ALTER TABLE conferences ADD COLUMN IF NOT EXISTS {_col} {_typ}")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_conf_field_id "
@@ -298,7 +317,16 @@ _CONF_COLS = ('id', 'title', 'title_slug', 'scope', 'organizer', 'field',
               'poster_image', 'ccf_rank', 'core_rank', 'doi_available',
               # B2B universitet paneli (faqat SELECT'larda; INSERT'lar
               # _ADMIN_FIELDS/_ADMIN_EXTRA bilan boshqariladi)
-              'canonical_institution', 'submitted_by', 'moderation_status')
+              'canonical_institution', 'submitted_by', 'moderation_status',
+              # v3 ishonchlilik, narx va qaror qabul qilish maydonlari
+              'official_url', 'source_name', 'source_type',
+              'organizer_verified', 'indexing_status',
+              'indexing_evidence_url', 'last_verified_at',
+              'conference_language', 'paper_language',
+              'presentation_types', 'audience', 'key_dates', 'fees',
+              'travel_grant_status', 'travel_grant_url',
+              'proceedings_name', 'proceedings_status')
+
 
 
 def _card(r):
@@ -306,6 +334,39 @@ def _card(r):
     start, end = r.get('start_date'), r.get('end_date')
     sub = r.get('submission_deadline')
     days = _days_until(start)
+    today = date.today()
+    end_for_status = end or start
+    if start and end_for_status and start <= today <= end_for_status:
+        event_status = 'ongoing'
+    elif start and start > today:
+        event_status = 'upcoming'
+    elif end_for_status and end_for_status < today:
+        event_status = 'past'
+    else:
+        event_status = 'unknown'
+
+    key_dates = list(r.get('key_dates') or [])
+    if not key_dates:
+        for kind, label, value in (
+            ('submission', 'Maqola topshirish', sub),
+            ('notification', 'Qabul haqida xabar', r.get('notification_date')),
+            ('registration', "Ro'yxatdan o'tish", r.get('registration_deadline')),
+            ('conference', 'Konferensiya sanalari', start),
+        ):
+            if value:
+                key_dates.append({'type': kind, 'label': label,
+                                  'date': value.isoformat() if hasattr(value, 'isoformat') else str(value)[:10]})
+    for entry in key_dates:
+        if not isinstance(entry, dict):
+            continue
+        parsed = _parse_date(entry.get('date'))
+        entry.setdefault('date_uz', _uz_date(parsed) if parsed else (entry.get('date') or ''))
+        entry.setdefault('days_remaining', _days_until(parsed))
+
+    indexing_status = (r.get('indexing_status') or 'unverified').lower()
+    # Legacy yozuvlar faqat eski boolean tasdiq bilan keladi.
+    if r.get('is_scopus_indexed') and indexing_status == 'unverified':
+        indexing_status = 'verified'
     item = {
         'id': r['id'],
         'title': r.get('title') or '',
@@ -333,6 +394,7 @@ def _card(r):
         'description': r.get('description') or '',
         'days_remaining': days,
         'expired': days is not None and days < 0,
+        'event_status': event_status,
         # v2 maydonlar
         'acronym': r.get('acronym') or '',
         'title_en': r.get('title_en') or '',
@@ -352,6 +414,28 @@ def _card(r):
         'ccf_rank': (r.get('ccf_rank') or '').upper(),
         'core_rank': (r.get('core_rank') or '').upper(),
         'doi_available': bool(r.get('doi_available')),
+        # v3
+        'official_url': r.get('official_url') or '',
+        'source_name': r.get('source_name') or r.get('source') or '',
+        'source_type': r.get('source_type') or 'aggregator',
+        'organizer_verified': bool(r.get('organizer_verified')),
+        'indexing_status': indexing_status,
+        'indexing_evidence_url': r.get('indexing_evidence_url') or '',
+        'last_verified_at': (r['last_verified_at'].date().isoformat()
+                             if isinstance(r.get('last_verified_at'), datetime)
+                             else (r['last_verified_at'].isoformat()
+                                   if r.get('last_verified_at') else None)),
+        'last_verified_uz': _uz_date(r.get('last_verified_at')),
+        'conference_language': r.get('conference_language') or '',
+        'paper_language': r.get('paper_language') or '',
+        'presentation_types': list(r.get('presentation_types') or []),
+        'audience': list(r.get('audience') or []),
+        'key_dates': key_dates,
+        'fees': list(r.get('fees') or []),
+        'travel_grant_status': r.get('travel_grant_status') or 'unknown',
+        'travel_grant_url': r.get('travel_grant_url') or '',
+        'proceedings_name': r.get('proceedings_name') or r.get('publisher') or '',
+        'proceedings_status': r.get('proceedings_status') or 'unverified',
     }
     return item
 
@@ -736,6 +820,7 @@ def get_upcoming_conferences(limit=3):
 # ── bookmark (user_bookmarks UX aksi) ────────────────────────────────────────
 
 @conferences_bp.route('/api/v1/conferences/bookmark', methods=['POST'])
+@csrf.exempt
 @login_required
 def conference_bookmark():
     data = request.get_json(silent=True) or {}
@@ -770,6 +855,7 @@ def conference_bookmark():
 # ── Roadmap integratsiyasi ───────────────────────────────────────────────────
 
 @conferences_bp.route('/api/v1/conferences/roadmap', methods=['POST'])
+@csrf.exempt
 @login_required
 def conference_to_roadmap():
     """Katalogdagi konferensiyani foydalanuvchining faol Roadmap rejasiga
@@ -1013,11 +1099,18 @@ _ADMIN_FIELDS = ('title', 'scope', 'organizer', 'field', 'region', 'city',
                  # v2 tahrirlanadigan maydonlar
                  'acronym', 'title_en', 'venue', 'organizer_contact', 'cfp_url',
                  'registration_deadline', 'notification_date', 'poster_image',
-                 'ccf_rank', 'core_rank')
+                 'ccf_rank', 'core_rank',
+                 # v3
+                 'official_url', 'source_name', 'source_type',
+                 'indexing_status', 'indexing_evidence_url',
+                 'conference_language', 'paper_language',
+                 'travel_grant_status', 'travel_grant_url',
+                 'proceedings_name', 'proceedings_status')
 
 # _ADMIN_FIELDS'dan tashqari, alohida ishlov beriladigan ustunlar (bool/array/fk)
 _ADMIN_EXTRA = ('is_scopus_indexed', 'is_multiday', 'field_id', 'tags',
-                'doi_available')
+                'doi_available', 'organizer_verified', 'presentation_types',
+                'audience', 'key_dates', 'fees', 'last_verified_at')
 
 
 def _get_conference_fields():
@@ -1045,6 +1138,7 @@ def _admin_form_values():
         v[k] = _parse_date(v[k])
     v['is_scopus_indexed'] = f.get('is_scopus_indexed') == 'on'
     v['doi_available'] = f.get('doi_available') == 'on'
+    v['organizer_verified'] = f.get('organizer_verified') == 'on'
     v['is_multiday'] = bool(v['start_date'] and v['end_date']
                             and v['end_date'] != v['start_date'])
     # field_id (soha select) — bo'sh bo'lsa None
@@ -1055,6 +1149,20 @@ def _admin_form_values():
     # tags — vergul bilan ajratilgan
     tags = [t.strip() for t in (f.get('tags') or '').split(',') if t.strip()]
     v['tags'] = tags or None
+    for name in ('presentation_types', 'audience'):
+        values = [x.strip() for x in (f.get(name) or '').split(',') if x.strip()]
+        v[name] = values or None
+    for name in ('key_dates', 'fees'):
+        raw = (f.get(name) or '').strip()
+        if not raw:
+            v[name] = []
+            continue
+        try:
+            parsed = json.loads(raw)
+            v[name] = parsed if isinstance(parsed, list) else []
+        except (TypeError, ValueError, json.JSONDecodeError):
+            v[name] = []
+    v['last_verified_at'] = _parse_date(f.get('last_verified_at'))
     return v
 
 

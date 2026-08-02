@@ -148,6 +148,66 @@
           Materiallar DOI bilan chop etiladi</label></div>
     </div>
 
+    <hr style="border:0;border-top:1px solid rgba(148,163,184,.2);margin:8px 0;">
+    <h2 style="font-size:1rem;margin:0;">Ishonchlilik va xalqaro ma'lumotlar</h2>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Rasmiy sayt</label>
+        <input class="cf-in" name="official_url" value="{{ v.get('official_url') or '' }}"></div>
+      <div><label class="cf-lbl">Topilgan manba nomi</label>
+        <input class="cf-in" name="source_name" maxlength="200" value="{{ v.get('source_name') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Manba turi</label>
+        <select class="cf-in" name="source_type">
+          {% for x in ['official','publisher','society','university','aggregator'] %}<option value="{{ x }}" {{ 'selected' if v.get('source_type') == x }}>{{ x }}</option>{% endfor %}
+        </select></div>
+      <div><label class="cf-lbl">Oxirgi tekshirilgan sana</label>
+        <input class="cf-in" name="last_verified_at" type="date" value="{{ v.get('last_verified_at') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Indeksatsiya holati</label>
+        <select class="cf-in" name="indexing_status">
+          {% for x in ['unverified','claimed','verified','not_indexed'] %}<option value="{{ x }}" {{ 'selected' if v.get('indexing_status') == x }}>{{ x }}</option>{% endfor %}
+        </select></div>
+      <div><label class="cf-lbl">Indeksatsiya dalili</label>
+        <input class="cf-in" name="indexing_evidence_url" value="{{ v.get('indexing_evidence_url') or '' }}"></div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer;">
+      <input type="checkbox" name="organizer_verified" style="accent-color:#367E3F;" {{ 'checked' if v.get('organizer_verified') }}>
+      Tashkilotchi rasmiy manba bilan tasdiqlangan
+    </label>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Konferensiya tili</label><input class="cf-in" name="conference_language" value="{{ v.get('conference_language') or '' }}"></div>
+      <div><label class="cf-lbl">Maqola tili</label><input class="cf-in" name="paper_language" value="{{ v.get('paper_language') or '' }}"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Taqdimot shakllari (vergul bilan)</label><input class="cf-in" name="presentation_types" value="{{ (v.get('presentation_types') or [])|join(', ') }}" placeholder="Og'zaki, poster"></div>
+      <div><label class="cf-lbl">Kimlar uchun (vergul bilan)</label><input class="cf-in" name="audience" value="{{ (v.get('audience') or [])|join(', ') }}" placeholder="Magistrlar, PhD, DSc"></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Nashr / proceedings nomi</label><input class="cf-in" name="proceedings_name" value="{{ v.get('proceedings_name') or '' }}"></div>
+      <div><label class="cf-lbl">Nashr holati</label>
+        <select class="cf-in" name="proceedings_status">{% for x in ['unverified','claimed','verified'] %}<option value="{{ x }}" {{ 'selected' if v.get('proceedings_status') == x }}>{{ x }}</option>{% endfor %}</select></div>
+    </div>
+
+    <div class="cf-row2">
+      <div><label class="cf-lbl">Travel grant holati</label>
+        <select class="cf-in" name="travel_grant_status">{% for x in ['unknown','available','unavailable'] %}<option value="{{ x }}" {{ 'selected' if v.get('travel_grant_status') == x }}>{{ x }}</option>{% endfor %}</select></div>
+      <div><label class="cf-lbl">Travel grant havolasi</label><input class="cf-in" name="travel_grant_url" value="{{ v.get('travel_grant_url') or '' }}"></div>
+    </div>
+
+    <div><label class="cf-lbl">Muhim sanalar (JSON ro'yxat)</label>
+      <textarea class="cf-in" name="key_dates" rows="4" placeholder='[{"label":"Maqola topshirish","date":"2026-03-31","type":"submission"}]'>{{ v.get('key_dates')|tojson if v.get('key_dates') else '[]' }}</textarea></div>
+    <div><label class="cf-lbl">Narxlar (JSON ro'yxat)</label>
+      <textarea class="cf-in" name="fees" rows="4" placeholder='[{"label":"Talaba","amount":"250","currency":"USD"}]'>{{ v.get('fees')|tojson if v.get('fees') else '[]' }}</textarea></div>
+
     <div><label class="cf-lbl">Tavsif</label>
       <textarea class="cf-in" name="description" rows="4">{{ v.get('description') or '' }}</textarea></div>
 

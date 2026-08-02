@@ -56,3 +56,22 @@ CREATE INDEX IF NOT EXISTS idx_conf_notif_log
 -- Roadmap: katalogdan qo'shilgan yozuv belgisi (qo'ldagilar NULL bo'lib qoladi)
 ALTER TABLE IF EXISTS roadmap_conferences
     ADD COLUMN IF NOT EXISTS source_conference_id INTEGER;
+
+-- v3: konferensiya detail sahifasidagi ishonchlilik, til, narx va muddatlar.
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS official_url TEXT;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS source_name VARCHAR(200);
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS source_type VARCHAR(30) DEFAULT 'aggregator';
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS organizer_verified BOOLEAN DEFAULT FALSE;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS indexing_status VARCHAR(30) DEFAULT 'unverified';
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS indexing_evidence_url TEXT;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS last_verified_at TIMESTAMP;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS conference_language VARCHAR(100);
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS paper_language VARCHAR(100);
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS presentation_types TEXT[];
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS audience TEXT[];
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS key_dates JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS fees JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS travel_grant_status VARCHAR(30) DEFAULT 'unknown';
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS travel_grant_url TEXT;
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS proceedings_name VARCHAR(300);
+ALTER TABLE conferences ADD COLUMN IF NOT EXISTS proceedings_status VARCHAR(30) DEFAULT 'unverified';
