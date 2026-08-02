@@ -279,11 +279,9 @@
     if (!items.length) { tb.innerHTML = '<tr><td colspan="4" class="rk-state">Mos olim topilmadi</td></tr>'; return; }
     var html = '';
     items.forEach(function (s, i) {
-      var name = s.olim_match
-        ? '<a href="/olim/' + encodeURIComponent(s.olim_match) + '">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
-        : (s.external_profile_url
-          ? '<a href="' + esc(s.external_profile_url) + '" target="_blank" rel="noopener nofollow">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
-          : esc(s.scholar_name));
+      var name = s.profile_url
+        ? '<a href="' + esc(s.profile_url) + '">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
+        : esc(s.scholar_name);
       var orcid = s.orcid ? ' <a class="rk-orcid" href="https://orcid.org/' + encodeURIComponent(s.orcid.replace(/^https?:\/\/orcid\.org\//, '')) + '" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill"></i></a>' : '';
       html += '<tr>' +
         '<td class="rk-rank">' + medal(s.rank, i) + '</td>' +

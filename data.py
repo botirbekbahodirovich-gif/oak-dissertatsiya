@@ -1221,6 +1221,120 @@ _SANA_ORDER_PLAIN = (
 )
 
 
+_PUBLIC_OLIM_ID_RE = re.compile(r'^OLIM-[A-F0-9]{12}$', re.IGNORECASE)
+
+
+def _load_canonical_researcher(public_id=None, olim_name=None):
+    """Public OLIM ID yoki bog'langan OAK profili orqali canonical olimni yuklaydi."""
+    if not public_id and not olim_name:
+        return None
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
+                where = "c.public_id = %s"
+                value = (public_id or '').strip().upper()
+                if olim_name:
+                    where = "LOWER(TRIM(op.olim_name)) = LOWER(TRIM(%s))"
+                    value = (olim_name or '').strip()
+                cur.execute(f"""
+                    SELECT c.id, c.public_id, c.display_name, c.orcid,
+                           c.olim_profile_id, op.olim_name, op.slug,
+                           org.name AS institution,
+                           org.university_id,
+                           uni.name AS university_name,
+                           aff.organization_rank
+                    FROM canonical_researchers c
+                    LEFT JOIN olim_profiles op ON op.id = c.olim_profile_id
+                    LEFT JOIN LATERAL (
+                        SELECT a.organization_id, a.organization_rank
+                        FROM researcher_affiliations a
+                        WHERE a.researcher_id = c.id
+                        ORDER BY a.is_primary DESC, a.reporting_period DESC, a.id DESC
+                        LIMIT 1
+                    ) aff ON TRUE
+                    LEFT JOIN research_organizations org ON org.id = aff.organization_id
+                    LEFT JOIN universities uni ON uni.id = org.university_id
+                    WHERE {where}
+                    LIMIT 1
+                """, (value,))
+                row = cur.fetchone()
+                if not row:
+                    return None
+                researcher = dict(row)
+
+                cur.execute("""
+                    SELECT DISTINCT ON (source)
+                           source, source_author_id, external_profile_url, orcid
+                    FROM researcher_external_profiles
+                    WHERE researcher_id = %s
+                    ORDER BY source, updated_at DESC, id DESC
+                """, (researcher['id'],))
+                researcher['external_profiles'] = {
+                    r['source']: dict(r) for r in cur.fetchall()
+                }
+
+                cur.execute("""
+                    SELECT DISTINCT ON (source)
+                           source, h_index, rank, reporting_period, snapshot_date
+                    FROM researcher_metric_snapshots
+                    WHERE researcher_id = %s
+                    ORDER BY source, snapshot_date DESC, id DESC
+                """, (researcher['id'],))
+                researcher['metrics'] = [dict(r) for r in cur.fetchall()]
+                return researcher
+        finally:
+            conn.close()
+    except Exception:
+        log_exception(current_app.logger, "Canonical researcher profile yuklanmadi")
+        return None
+
+
+def _profile_with_research_sources(profile, canonical):
+    """OAK portfolio maydonlarini canonical Scopus/Scholar/ORCID bilan boyitadi."""
+    if not canonical:
+        return profile
+    merged = dict(profile or {})
+    merged['public_id'] = canonical.get('public_id')
+    if not merged.get('institution'):
+        merged['institution'] = canonical.get('institution') or ''
+    merged['university_name'] = canonical.get('university_name') or ''
+    merged['organization_rank'] = canonical.get('organization_rank')
+
+    external = canonical.get('external_profiles') or {}
+    source_fields = {
+        'scopus': 'scopus_url',
+        'scholar': 'scholar_url',
+        'wos': 'wos_url',
+    }
+    allowed_hosts = {
+        'scopus': ('scopus.com',),
+        'scholar': ('scholar.google.',),
+        'wos': ('webofscience.com', 'researcherid.com', 'clarivate.com'),
+    }
+    for source, field in source_fields.items():
+        item = external.get(source) or {}
+        external_url = item.get('external_profile_url') or ''
+        try:
+            host = (urlparse(external_url).hostname or '').lower()
+        except Exception:
+            host = ''
+        if (not merged.get(field) and external_url
+                and any(token in host for token in allowed_hosts[source])):
+            merged[field] = external_url
+
+    orcid = canonical.get('orcid')
+    if not orcid:
+        orcid = next((item.get('orcid') for item in external.values()
+                      if item.get('orcid')), None)
+    orcid_url = (external.get('orcid') or {}).get('external_profile_url')
+    if not orcid_url and orcid:
+        orcid_url = 'https://orcid.org/' + str(orcid).replace('https://orcid.org/', '')
+    if not merged.get('orcid_url') and orcid_url:
+        merged['orcid_url'] = orcid_url
+    return merged
+
+
 def _slug_for_olim(term):
     """olim_name uchun tasdiqlangan slug (olim_profiles.slug) yoki None."""
     try:
@@ -1240,19 +1354,18 @@ def _slug_for_olim(term):
 
 @data_bp.route('/olim/<path:name>')
 def olim_profile(name):
-    """Eski (indekslangan) URL. Slug bo'lsa — kanonik /@slug ga 301 (SEO)."""
+    """Eski indekslangan URL. Username bo'lsa kanonik /username ga 301."""
     from flask import redirect
     term = (name or '').strip()
     slug = _slug_for_olim(term)
     if slug:
-        return redirect('/@' + slug, code=301)
+        return redirect('/' + slug, code=301)
     return _render_olim_profile(term)
 
 
 @data_bp.route('/@<slug>')
 def profile_by_username(slug):
-    """Vanity URL. slug → olim_name; topilmasa username_history'da eski slugni
-    qidiradi (301 yangi slugga); hech joyda bo'lmasa 404."""
+    """Eski @username URL'larini kanonik /username manziliga yo'naltiradi."""
     from flask import redirect
     slug = (slug or '').strip().lower()
     olim_name = None
@@ -1264,7 +1377,7 @@ def profile_by_username(slug):
                             (slug,))
                 r = cur.fetchone()
                 if r:
-                    olim_name = r[0]
+                    return redirect('/' + slug, code=301)
                 else:
                     cur.execute("""
                         SELECT p.slug FROM username_history h
@@ -1273,27 +1386,31 @@ def profile_by_username(slug):
                         ORDER BY h.changed_at DESC LIMIT 1""", (slug,))
                     hr = cur.fetchone()
                     if hr and hr[0]:
-                        return redirect('/@' + hr[0], code=301)
+                        return redirect('/' + hr[0], code=301)
         finally:
             conn.close()
     except Exception:
         olim_name = None
-    if not olim_name:
-        abort(404)
-    return _render_olim_profile(olim_name)
+    abort(404)
 
 
 @data_bp.route('/<slug>')
 def profile_by_bare_username(slug):
-    """Instagram uslubidagi '@'siz vanity URL (olimlar.uz/karimov.sardor) —
-    kanonik /@slug ga 301 (bitta indekslanadigan URL, /olim/<name> bilan bir xil
-    naqsh). Boshqa barcha aniq (static) route'lar Werkzeug tomonidan bu dinamik
-    qoidadan OLDIN tekshiriladi, shuning uchun bu qator qayerda ro'yxatdan
-    o'tishidan qat'iy nazar xavfsiz — lekin RESERVED_WORDS baribir qo'shimcha
-    himoya sifatida tekshiriladi (band bo'lmagan lekin hali yozilmagan route
-    nomlarini ham "o'lik" username qilib olishning oldini olish uchun)."""
+    """Kanonik /username va doimiy /OLIM-XXXXXXXXXXXX profil URL'lari."""
     from flask import redirect
     from utils.username import normalize_username, validate_username
+
+    raw = (slug or '').strip()
+    if _PUBLIC_OLIM_ID_RE.fullmatch(raw):
+        public_id = raw.upper()
+        canonical = _load_canonical_researcher(public_id=public_id)
+        if not canonical:
+            abort(404)
+        if raw != public_id:
+            return redirect('/' + public_id, code=301)
+        display_name = canonical.get('olim_name') or canonical.get('display_name')
+        return _render_olim_profile(display_name, canonical=canonical)
+
     slug = normalize_username(slug)
     ok, _ = validate_username(slug)
     if not ok:
@@ -1316,19 +1433,19 @@ def profile_by_bare_username(slug):
                         ORDER BY h.changed_at DESC LIMIT 1""", (slug,))
                     hr = cur.fetchone()
                     if hr and hr[0]:
-                        slug = hr[0]
-                        olim_name = True  # faqat "topildi" belgisi — pastda slug bilan redirect
+                        return redirect('/' + hr[0], code=301)
         finally:
             conn.close()
     except Exception:
         olim_name = None
     if not olim_name:
         abort(404)
-    return redirect('/@' + slug, code=301)
+    return _render_olim_profile(olim_name)
 
 
-def _render_olim_profile(term):
+def _render_olim_profile(term, canonical=None):
     term = (term or '').strip()
+    canonical = canonical or _load_canonical_researcher(olim_name=term)
     # Exact (case-insensitive) match so links resolve to the correct person in each role.
     own = _query_full_diss('LOWER(TRIM(olim)) = LOWER(TRIM(%s))', (term,), order=_SANA_ORDER_PLAIN)
     as_supervisor = _query_full_diss(
@@ -1338,9 +1455,6 @@ def _render_olim_profile(term):
         "OR LOWER(TRIM(COALESCE(opponent_2,''))) = LOWER(TRIM(%s)) "
         "OR LOWER(TRIM(COALESCE(opponent_3,''))) = LOWER(TRIM(%s))",
         (term, term, term), order=_SANA_ORDER_PLAIN)
-    # A person may exist purely as a supervisor or opponent — only 404 if they have no role at all.
-    if not own and not as_supervisor and not as_opponent:
-        abort(404)
     fields = {d.get('Ixtisoslik', '').strip() for d in own if d.get('Ixtisoslik', '').strip()}
 
     # Portfolio data (new profile tables) — empty if not yet filled in
@@ -1377,6 +1491,13 @@ def _render_olim_profile(term):
     except Exception:
         profile = None
         maqolalar = konferensiyalar = ish_faoliyati = rasmlar = magistratura_talabalari = []
+
+    profile = _profile_with_research_sources(profile, canonical)
+
+    # OAK roli bo'lmagan, lekin ro'yxatdan o'tib portfolio yaratgan olim ham
+    # haqiqiy profil hisoblanadi. Faqat uchala manba ham bo'sh bo'lsa 404.
+    if not own and not as_supervisor and not as_opponent and not canonical and not profile:
+        abort(404)
 
     stats = {
         'total': len(own),
@@ -1458,6 +1579,8 @@ def _render_olim_profile(term):
     except Exception:
         h_index = None
 
+    research_metrics = canonical.get('metrics', []) if canonical else []
+
     # Obro' metrikalari (Olimlar katalogi 2.0): avlod, nashr, sparkline, o'xshash
     reputation = None
     try:
@@ -1475,6 +1598,8 @@ def _render_olim_profile(term):
                            konferensiyalar=konferensiyalar, ish_faoliyati=ish_faoliyati, rasmlar=rasmlar,
                            tree_parents=tree_parents, tree_children=tree_children,
                            journal_map=journal_map, h_index=h_index,
+                           public_id=(canonical or {}).get('public_id'),
+                           research_metrics=research_metrics,
                            reputation=reputation)
 
 

@@ -305,7 +305,8 @@ def _ranked_researchers(source):
     rows = _safe_rows("""
         SELECT m.rank, c.display_name, o.name, m.h_index, p.orcid,
                op.olim_name, p.external_profile_url, p.source_author_id,
-               m.snapshot_date, m.reporting_period
+               m.snapshot_date, m.reporting_period, c.public_id, op.slug,
+               a.organization_rank, o.university_id
         FROM researcher_metric_snapshots m
         JOIN canonical_researchers c ON c.id = m.researcher_id
         JOIN researcher_external_profiles p ON p.id = m.external_profile_id
@@ -333,6 +334,9 @@ def _ranked_researchers(source):
         'h_scholar': r[3] if source == 'scholar' else None,
         'orcid': r[4] or '', 'olim_match': r[5] or '',
         'external_profile_url': r[6] or '', 'source_author_id': r[7] or '',
+        'public_id': r[10] or '',
+        'profile_url': ('/' + r[11]) if r[11] else ('/' + (r[10] or '')),
+        'organization_rank': r[12], 'university_id': r[13],
     } for r in rows]
     result = {
         'date': str(rows[0][8]) if rows else '',
