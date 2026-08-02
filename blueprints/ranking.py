@@ -121,6 +121,8 @@ def _to_int(v):
     s = str(v).strip()
     if not s:
         return None
+    if s.lower() in {'n/a', 'na', '#n/a', 'null', 'none', '-', '—'}:
+        return None
     m = re.search(r'-?\d+', s.replace(' ', ''))
     return int(m.group(0)) if m else None
 
@@ -525,6 +527,26 @@ def _map_headers(header_row, spec):
     return out
 
 
+def _existing_institution_snapshot(cur, snapshot_date, source):
+    """Bir xil sana/manba tashkilot importini transaction ichida idempotent qiladi."""
+    lock_key = f"h-index:institutions:{snapshot_date}:{source}"
+    cur.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (lock_key,))
+    cur.execute("""
+        SELECT s.id
+        FROM h_index_snapshots s
+        WHERE s.snapshot_date = %s
+          AND s.source = %s
+          AND EXISTS (
+              SELECT 1 FROM h_index_institutions i
+              WHERE i.snapshot_id = s.id
+          )
+        ORDER BY s.id DESC
+        LIMIT 1
+    """, (snapshot_date, source))
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
 def _admin_guard():
     if not getattr(current_user, 'is_admin', False):
         abort(403)
@@ -609,6 +631,16 @@ def _handle_upload(cur, conn):
               f"{', '.join(str(h) for h in header if h)}", 'error')
         return
 
+    if kind == 'institutions':
+        existing_snap_id = _existing_institution_snapshot(cur, snapshot_date, source)
+        if existing_snap_id is not None:
+            conn.rollback()
+            flash(
+                f"Import o'tkazib yuborildi: {snapshot_date} / {source} "
+                f"tashkilot snapshoti allaqachon mavjud (ID: {existing_snap_id}).",
+                'info')
+            return
+
     # matching manbalarini bir marta tayyorlaymiz
     if kind == 'scholars':
         by_key, by_skey = _build_olim_maps()
@@ -686,6 +718,20 @@ def _handle_upload(cur, conn):
             errors.append(f"{rn}-qator ({name[:40]}): {e}")
             skipped += 1
             continue
+    if kind == 'institutions' and (skipped or added == 0):
+        conn.rollback()
+        if added == 0 and skipped == 0:
+            flash("Import bekor qilindi: faylda yoziladigan tashkilot qatori yo'q.",
+                  'error')
+        else:
+            flash(
+                f"Import bekor qilindi: {skipped} ta xato yoki dublikat qator "
+                "topildi. Tashkilot snapshoti qisman yozilmadi.",
+                'error')
+        for e in errors[:15]:
+            flash(e, 'warning')
+        return
+
     conn.commit()
     _clear_ranking_cache()
 
