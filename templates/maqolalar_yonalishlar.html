@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Fan yo'nalishlari | Olimlar.uz{% endblock %}
+{% block meta_description %}Ilmiy maqolalar uchun fan yo'nalishlari katalogi — ierarxik tuzilgan yo'nalishlar ro'yxati.{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  <nav aria-label="Breadcrumb">
+    <ol class="ol-breadcrumb">
+      <li><a href="/">Bosh sahifa</a></li>
+      <li><a href="/maqolalar">Ilmiy maqolalar</a></li>
+      <li aria-current="page">Fan yo'nalishlari</li>
+    </ol>
+  </nav>
+
+  <h1 class="ol-h1">Fan yo'nalishlari</h1>
+  <p class="ol-body-lg ol-muted" style="max-width:70ch;">
+    Maqolalar katalogi fan yo'nalishlari bo'yicha ierarxik tartibda tuziladi:
+    soha, yo'nalish va ixtisoslik darajalari.
+  </p>
+
+  {# Ierarxik kategoriya komponenti uchun page shell.
+     Kategoriyalar backend tayyor bo'lgach shu joyga render qilinadi —
+     hozircha sun'iy ma'lumot kiritilmaydi (route kontrakti:
+     docs/maqolalar-route-contract.md). #}
+  <section class="ol-section" aria-labelledby="yonalishlar-royxat">
+    <h2 id="yonalishlar-royxat" class="ol-h4">Yo'nalishlar katalogi</h2>
+    <div id="maqolalar-yonalishlar-root" class="ol-empty" data-hierarchy-root>
+      <p class="ol-body" style="margin:0 0 var(--space-16);">
+        Yo'nalishlar katalogi tayyorlanmoqda.
+      </p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>Ilmiy maqolalarga qaytish
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

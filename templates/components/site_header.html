@@ -1,0 +1,199 @@
+{# Olimlar.uz header — desktop dropdownlar + mobil drawer.
+   Barcha linklar utils/navigation.py dan keladi (nav_* context o'zgaruvchilari).
+   Bu yerda linklarni qo'lda yozmang. #}
+
+{% macro menu_link(item, path) -%}
+<a href="{{ item.href }}"
+   class="ol-menu__link{% if nav_item_active(item, path) %} ol-menu__link--active{% endif %}"
+   {% if nav_item_active(item, path) %}aria-current="page"{% endif %}>
+  {% if item.icon %}<i class="bi {{ item.icon }}" aria-hidden="true"></i>{% endif %}
+  <span class="ol-menu__text">
+    <span>{{ item.label }}{% if item.badge %} <span class="ol-badge ol-badge--brand">{{ item.badge }}</span>{% endif %}</span>
+    {% if item.description %}<span class="ol-menu__desc">{{ item.description }}</span>{% endif %}
+  </span>
+</a>
+{%- endmacro %}
+
+{% set path = request.path %}
+{% set account_name = current_user.username or 'Kabinet' %}
+
+<header class="ol-header" data-nav-shell>
+  <div class="ol-container ol-container--wide ol-header__inner">
+
+    <button type="button" id="ol-burger" class="ol-icon-btn ol-header__burger"
+            aria-label="Menyuni ochish" aria-expanded="false" aria-controls="ol-drawer">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+
+    <a class="ol-brand" href="/" aria-label="Olimlar.uz — bosh sahifa">
+      <img class="ol-brand__mark" src="/static/images/logo-mark.png" alt="" aria-hidden="true">
+      <span class="ol-brand__name">Olimlar.uz</span>
+    </a>
+
+    <nav class="ol-nav ol-nav--desktop" aria-label="Asosiy navigatsiya">
+      {% for section in primary_nav %}
+      {% set is_active = nav_section_active(section, path) %}
+      <div class="ol-nav__item{% if is_active %} ol-nav__item--active{% endif %}" data-nav-item>
+        <button type="button" class="ol-nav__trigger" data-nav-trigger
+                id="ol-nav-btn-{{ section.key }}"
+                aria-expanded="false" aria-controls="ol-nav-menu-{{ section.key }}"
+                aria-haspopup="true">
+          {{ section.label }}
+          <i class="bi bi-chevron-down ol-nav__caret" aria-hidden="true"></i>
+        </button>
+        <div class="ol-menu" id="ol-nav-menu-{{ section.key }}" data-open="false"
+             role="group" aria-labelledby="ol-nav-btn-{{ section.key }}">
+          {% for item in section.children %}{{ menu_link(item, path) }}{% endfor %}
+          {% if section.key == 'universitet' and univer_workspace %}
+          <div class="ol-menu__sep"></div>
+          {{ menu_link(univer_item, path) }}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </nav>
+
+    <div class="ol-header__actions">
+      <button type="button" class="ol-icon-btn" data-search-toggle aria-label="Qidiruvni ochish">
+        <i class="bi bi-search" aria-hidden="true"></i>
+      </button>
+
+      <a href="{{ premium_item.href }}" class="ol-btn ol-btn--primary ol-premium-btn" aria-label="Premium tarifga o'tish">
+        <i class="bi {{ premium_item.icon }}" aria-hidden="true"></i><span>{{ premium_item.label }}</span>
+      </a>
+
+      {% if current_user.is_authenticated %}
+      <a href="/messages" class="ol-icon-btn" aria-label="Xabarlar">
+        <i class="bi bi-chat-dots" aria-hidden="true"></i>
+        <span id="msg-badge" class="ol-icon-btn__badge" style="display:none;">0</span>
+      </a>
+      <a href="/notifications" class="ol-icon-btn" aria-label="Bildirishnomalar">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span id="notif-badge" class="ol-icon-btn__badge" style="display:none;">0</span>
+      </a>
+
+      <div class="ol-account" data-nav-item>
+        <button type="button" class="ol-account__trigger" data-nav-trigger
+                id="ol-account-btn" aria-expanded="false" aria-controls="ol-account-menu"
+                aria-haspopup="true">
+          <span class="ol-avatar" aria-hidden="true">{{ account_name[:1] }}</span>
+          <span class="ol-account__name">{{ account_name }}</span>
+          <i class="bi bi-chevron-down ol-nav__caret" aria-hidden="true"></i>
+        </button>
+        <div class="ol-menu ol-menu--end" id="ol-account-menu" data-open="false"
+             role="group" aria-labelledby="ol-account-btn">
+          {% if cabinet_slug %}
+          <a href="/@{{ cabinet_slug }}" class="ol-menu__link">
+            <i class="bi bi-at" aria-hidden="true"></i>
+            <span class="ol-menu__text"><span>Ochiq profilim</span><span class="ol-menu__desc">@{{ cabinet_slug }}</span></span>
+          </a>
+          {% endif %}
+          {% for item in account_menu %}{{ menu_link(item, path) }}{% endfor %}
+          {% if current_user.is_admin %}
+          <div class="ol-menu__sep"></div>
+          {% for item in admin_menu %}{{ menu_link(item, path) }}{% endfor %}
+          {% endif %}
+          <div class="ol-menu__sep"></div>
+          <a href="/logout" class="ol-menu__link">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span class="ol-menu__text"><span>Chiqish</span></span>
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <a href="{{ login_item.href }}" class="ol-btn ol-btn--secondary">
+        <i class="bi {{ login_item.icon }}" aria-hidden="true"></i>{{ login_item.label }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+{# ── Mobil drawer ── #}
+<div class="ol-drawer" id="ol-drawer" data-open="false">
+  <div class="ol-drawer__backdrop" data-drawer-backdrop></div>
+  <div class="ol-drawer__panel" role="dialog" aria-modal="true" aria-label="Asosiy menyu">
+    <div class="ol-drawer__head">
+      <a class="ol-brand" href="/">
+        <img class="ol-brand__mark" src="/static/images/logo-mark.png" alt="" aria-hidden="true">
+        <span class="ol-brand__name">Olimlar.uz</span>
+      </a>
+      <button type="button" id="ol-drawer-close" class="ol-icon-btn" aria-label="Menyuni yopish">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <nav class="ol-drawer__body" aria-label="Mobil navigatsiya">
+      {% for section in primary_nav %}
+      {% set is_active = nav_section_active(section, path) %}
+      <div class="ol-acc">
+        <button type="button" class="ol-acc__trigger" data-acc-trigger
+                id="ol-acc-btn-{{ section.key }}"
+                aria-expanded="{{ 'true' if is_active else 'false' }}"
+                aria-controls="ol-acc-panel-{{ section.key }}">
+          {{ section.label }}
+          <i class="bi bi-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ol-acc__panel" id="ol-acc-panel-{{ section.key }}"
+             data-open="{{ 'true' if is_active else 'false' }}"
+             role="group" aria-labelledby="ol-acc-btn-{{ section.key }}">
+          {% for item in section.children %}{{ menu_link(item, path) }}{% endfor %}
+          {% if section.key == 'universitet' and univer_workspace %}{{ menu_link(univer_item, path) }}{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      {% if current_user.is_authenticated %}
+      <div class="ol-acc">
+        <button type="button" class="ol-acc__trigger" data-acc-trigger
+                id="ol-acc-btn-account" aria-expanded="false" aria-controls="ol-acc-panel-account">
+          {{ account_name }}
+          <i class="bi bi-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="ol-acc__panel" id="ol-acc-panel-account" data-open="false"
+             role="group" aria-labelledby="ol-acc-btn-account">
+          {% for item in account_menu %}{{ menu_link(item, path) }}{% endfor %}
+          {% if current_user.is_admin %}{% for item in admin_menu %}{{ menu_link(item, path) }}{% endfor %}{% endif %}
+          <a href="/logout" class="ol-menu__link">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span class="ol-menu__text"><span>Chiqish</span></span>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </nav>
+
+    <div class="ol-drawer__foot ol-stack">
+      <a href="{{ premium_item.href }}" class="ol-btn ol-btn--primary ol-btn--block">
+        <i class="bi {{ premium_item.icon }}" aria-hidden="true"></i>{{ premium_item.label }}
+      </a>
+      {% if not current_user.is_authenticated %}
+      <a href="{{ login_item.href }}" class="ol-btn ol-btn--secondary ol-btn--block">{{ login_item.label }}</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Qidiruv overlay — mavjud /dissertatsiyalar?q= qidiruviga ulanadi ── #}
+<div class="ol-drawer" id="ol-search" data-open="false">
+  <div class="ol-drawer__backdrop" data-drawer-backdrop></div>
+  <div class="ol-drawer__panel" role="dialog" aria-modal="true" aria-label="Qidiruv"
+       style="inset-block:0 auto;left:0;right:0;width:100%;border-right:0;border-bottom:1px solid var(--color-border);">
+    <div class="ol-container ol-container--wide" style="padding-block:var(--space-24);">
+      <form action="{{ nav_search_target }}" method="get" role="search"
+            style="display:flex;gap:var(--space-12);align-items:flex-end;">
+        <div class="ol-field-group" style="flex:1;">
+          <label class="ol-label" for="ol-search-input">Dissertatsiyalar bo'yicha qidiruv</label>
+          <input class="ol-field" type="search" id="ol-search-input" name="q"
+                 placeholder="Mavzu, muallif yoki ilmiy rahbar" autocomplete="off">
+        </div>
+        <button type="submit" class="ol-btn ol-btn--primary">
+          <i class="bi bi-search" aria-hidden="true"></i>Qidirish
+        </button>
+        <button type="button" id="ol-search-close" class="ol-btn ol-btn--secondary" aria-label="Qidiruvni yopish">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

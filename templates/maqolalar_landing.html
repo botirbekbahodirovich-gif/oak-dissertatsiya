@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Ilmiy maqolalar | Olimlar.uz{% endblock %}
+{% block meta_description %}Olimlar.uz ilmiy maqolalar katalogi — fan yo'nalishlari bo'yicha tartiblangan nashrlar to'plami.{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  <nav aria-label="Breadcrumb">
+    <ol class="ol-breadcrumb">
+      <li><a href="/">Bosh sahifa</a></li>
+      <li><a href="/maqolalar">Ilmiy resurslar</a></li>
+      <li aria-current="page">Ilmiy maqolalar</li>
+    </ol>
+  </nav>
+
+  <h1 class="ol-h1">Ilmiy maqolalar</h1>
+  <p class="ol-body-lg ol-muted" style="max-width:70ch;">
+    O'zbekiston tadqiqotchilarining ilmiy maqolalari fan yo'nalishlari bo'yicha
+    tartiblangan yagona katalog.
+  </p>
+
+  {# Kelajakdagi qidiruv uchun UI karkasi — backend hali ulanmagan. #}
+  <section class="ol-section" aria-labelledby="maqolalar-qidiruv">
+    <h2 id="maqolalar-qidiruv" class="ol-h4">Maqolalar bo'yicha qidiruv</h2>
+    <div class="ol-card">
+      <div style="display:flex;gap:var(--space-12);flex-wrap:wrap;align-items:flex-end;">
+        <div class="ol-field-group" style="flex:1;min-width:260px;">
+          <label class="ol-label" for="maqolalar-q">Kalit so'z</label>
+          <input class="ol-field" type="search" id="maqolalar-q"
+                 placeholder="Maqola sarlavhasi yoki muallif" disabled>
+        </div>
+        <div class="ol-field-group" style="min-width:220px;">
+          <label class="ol-label" for="maqolalar-yonalish">Fan yo'nalishi</label>
+          <select class="ol-field" id="maqolalar-yonalish" disabled>
+            <option>Barcha yo'nalishlar</option>
+          </select>
+        </div>
+        <button type="button" class="ol-btn ol-btn--primary" disabled>
+          <i class="bi bi-search" aria-hidden="true"></i>Qidirish
+        </button>
+      </div>
+      <p class="ol-meta" style="margin:var(--space-12) 0 0;">
+        Qidiruv maqolalar katalogi to'ldirilgach ishga tushadi.
+      </p>
+    </div>
+  </section>
+
+  <section class="ol-section" aria-labelledby="maqolalar-royxat">
+    <h2 id="maqolalar-royxat" class="ol-h4">Maqolalar</h2>
+    <div class="ol-empty">
+      <p class="ol-body" style="margin:0 0 var(--space-16);">Tez orada maqolalar joylashtiriladi.</p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">
+        <i class="bi bi-list-nested" aria-hidden="true"></i>Fan yo'nalishlarini ko'rish
+      </a>
+    </div>
+  </section>
+
+  <section class="ol-section" aria-labelledby="maqolalar-tahlil">
+    <h2 id="maqolalar-tahlil" class="ol-h4">Nashrlar tahlili allaqachon mavjud</h2>
+    <div class="ol-card">
+      <p class="ol-body" style="margin:0 0 var(--space-16);">
+        OpenAlex ma'lumotlari asosidagi nashr tahlili alohida bo'limda ishlaydi:
+        yo'nalishlar bo'yicha global va mahalliy nashrlar taqqoslanadi.
+      </p>
+      <a class="ol-btn ol-btn--tertiary" href="/maqolalar-tahlili">
+        Maqolalar tahliliga o'tish<i class="bi bi-arrow-right" aria-hidden="true"></i>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

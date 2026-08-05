@@ -319,6 +319,21 @@ def _gap(global_total, uz_total):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@maqolalar_bp.route('/maqolalar')
+def maqolalar_landing_page():
+    """Ilmiy maqolalar katalogining kirish sahifasi (hozircha karkas).
+
+    To'liq route kontrakti: docs/maqolalar-route-contract.md
+    """
+    return render_template('maqolalar_landing.html')
+
+
+@maqolalar_bp.route('/maqolalar/yonalishlar')
+def maqolalar_topics_page():
+    """Fan yo'nalishlari katalogi (hozircha karkas — backend keyingi bosqichda)."""
+    return render_template('maqolalar_yonalishlar.html')
+
+
 @maqolalar_bp.route('/maqolalar-tahlili')
 def maqolalar_page():
     """Qidiruv sahifasi — mehmonga ham ochiq (qidiruv login talab qiladi)."""

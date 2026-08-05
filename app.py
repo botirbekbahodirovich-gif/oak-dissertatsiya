@@ -300,6 +300,14 @@ def inject_env_flags():
 
 
 @app.context_processor
+def inject_navigation():
+    """Yagona navigatsiya konfiguratsiyasi — header, mobil drawer va footer
+    aynan shu manbadan o'qiydi (utils/navigation.py)."""
+    from utils.navigation import navigation_context
+    return navigation_context()
+
+
+@app.context_processor
 def inject_broadcasts():
     """Expose active admin broadcasts to every template, filtered by audience."""
     from flask import session
