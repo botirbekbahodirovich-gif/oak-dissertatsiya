@@ -330,6 +330,170 @@
 .ol-breadcrumb a:hover { text-decoration: underline; }
 .ol-breadcrumb li + li::before { content: "/"; margin-right: var(--space-8); color: var(--color-border); }
 
+/* ── Sahifa sarlavhasi (components/page_header.html macro) ─────────────────── */
+
+.ol-page-header { margin-bottom: var(--space-32); }
+.ol-page-header__title { font-family: var(--font-serif); font-size: var(--text-h1);
+  line-height: var(--leading-heading); font-weight: 700; color: var(--color-text-primary);
+  margin: 0 0 var(--space-12); }
+.ol-page-header__lead { max-width: 70ch; margin: 0; font-size: var(--text-body-lg);
+  line-height: var(--leading-body); color: var(--color-text-muted); }
+.ol-page-header__actions { display: flex; flex-wrap: wrap; gap: var(--space-12);
+  margin-top: var(--space-20); }
+.ol-page-header__meta { display: flex; flex-wrap: wrap; gap: var(--space-8) var(--space-16);
+  margin-top: var(--space-12); font-size: var(--text-small); color: var(--color-text-muted); }
+@media (max-width: 649px) {
+  .ol-page-header { margin-bottom: var(--space-24); }
+  .ol-page-header__title { font-size: 32px; }
+  .ol-page-header__lead { font-size: var(--text-body); }
+}
+
+/* ── Bo'lim sarlavhasi ─────────────────────────────────────────────────────── */
+
+.ol-section-header { display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-16); flex-wrap: wrap; margin-bottom: var(--space-16); }
+.ol-section-header h2 { font-family: var(--font-sans); font-size: var(--text-h5);
+  font-weight: 600; color: var(--color-text-primary); margin: 0; }
+
+/* ── Stat kartalar ─────────────────────────────────────────────────────────── */
+
+.ol-stat-grid { display: grid; gap: var(--gutter);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.ol-stat {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  padding: var(--space-20) var(--space-24);
+}
+.ol-stat__value { font-size: var(--text-h3); font-weight: 600; line-height: 1.15;
+  color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.ol-stat__label { margin-top: var(--space-4); font-size: var(--text-small);
+  color: var(--color-text-muted); }
+.ol-stat__trend { display: inline-flex; align-items: center; gap: var(--space-4);
+  margin-top: var(--space-8); font-size: var(--text-meta); font-weight: 600; }
+.ol-stat__trend--up { color: var(--color-success); }
+.ol-stat__trend--down { color: var(--color-error); }
+@media (max-width: 649px) { .ol-stat { padding: var(--space-16); } }
+
+/* ── Filter paneli (barcha ro'yxat sahifalarida bir xil) ───────────────────── */
+
+.ol-filters {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  padding: var(--space-20) var(--space-24);
+  margin-bottom: var(--space-24);
+}
+.ol-filters__row { display: flex; flex-wrap: wrap; gap: var(--space-12); align-items: flex-end; }
+.ol-filters__row > .ol-field-group { flex: 1 1 200px; min-width: 0; }
+.ol-filters__actions { display: flex; gap: var(--space-8); flex-wrap: wrap; margin-left: auto; }
+.ol-filters__count { font-size: var(--text-small); color: var(--color-text-muted); }
+/* Mobil: filtrlar yig'iladi, tugma tanlanganlar sonini ko'rsatadi. */
+.ol-filters__toggle { display: none; }
+@media (max-width: 767px) {
+  .ol-filters { padding: var(--space-16); }
+  .ol-filters__toggle { display: inline-flex; width: 100%; }
+  .ol-filters__body { display: none; margin-top: var(--space-16); }
+  .ol-filters__body[data-open="true"] { display: block; }
+  .ol-filters__row > .ol-field-group { flex-basis: 100%; }
+  .ol-filters__actions { margin-left: 0; width: 100%; }
+  .ol-filters__actions > * { flex: 1; }
+}
+
+/* Tanlangan filtrlar — chip ko'rinishida */
+.ol-chips { display: flex; flex-wrap: wrap; gap: var(--space-8); align-items: center; }
+.ol-chip {
+  display: inline-flex; align-items: center; gap: var(--space-6);
+  min-height: 32px; padding: var(--space-4) var(--space-12);
+  background: var(--color-blue-soft);
+  border: 1px solid var(--color-action-blue-light);
+  border-radius: var(--radius-rounded);
+  color: var(--color-action-blue);
+  font-size: var(--text-small); font-weight: 600;
+}
+.ol-chip button { display: grid; place-items: center; width: 20px; height: 20px;
+  padding: 0; border: 0; background: none; color: inherit; cursor: pointer; font-size: 12px; }
+.ol-chip button:hover { color: var(--color-action-blue-dark); }
+
+/* ── Grafik paneli ─────────────────────────────────────────────────────────── */
+
+.ol-chart {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  padding: var(--space-24);
+}
+.ol-chart__head { margin-bottom: var(--space-16); }
+.ol-chart__title { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0; }
+.ol-chart__note { margin: var(--space-4) 0 0; font-size: var(--text-small); color: var(--color-text-muted); }
+.ol-chart__body { position: relative; min-height: 240px; }
+.ol-chart__state { padding: var(--space-40) var(--space-16); text-align: center;
+  font-size: var(--text-small); color: var(--color-text-muted); }
+.ol-chart__state--error { color: var(--color-error); }
+@media (max-width: 649px) { .ol-chart { padding: var(--space-16); } }
+
+/* ── Tablar ────────────────────────────────────────────────────────────────── */
+
+.ol-tabs {
+  display: flex; gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.ol-tab {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: var(--space-12) var(--space-16);
+  background: none; border: 0;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-sans); font-size: var(--text-small); font-weight: 600;
+  color: var(--color-text-muted); white-space: nowrap; cursor: pointer;
+  text-decoration: none;
+}
+.ol-tab:hover { color: var(--color-action-blue); text-decoration: none; }
+.ol-tab[aria-selected="true"] { color: var(--color-action-blue); border-bottom-color: var(--color-action-blue); }
+
+/* ── Sahifalash ────────────────────────────────────────────────────────────── */
+
+.ol-pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6);
+  padding: var(--space-16) 0; }
+.ol-pager button, .ol-pager a {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; min-height: 40px; padding: 0 var(--space-8);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text-primary); font-size: var(--text-small); cursor: pointer;
+  text-decoration: none;
+}
+.ol-pager button:hover:not(:disabled):not([aria-current]),
+.ol-pager a:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); text-decoration: none; }
+.ol-pager [aria-current="page"] { background: var(--color-action-blue);
+  border-color: var(--color-action-blue); color: var(--color-white); font-weight: 600; cursor: default; }
+.ol-pager button:disabled { opacity: 0.4; cursor: default; }
+.ol-pager__info { margin-left: var(--space-8); font-size: var(--text-small); color: var(--color-text-muted); }
+
+/* ── Yon filter paneli (dashboard fasetlari) ───────────────────────────────── */
+
+.ol-facets {
+  width: 260px; flex-shrink: 0;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  padding: var(--space-16);
+  position: sticky; top: calc(var(--header-height) + var(--space-8));
+  max-height: calc(100vh - var(--header-height) - var(--space-24));
+  overflow-y: auto;
+}
+.ol-facets__group { border-bottom: 1px solid var(--color-border-subtle); padding: var(--space-12) 0; }
+.ol-facets__group:last-child { border-bottom: 0; }
+.ol-facets__title { font-size: var(--text-small); font-weight: 600;
+  color: var(--color-text-primary); margin-bottom: var(--space-8); }
+.ol-facets__opt { display: flex; align-items: center; gap: var(--space-8);
+  min-height: 32px; font-size: var(--text-small); color: var(--color-text-secondary); cursor: pointer; }
+.ol-facets__opt input { accent-color: var(--color-action-blue); cursor: pointer; flex-shrink: 0; }
+.ol-facets__count { margin-left: auto; font-size: var(--text-meta); color: var(--color-text-muted); }
+
 /* ── Sahifa karkasi ────────────────────────────────────────────────────────── */
 
 .ol-page { padding-block: var(--space-48) var(--space-96); }

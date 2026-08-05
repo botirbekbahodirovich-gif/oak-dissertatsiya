@@ -208,7 +208,6 @@
       {% set _deg = (profile.academic_degree or '')|upper %}
       <!-- ── KO'RINISH / OVERVIEW (read-only, default) ── -->
       <section class="cab-panel active" id="panel-korinish">
-        {% set rw_dark = true %}
         {% include '_reminders_widget.html' %}
         {% set _checks = [olim_name, (profile.first_name and profile.last_name), profile.academic_degree, profile.region, profile.institution, profile.bio, profile.orcid_url] %}
         {% set _done = _checks|select|list|length %}

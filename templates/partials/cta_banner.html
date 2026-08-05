@@ -8,7 +8,8 @@
     cta_text: tugma matni
     cta_href: tugma havolasi
     show_only_anon: True bo'lsa, faqat login qilmagan foydalanuvchiga ko'rinadi
-    icon:    ixtiyoriy emoji (chap tomonda)
+    icon:    ixtiyoriy Bootstrap Icons klassi, masalan 'bi-search'
+             (dizayn tizimi dekorativ emoji ishlatishni taqiqlaydi)
 
   Namuna:
     {% from 'partials/cta_banner.html' import cta_banner %}
@@ -19,7 +20,7 @@
         cta_text="Qidirib ko'rish →",
         cta_href='#search-input',
         show_only_anon=True,
-        icon='🔍'
+        icon='bi-search'
     ) }}
 #}
 {% macro cta_banner(variant='search', title='', body='', cta_text='', cta_href='', show_only_anon=True, icon='') %}
@@ -27,7 +28,7 @@
   {% if not show_only_anon or not (_user and _user.is_authenticated) %}
   <div class="olz-cta olz-cta--{{ variant }}">
     <div class="olz-cta__inner">
-      {% if icon %}<div class="olz-cta__icon">{{ icon }}</div>{% endif %}
+      {% if icon %}<div class="olz-cta__icon"><i class="bi {{ icon }}" aria-hidden="true"></i></div>{% endif %}
       <div class="olz-cta__content">
         <h3 class="olz-cta__title">{{ title }}</h3>
         {% if body %}<p class="olz-cta__body">{{ body }}</p>{% endif %}
