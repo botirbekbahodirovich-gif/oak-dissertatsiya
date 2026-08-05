@@ -644,7 +644,7 @@
       const olimDisplay = escHtml(r.Olim_short || r.Olim || '—');
       const olimLink = r.Olim
         ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
-        : '<span style="color:var(--color-text-muted);" title="Bu yozuvda muallif ko\'rsatilmagan">Noma\'lum muallif</span>';
+        : '<span style="color:#666666;" title="Bu yozuvda muallif ko\'rsatilmagan">Noma\'lum muallif</span>';
       const qualityDot = r.DataQuality === 'incomplete'
         ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius: var(--radius-full);background:#eab308;margin-left:5px;vertical-align:middle;"></span>'
         : '';
@@ -962,7 +962,7 @@
   });
 
   function showSkeleton() {
-    const cell = `<td><div style="height:14px;background:var(--color-border-subtle);border-radius: var(--radius-default);animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
+    const cell = `<td><div style="height:14px;background:#ecebe9;border-radius: var(--radius-default);animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
     tableBody.innerHTML = Array(8).fill(`<tr>${Array(8).fill(cell).join('')}</tr>`).join('');
   }
   function _searchSpinner(on) {
@@ -977,27 +977,27 @@
     const el = document.getElementById('search-summary');
     if (!el) return;
     if (!data || !Object.keys(data).length) { el.style.display = 'none'; return; }
-    let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;color:var(--color-text-muted);">';
+    let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;color:#666666;">';
     if (data.olim_count > 0) {
       html += '<div>';
-      html += '<span style="color:var(--color-action-blue);font-weight:600;"><i class="bi bi-mortarboard"></i> Olim sifatida:</span><br>';
+      html += '<span style="color:#0056d6;font-weight:600;"><i class="bi bi-mortarboard"></i> Olim sifatida:</span><br>';
       (data.phd_mavzu || []).forEach(m => {
-        html += `<span style="color:var(--color-success);">PhD:</span> <span style="color:var(--color-text-primary);">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+        html += `<span style="color:#0c8930;">PhD:</span> <span style="color:#0c0f12;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       (data.dsc_mavzu || []).forEach(m => {
-        html += `<span style="color:var(--color-brand-orange);">DSc:</span> <span style="color:var(--color-text-primary);">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+        html += `<span style="color:#ff4203;">DSc:</span> <span style="color:#0c0f12;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       html += '</div>';
     }
     if (data.rahbar_count > 0) {
-      html += `<div><span style="color:var(--color-action-blue);font-weight:600;"><i class="bi bi-person-badge"></i> Ilmiy rahbar:</span><br><span style="color:var(--color-text-primary);">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
+      html += `<div><span style="color:#0056d6;font-weight:600;"><i class="bi bi-person-badge"></i> Ilmiy rahbar:</span><br><span style="color:#0c0f12;">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
     }
     if (data.opponent_count > 0) {
-      html += `<div><span style="color:var(--color-action-blue);font-weight:600;"><i class="bi bi-person-lines-fill"></i> Opponent:</span><br>` +
+      html += `<div><span style="color:#0056d6;font-weight:600;"><i class="bi bi-person-lines-fill"></i> Opponent:</span><br>` +
         `<a href="#table-panel" onclick="document.querySelector('.table-panel')?.scrollIntoView({behavior:'smooth'});return false;" ` +
-        `style="color:var(--color-action-blue);font-size:13px;text-decoration:underline;cursor:pointer;">` +
+        `style="color:#0056d6;font-size:13px;text-decoration:underline;cursor:pointer;">` +
         `${data.opponent_count.toLocaleString('uz')} ta himoyada ishtirok etgan` +
-        `</a> <span style="color:var(--color-text-muted);font-size:11px;">(↓ opponent belgisi bilan ko'rsatilgan)</span></div>`;
+        `</a> <span style="color:#666666;font-size:11px;">(↓ opponent belgisi bilan ko'rsatilgan)</span></div>`;
     }
     html += '</div>';
     el.innerHTML = html;
@@ -1329,7 +1329,7 @@
       return `<label class="facet-opt"><input type="checkbox" data-fv="${escHtml(it.value)}" ${checked ? 'checked' : ''}>` +
         `<span class="fo-label" title="${escHtml(label)}">${escHtml(label)}</span>` +
         `<span class="fo-count">${(it.count || 0).toLocaleString('uz')}</span></label>`;
-    }).join('') || '<div style="color:var(--color-text-muted);font-size:0.78rem;">—</div>';
+    }).join('') || '<div style="color:#666666;font-size:0.78rem;">—</div>';
     host.querySelectorAll('input[data-fv]').forEach(cb => {
       cb.addEventListener('change', () => {
         const v = cb.dataset.fv;
@@ -1508,7 +1508,7 @@
   document.getElementById('copy-link-btn')?.addEventListener('click', function() {
     const url = window.location.href;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
-      .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => this.textContent = '<i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash', 1600); })
+      .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => { this.innerHTML = '<i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash'; }, 1600); })
       .catch(() => prompt('Havolani nusxalang:', url));
   });
 
@@ -1588,7 +1588,7 @@
   window.copyCite = function(boxId, btn) {
     const text = document.getElementById(boxId).textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
-      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => btn.textContent = '<i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash', 1500); })
+      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash'; }, 1500); })
       .catch(() => prompt('Nusxalang:', text));
   };
 
@@ -1611,7 +1611,7 @@
 
     const daraja = (d.Daraja || '').toUpperCase();
     const isPhd = daraja === 'PHD' || daraja.includes('ФАН') || (d.Daraja || '').toLowerCase().includes('phd');
-    const degreeColor = isPhd ? 'var(--color-success)' : 'var(--color-brand-orange)';
+    const degreeColor = isPhd ? '#0c8930' : '#ff4203';
     const degreeText = isPhd ? 'PhD' : 'DSc';
     const supervisorCount = d.supervisor_count || 0;
 
@@ -1642,7 +1642,7 @@
       html += '👨‍🏫 <a href="/olim/' + encodeURIComponent(rahbarName) + '">' + escHtml(rahbarDisp) + '</a>';
       if (supervisorCount > 0) html += '<span class="supervisor-badge">' + supervisorCount + ' 👨‍🎓</span>';
     } else {
-      html += '<span style="color:var(--color-text-muted);">—</span>';
+      html += '<span style="color:#666666;">—</span>';
     }
     html += '</div>';
     if (oakUrl) {
@@ -1657,7 +1657,7 @@
     if (!grid) return;
     grid.innerHTML = '';
     if (!records || records.length === 0) {
-      grid.innerHTML = '<div class="no-cards"><p>😕 Natija topilmadi</p></div>';
+      grid.innerHTML = '<div class="no-cards"><p>Natija topilmadi</p></div>';
       renderCardPagination(currentPage, 0, 0);
       return;
     }
@@ -1670,7 +1670,7 @@
     const container = document.getElementById('cardPagination');
     if (!container) return;
     if (totalPages <= 1) { container.innerHTML = ''; return; }
-    let html = '<span style="color:var(--color-text-muted);font-size:0.85rem;margin-right:12px;">Sahifa ' + page + ' / ' + totalPages + ' (' + (totalRecords || 0).toLocaleString('uz') + ' ta natija)</span>';
+    let html = '<span style="color:#666666;font-size:0.85rem;margin-right:12px;">Sahifa ' + page + ' / ' + totalPages + ' (' + (totalRecords || 0).toLocaleString('uz') + ' ta natija)</span>';
     if (page > 1) html += '<button class="card-page-btn" data-cpg="' + (page - 1) + '">← Oldingi</button>';
     let start = Math.max(1, page - 2);
     let end = Math.min(totalPages, start + 4);

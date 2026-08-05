@@ -4,31 +4,33 @@
 
 {% block extra_head %}
 <style>
-  .rmap-card { border-radius:16px; border:1px solid var(--oak-border); background:var(--oak-surface); padding:1.25rem; position:relative; min-height:420px; }
+  /* Xarita konteyneri sahifa fonidan 1px chegara bilan ajraladi. */
+  .rmap-card { border-radius: var(--radius-default); border:1px solid var(--color-border);
+    background:var(--color-white); padding:var(--space-24); position:relative; min-height:420px; }
   #rmap { width:100%; }
   #rmap svg { display:block; }
-  #rmap-tooltip { position:absolute; pointer-events:none; background:rgba(15,23,42,0.96);
-    color:#fff; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:8px 13px;
+  /* Tooltip ataylab to'q — oq xarita ustida yuqori kontrast beradi. */
+  #rmap-tooltip { position:absolute; pointer-events:none; background:var(--color-text-primary);
+    color:#fff; border:0; border-radius: var(--radius-default); padding:var(--space-8) var(--space-12);
     font-size:13px; line-height:1.35; opacity:0; transition:opacity .15s; z-index:20; white-space:nowrap;
-    box-shadow:0 12px 30px rgba(0,0,0,0.4); }
-  .rmap-legend { display:flex; justify-content:center; gap:1rem; flex-wrap:wrap; margin-top:.9rem;
-    font-size:12px; color:var(--oak-muted); }
-  .rmap-legend span.sw { width:14px; height:14px; border-radius:3px; display:inline-block; vertical-align:-2px; margin-right:5px; }
-  .rmap-stat { border-radius:12px; background:var(--oak-surface-2); border:1px solid var(--oak-border);
-    padding:1rem; text-align:center; }
-  .rmap-stat .lbl { font-size:.75rem; color:var(--oak-muted); text-transform:uppercase; letter-spacing:.4px; }
-  .rmap-stat .val { font-size:1.7rem; font-weight:800; line-height:1.2; }
+    box-shadow:0 4px 12px rgba(12,15,18,0.08); }
+  .rmap-legend { display:flex; justify-content:center; gap:var(--space-16); flex-wrap:wrap; margin-top:var(--space-16);
+    font-size:var(--text-meta); color:var(--color-text-muted); }
+  .rmap-legend span.sw { width:14px; height:14px; border-radius:2px; display:inline-block; vertical-align:-2px; margin-right:5px; }
+  .rmap-stat { border-radius: var(--radius-default); background:var(--color-background-soft); border:1px solid var(--color-border);
+    padding:var(--space-16); text-align:center; }
+  .rmap-stat .lbl { font-size:var(--text-meta); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; }
+  .rmap-stat .val { font-size:var(--text-h4); font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
   .rmap-region path { transition: fill .18s ease; }
 </style>
 {% endblock %}
 
+{% from "components/page_header.html" import page_header %}
 {% block content %}
-<div class="page-heading">
-  <div>
-    <h1>🗺️ Tadqiqot xaritasi</h1>
-    <p>Viloyatlar bo'yicha ilmiy-tadqiqot faoliyati — hududni tanlab ko'rsatkichlarni ko'ring</p>
-  </div>
-</div>
+{{ page_header(
+     'Tadqiqot xaritasi',
+     "Viloyatlar bo'yicha ilmiy-tadqiqot faoliyati — hududni tanlab ko'rsatkichlarni ko'ring",
+     crumbs=[('Bosh sahifa', '/'), ('Tahlil', '/stats')]) }}
 
 <div class="rmap-card mb-4">
   <div id="rmap-tooltip"></div>
@@ -38,11 +40,11 @@
     <p class="mt-2 mb-0">Xarita yuklanmoqda...</p>
   </div>
   <div class="rmap-legend">
-    <span><span class="sw" style="background:#334155;border:1px solid rgba(255,255,255,0.12);"></span>ma'lumot yo'q</span>
-    <span><span class="sw" style="background:#1e3a8a;"></span>&lt; 100</span>
-    <span><span class="sw" style="background:#2563eb;"></span>100–500</span>
-    <span><span class="sw" style="background:#3b82f6;"></span>500–2000</span>
-    <span><span class="sw" style="background:#60a5fa;"></span>2000+</span>
+    <span><span class="sw" style="background:#e6e6e6;border:1px solid var(--color-border);"></span>ma'lumot yo'q</span>
+    <span><span class="sw" style="background:#cfe0f7;"></span>&lt; 100</span>
+    <span><span class="sw" style="background:#8fb4e8;"></span>100–500</span>
+    <span><span class="sw" style="background:#3b7fd4;"></span>500–2000</span>
+    <span><span class="sw" style="background:#00429f;"></span>2000+</span>
   </div>
 </div>
 
@@ -52,19 +54,19 @@
     <div class="col-md-4">
       <div class="rmap-stat">
         <div class="lbl">Tadqiqotchilar</div>
-        <div id="rmap-d-researchers" class="val" style="color:#60a5fa;">—</div>
+        <div id="rmap-d-researchers" class="val" style="color:var(--color-action-blue);">—</div>
       </div>
     </div>
     <div class="col-md-4">
       <div class="rmap-stat">
         <div class="lbl">Dissertatsiyalar</div>
-        <div id="rmap-d-diss" class="val" style="color:#34d399;">—</div>
+        <div id="rmap-d-diss" class="val" style="color:var(--color-success);">—</div>
       </div>
     </div>
     <div class="col-md-4">
       <div class="rmap-stat">
         <div class="lbl">Muassasalar</div>
-        <div id="rmap-d-inst" class="val" style="color:#fbbf24;">—</div>
+        <div id="rmap-d-inst" class="val" style="color:var(--color-notice);">—</div>
       </div>
     </div>
   </div>
@@ -83,12 +85,23 @@
 (function () {
   var width = 820, height = 460;
 
+  /* Ketma-ket (sequential) ko'k shkala — oq fon uchun ochdan to'qqa.
+     Avvalgi shkala to'q fonga mo'ljallangan edi va yuqori ikki daraja
+     bir xil rangga tushib qolgan edi. */
+  var SCALE = {
+    none: "#e6e6e6",   // ma'lumot yo'q — --color-border
+    s1:   "#cfe0f7",   // < 100
+    s2:   "#8fb4e8",   // 100–500
+    s3:   "#3b7fd4",   // 500–2000
+    s4:   "#00429f"    // 2000+ — --color-action-blue-dark
+  };
+
   function colorFor(v) {
-    if (v == null || v === 0) return "#334155";
-    if (v < 100)  return "#1e3a8a";
-    if (v < 500)  return "#2563eb";
-    if (v < 2000) return "#3b82f6";
-    return "#60a5fa";
+    if (v == null || v === 0) return SCALE.none;
+    if (v < 100)  return SCALE.s1;
+    if (v < 500)  return SCALE.s2;
+    if (v < 2000) return SCALE.s3;
+    return SCALE.s4;
   }
 
   var mapEl    = document.getElementById("rmap");
@@ -120,7 +133,7 @@
       .data(geo.features)
       .join("path")
       .attr("d", path)
-      .attr("stroke", "#0f172a")
+      .attr("stroke", "#ffffff")
       .attr("stroke-width", 0.8)
       .attr("fill", function (d) {
         var s = stats[nameOf(d)];
@@ -136,17 +149,17 @@
         var wrap = mapEl.getBoundingClientRect();
         tooltip.style.left = (event.clientX - wrap.left + 14) + "px";
         tooltip.style.top  = (event.clientY - wrap.top + 14) + "px";
-        d3.select(this).attr("stroke", "#93c5fd").attr("stroke-width", 2);
+        d3.select(this).attr("stroke", "#6593dc").attr("stroke-width", 2);
       })
       .on("mouseleave", function () {
         tooltip.style.opacity = 0;
-        d3.select(this).attr("stroke", "#0f172a").attr("stroke-width", 0.8);
+        d3.select(this).attr("stroke", "#ffffff").attr("stroke-width", 0.8);
       })
       .on("click", function (event, d) {
         var s = stats[nameOf(d)];
         if (!s) return;
-        g.selectAll("path").attr("stroke", "#0f172a").attr("stroke-width", 0.8);
-        d3.select(this).attr("stroke", "#93c5fd").attr("stroke-width", 2.5);
+        g.selectAll("path").attr("stroke", "#ffffff").attr("stroke-width", 0.8);
+        d3.select(this).attr("stroke", "#6593dc").attr("stroke-width", 2.5);
 
         document.getElementById("rmap-detail-name").textContent = s.uz_name;
         document.getElementById("rmap-d-researchers").textContent = s.researchers.toLocaleString();
@@ -168,11 +181,12 @@
       .attr("dy", "0.35em")
       .attr("font-size", "10px")
       .attr("font-weight", "600")
-      .attr("fill", "#ffffff")
+      // Och hududlarda oq matn ko'rinmasdi — to'q matn + oq halo.
+      .attr("fill", "#0c0f12")
       .attr("pointer-events", "none")
       .style("paint-order", "stroke")
-      .style("stroke", "rgba(0,0,0,0.55)")
-      .style("stroke-width", "2.5px")
+      .style("stroke", "#ffffff")
+      .style("stroke-width", "3px")
       .text(function (d) {
         var s = stats[nameOf(d)];
         return s ? s.uz_name : "";

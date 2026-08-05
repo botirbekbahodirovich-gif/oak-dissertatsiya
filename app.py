@@ -2297,16 +2297,23 @@ def api_collaboration_search():
 
 
 # ── Topic clustering (keyword-based grouping of dissertation topics) ────────
-_IXT_GROUPS = {  # ixtisoslik prefix -> (group key, color)
-    "13": ("education", "#059669"), "05": ("technical", "#3b82f6"),
-    "14": ("medical", "#ef4444"), "08": ("economics", "#f59e0b"),
-    "12": ("law", "#8b5cf6"),
+# ixtisoslik prefiksi -> (guruh kaliti, rang).
+# Ranglar static/js/olimlar-charts.js dagi kategoriya palitrasiga mos:
+# oq fonda bir-biridan ajraladi, neon emas. Rang guruhga biriktirilgan
+# (tasodifiy emas), shuning uchun klaster kartasi va bubble chart bir xil
+# ma'noni ko'rsatadi.
+_IXT_GROUPS = {
+    "13": ("education", "#0c8930"),   # pedagogika — yashil
+    "05": ("technical", "#0056d6"),   # texnika — ko'k
+    "14": ("medical", "#af1d1d"),     # tibbiyot — qizil
+    "08": ("economics", "#8a5200"),   # iqtisodiyot — to'q sariq
+    "12": ("law", "#7a3ea3"),         # huquq — binafsha
 }
 
 
 def _ixt_group(code):
     pre = (code or "")[:2]
-    return _IXT_GROUPS.get(pre, ("other", "#64748b"))
+    return _IXT_GROUPS.get(pre, ("other", "#666666"))
 
 
 def _cluster_trend(year_counts):

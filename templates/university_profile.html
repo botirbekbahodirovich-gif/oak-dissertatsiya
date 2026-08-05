@@ -197,8 +197,8 @@
       }).then(function (r) { return r.json(); }).then(function (d) {
         btn.disabled = false;
         var m = document.getElementById('uv-pp-msg'); m.style.display = 'block';
-        if (d.success) { m.style.color = 'var(--color-success)'; m.textContent = 'Saqlandi — sahifa yangilanmoqda…'; location.reload(); }
-        else { m.style.color = 'var(--color-error)'; m.textContent = d.error || 'Xatolik'; }
+        if (d.success) { m.style.color = '#0c8930'; m.textContent = 'Saqlandi — sahifa yangilanmoqda…'; location.reload(); }
+        else { m.style.color = '#af1d1d'; m.textContent = d.error || 'Xatolik'; }
       }).catch(function () { btn.disabled = false; });
     });
   </script>
@@ -411,8 +411,8 @@ function initCharts() {
   if (degEl && (phd + dsc) > 0) {
     new Chart(degEl.getContext('2d'), {
       type: 'doughnut',
-      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['var(--color-success)', 'var(--color-brand-orange)'] }] },
-      options: { plugins: { legend: { labels: { color: 'var(--color-text-secondary)' } } } }
+      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['#0c8930', '#ff4203'] }] },
+      options: { plugins: { legend: { labels: { color: '#333333' } } } }
     });
   }
   var years = {{ by_year|tojson }};
@@ -421,10 +421,10 @@ function initCharts() {
     new Chart(yEl.getContext('2d'), {
       type: 'bar',
       data: { labels: years.map(function (y) { return y.year; }),
-              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: 'var(--color-action-blue)' }] },
+              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: '#0056d6' }] },
       options: { plugins: { legend: { display: false } },
-                 scales: { x: { ticks: { color: 'var(--color-text-muted)', font: { size: 9 } }, grid: { display: false } },
-                           y: { ticks: { color: 'var(--color-text-muted)' }, grid: { color: '#28344a' } } } }
+                 scales: { x: { ticks: { color: '#666666', font: { size: 9 } }, grid: { display: false } },
+                           y: { ticks: { color: '#666666' }, grid: { color: '#28344a' } } } }
     });
   }
 }

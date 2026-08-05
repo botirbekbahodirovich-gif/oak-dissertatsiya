@@ -102,7 +102,7 @@
           {% for c in ixtisosliklar %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
         </select>
       </div>
-      <button class="mt-btn" id="analyze-btn" onclick="analyze()">🔍 O'xshash mavzularni topish</button>
+      <button class="mt-btn" id="analyze-btn" onclick="analyze()">O'xshash mavzularni topish</button>
     </div>
   </div>
 
@@ -111,14 +111,14 @@
   <!-- AI analysis -->
   <div id="ai-section" style="display:none;">
     <div class="ai-card" id="ai-card">
-      <h3>🤖 AI Tahlil</h3>
+      <h3>AI Tahlil</h3>
       <div id="ai-body"><div class="ai-loading"><span class="spinner"></span> AI tahlil qilmoqda...</div></div>
     </div>
   </div>
 
   <!-- similar results -->
   <div id="results-section" style="display:none;">
-    <h2 class="res-head" id="results-head">📋 O'xshash mavzular</h2>
+    <h2 class="res-head" id="results-head">O'xshash mavzular</h2>
     <div id="freemium-bar"></div>
     <div id="results"></div>
     <button class="load-more" id="load-more" style="display:none;" onclick="showMore()">Yana 10 ta ko'rsatish</button>
@@ -197,7 +197,7 @@ function analyze() {
     allResults = d.results || []; shownCount = 0;
     var head = "📋 O'xshash mavzular (" + allResults.length + ' ta topildi)';
     document.getElementById('results-head').innerHTML = escapeHtml(head) +
-      (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">✅ To\'liq natijalar</span>' : '');
+      (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">To\'liq natijalar</span>' : '');
     renderResults();
     runAI(mavzu, allResults.slice(0, 10).map(function (x) { return x.mavzu; }));
   }).catch(function () {
@@ -210,16 +210,16 @@ function cardHtml(x) {
   return '<div class="res-card"><div class="res-mavzu">' + highlight(x.mavzu) + '</div><div class="res-meta">' +
     '<span class="match-badge">' + x.match_score + " kalit so'z mos</span>" +
     badgeFor(x.daraja) +
-    (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">👤 ' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
+    (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
     (x.sana ? '<span>' + escapeHtml(x.sana) + '</span>' : '') +
-    (ix ? '<span>📎 ' + escapeHtml(ix) + '</span>' : '') +
-    (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">👨‍🏫 ' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
+    (ix ? '<span>' + escapeHtml(ix) + '</span>' : '') +
+    (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
     '</div></div>';
 }
 function blurCardHtml(x) {
   return '<div class="res-card"><div class="res-mavzu">' + escapeHtml(x.mavzu) + '</div><div class="res-meta">' +
     badgeFor(x.daraja) +
-    (x.olim ? '<span>👤 ' + escapeHtml(x.olim_short || x.olim) + '</span>' : '') +
+    (x.olim ? '<span>' + escapeHtml(x.olim_short || x.olim) + '</span>' : '') +
     (x.sana ? '<span>' + escapeHtml(x.sana) + '</span>' : '') +
     '</div></div>';
 }
@@ -251,7 +251,7 @@ function renderResults() {
           '<a class="lc-btn" href="/cabinet/login?next=/compare">Kabinetga kirish →</a>' +
           '<a class="lc-reg" href="/cabinet/register">Hisobingiz yo\'qmi? Ro\'yxatdan o\'ting</a>' +
         '</div>' +
-        '<div class="lc-foot">✨ Kabinet bepul. Barcha natijalar, AI tahlil va shaxsiy portfolio imkoniyatlari.</div>' +
+        '<div class="lc-foot">Kabinet bepul. Barcha natijalar, AI tahlil va shaxsiy portfolio imkoniyatlari.</div>' +
       '</div></div></div>';
     box.insertAdjacentHTML('beforeend', wall);
   }
@@ -286,7 +286,7 @@ function runAI(mavzu, similar) {
     var score = d.uniqueness_score || 0;
     var cls = score <= 3 ? 'low' : (score <= 6 ? 'mid' : 'high');
     var lbl = score <= 3 ? "Juda o'xshash mavzular ko'p" : (score <= 6 ? "O'rtacha" : "Noyob mavzu");
-    var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:var(--color-text-muted);">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
+    var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:#666666;">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
     var analysis = d.analysis || '';
     if (IS_LOGGED_IN) {
       if (analysis) html += '<div class="ai-text">' + escapeHtml(analysis) + '</div>';
@@ -300,7 +300,7 @@ function runAI(mavzu, similar) {
       if (analysis.length > 200) {
         html += '<div class="ai-text ai-blur">' + escapeHtml(analysis.slice(200, 500)) + '</div>';
       }
-      html += '<div class="ai-unlock"><a href="/cabinet/login?next=/compare">🔓 AI tahlilni to\'liq ko\'rish uchun kiring</a></div>';
+      html += '<div class="ai-unlock"><a href="/cabinet/login?next=/compare">AI tahlilni to\'liq ko\'rish uchun kiring</a></div>';
     }
     document.getElementById('ai-body').innerHTML = html;
   }).catch(function () {
