@@ -132,6 +132,7 @@
   var searchPanel = document.getElementById('ol-search');
   var searchInput = document.getElementById('ol-search-input');
   var searchClose = document.getElementById('ol-search-close');
+  var searchLastFocused = null;
 
   function searchIsOpen() {
     return !!searchPanel && searchPanel.getAttribute('data-open') === 'true';
@@ -147,13 +148,20 @@
     }
     if (!searchPanel) return;
     closeDrawer();
+    closeAllMenus(null);
+    searchLastFocused = document.activeElement;
     searchPanel.setAttribute('data-open', 'true');
+    document.body.classList.add('ol-scroll-locked');
     if (searchInput) searchInput.focus();
   }
 
   function closeSearch() {
     if (!searchPanel) return;
     searchPanel.setAttribute('data-open', 'false');
+    if (!drawerIsOpen()) document.body.classList.remove('ol-scroll-locked');
+    if (searchLastFocused && typeof searchLastFocused.focus === 'function') {
+      searchLastFocused.focus();
+    }
   }
 
   Array.prototype.forEach.call(searchToggles, function (btn) {

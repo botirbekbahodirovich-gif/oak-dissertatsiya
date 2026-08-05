@@ -452,11 +452,15 @@
 /* ── Header'ning o'ng tomoni ── */
 
 .ol-header__actions { display: flex; align-items: center; gap: var(--space-8); flex-shrink: 0; }
+/* Tor ekranda flex hech qachon 44px tegish maydonini siqmasin. */
+.ol-header__actions > *,
+.ol-header__burger { flex-shrink: 0; }
 
 .ol-icon-btn {
   display: inline-grid;
   place-items: center;
   width: 44px;
+  min-width: 44px;
   height: 44px;
   position: relative;
   background: none;
@@ -483,9 +487,9 @@
   text-align: center;
 }
 
-.ol-premium-btn { background: var(--color-action-blue); color: var(--color-white); }
-.ol-premium-btn i { color: var(--color-notice); }
-.ol-premium-btn:hover { background: var(--color-action-blue-dark); color: var(--color-white); }
+/* Orange yulduz — kichik brend aksenti; blue tugma ustida ham, drawer
+   ichidagi to'liq kenglikdagi CTA ustida ham bir xil ko'rinadi. */
+.ol-premium-cta i { color: var(--color-notice); }
 
 .ol-account { position: relative; }
 .ol-account__trigger {
@@ -523,14 +527,34 @@
 .ol-header__burger { display: none; }
 .ol-nav--desktop { display: flex; }
 
+/* Desktop nav ~1043px joy talab qiladi (brand 130 + nav 632 + actions 281),
+   ustiga container padding. 1199px dan pastda drawer'ga o'tamiz. */
 @media (max-width: 1199px) {
   .ol-header__burger { display: inline-grid; }
   .ol-nav--desktop { display: none; }
   .ol-header__inner { gap: var(--space-8); }
-  .ol-brand { margin-inline: auto 0; }
+  /* Logotip burger yonida qoladi; actions o'ng chekkaga suriladi. */
+  .ol-brand { margin-right: auto; }
   .ol-account__name { display: none; }
+}
+
+/* Premium yorlig'i joy tor bo'lgandagina ikonkaga qisqaradi. */
+@media (max-width: 767px) {
   .ol-premium-btn span { display: none; }
-  .ol-premium-btn { width: 44px; padding: 0; }
+  .ol-premium-btn { width: 44px; min-width: 44px; padding: 0; }
+}
+
+/* Telefonda header'da faqat eng zarur boshqaruvlar qoladi; xabarlar va
+   bildirishnomalar drawer ichidagi hisob akkordeonida ochiladi. */
+@media (max-width: 649px) {
+  .ol-icon-btn--secondary { display: none; }
+  .ol-brand__name { font-size: var(--text-body); }
+}
+
+/* 480px dan tor ekranda Premium drawer ichidagi to'liq kenglikdagi CTA
+   sifatida qoladi — header sig'masligi kerak emas. */
+@media (max-width: 479px) {
+  .ol-premium-btn { display: none; }
 }
 
 .ol-drawer {

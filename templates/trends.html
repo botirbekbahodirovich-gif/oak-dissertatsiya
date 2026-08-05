@@ -176,8 +176,9 @@
 var T = {{ t|tojson }};
 (function () {
   if (!T.yearly || !T.yearly.length) return;
-  Chart.defaults.color = '#94a3b8';
-  Chart.defaults.borderColor = '#334155';
+  // Light fon uchun (avval dark fonga mo'ljallangan edi).
+  Chart.defaults.color = '#666666';            // --color-text-muted
+  Chart.defaults.borderColor = '#e6e6e6';      // --color-border
   Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
   var TT = { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#cbd5e1', padding: 10, cornerRadius: 8 };
   var grid = { color: '#1e293b' };

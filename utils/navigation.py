@@ -154,10 +154,29 @@ PRIMARY_NAV: tuple[NavSection, ...] = (
 
 # ── Header'ning o'ng tomonidagi alohida elementlar ────────────────────────────
 
+# DIQQAT: bu sayt bo'ylab qidiruv EMAS. Loyihada global qidiruv mavjud emas —
+# har bir modul o'z qidiruviga ega (dissertatsiyalar, olimlar katalogi,
+# hamkorlik, maqolalar tahlili). Header tugmasi shu sababli faqat
+# dissertatsiyalar qidiruviga yo'naltiradi va overlay matni buni aniq aytadi.
+# TODO(global-search): haqiqiy ko'p-entity qidiruv (dissertatsiya + olim +
+# jurnal + grant) paydo bo'lganda shu konstanta va site_header.html dagi
+# overlay o'sha endpoint'ga o'tkazilsin.
 SEARCH_TARGET = "/dissertatsiyalar"
+SEARCH_SCOPE_LABEL = "Dissertatsiyalar bo'yicha qidiruv"
+SEARCH_SCOPE_HINT = ("Hozircha faqat dissertatsiyalar bazasi bo'yicha qidiriladi. "
+                     "Olimlar, jurnallar va grantlar o'z bo'limlarida qidiriladi.")
+
 PREMIUM_ITEM = NavItem("Premium", "/premium", icon="bi-star-fill",
                        description="Kengaytirilgan imkoniyatlar")
 LOGIN_ITEM = NavItem("Kirish", "/login", icon="bi-box-arrow-in-right")
+
+# Header'dagi ikonka tugmalari (faqat tizimga kirgan foydalanuvchiga).
+# Shu yerdan render qilinadi — shablon ichida qo'lda yozilmaydi. Tor
+# ekranlarda ular yashiriladi va drawer ichidagi ACCOUNT_MENU orqali ochiladi.
+HEADER_ICON_ITEMS: tuple[NavItem, ...] = (
+    NavItem("Xabarlar", "/messages", icon="bi-chat-dots"),
+    NavItem("Bildirishnomalar", "/notifications", icon="bi-bell"),
+)
 
 # Avatar dropdown'i. Admin bandlar shablon tomonidan alohida qo'shiladi.
 ACCOUNT_MENU: tuple[NavItem, ...] = (
@@ -165,29 +184,59 @@ ACCOUNT_MENU: tuple[NavItem, ...] = (
     NavItem("Saqlanganlar", "/cabinet/saqlangan", icon="bi-bookmark"),
     NavItem("Mening maqolalarim", "/cabinet/maqolalar", icon="bi-file-earmark-text"),
     NavItem("To'lovlar", "/cabinet/tolovlar", icon="bi-credit-card"),
+    NavItem("Xabarlar", "/messages", icon="bi-chat-dots"),
     NavItem("Bildirishnomalar", "/notifications", icon="bi-bell"),
 )
 
+LOGOUT_ITEM = NavItem("Chiqish", "/logout", icon="bi-box-arrow-right")
+
 # Eski "Boshqa" dropdown'i admin navigatsiyasi vazifasini ham bajargan —
-# admin sahifalarida o'zaro havolalar yo'q. Shuning uchun to'liq ro'yxat shu
-# yerda saqlanadi (faqat adminlarga ko'rinadi, asosiy menyuni to'ldirmaydi).
+# admin sahifalarida o'zaro havolalar yo'q edi. To'liq ro'yxat ADMIN_SERVICES
+# da saqlanadi va admin panelining yuqorisida grid sifatida chiqadi; avatar
+# dropdown'ida esa faqat bir nechta tez havola qoladi (22 bandli dropdown
+# 1440x900 ekranda 812px balandlikka cho'zilib ketgan edi).
+ADMIN_HUB = NavItem("Admin panel", "/admin/analytics", icon="bi-speedometer2")
+
+ADMIN_SERVICES: tuple[NavItem, ...] = (
+    NavItem("Foydalanuvchi manbalari", "/admin/acquisition", icon="bi-signpost-split",
+            description="Ro'yxatdan o'tish manbalari tahlili"),
+    NavItem("Ma'lumot sifati", "/admin/data-quality", icon="bi-clipboard-data",
+            description="Dublikatlar va tuzatish jurnali"),
+    NavItem("Yangiliklar", "/admin/yangiliklar", icon="bi-newspaper",
+            description="Yangiliklarni boshqarish"),
+    NavItem("Blog", "/admin/blog", icon="bi-pencil-square",
+            description="Blog postlari"),
+    NavItem("Vakansiyalar", "/admin/vacancies", icon="bi-briefcase",
+            description="Ish o'rinlari e'lonlari"),
+    NavItem("Grantlar", "/admin/grants", icon="bi-cash-coin",
+            description="Grant tanlovlari"),
+    NavItem("Jurnallar", "/admin/journals", icon="bi-journals",
+            description="Jurnallar bazasi va shubhalilar"),
+    NavItem("Konferensiyalar", "/admin/conferences", icon="bi-mic",
+            description="Anjumanlar import/eksporti"),
+    NavItem("Kurslar talabi", "/admin/courses", icon="bi-mortarboard",
+            description="Kurslarga talab statistikasi"),
+    NavItem("Universitetlar", "/admin/universities", icon="bi-bank", exact=True,
+            description="Tashkilot profillari"),
+    NavItem("Universitet litsenziyalari", "/admin/universities/licenses", icon="bi-key",
+            description="B2B litsenziyalar"),
+    NavItem("Institutlarni birlashtirish", "/admin/institutions", icon="bi-diagram-2",
+            description="Dublikat tashkilotlarni birlashtirish"),
+    NavItem("So'rovnoma", "/admin/survey", icon="bi-ui-checks",
+            description="Foydalanuvchi so'rovnomalari"),
+    NavItem("Smart eslatmalar", "/admin/reminders", icon="bi-alarm",
+            description="Muddat eslatmalari dispatchi"),
+    NavItem("To'lovlar", "/admin/payments", icon="bi-credit-card",
+            description="ATMOS to'lovlari"),
+    NavItem("Reyting", "/admin/reyting", icon="bi-award",
+            description="H-index snapshotlari"),
+)
+
+# Avatar dropdown'idagi qisqa admin bloki. To'liq ro'yxat admin panelida.
 ADMIN_MENU: tuple[NavItem, ...] = (
-    NavItem("Admin panel", "/admin/analytics", icon="bi-speedometer2"),
-    NavItem("Foydalanuvchi manbalari", "/admin/acquisition", icon="bi-signpost-split"),
+    ADMIN_HUB,
     NavItem("Ma'lumot sifati", "/admin/data-quality", icon="bi-clipboard-data"),
-    NavItem("Yangiliklar", "/admin/yangiliklar", icon="bi-newspaper"),
-    NavItem("Blog", "/admin/blog", icon="bi-pencil-square"),
-    NavItem("Vakansiyalar", "/admin/vacancies", icon="bi-briefcase"),
-    NavItem("Grantlar", "/admin/grants", icon="bi-cash-coin"),
-    NavItem("Jurnallar", "/admin/journals", icon="bi-journals"),
-    NavItem("Konferensiyalar", "/admin/conferences", icon="bi-mic"),
-    NavItem("Kurslar talabi", "/admin/courses", icon="bi-mortarboard"),
-    NavItem("Universitetlar", "/admin/universities", icon="bi-bank", exact=True),
-    NavItem("Universitet litsenziyalari", "/admin/universities/licenses", icon="bi-key"),
-    NavItem("Institutlarni birlashtirish", "/admin/institutions", icon="bi-diagram-2"),
-    NavItem("So'rovnoma", "/admin/survey", icon="bi-ui-checks"),
     NavItem("Smart eslatmalar", "/admin/reminders", icon="bi-alarm"),
-    NavItem("To'lovlar", "/admin/payments", icon="bi-credit-card"),
 )
 
 # Universitet B2B ish maydoni — faqat litsenziyaga ega foydalanuvchilarga.
@@ -276,10 +325,16 @@ def navigation_context() -> dict:
         "footer_columns": FOOTER_COLUMNS,
         "account_menu": ACCOUNT_MENU,
         "admin_menu": ADMIN_MENU,
+        "admin_services": ADMIN_SERVICES,
+        "admin_hub": ADMIN_HUB,
+        "header_icon_items": HEADER_ICON_ITEMS,
         "univer_item": UNIVER_ITEM,
         "premium_item": PREMIUM_ITEM,
         "login_item": LOGIN_ITEM,
+        "logout_item": LOGOUT_ITEM,
         "nav_search_target": SEARCH_TARGET,
+        "nav_search_label": SEARCH_SCOPE_LABEL,
+        "nav_search_hint": SEARCH_SCOPE_HINT,
         "nav_item_active": item_is_active,
         "nav_section_active": section_is_active,
     }

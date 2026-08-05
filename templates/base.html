@@ -103,7 +103,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous" />
   {# Olimlar.uz dizayn tizimi — rang/tipografiya/spacing tokenlari va umumiy
      komponentlar. Bootstrap'dan KEYIN, sahifa stillaridan OLDIN. #}
-  <link href="/static/css/olimlar-design-system.css?v=20260805" rel="stylesheet" />
+  <link href="/static/css/olimlar-design-system.css?v=20260806" rel="stylesheet" />
   {% if request.path != '/' %}{# bosh sahifa grafiksiz — LCP uchun Chart.js keraksiz #}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   {% endif %}
@@ -289,10 +289,20 @@
 
     /* ═══════ LEGACY BRIDGE — eski dark qatlamdan light dizayn tizimiga ═══════
        Bu blok ilgari butun saytni majburan dark qilardi. Endi u aksincha:
-       o'sha sahifa-klasslarini yangi light tokenlarga bog'laydi. Har bir
-       shablon o'z tokenlariga ko'chirilgach, bu blok bosqichma-bosqich
-       qisqartiriladi (Phase 2). */
-    html, body { background-color: var(--color-background) !important; color: var(--color-text-primary) !important; }
+       o'sha sahifa-klasslarini yangi light tokenlarga bog'laydi.
+
+       QOIDALAR (buzilmasin):
+       1. Faqat ESKI sahifa klasslari (.hp-*, .op-*, .nc-*, ...). Yangi `.ol-*`
+          komponentlari bu yerda hech qachon paydo bo'lmasin.
+       2. Umumiy `.card`, `.table`, `.panel`, `.text-white`, `canvas`, Bootstrap
+          klasslari va modal/dropdown selektorlari qo'shilmasin — ular butun
+          saytni buzadi.
+       3. `!important` faqat sahifa ichidagi dark qiymatni yengish uchun zarur
+          bo'lganda. Yangi qoida qo'shishdan oldin `!important`siz sinab ko'ring.
+       4. Blok o'smasin — Phase 2 da har bir shablon ko'chirilgach qisqarsin. */
+    /* body: !important shart emas — hech bir jonli shablon body fonini
+       qayta belgilamaydi (faqat print stillari, ular kaskadda keyin keladi). */
+    html, body { background-color: var(--color-background); color: var(--color-text-primary); }
     /* sahifa wrapperlari */
     .hp, .lite, .op, .op-body, .ph-page { background: var(--color-background) !important; color: var(--color-text-primary) !important; }
     /* section fonlari — oq va och kulrang navbatlashadi */
@@ -312,9 +322,10 @@
     .pager a, .pager span { background: var(--color-white) !important; border-color: var(--color-border) !important; color: var(--color-action-blue) !important; }
     .pager .cur { background: var(--color-action-blue) !important; color: var(--color-white) !important; }
     /* sarlavhalar */
+    /* .nc-title atayin bu ro'yxatda yo'q — u havola, quyida blue bo'ladi. */
     .hp-h2, .hero-h1, .lite h1, .ph-page h1, .detail-card h1, .final-sec h2,
     .about-mission, .op-sec-title, .help-card h3, .cap-card h3, .op-card h3,
-    .team-name, .nc-title, .ng-title, .faq-q, .lc-title { color: var(--color-text-primary) !important; }
+    .team-name, .ng-title, .faq-q, .lc-title { color: var(--color-text-primary) !important; }
     .hp-h2, .hero-h1, .lite h1, .ph-page h1, .final-sec h2 { font-family: var(--font-serif) !important; }
     /* body va muted matn */
     .hp-sub, .hp-eyebrow, .hero-p, .help-card p, .cap-list li, .lite-sub,
@@ -329,8 +340,8 @@
     .hp-eyebrow { background: var(--color-blue-soft) !important; }
     .hero-newbadge { color: var(--color-text-muted) !important; }
     .op-empty { border-color: var(--color-border) !important; }
-    /* scrollbar */
-    * { scrollbar-color: #c9c9c9 var(--color-background-soft); }
+    /* scrollbar — universal selektor emas, faqat ildiz element */
+    html { scrollbar-color: #c9c9c9 var(--color-background-soft); }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: var(--color-background-soft); }
     ::-webkit-scrollbar-thumb { background: #c9c9c9; border-radius: var(--radius-default); }
@@ -592,14 +603,17 @@
       align-items: center; justify-content: center;
       background: var(--oak-bg, var(--color-white)); transition: opacity .4s ease; }
     #oak-preloader.hide { opacity: 0; pointer-events: none; }
-    #oak-preloader img { width: 84px; height: auto; animation: oakPulse 1.2s ease-in-out infinite; }
+    /* icon-192 o'z foniga ega — oq preloader ustida ham ko'rinadi
+       (logo-mark.png oq bo'lgani uchun bu yerda ko'rinmay qolgan edi). */
+    #oak-preloader img { width: 72px; height: auto; border-radius: var(--radius-banner);
+      animation: oakPulse 1.2s ease-in-out infinite; }
     @keyframes oakPulse {
       0%, 100% { transform: scale(0.9); opacity: 0.55; }
       50%      { transform: scale(1.08); opacity: 1; }
     }
     @media (prefers-reduced-motion: reduce) { #oak-preloader img { animation: none; } }
   </style>
-  <div id="oak-preloader"><img src="/static/images/logo-mark.png" alt="Yuklanmoqda…"></div>
+  <div id="oak-preloader"><img src="/static/images/icon-192.png" alt="Yuklanmoqda…"></div>
   <script>
     (function () {
       function hide() {
@@ -671,7 +685,7 @@
       };
     })(window.fetch);
   </script>
-  <script src="/static/js/olimlar-nav.js?v=20260805" defer></script>
+  <script src="/static/js/olimlar-nav.js?v=20260806" defer></script>
   <script>
   (function checkNotifs() {
     fetch('/api/notifications/count')

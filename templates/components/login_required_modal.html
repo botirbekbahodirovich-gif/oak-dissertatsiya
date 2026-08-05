@@ -9,30 +9,30 @@
     align-items: center; justify-content: center; background: rgba(2,6,23,0.88);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 16px; }
   #loginModal.show { display: flex; }
-  #loginModal .lm-card { position: relative; background: #0f172a; border: 1px solid #334155;
+  #loginModal .lm-card { position: relative; background: var(--color-white); border: 1px solid var(--color-border);
     border-radius: 18px; max-width: 420px; width: 100%; padding: 30px 26px 24px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.55); color: #e2e8f0; text-align: center;
+    box-shadow: 0 4px 12px rgba(12,15,18,0.08); color: var(--color-text-primary); text-align: center;
     animation: lmIn .22s ease; }
   @keyframes lmIn { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
   #loginModal .lm-eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: .02em;
-    text-transform: uppercase; color: #60a5fa; margin-bottom: 8px; }
-  #loginModal .lm-title { margin: 0 0 6px; font-size: 1.3rem; font-weight: 800; color: #f1f5f9; }
-  #loginModal .lm-sub { margin: 0 0 20px; font-size: 0.93rem; color: #94a3b8; line-height: 1.5; }
+    text-transform: uppercase; color: var(--color-action-blue); margin-bottom: 8px; }
+  #loginModal .lm-title { margin: 0 0 6px; font-size: 1.3rem; font-weight: 800; color: var(--color-text-primary); }
+  #loginModal .lm-sub { margin: 0 0 20px; font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.5; }
   #loginModal .lm-google { display: flex; align-items: center; justify-content: center; gap: 10px;
     background: #fff; color: #333; padding: 12px 20px; border-radius: 12px; text-decoration: none;
     font-weight: 600; font-size: 0.98rem; border: 1px solid #ddd; }
   #loginModal .lm-google:hover { background: #f4f6f8; text-decoration: none; color: #333; }
-  #loginModal .lm-or { color: #64748b; font-size: 13px; margin: 14px 0 12px; }
+  #loginModal .lm-or { color: var(--color-text-muted); font-size: 13px; margin: 14px 0 12px; }
   #loginModal .lm-tg { display: flex; justify-content: center; min-height: 44px; }
   #loginModal .lm-tg-status { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
-  #loginModal .lm-register { display: block; width: 100%; margin-top: 16px; background: #3b82f6;
+  #loginModal .lm-register { display: block; width: 100%; margin-top: 16px; background: var(--color-action-blue);
     color: #fff; border: none; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 0.98rem;
     text-decoration: none; }
   #loginModal .lm-register:hover { background: #2563eb; color: #fff; text-decoration: none; }
-  #loginModal .lm-small { margin-top: 10px; font-size: 12px; color: #64748b; }
-  #loginModal .lm-login { margin-top: 16px; padding-top: 14px; border-top: 1px solid #1e293b;
-    font-size: 0.88rem; color: #94a3b8; }
-  #loginModal .lm-login a { color: #60a5fa; font-weight: 600; }
+  #loginModal .lm-small { margin-top: 10px; font-size: 12px; color: var(--color-text-muted); }
+  #loginModal .lm-login { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border);
+    font-size: 0.88rem; color: var(--color-text-muted); }
+  #loginModal .lm-login a { color: var(--color-action-blue); font-weight: 600; }
   #loginModal .lm-login a:hover { text-decoration: underline; }
 </style>
 
