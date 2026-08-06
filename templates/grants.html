@@ -167,8 +167,14 @@
   {% if my %}
   <!-- ═══ MENING GRANTLARIM (kanban) ═══ -->
   <div class="gr-hero">
-    <h1>Mening grantlarim</h1>
-    <p>Kuzatilayotgan grantlaringiz — holat bo'yicha guruhlangan. <a href="/grants" style="color:var(--color-action-blue);">← Barcha grantlar</a></p>
+    <nav aria-label="Breadcrumb"><ol class="ol-breadcrumb">
+      <li><a href="/">Bosh sahifa</a></li>
+      <li><a href="/grants">Grantlar</a></li>
+      <li aria-current="page">Mening grantlarim</li>
+    </ol></nav>
+    <h1 class="ol-page-header__title">Mening grantlarim</h1>
+    <p class="ol-page-header__lead">Kuzatilayotgan grantlaringiz — holat bo'yicha guruhlangan.
+      <a href="/grants">Barcha grantlar</a></p>
   </div>
   {% if my_grants %}
   <div class="gr-kanban">
@@ -204,8 +210,13 @@
   {% else %}
   <!-- ═══ HERO ═══ -->
   <div class="gr-hero">
-    <h1>Ilmiy Grantlar va Stipendiyalar</h1>
-    <p>Xalqaro va mahalliy moliyalashtirish imkoniyatlari — magistratura, PhD va postdoc uchun</p>
+    <nav aria-label="Breadcrumb"><ol class="ol-breadcrumb">
+      <li><a href="/">Bosh sahifa</a></li>
+      <li><a href="/grants">Imkoniyatlar</a></li>
+      <li aria-current="page">Grantlar</li>
+    </ol></nav>
+    <h1 class="ol-page-header__title">Grantlar va stipendiyalar</h1>
+    <p class="ol-page-header__lead">Xalqaro va mahalliy moliyalashtirish imkoniyatlari — magistratura, PhD va postdoc uchun</p>
     <div class="gr-stats">
       <span><b>{{ stats.active }}</b> ta aktiv grant</span>
       <span><b>{{ stats.countries }}</b> ta mamlakat</span>

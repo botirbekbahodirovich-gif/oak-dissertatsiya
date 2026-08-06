@@ -58,13 +58,17 @@
 </style>
 {% endblock %}
 
+{% from "components/page_header.html" import page_header_with_actions %}
 {% block content %}
 <div class="jr-wrap">
-  <div class="jr-head">
-    <h1>Ilmiy jurnallar bazasi</h1>
-    <p>OAK tasdiqlangan jurnallardan o'zingizga mosini toping</p>
-    <a href="/jurnal-tekshirish" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:var(--color-blue-soft);border:1px solid rgba(59,130,246,0.45);color:var(--color-action-blue);padding:8px 18px;border-radius: var(--radius-full);font-size:0.86rem;font-weight:600;text-decoration:none;">Jurnal tekshiruvi — OAK/Scopus ro'yxatida bormi?</a>
-  </div>
+  {% call page_header_with_actions(
+       'Ilmiy jurnallar',
+       "OAK tasdiqlangan jurnallardan o'zingizga mosini toping",
+       crumbs=[('Bosh sahifa', '/'), ('Ilmiy resurslar', '/maqolalar')]) %}
+    <a class="ol-btn ol-btn--secondary" href="/jurnal-tekshirish">
+      <i class="bi bi-shield-check" aria-hidden="true"></i>Jurnal tekshiruvi
+    </a>
+  {% endcall %}
 
   <!-- Search -->
   <div class="jr-search-card">
