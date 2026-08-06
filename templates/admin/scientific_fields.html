@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Fan yo'nalishlari (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% macro admin_tree(nodes) %}
+<ul class="mq-tree">
+  {% for node in nodes %}
+  <li class="mq-tree__item">
+    <div class="mq-tree__row">
+      <span class="mq-tree__spacer" aria-hidden="true"></span>
+      <a class="mq-tree__name" href="/maqolalar/yonalish/{{ node.slug }}">{{ node.name_uz }}</a>
+      {% if node.code %}<span class="mq-tree__code">{{ node.code }}</span>{% endif %}
+      {% if not node.is_active %}<span class="ol-badge ol-badge--neutral">nofaol</span>{% endif %}
+      <span class="mq-tree__counts">
+        <span>{{ node.level }}-daraja</span>
+        <span>{{ node.total_count }} ta maqola</span>
+      </span>
+      <span class="mq-table__actions">
+        <a class="ol-btn ol-btn--tertiary" href="/admin/scientific-fields/{{ node.id }}/edit">Tahrirlash</a>
+        <form method="POST" action="/admin/scientific-fields/{{ node.id }}/delete"
+              style="display:inline;"
+              onsubmit="return confirm('Yo\'nalish o\'chirilsinmi? Bolalari yoki maqolalari bo\'lsa faqat nofaol qilinadi.');">
+          {{ csrf_token()|safe }}
+          <button type="submit" class="ol-btn ol-btn--tertiary">O'chirish</button>
+        </form>
+      </span>
+    </div>
+    {% if node.children %}{{ admin_tree(node.children) }}{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header("Fan yo'nalishlari",
+                 "OAK klassifikatsiyasiga mos ierarxiya. Sun'iy kategoriya qo'shmang — faqat tasdiqlangan manbadan.",
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')],
+                 meta=['Jami: %d ta yo\'nalish' % field_total]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="mq-notice" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="mq-detail__actions" style="margin-bottom:var(--space-24);">
+    <a class="ol-btn ol-btn--primary" href="/admin/scientific-fields/new">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>Yangi yo'nalish</a>
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles">Maqolalar</a>
+  </div>
+
+  {% if field_tree %}
+    {{ admin_tree(field_tree) }}
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Yo'nalishlar hali kiritilmagan</h2>
+    <p class="ol-body">
+      Serverda seed skriptini ishga tushiring:
+      <code>python scripts/seed_scientific_fields.py --file data/scientific_fields.json</code>
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

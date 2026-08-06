@@ -1,6 +1,7 @@
 """Bounded, content-aware validation for user supplied files."""
 from __future__ import annotations
 
+import hashlib
 import io
 import os
 import secrets
@@ -151,3 +152,110 @@ def save_safe_image(file_storage, upload_dir: str, prefix: str) -> str:
     finally:
         image.close()
     return filename
+
+
+# ── PDF (ilmiy maqolalar katalogi) ──────────────────────────────────────────
+# Hajm chegarasi konfiguratsiyadan. Flask'ning global MAX_CONTENT_LENGTH
+# (app.py: 20 MB) butun so'rovni rad etadi, shuning uchun bu chegara undan
+# KICHIK bo'lishi shart — aks holda foydalanuvchi tushunarsiz 413 oladi.
+MAX_PDF_BYTES = min(
+    int(os.environ.get("ARTICLE_PDF_MAX_MB", "15")) * 1024 * 1024,
+    19 * 1024 * 1024,
+)
+
+_PDF_MIMES = {
+    "application/pdf",
+    "application/x-pdf",
+    "application/octet-stream",   # ba'zi brauzerlar PDF ni shunday yuboradi
+}
+
+
+def validate_pdf_upload(file_storage, max_bytes=None):
+    """Extension + MIME + magic bytes + hajm; (data, sha256) qaytaradi.
+
+    PDF ichidagi JavaScript, /OpenAction yoki o'rnatilgan fayllarni TOZALAMAYDI
+    — hozirgi stack'da (Pillow bor, PDF kutubxonasi yo'q) sanitizatsiya
+    imkoni yo'q. Bu cheklov docs/articles-module.md da hujjatlashtirilgan;
+    shu sababli PDF hech qachon brauzerga inline `application/pdf` sifatida
+    to'g'ridan-to'g'ri berilmaydi (Phase 2B.2 viewer kontrakti).
+    """
+    limit = max_bytes or MAX_PDF_BYTES
+    name = file_storage.filename or ""
+    if os.path.splitext(name)[1].lower() != ".pdf":
+        raise UploadValidationError("Faqat .pdf kengaytmali fayl qabul qilinadi")
+
+    mimetype = (file_storage.mimetype or "").lower()
+    if mimetype and mimetype not in _PDF_MIMES:
+        raise UploadValidationError("Fayl MIME turi PDF emas")
+
+    data = _read_bounded(file_storage, limit)
+    if not data.startswith(b"%PDF-"):
+        raise UploadValidationError("Fayl PDF signaturasiga ega emas (%PDF)")
+    # Buzilgan yoki kesilgan yuklamani erta ushlash: har bir haqiqiy PDF
+    # oxirida %%EOF bo'ladi (ba'zi generatorlar keyin bo'sh joy qoldiradi).
+    if b"%%EOF" not in data[-2048:]:
+        raise UploadValidationError("PDF fayl to'liq yuklanmagan yoki buzilgan")
+
+    return data, hashlib.sha256(data).hexdigest()
+
+
+def sanitize_pdf_filename(name, fallback="maqola.pdf"):
+    """Foydalanuvchi bergan nomni ko'rsatish uchun xavfsiz holga keltiradi.
+
+    Bu nom DISKDA ISHLATILMAYDI (fayl nomi doim server generatsiya qiladi) —
+    faqat metadata sifatida saqlanadi va yuklab olishda taklif qilinadi.
+    Directory traversal shu sababli ikki qavat to'silgan: basename + oq ro'yxat.
+    """
+    base = os.path.basename((name or "").replace("\\", "/")).strip()
+    cleaned = "".join(c for c in base if c.isalnum() or c in " ._-")[:120].strip(" .")
+    if not cleaned or not cleaned.lower().endswith(".pdf"):
+        cleaned = (cleaned or "maqola") + ".pdf"
+    return cleaned or fallback
+
+
+def save_private_pdf(data, storage_dir):
+    """PDF ni static/ TASHQARISIGA atomik yozadi; nisbiy yo'lni qaytaradi.
+
+    * Fayl nomi to'liq server tomonidan generatsiya qilinadi (secrets) —
+      foydalanuvchi URL ni taxmin qila olmaydi va traversal imkonsiz.
+    * Sana bo'yicha pastki papka — bitta katalogda o'n minglab fayl to'planmasin.
+    * os.replace bilan atomik: yarim yozilgan fayl hech qachon ko'rinmaydi.
+    """
+    from datetime import date
+
+    bucket = date.today().strftime("%Y/%m")
+    target_dir = os.path.join(storage_dir, bucket)
+    os.makedirs(target_dir, exist_ok=True)
+    filename = f"{secrets.token_urlsafe(24).replace('-', '_')}.pdf"
+    final_path = os.path.join(target_dir, filename)
+
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=target_dir, prefix=".upload_", suffix=".tmp", delete=False
+        ) as temporary:
+            temp_path = temporary.name
+            temporary.write(data)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temp_path, final_path)
+        temp_path = None
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+    return f"{bucket}/{filename}"
+
+
+def resolve_private_pdf(storage_dir, relative_path):
+    """Saqlangan nisbiy yo'lni absolyut yo'lga aylantiradi, traversalni to'sib.
+
+    DB buzilgan yoki qo'lda tahrirlangan bo'lsa ham storage_dir dan tashqariga
+    chiqib bo'lmaydi — realpath solishtiruvi oxirgi to'siq.
+    """
+    if not relative_path:
+        return None
+    root = os.path.realpath(storage_dir)
+    candidate = os.path.realpath(os.path.join(root, str(relative_path).lstrip("/\\")))
+    if candidate != root and not candidate.startswith(root + os.sep):
+        return None
+    return candidate if os.path.isfile(candidate) else None

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ "Yo'nalishni tahrirlash" if edit_mode else "Yangi yo'nalish" }} (admin){% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% set d = values or {} %}
+<div class="ol-page">
+  {{ page_header("Yo'nalishni tahrirlash" if edit_mode else "Yangi fan yo'nalishi",
+                 "Daraja OAK shifridan avtomatik aniqlanadi; shifr bo'lmasa ota yo'nalishdan olinadi.",
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'),
+                         ("Fan yo'nalishlari", '/admin/scientific-fields')]) }}
+
+  {% if error %}<div class="mq-form__error" role="alert">{{ error }}</div>{% endif %}
+
+  <form class="mq-form" method="POST"
+        action="{{ '/admin/scientific-fields/%d/edit' % field_id if edit_mode else '/admin/scientific-fields/new' }}">
+    {{ csrf_token()|safe }}
+    <fieldset>
+      <legend>Yo'nalish ma'lumotlari</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="sf-name">Nomi (o'zbekcha, lotin) <abbr title="majburiy">*</abbr></label>
+          <input class="ol-field" id="sf-name" name="name_uz" required maxlength="300"
+                 value="{{ d.name_uz or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-name-cyr">Nomi (kirill)</label>
+          <input class="ol-field" id="sf-name-cyr" name="name_uz_cyrillic" maxlength="300"
+                 value="{{ d.name_uz_cyrillic or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-name-ru">Nomi (rus)</label>
+          <input class="ol-field" id="sf-name-ru" name="name_ru" maxlength="300"
+                 value="{{ d.name_ru or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-code">OAK shifri</label>
+          <input class="ol-field" id="sf-code" name="code" maxlength="32"
+                 value="{{ d.code or '' }}" placeholder="13.00.01"
+                 aria-describedby="sf-code-help">
+          <span class="ol-meta" id="sf-code-help">Majburiy emas. Berilsa yagona bo'lishi shart.</span>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-parent">Ota yo'nalish</label>
+          <select class="ol-field" id="sf-parent" name="parent_id">
+            <option value="">— yo'q (fan tarmog'i) —</option>
+            {% for f in field_rows %}
+            {% if not (edit_mode and f.id == field_id) %}
+            <option value="{{ f.id }}"
+                    {{ 'selected' if d.parent_id and f.id|string == d.parent_id|string }}>
+              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-order">Tartib raqami</label>
+          <input class="ol-field" type="number" id="sf-order" name="sort_order"
+                 value="{{ d.sort_order if d.sort_order is not none else 0 }}">
+        </div>
+        <label class="mq-form__check" for="sf-active">
+          <input type="checkbox" id="sf-active" name="is_active" value="1"
+                 {{ 'checked' if d.is_active or not values }}> Faol
+        </label>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="sf-desc">Tavsif</label>
+          <textarea class="ol-field" id="sf-desc" name="description" rows="3">{{ d.description or '' }}</textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Manba</legend>
+      <p class="ol-meta">Yo'nalish qaysi rasmiy ro'yxatdan olinganini yozing —
+        keyinchalik dataset yangilanganda taqqoslash uchun kerak.</p>
+      <div class="mq-form__grid">
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-source">Manba nomi</label>
+          <input class="ol-field" id="sf-source" name="source_name" maxlength="300"
+                 value="{{ d.source_name or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-source-url">Manba havolasi</label>
+          <input class="ol-field" type="url" id="sf-source-url" name="source_url"
+                 maxlength="1000" value="{{ d.source_url or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="sf-source-date">Tekshirilgan sana</label>
+          <input class="ol-field" type="date" id="sf-source-date" name="source_updated_at"
+                 value="{{ d.source_updated_at or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="mq-detail__actions">
+      <button type="submit" class="ol-btn ol-btn--primary">{{ 'Saqlash' if edit_mode else "Qo'shish" }}</button>
+      <a class="ol-btn ol-btn--secondary" href="/admin/scientific-fields">Bekor qilish</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

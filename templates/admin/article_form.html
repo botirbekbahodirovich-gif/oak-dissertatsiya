@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ 'Maqolani tahrirlash' if edit_mode else 'Yangi maqola' }} (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{# `values` — validatsiya yiqilganda formaga qaytarilgan xom qiymatlar;
+   `article` — tahrirlashda DB dan kelgan qator. Ustuvorlik `values` da,
+   shunda admin kiritgan matn xato xabaridan keyin ham yo'qolmaydi (§26). #}
+{% set d = values if values else (article if article else {}) %}
+{% set authors = (values.authors if values else (article.authors if article else None)) or [{}] %}
+{% set primary_id = (values.primary_field_id if values
+                     else (article.primary_field.id if article and article.primary_field else '')) %}
+{% set extra_ids = ((values.extra_field_ids if values
+                     else (article.fields|rejectattr('is_primary')|map(attribute='id')|list
+                           if article else [])) or [])|map('string')|list %}
+
+<div class="ol-page">
+  {{ page_header(
+       'Maqolani tahrirlash' if edit_mode else 'Yangi maqola',
+       'Faqat huquqi tekshirilgan, qonuniy ochiq maqolalar joylashtiriladi.',
+       crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')]) }}
+
+  {% if error %}
+  <div class="mq-form__error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form class="mq-form" method="POST" enctype="multipart/form-data"
+        action="{{ '/admin/articles/%d/edit' % article.id if edit_mode else '/admin/articles/new' }}">
+    {{ csrf_token()|safe }}
+
+    <!-- 1. Asosiy ma'lumotlar -->
+    <fieldset>
+      <legend>1. Asosiy ma'lumotlar</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-title">Maqola nomi <abbr title="majburiy">*</abbr></label>
+          <input class="ol-field" id="f-title" name="title" required maxlength="500"
+                 value="{{ d.title or '' }}">
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-abstract">Annotatsiya</label>
+          <textarea class="ol-field" id="f-abstract" name="abstract" rows="5">{{ d.abstract or '' }}</textarea>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-keywords">Kalit so'zlar (vergul bilan)</label>
+          <input class="ol-field" id="f-keywords" name="keywords" maxlength="500"
+                 value="{{ d.keywords or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-language">Til</label>
+          <select class="ol-field" id="f-language" name="language">
+            {% for key, label in languages.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.language or 'uz') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 2. Mualliflar -->
+    <fieldset>
+      <legend>2. Mualliflar</legend>
+      <p class="ol-meta">Tartib saqlanadi. Tashqi mualliflarni oddiy matn sifatida
+        kiritish mumkin — sayt profiliga majburiy bog'lash talab qilinmaydi.</p>
+      <div id="mq-authors">
+        {% for a in authors %}
+        <div class="mq-authorrow">
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-author-{{ loop.index0 }}">Muallif F.I.Sh.</label>
+            <input class="ol-field" id="f-author-{{ loop.index0 }}" name="author_name"
+                   maxlength="300" value="{{ a.author_name or '' }}">
+          </div>
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-orcid-{{ loop.index0 }}">ORCID</label>
+            <input class="ol-field" id="f-orcid-{{ loop.index0 }}" name="author_orcid"
+                   maxlength="64" value="{{ a.orcid or '' }}">
+          </div>
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-aff-{{ loop.index0 }}">Tashkilot</label>
+            <input class="ol-field" id="f-aff-{{ loop.index0 }}" name="author_affiliation"
+                   maxlength="400" value="{{ a.affiliation or '' }}">
+          </div>
+          <label class="mq-form__check" for="f-corr-{{ loop.index0 }}">
+            <input type="checkbox" id="f-corr-{{ loop.index0 }}" name="author_corresponding"
+                   value="{{ loop.index0 }}" {{ 'checked' if a.is_corresponding }}>
+            Mas'ul
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="ol-btn ol-btn--secondary" data-mq-add-author>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>Muallif qo'shish</button>
+    </fieldset>
+
+    <!-- 3. Nashr ma'lumotlari -->
+    <fieldset>
+      <legend>3. Nashr ma'lumotlari</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-journal">Jurnal nomi</label>
+          <input class="ol-field" id="f-journal" name="journal_name" maxlength="300"
+                 value="{{ d.journal_name or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-year">Nashr yili</label>
+          <input class="ol-field" type="number" id="f-year" name="publication_year"
+                 inputmode="numeric" value="{{ d.publication_year or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-date">Nashr sanasi</label>
+          <input class="ol-field" type="date" id="f-date" name="publication_date"
+                 value="{{ d.publication_date or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-volume">Jild</label>
+          <input class="ol-field" id="f-volume" name="volume" maxlength="50" value="{{ d.volume or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-issue">Son</label>
+          <input class="ol-field" id="f-issue" name="issue" maxlength="50" value="{{ d.issue or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-pages">Betlar</label>
+          <input class="ol-field" id="f-pages" name="pages" maxlength="50" value="{{ d.pages or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-doi">DOI</label>
+          <input class="ol-field" id="f-doi" name="doi" value="{{ d.doi or '' }}"
+                 placeholder="10.1234/abcd.2024.01"
+                 aria-describedby="f-doi-help">
+          <span class="ol-meta" id="f-doi-help">https://doi.org/ prefiksi avtomatik olib tashlanadi.</span>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-external">Tashqi havola (jurnal sahifasi)</label>
+          <input class="ol-field" type="url" id="f-external" name="external_url"
+                 maxlength="1000" value="{{ d.external_url or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 4. Fan yo'nalishlari -->
+    <fieldset>
+      <legend>4. Fan yo'nalishlari</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-primary">Asosiy yo'nalish <abbr title="majburiy">*</abbr></label>
+          <select class="ol-field" id="f-primary" name="primary_field_id" required>
+            <option value="">— tanlang —</option>
+            {% for f in field_rows %}
+            <option value="{{ f.id }}" {{ 'selected' if primary_id and f.id|string == primary_id|string }}>
+              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-extra">Qo'shimcha yo'nalishlar (Ctrl bilan bir nechta)</label>
+          <select class="ol-field" id="f-extra" name="extra_field_ids" multiple size="8">
+            {% for f in field_rows %}
+            <option value="{{ f.id }}" {{ 'selected' if f.id|string in extra_ids }}>
+              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 5. Indekslash -->
+    <fieldset>
+      <legend>5. Indekslash</legend>
+      <div class="mq-form__grid">
+        <label class="mq-form__check" for="f-scopus">
+          <input type="checkbox" id="f-scopus" name="index_scopus" value="1"
+                 {{ 'checked' if d.index_scopus }}> Scopus</label>
+        <label class="mq-form__check" for="f-wos">
+          <input type="checkbox" id="f-wos" name="index_wos" value="1"
+                 {{ 'checked' if d.index_wos }}> Web of Science</label>
+        <label class="mq-form__check" for="f-doaj">
+          <input type="checkbox" id="f-doaj" name="index_doaj" value="1"
+                 {{ 'checked' if d.index_doaj }}> DOAJ</label>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-index-other">Boshqa indekslar</label>
+          <input class="ol-field" id="f-index-other" name="index_other" maxlength="300"
+                 value="{{ d.index_other or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 6. Ochiq kirish va huquq -->
+    <fieldset>
+      <legend>6. Ochiq kirish va huquq</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group">
+          <label class="ol-label" for="mq-access-type">Kirish turi</label>
+          <select class="ol-field" id="mq-access-type" name="access_type">
+            {% for key, label in access_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.access_type or 'metadata_only') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-version">Maqola versiyasi</label>
+          <select class="ol-field" id="f-version" name="version_type">
+            {% for key, label in version_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.version_type or 'other') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-license">Litsenziya</label>
+          <select class="ol-field" id="f-license" name="license_type">
+            {% for key, label in licenses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.license_type or 'unknown') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <span class="ol-meta">Unknown litsenziyada PDF ommaga chiqmaydi.</span>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-license-url">Litsenziya havolasi</label>
+          <input class="ol-field" type="url" id="f-license-url" name="license_url"
+                 maxlength="500" value="{{ d.license_url or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-source-type">Manba turi</label>
+          <select class="ol-field" id="f-source-type" name="source_type">
+            {% for key, label in source_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.source_type or 'other_verified_source') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-source-name">Manba nomi</label>
+          <input class="ol-field" id="f-source-name" name="source_name" maxlength="300"
+                 value="{{ d.source_name or '' }}"
+                 aria-describedby="f-source-help">
+          <span class="ol-meta" id="f-source-help">PDF ochiq bo'lishi uchun manba majburiy.</span>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-source-url">Manba havolasi</label>
+          <input class="ol-field" type="url" id="f-source-url" name="source_url"
+                 maxlength="1000" value="{{ d.source_url or '' }}">
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-copyright">Mualliflik huquqi izohi</label>
+          <textarea class="ol-field" id="f-copyright" name="copyright_note" rows="2">{{ d.copyright_note or '' }}</textarea>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-permission">Ruxsat izohi (kim, qachon, qanday ruxsat berdi)</label>
+          <textarea class="ol-field" id="f-permission" name="permission_note" rows="2">{{ d.permission_note or '' }}</textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 7. PDF -->
+    <fieldset id="mq-pdf-section" data-allowed="{{ pdf_allowed_access|join(',') }}">
+      <legend>7. PDF fayl</legend>
+      {% if article and article.pdf_path %}
+      <p class="ol-body">
+        Joriy fayl: <strong>{{ article.pdf_original_name or 'maqola.pdf' }}</strong>
+        {% if article.pdf_size %}({{ (article.pdf_size / 1048576)|round(2) }} MB){% endif %}
+        {% if article.can_read_pdf %}
+        <span class="ol-badge ol-badge--success">Ommaga ochiq</span>
+        {% else %}
+        <span class="ol-badge ol-badge--notice">Yopiq: {{ article.pdf_block_reason }}</span>
+        {% endif %}
+      </p>
+      <label class="mq-form__check" for="f-remove-pdf">
+        <input type="checkbox" id="f-remove-pdf" name="remove_pdf" value="1">
+        Joriy PDF faylni olib tashlash
+      </label>
+      {% endif %}
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="f-pdf">PDF fayl (maksimal {{ max_pdf_mb }} MB)</label>
+        <input class="ol-field" type="file" id="f-pdf" name="pdf_file" accept="application/pdf,.pdf"
+               aria-describedby="f-pdf-help">
+        <span class="ol-meta" id="f-pdf-help">
+          Faqat ochiq kirish, muallif ruxsati, umumiy mulk va qayta tarqatishga
+          ruxsat etilgan repozitoriy nusxasi uchun. Yangi fayl yuklansa eskisi
+          faqat muvaffaqiyatli saqlangandan keyin o'chiriladi.
+        </span>
+      </div>
+
+      <!-- 8-bo'limga kirmaydigan, lekin PDF bilan bevosita bog'liq huquqiy tasdiq -->
+      <label class="mq-form__check" for="f-rights" style="align-items:flex-start;">
+        <input type="checkbox" id="f-rights" name="rights_confirmed" value="1"
+               {{ 'checked' if (article and article.rights_confirmed_at) or (values and values.rights_confirmed) }}>
+        <span>Ushbu faylni Olimlar.uz serverida saqlash va foydalanuvchilarga
+          ko'rsatish uchun yetarli huquq yoki ochiq litsenziya mavjudligini
+          tasdiqlayman.</span>
+      </label>
+      {% if article and article.rights_confirmed_at %}
+      <p class="ol-meta">Tasdiqlangan: {{ article.rights_confirmed_at }}
+        (admin #{{ article.rights_confirmed_by }})</p>
+      {% endif %}
+    </fieldset>
+
+    <!-- 8. Holat va moderatsiya -->
+    <fieldset>
+      <legend>8. Holat va moderatsiya</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-verification">Tekshiruv holati</label>
+          <select class="ol-field" id="f-verification" name="verification_status">
+            {% for key, label in verification_statuses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.verification_status or 'draft') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-publication">Nashr holati</label>
+          <select class="ol-field" id="f-publication" name="publication_status">
+            {% for key, label in publication_statuses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.publication_status or 'draft') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <label class="mq-form__check" for="f-featured">
+          <input type="checkbox" id="f-featured" name="is_featured" value="1"
+                 {{ 'checked' if d.is_featured }}> Tavsiya etilgan
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="mq-detail__actions">
+      <button type="submit" class="ol-btn ol-btn--primary">
+        {{ 'Saqlash' if edit_mode else "Qo'shish" }}</button>
+      <a class="ol-btn ol-btn--secondary" href="/admin/articles">Bekor qilish</a>
+      {% if edit_mode %}
+      <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ article.id }}/preview">Ko'rish</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+{% endblock %}

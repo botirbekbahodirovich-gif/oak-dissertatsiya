@@ -319,19 +319,9 @@ def _gap(global_total, uz_total):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@maqolalar_bp.route('/maqolalar')
-def maqolalar_landing_page():
-    """Ilmiy maqolalar katalogining kirish sahifasi (hozircha karkas).
-
-    To'liq route kontrakti: docs/maqolalar-route-contract.md
-    """
-    return render_template('maqolalar_landing.html')
-
-
-@maqolalar_bp.route('/maqolalar/yonalishlar')
-def maqolalar_topics_page():
-    """Fan yo'nalishlari katalogi (hozircha karkas — backend keyingi bosqichda)."""
-    return render_template('maqolalar_yonalishlar.html')
+# /maqolalar va /maqolalar/yonalishlar karkas route'lari bu yerdan OLIB TASHLANDI
+# (Phase 2B.1). Ular endi blueprints/articles.py da — DB'ga ulangan haqiqiy
+# katalog. Bu modul faqat OpenAlex nashr TAHLILI bilan shug'ullanadi.
 
 
 @maqolalar_bp.route('/maqolalar-tahlili')

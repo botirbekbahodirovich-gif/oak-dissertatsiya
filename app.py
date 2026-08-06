@@ -802,6 +802,9 @@ from blueprints.maqolalar import maqolalar_bp
 from blueprints.share import share_bp
 from blueprints.kafedra import kafedra_bp
 from blueprints.data_quality import data_quality_bp
+# articles_bp — saytning O'Z maqolalar katalogi (/maqolalar). maqolalar_bp bilan
+# adashtirmang: u OpenAlex nashr tahlili (/maqolalar-tahlili), boshqa modul.
+from blueprints.articles import articles_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -836,6 +839,7 @@ app.register_blueprint(maqolalar_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(kafedra_bp)
 app.register_blueprint(data_quality_bp)
+app.register_blueprint(articles_bp)
 
 # ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])
