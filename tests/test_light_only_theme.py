@@ -61,7 +61,13 @@ def read(path):
 class RenderedHtmlHasNoThemeSwitch(unittest.TestCase):
     """DB'ga tegmaydigan public sahifalar orqali tekshiriladi."""
 
-    PAGES = ['/maqolalar', '/maqolalar/yonalishlar', '/about', '/login']
+    # DB'ga tegmaydigan sahifalar. /maqolalar va /maqolalar/yonalishlar Phase
+    # 2B.1 da haqiqiy katalogga aylandi va endi Postgres talab qiladi — lokal
+    # muhitda ular 500 qaytaradi va bu tekshiruv xato sahifani "tekshirgan"
+    # bo'lib qolardi. Maqolalar sahifalarining light-only holati
+    # tests/test_articles_catalog.py:DesignSystemTests da (qalbaki DB bilan)
+    # tekshiriladi.
+    PAGES = ['/about', '/login', '/maxfiylik', '/oferta']
 
     @classmethod
     def setUpClass(cls):
@@ -190,7 +196,7 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(data['theme_color'].lower(), '#ffffff')
 
     def test_apple_status_bar_is_default(self):
-        html = app.test_client().get('/maqolalar').get_data(as_text=True)
+        html = app.test_client().get('/about').get_data(as_text=True)
         self.assertIn('apple-mobile-web-app-status-bar-style" content="default"', html)
 
 

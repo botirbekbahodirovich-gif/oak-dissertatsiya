@@ -16,6 +16,14 @@ from utils.navigation import (
     section_is_active,
 )
 
+# Navigatsiya shelli har bir sahifada bir xil, shuning uchun uni tekshirish
+# uchun DB'ga TEGMAYDIGAN, lekin navigatsiyada MAVJUD sahifa tanlanadi
+# (aktiv holat ham tekshirilishi kerak). Ilgari bu /maqolalar edi; Phase 2B.1
+# dan boshlab u haqiqiy katalog va Postgres talab qiladi, shu sababli lokal
+# muhitda 500 qaytarib bu testlarni yashirin ravishda xato sahifa ustida
+# ishlatib yuborardi.
+NAV_PROBE_PAGE = '/preparation'
+
 
 class NavigationConfigTests(unittest.TestCase):
     """utils/navigation.py — yagona konfiguratsiya va aktiv holat mantiqi."""
@@ -99,7 +107,7 @@ class NavigationShellTests(unittest.TestCase):
     def setUpClass(cls):
         cls.client = app.test_client()
 
-    def _html_as(self, user, path='/maqolalar'):
+    def _html_as(self, user, path=NAV_PROBE_PAGE):
         """DB'ga tegmaydigan shell sahifasini berilgan foydalanuvchi sifatida render qiladi."""
         client = app.test_client()
         original = app.login_manager._user_callback
@@ -114,10 +122,15 @@ class NavigationShellTests(unittest.TestCase):
             # "Missing user_loader" bilan yiqiladi.
             app.login_manager._user_callback = original
 
-    def test_public_maqolalar_pages_are_available(self):
-        for path in ['/maqolalar', '/maqolalar/yonalishlar']:
-            response = self.client.get(path)
-            self.assertEqual(response.status_code, 200, msg=path)
+    def test_public_maqolalar_routes_are_registered(self):
+        # Phase 2B.1 dan boshlab bu sahifalar haqiqiy katalog va Postgres
+        # talab qiladi, shuning uchun bu yerda ular CHAQIRILMAYDI — mavjudligi
+        # url_map orqali tekshiriladi. Sahifalarning o'zi
+        # tests/test_articles_catalog.py da (qalbaki DB bilan) tekshiriladi.
+        rules = {str(r.rule) for r in app.url_map.iter_rules()}
+        for path in ['/maqolalar', '/maqolalar/yonalishlar',
+                     '/maqolalar/<slug>', '/maqolalar/yonalish/<slug>']:
+            self.assertIn(path, rules, msg=path)
 
     def test_legacy_heatmap_route_still_responds(self):
         self.assertEqual(self.client.get('/heatmap').status_code, 200)
@@ -128,28 +141,28 @@ class NavigationShellTests(unittest.TestCase):
         self.assertIn('ol-footer', html)
 
     def test_every_primary_section_appears_in_the_header(self):
-        html = self.client.get('/maqolalar').get_data(as_text=True)
+        html = self.client.get(NAV_PROBE_PAGE).get_data(as_text=True)
         for section in PRIMARY_NAV:
             self.assertIn('ol-nav-menu-%s' % section.key, html)
 
     def test_old_boshqa_dropdown_is_gone(self):
-        html = self.client.get('/maqolalar').get_data(as_text=True)
+        html = self.client.get(NAV_PROBE_PAGE).get_data(as_text=True)
         self.assertNotIn('nav-dd-menu', html)
         self.assertNotIn('id="nav-links"', html)
 
     def test_header_exposes_search_premium_and_login_controls(self):
-        html = self.client.get('/maqolalar').get_data(as_text=True)
+        html = self.client.get(NAV_PROBE_PAGE).get_data(as_text=True)
         self.assertIn('aria-label="Qidiruvni ochish"', html)
         self.assertIn('ol-premium-btn', html)
         self.assertIn('href="/login"', html)
 
     def test_dropdown_triggers_are_wired_for_accessibility(self):
-        html = self.client.get('/maqolalar').get_data(as_text=True)
+        html = self.client.get(NAV_PROBE_PAGE).get_data(as_text=True)
         self.assertIn('aria-expanded="false"', html)
         self.assertIn('aria-controls="ol-nav-menu-tadqiqot"', html)
 
     def test_active_item_is_marked_on_the_current_page(self):
-        html = self.client.get('/maqolalar').get_data(as_text=True)
+        html = self.client.get(NAV_PROBE_PAGE).get_data(as_text=True)
         self.assertIn('ol-menu__link--active', html)
 
     def test_design_system_stylesheet_is_linked(self):
@@ -177,7 +190,7 @@ class NavigationShellTests(unittest.TestCase):
 class HeaderAuthStateTests(unittest.TestCase):
     """Logged-out / logged-in / admin header holatlari."""
 
-    def _html_as(self, user, path='/maqolalar'):
+    def _html_as(self, user, path=NAV_PROBE_PAGE):
         client = app.test_client()
         original = app.login_manager._user_callback
         app.login_manager._user_callback = lambda uid: user
@@ -192,7 +205,7 @@ class HeaderAuthStateTests(unittest.TestCase):
             app.login_manager._user_callback = original
 
     def test_logged_out_header_shows_login_and_no_account_menu(self):
-        html = app.test_client().get('/maqolalar').get_data(as_text=True)
+        html = app.test_client().get(NAV_PROBE_PAGE).get_data(as_text=True)
         self.assertIn('href="/login"', html)
         self.assertNotIn('ol-account-menu', html)
         self.assertNotIn('href="/logout"', html)
@@ -204,7 +217,7 @@ class HeaderAuthStateTests(unittest.TestCase):
         self.assertIn('botirbek', html)
 
     def test_admin_links_are_not_rendered_for_public_users(self):
-        html = app.test_client().get('/maqolalar').get_data(as_text=True)
+        html = app.test_client().get(NAV_PROBE_PAGE).get_data(as_text=True)
         for item in ADMIN_SERVICES:
             self.assertNotIn('href="%s"' % item.href, html,
                              msg='mehmonga admin link ko\'rindi: %s' % item.href)
@@ -236,7 +249,7 @@ class AccessibilityMarkupTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.html = app.test_client().get('/maqolalar').get_data(as_text=True)
+        cls.html = app.test_client().get(NAV_PROBE_PAGE).get_data(as_text=True)
 
     def test_landmarks_are_present(self):
         for marker in ('<header', '<nav', '<main', '<footer'):
