@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{# Phase 2B.2 PDF viewer uchun zaxiralangan sahifa.
+
+   Bu route ATAYIN hozirdan mavjud va ishlaydi: havolalar shu manzilga
+   qo'yilgan, viewer chiqqanda faqat shu shablon almashadi — URL o'zgarmaydi.
+   Kirish qoidasi (can_read_pdf) allaqachon to'liq kuchda: bu sahifaga
+   yetib kelgan foydalanuvchining PDF'ni ko'rish huquqi tekshirilgan.
+
+   Viewer vizual kontrakti: docs/maqolalar-route-contract.md (light-only). #}
+
+{% block title %}{{ article.title|truncate(80) }} — o'qish | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ article.title|truncate(200) }}{% endblock %}
+{# Viewer tayyor bo'lmaguncha bu sahifa indekslanmaydi — qidiruv natijasida
+   foydalanuvchi vaqtinchalik sahifaga tushib qolmasin. Kanonik manzil —
+   maqola tafsiloti. #}
+{% block seo_extra %}
+<meta name="robots" content="noindex, follow">
+{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header(
+       article.title,
+       '',
+       crumbs=[('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar'),
+               (article.title|truncate(40), '/maqolalar/' ~ article.slug)]) }}
+
+  <div class="mq-notice" role="status">
+    <h2 class="ol-h5" style="margin-top:0;">Ichki PDF o'qish rejimi tayyorlanmoqda</h2>
+    <p class="ol-body" style="margin-bottom:var(--space-16);">
+      Saytdan chiqmasdan o'qish imkoniyati keyingi bosqichda ishga tushadi.
+      Shu vaqtgacha faylni yuklab olib o'qishingiz mumkin.
+    </p>
+    <div class="mq-detail__actions">
+      <a class="ol-btn ol-btn--primary" href="/maqolalar/{{ article.slug }}/fayl">
+        <i class="bi bi-download" aria-hidden="true"></i>PDF'ni yuklab olish</a>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar/{{ article.slug }}">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>Maqola tafsilotlari</a>
+    </div>
+  </div>
+
+  <p class="ol-meta" style="margin-top:var(--space-24);">
+    Litsenziya: {{ article.license_label }}
+    {%- if article.source_name %} &middot; Manba: {{ article.source_name }}{% endif %}
+    {%- if article.pdf_size %} &middot; {{ (article.pdf_size / 1048576)|round(1) }} MB{% endif %}
+  </p>
+</div>
+{% endblock %}

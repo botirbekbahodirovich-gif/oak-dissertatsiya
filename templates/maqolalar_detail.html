@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/article_bits.html" import index_badges, access_badge %}
+
+{% block title %}{{ article.title|truncate(90) }} | Ilmiy maqolalar | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ (article.abstract or article.title)|striptags|truncate(300) }}{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block seo_extra %}
+{% if preview %}
+{# Admin preview public route emas va indekslanmaydi (§28). #}
+<meta name="robots" content="noindex, nofollow">
+{% else %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{# ScholarlyArticle — FAQAT haqiqatan mavjud maydonlar yoziladi. Taxminiy
+   iqtibos yoki indeks ma'lumoti structured data'ga QO'SHILMAYDI (§24). #}
+{{ seo_meta(
+     article.title,
+     (article.abstract or article.title)|striptags|truncate(300),
+     schema_type='ScholarlyArticle',
+     canonical_path='/maqolalar/' ~ article.slug,
+     extra_schema={
+       'author': article.authors|map(attribute='author_name')|list,
+       'datePublished': (article.publication_date.isoformat() if article.publication_date else (article.publication_year|string if article.publication_year else '')),
+       'isPartOf': article.journal_name or '',
+       'identifier': ('https://doi.org/' ~ article.doi) if article.doi else '',
+       'license': article.license_url or '',
+       'inLanguage': article.language or '',
+       'pagination': article.pages or '',
+     }) }}
+{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {% set crumb_list = [('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar')] %}
+  {% for node in field_crumbs %}
+    {% set _ = crumb_list.append((node.name_uz, '/maqolalar/yonalish/' ~ node.slug)) %}
+  {% endfor %}
+
+  {% if preview %}
+  <div class="mq-notice" role="status">
+    <strong>Admin ko'rinishi.</strong>
+    Bu sahifa public shablonning o'zi — holat:
+    {{ article.publication_label }} / {{ article.verification_label }}.
+    {% if article.pdf_block_reason %}
+    PDF ochiq emas: {{ article.pdf_block_reason }}.
+    {% endif %}
+    <a href="/admin/articles/{{ article.id }}/edit">Tahrirlash</a>
+  </div>
+  {% endif %}
+
+  {{ page_header(article.title, '', crumbs=crumb_list) }}
+
+  <div class="mq-detail__badges">
+    {{ access_badge(article) }}
+    {{ index_badges(article) }}
+    <span class="ol-badge ol-badge--neutral">{{ article.language_label }}</span>
+    <span class="ol-badge ol-badge--neutral">{{ article.version_label }}</span>
+    <span class="ol-badge ol-badge--neutral">{{ article.license_label }}</span>
+  </div>
+
+  <div class="mq-detail">
+    <div class="mq-detail__main">
+      <p class="ol-body-lg" style="margin-top:0;">
+        {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </p>
+      <p class="ol-body ol-muted">
+        {%- if article.journal_name %}{{ article.journal_name }}{% endif -%}
+        {%- if article.publication_year %} &middot; {{ article.publication_year }}{% endif -%}
+        {%- if article.volume %} &middot; {{ article.volume }}-jild{% endif -%}
+        {%- if article.issue %}, {{ article.issue }}-son{% endif -%}
+        {%- if article.pages %} &middot; {{ article.pages }}-betlar{% endif -%}
+      </p>
+
+      {# Asosiy CTA doim ICHKI route (§22): foydalanuvchi tashqi saytga
+         yuborilmaydi; original manba pastda metadata sifatida turadi. #}
+      <div class="mq-detail__actions">
+        {% if article.can_read_pdf %}
+        <a class="ol-btn ol-btn--primary" href="/maqolalar/{{ article.slug }}/oqish">
+          <i class="bi bi-book" aria-hidden="true"></i>PDF'ni o'qish</a>
+        {% endif %}
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <a class="ol-btn ol-btn--secondary" href="/admin/articles/{{ article.id }}/edit">
+          <i class="bi bi-pencil" aria-hidden="true"></i>Tahrirlash</a>
+        {% endif %}
+      </div>
+
+      {% if article.abstract %}
+      <section class="ol-section" aria-labelledby="mq-annotatsiya">
+        <h2 id="mq-annotatsiya" class="ol-h4">Annotatsiya</h2>
+        <p class="ol-body" style="white-space:pre-line;">{{ article.abstract }}</p>
+      </section>
+      {% endif %}
+
+      {% if article.keywords %}
+      <section class="ol-section" aria-labelledby="mq-kalit">
+        <h2 id="mq-kalit" class="ol-h4">Kalit so'zlar</h2>
+        <div class="ol-chips">
+          {% for word in article.keywords.split(',') %}
+            {% if word.strip() %}<span class="ol-chip">{{ word.strip() }}</span>{% endif %}
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if article.fields %}
+      <section class="ol-section" aria-labelledby="mq-yonalishlar">
+        <h2 id="mq-yonalishlar" class="ol-h4">Fan yo'nalishlari</h2>
+        <div class="ol-chips">
+          {% for f in article.fields %}
+          <a class="ol-chip" href="/maqolalar/yonalish/{{ f.slug }}">
+            {{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}
+            {%- if f.is_primary %} &middot; asosiy{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="ol-section" aria-labelledby="mq-mualliflar">
+        <h2 id="mq-mualliflar" class="ol-h4">Mualliflar</h2>
+        <ol class="mq-authors">
+          {% for a in article.authors %}
+          <li>
+            <span class="mq-authors__name">{{ a.author_name }}
+              {%- if a.is_corresponding %} <span class="ol-badge ol-badge--neutral">mas'ul muallif</span>{% endif %}</span>
+            {% if a.affiliation %}<span class="mq-authors__meta">{{ a.affiliation }}</span>{% endif %}
+            {% if a.orcid %}<span class="mq-authors__meta">ORCID: {{ a.orcid }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </section>
+
+      <section class="ol-section" aria-labelledby="mq-huquq">
+        <h2 id="mq-huquq" class="ol-h4">Manba va huquqiy ma'lumot</h2>
+        <dl class="mq-deflist">
+          <dt>Kirish turi</dt><dd>{{ article.access_label }}</dd>
+          <dt>Maqola versiyasi</dt><dd>{{ article.version_label }}</dd>
+          <dt>Litsenziya</dt>
+          <dd>{% if article.license_url %}<a href="{{ article.license_url }}" rel="license noopener"
+                  target="_blank">{{ article.license_label }}</a>{% else %}{{ article.license_label }}{% endif %}</dd>
+          <dt>Manba turi</dt><dd>{{ article.source_type_label }}</dd>
+          {% if article.source_name %}<dt>Manba</dt><dd>{{ article.source_name }}</dd>{% endif %}
+          {% if article.source_url %}
+          <dt>Manba havolasi</dt>
+          <dd><a href="{{ article.source_url }}" rel="nofollow noopener" target="_blank">{{ article.source_url }}</a></dd>
+          {% endif %}
+          {% if article.copyright_note %}<dt>Mualliflik huquqi</dt><dd>{{ article.copyright_note }}</dd>{% endif %}
+        </dl>
+
+        <p class="ol-meta" style="margin-top:var(--space-16);">
+          Bu nusxa &laquo;{{ article.version_label }}&raquo; versiyasi. Yakuniy nashr
+          etilgan variant jurnal saytida farq qilishi mumkin.
+        </p>
+      </section>
+    </div>
+
+    <aside class="mq-detail__aside" aria-label="Maqola ma'lumotlari">
+      <div class="ol-card">
+        <h2 class="ol-h5" style="margin-top:0;">Nashr ma'lumotlari</h2>
+        <dl class="mq-deflist">
+          {% if article.journal_name %}<dt>Jurnal</dt><dd>{{ article.journal_name }}</dd>{% endif %}
+          {% if article.publication_year %}<dt>Yil</dt><dd>{{ article.publication_year }}</dd>{% endif %}
+          {% if article.publication_date %}<dt>Sana</dt><dd>{{ article.publication_date }}</dd>{% endif %}
+          {% if article.volume %}<dt>Jild</dt><dd>{{ article.volume }}</dd>{% endif %}
+          {% if article.issue %}<dt>Son</dt><dd>{{ article.issue }}</dd>{% endif %}
+          {% if article.pages %}<dt>Betlar</dt><dd>{{ article.pages }}</dd>{% endif %}
+          <dt>Til</dt><dd>{{ article.language_label }}</dd>
+          {% if article.doi %}
+          <dt>DOI</dt>
+          <dd class="mq-doi"><a href="https://doi.org/{{ article.doi }}" rel="nofollow noopener"
+                 target="_blank">{{ article.doi }}</a></dd>
+          {% endif %}
+          {% if article.index_other %}<dt>Boshqa indekslar</dt><dd>{{ article.index_other }}</dd>{% endif %}
+        </dl>
+      </div>
+
+      <div class="ol-card">
+        <h2 class="ol-h5" style="margin-top:0;">Iqtibos</h2>
+        {# Minimal mavjud format — to'liq iqtibos generatori keyingi bosqichda. #}
+        <p class="ol-small" style="overflow-wrap:anywhere;">
+          {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+          {{ article.title }}.
+          {%- if article.journal_name %} {{ article.journal_name }}.{% endif %}
+          {%- if article.publication_year %} {{ article.publication_year }}.{% endif %}
+          {%- if article.volume %} {{ article.volume }}{% if article.issue %}({{ article.issue }}){% endif %}.{% endif %}
+          {%- if article.pages %} {{ article.pages }}.{% endif %}
+          {%- if article.doi %} https://doi.org/{{ article.doi }}{% endif %}
+        </p>
+      </div>
+
+      {% if not article.can_read_pdf and article.access_type == 'metadata_only' %}
+      <div class="mq-notice">
+        <p class="ol-small" style="margin:0;">
+          Bu yozuv faqat bibliografik ma'lumot sifatida saqlanadi — to'liq matn
+          Olimlar.uz'da joylashtirilmagan.
+        </p>
+      </div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}
