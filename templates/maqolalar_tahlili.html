@@ -123,29 +123,6 @@
                  color: #64748b; margin: 0 0 6px; }
 .mq-cite-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 11px 13px;
                font-size: 0.87rem; color: #1e293b; line-height: 1.55; margin-bottom: 8px; word-break: break-word; }
-
-[data-bs-theme="dark"] .mq-box, [data-bs-theme="dark"] .mq-gap-card,
-[data-bs-theme="dark"] .mq-panel, [data-bs-theme="dark"] .mq-item { background: #1e293b; border-color: rgba(148,163,184,0.15); }
-[data-bs-theme="dark"] .mq-card-h, [data-bs-theme="dark"] .mq-panel-h,
-[data-bs-theme="dark"] .mq-gap-stat b { color: #e2e8f0; }
-[data-bs-theme="dark"] .mq-input, [data-bs-theme="dark"] .mq-num { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
-[data-bs-theme="dark"] .mq-pill { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #94a3b8; }
-[data-bs-theme="dark"] .mq-pill.on { background: rgba(59,130,246,0.18); border-color: #3b82f6; color: #93c5fd; }
-[data-bs-theme="dark"] .mq-btn2 { background: #334155; border-color: rgba(148,163,184,0.25); color: #e2e8f0; }
-[data-bs-theme="dark"] .mq-item-title { color: #e2e8f0; }
-[data-bs-theme="dark"] .mq-item-title:hover { color: #93c5fd; }
-[data-bs-theme="dark"] .mq-item-authors { color: #94a3b8; }
-[data-bs-theme="dark"] .mq-tag { background: #0f172a; border-color: rgba(148,163,184,0.2); color: #cbd5e1; }
-[data-bs-theme="dark"] .mq-act { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #cbd5e1; }
-[data-bs-theme="dark"] .mq-chip { background: #0f172a; border-color: rgba(148,163,184,0.25); color: #cbd5e1; }
-[data-bs-theme="dark"] .mq-gap-bar, [data-bs-theme="dark"] .mq-jbar { background: #0f172a; }
-[data-bs-theme="dark"] .mq-jrow-top { color: #cbd5e1; }
-[data-bs-theme="dark"] .mq-cite-modal { background: #1e293b; border-color: rgba(148,163,184,0.2); }
-[data-bs-theme="dark"] .mq-cite-box { background: #0f172a; border-color: rgba(148,163,184,0.2); color: #e2e8f0; }
-[data-bs-theme="dark"] .mq-gap-label.strong { color: #fca5a5; }
-[data-bs-theme="dark"] .mq-gap-label.medium { color: #fcd34d; }
-[data-bs-theme="dark"] .mq-gap-label.low { color: #4ade80; }
-[data-bs-theme="dark"] .mq-bar-label { fill: #cbd5e1; }
 @media (max-width: 560px) {
   .mq-box { padding: 14px; }
   .mq-search-row { flex-direction: column; }
@@ -313,9 +290,6 @@
     if (n >= 1e6) return (Math.round(n / 1e5) / 10) + ' mln';
     if (n >= 1e3) return (Math.round(n / 100) / 10) + ' ming';
     return String(n);
-  }
-  function isDark() {
-    return document.documentElement.getAttribute('data-bs-theme') !== 'light';
   }
   function showAlert(msg, ok) {
     alertEl.textContent = msg;
@@ -511,7 +485,8 @@
       sec.style.display = 'none';
       return;
     }
-    var uzColor = isDark() ? '#0d9f6e' : '#10b981';
+    // Light-only: ilgari isDark() orqali ikki qiymat tanlanardi.
+    var uzColor = '#0c8930';  // --color-success
     document.getElementById('mq-chart-gtotal').textContent =
       fmt(yearly.global.reduce(function (a, b) { return a + b; }, 0)) + ' ta';
     document.getElementById('mq-chart-utotal').textContent =

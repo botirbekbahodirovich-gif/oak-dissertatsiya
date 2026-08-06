@@ -19,6 +19,25 @@ viewer uchun mo'ljallangan (tashqi faylga to'g'ridan-to'g'ri havola emas).
 Viewer chiqqanda `/maqolalar/[slug]` dagi "O'qish" tugmasi shu route'ga
 yo'naltiriladi.
 
+## PDF viewer — vizual kontrakt (light-only)
+
+Olimlar.uz'da kun/tun almashtirgichi yo'q va qo'shilmaydi. Viewer yaratilganda
+shu qoidalarga amal qilinsin:
+
+- viewer sahifasi umumiy sayt bilan bir xil **light** temada bo'ladi;
+- PDF canvas oq yoki hujjatning o'z foni bilan chiziladi — canvasga filtr,
+  invert yoki "dark mode" qo'llanmaydi;
+- toolbar soft-grey (`--color-background-soft`) yoki juda to'q neutral
+  bo'lishi mumkin. To'q toolbar — bu **semantik komponent tanlovi**, global
+  dark theme emas; u sahifaning qolgan qismiga tarqalmaydi;
+- foydalanuvchi uchun theme tanlovi, `data-bs-theme` almashtirish yoki
+  `localStorage` da rejim saqlash bo'lmaydi;
+- toolbar ikonkalari mavjud Bootstrap Icons to'plamidan olinadi, emoji emas.
+
+Bu qoidalar `tests/test_light_only_theme.py` bilan himoyalangan: manba daraxtida
+theme toggle, `data-bs-theme="dark"` yoki `prefers-color-scheme: dark` paydo
+bo'lsa testlar yiqiladi.
+
 ## Bu bosqichda ATAYIN qilinmagan ishlar
 
 - maqolalar backendi va ma'lumotlar modeli;

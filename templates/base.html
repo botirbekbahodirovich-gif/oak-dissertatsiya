@@ -21,9 +21,13 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/static/manifest.json">
+  {# Light-only: bitta theme-color, tizim rejimiga qarab almashmaydi. #}
   <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {# `black-translucent` kontentni status bar ostiga chiqarardi va oq
+     header ustida oq matn berardi — light UI uchun `default`. #}
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Olimlar.uz">
   <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 

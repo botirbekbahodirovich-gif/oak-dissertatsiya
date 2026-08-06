@@ -6,6 +6,12 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  /* Olimlar.uz — LIGHT-ONLY. Kun/tun almashtirgichi yo'q va qo'shilmaydi.
+     Bu e'lon brauzerga form control, scrollbar va tizim UI elementlarini
+     light rejimda chizishni aytadi — foydalanuvchining OS sozlamasidan
+     qat'i nazar. `light dark` yoki `dark` qiymati hech qachon qo'yilmasin. */
+  color-scheme: light;
+
   /* ── Rang ── */
   --color-brand-orange: #ff4203;
   --color-action-blue: #0056d6;
@@ -35,6 +41,10 @@
   --color-notice: #ff9900;
   --color-notice-soft: #fff9e6;
 
+  /* SEMANTIK to'q rang — global dark theme EMAS. AI yuzalarini qolgan
+     interfeysdan ajratish uchun zaxiraga olingan (dizayn tizimi kontraktida
+     belgilangan). Hozircha iste'molchisi yo'q: #ai-panel oq fonda.
+     Faqat AI konteksti uchun ishlating; sahifa yoki karta foniga qo'ymang. */
   --color-ai-background: #171426;
 
   /* ── Tipografiya ──
@@ -42,8 +52,17 @@
      Inter va Manrope loyihada o'zbek lotin + kirill subsetlari bilan
      self-host qilingan, shuning uchun Noto Serif o'rniga mavjud shriftlar
      saqlanadi (spetsifikatsiya shunga ruxsat beradi). */
-  --font-serif: 'Manrope', Georgia, 'Times New Roman', serif;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* H1/H2 uchun haqiqiy serif. Manrope bu yerda EMAS — u sans-serif geometrik
+     shrift bo'lib, "serif" tokeniga noto'g'ri qo'yilgan edi.
+     Noto Serif repoga yuklanmagan: loyiha ataylab Google Fonts'siz ishlaydi
+     (O'zbekiston latency, base.html:69). Foydalanuvchi tizimida Noto Serif
+     bo'lsa ishlatiladi, aks holda Georgia — u lotin va kirill uchun ham
+     ishonchli serif. Batafsil: docs/dead-templates.md yonidagi hisobot. */
+  --font-serif: 'Noto Serif', Georgia, 'Times New Roman', serif;
+  /* Manrope sarlavhaviy sans sifatida saqlanadi (self-hosted, kirill subseti
+     bilan), Inter esa asosiy UI shrifti. */
+  --font-sans: 'Inter', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
 
   --text-hero: 56px;
   --text-h1: 48px;
@@ -120,6 +139,13 @@
 @media (max-width: 649px) { .ol-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 
 /* ── Tipografiya ───────────────────────────────────────────────────────────── */
+
+/* Standart: H1 va H2 — serif; H3–H5, body, UI — sans.
+   Bu element darajasidagi qoida, shuning uchun `.ol-*` klassi yozilmagan
+   sahifalar ham to'g'ri ierarxiyani oladi. Sahifa o'z font-family sini
+   ataylab bersa, u yuqoriroq spetsifiklik bilan yengadi. */
+h1, h2 { font-family: var(--font-serif); }
+h3, h4, h5, h6 { font-family: var(--font-sans); }
 
 .ol-hero-title,
 .ol-h1, .ol-h2 { font-family: var(--font-serif); font-weight: 700; }

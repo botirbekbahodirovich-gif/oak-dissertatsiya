@@ -23,12 +23,9 @@
   }
   .auth-card .mb-3 { margin-bottom: 1rem !important; }
   /* Contrast: lift low-contrast helper text to the readable body token.
-     Theme-aware — base.html swaps text colour per theme via [data-bs-theme],
-     so mirror that here instead of hard-coding a single hex. */
-  .auth-card .auth-hint { color: var(--oak-text); }
-  .auth-card .text-muted { color: var(--oak-text) !important; }  /* beat Bootstrap's !important */
-  [data-bs-theme="light"] .auth-card .auth-hint { color: var(--oak-text-light); }
-  [data-bs-theme="light"] .auth-card .text-muted { color: var(--oak-text-light) !important; }
+     Light-only — ilgari bu yerda [data-bs-theme] bo'yicha ikkita variant bor edi. */
+  .auth-card .auth-hint { color: var(--color-text-secondary); }
+  .auth-card .text-muted { color: var(--color-text-secondary) !important; }  /* beat Bootstrap's !important */
 </style>
 {% endblock %}
 {% block content %}
