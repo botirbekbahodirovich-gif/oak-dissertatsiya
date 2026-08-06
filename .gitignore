@@ -30,3 +30,7 @@ output/
 
 # Kafedra hujjatlari — runtime da yaratilgan DOCX fayllar (serverda generatsiya qilinadi)
 static/generated_docs/
+
+# Ilmiy maqolalar PDF fayllari — runtime yuklamalar, static/ tashqarisida
+# saqlanadi (nginx to'g'ridan-to'g'ri bermasin). Hech qachon commit qilinmaydi.
+storage/

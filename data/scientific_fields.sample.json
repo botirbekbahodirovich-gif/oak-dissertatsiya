@@ -1,0 +1,44 @@
+{
+  "$schema_version": 1,
+  "sample": true,
+  "source_name": "DEVELOPMENT SAMPLE — rasmiy manba emas",
+  "source_url": null,
+  "source_updated_at": null,
+  "note": "FAQAT lokal ishlab chiqish va testlar uchun. Production bazaga yozish uchun --allow-sample bayrog'i ATAYIN talab qilinadi. Shifrlar va 1-daraja nomlari haqiqiy OAK ro'yxatidan olingan, lekin 2-3 daraja nomlari to'liq rasmiy registrga tekshirilmagan — shu sababli bu fayl production seed bilan ARALASHTIRILMAYDI.",
+  "fields": [
+    {
+      "code": "13.00.00",
+      "name_uz": "Pedagogika fanlari",
+      "sort_order": 130
+    },
+    {
+      "code": "13.00.01",
+      "name_uz": "Pedagogika nazariyasi. Pedagogik ta'limotlar tarixi",
+      "parent_code": "13.00.00",
+      "sort_order": 1
+    },
+    {
+      "code": "13.00.02",
+      "name_uz": "Ta'lim va tarbiya nazariyasi va metodikasi",
+      "parent_code": "13.00.00",
+      "sort_order": 2
+    },
+    {
+      "code": "05.00.00",
+      "name_uz": "Texnika fanlari",
+      "sort_order": 50
+    },
+    {
+      "code": "05.01.00",
+      "name_uz": "Informatika va axborot texnologiyalari",
+      "parent_code": "05.00.00",
+      "sort_order": 1
+    },
+    {
+      "code": "05.01.04",
+      "name_uz": "Hisoblash mashinalari, majmualari va kompyuter tarmoqlarining matematik va dasturiy ta'minoti",
+      "parent_code": "05.01.00",
+      "sort_order": 4
+    }
+  ]
+}
