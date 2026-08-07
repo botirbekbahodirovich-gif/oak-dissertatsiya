@@ -11,55 +11,12 @@ import os
 import unittest
 
 from scripts.seed_scientific_fields import (SeedError, load_seed, normalize_entries,
-                                            upsert_fields)
+                                            resolve_parent, upsert_fields)
+from tests.fake_seed_cursor import SeedCursor
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRODUCTION_SEED = os.path.join(_REPO_ROOT, 'data', 'scientific_fields.json')
 SAMPLE_SEED = os.path.join(_REPO_ROOT, 'data', 'scientific_fields.sample.json')
-
-
-class SeedCursor:
-    """Yo'nalishlar jadvalining xotiradagi minimal modeli."""
-
-    def __init__(self):
-        self.rows = []
-        self._result = []
-        self._next_id = 1
-        self.writes = 0
-
-    def execute(self, sql, params=None):
-        sql = ' '.join(sql.split())
-        params = list(params or [])
-        if sql.startswith('SELECT id, code, slug, name_uz, description, parent_id, level'):
-            self._result = [(r['id'], r['code'], r['slug'], r['name_uz'],
-                             r['description'], r['parent_id'], r['level'])
-                            for r in self.rows]
-        elif sql.startswith('SELECT 1 FROM scientific_fields WHERE slug'):
-            self._result = [(1,) for r in self.rows if r['slug'] == params[0]]
-        elif sql.startswith('INSERT INTO scientific_fields'):
-            self.writes += 1
-            row = {'id': self._next_id, 'parent_id': params[0], 'name_uz': params[1],
-                   'code': params[4], 'slug': params[5], 'level': params[6],
-                   'description': params[7]}
-            self._next_id += 1
-            self.rows.append(row)
-            self._result = [(row['id'],)]
-        elif sql.startswith('UPDATE scientific_fields'):
-            self.writes += 1
-            target = params[-1]
-            for row in self.rows:
-                if row['id'] == target:
-                    row.update(name_uz=params[0], description=params[3],
-                               parent_id=params[4], level=params[5])
-            self._result = []
-        else:
-            self._result = []
-
-    def fetchone(self):
-        return self._result[0] if self._result else None
-
-    def fetchall(self):
-        return list(self._result)
 
 
 def seed(entries, doc=None):
@@ -139,46 +96,63 @@ class UpsertTests(unittest.TestCase):
 
     def test_first_run_creates_everything(self):
         cursor = SeedCursor()
-        created, updated, skipped = upsert_fields(cursor, seed(self.ENTRIES))
-        self.assertEqual((created, updated, skipped), (2, 0, 0))
+        stats = upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)['stats']
+        self.assertEqual((stats['created'], stats['updated'], stats['skipped']),
+                         (2, 0, 0))
 
     def test_second_run_changes_nothing(self):
         cursor = SeedCursor()
-        upsert_fields(cursor, seed(self.ENTRIES))
+        upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)
         writes_after_first = cursor.writes
-        created, updated, skipped = upsert_fields(cursor, seed(self.ENTRIES))
-        self.assertEqual((created, updated, skipped), (0, 0, 2))
+        stats = upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)['stats']
+        self.assertEqual((stats['created'], stats['updated'], stats['skipped']),
+                         (0, 0, 2))
         self.assertEqual(cursor.writes, writes_after_first, 'ikkinchi run yozdi')
 
-    def test_a_changed_name_is_updated_not_duplicated(self):
+    def test_a_changed_name_is_a_conflict_by_default(self):
+        # Mavjud nom jimlik bilan almashtirilmaydi (§10).
         cursor = SeedCursor()
-        upsert_fields(cursor, seed(self.ENTRIES))
+        upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)
         changed = [dict(self.ENTRIES[0], name_uz='Pedagogika fanlari (yangilangan)'),
                    self.ENTRIES[1]]
-        created, updated, _skipped = upsert_fields(cursor, seed(changed))
-        self.assertEqual((created, updated), (0, 1))
+        result = upsert_fields(cursor, seed(changed), dry_run=False)
+        self.assertEqual(result['stats']['conflict'], 1)
+        self.assertEqual(result['stats']['updated'], 0)
+        self.assertEqual(cursor.rows[0]['name_uz'], 'Pedagogika fanlari')
+        self.assertEqual(result['conflicts'][0]['incoming_name_uz'],
+                         'Pedagogika fanlari (yangilangan)')
+
+    def test_a_changed_name_is_applied_with_update_names(self):
+        cursor = SeedCursor()
+        upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)
+        changed = [dict(self.ENTRIES[0], name_uz='Pedagogika fanlari (yangilangan)'),
+                   self.ENTRIES[1]]
+        result = upsert_fields(cursor, seed(changed), dry_run=False, update_names=True)
+        self.assertEqual(result['stats']['updated'], 1)
         self.assertEqual(len(cursor.rows), 2)
 
     def test_children_are_linked_to_their_parent(self):
         cursor = SeedCursor()
-        upsert_fields(cursor, seed(self.ENTRIES))
+        upsert_fields(cursor, seed(self.ENTRIES), dry_run=False)
         parent = next(r for r in cursor.rows if r['code'] == '13.00.00')
         child = next(r for r in cursor.rows if r['code'] == '13.00.01')
         self.assertEqual(child['parent_id'], parent['id'])
         self.assertEqual(parent['level'], 1)
         self.assertEqual(child['level'], 3)
 
-    def test_a_missing_parent_is_a_clear_error_not_a_silent_orphan(self):
+    def test_an_unreachable_parent_is_reported_not_silently_orphaned(self):
         cursor = SeedCursor()
-        with self.assertRaises(SeedError) as ctx:
-            upsert_fields(cursor, seed([{'name_uz': 'Yetim', 'code': '13.00.01'}]))
-        self.assertIn('Ota', ctx.exception.args[0])
+        result = upsert_fields(cursor, seed([{'name_uz': 'Yetim', 'code': '13.00.01'}]),
+                               dry_run=False)
+        self.assertEqual(result['stats']['unresolvable'], 1)
+        self.assertEqual(result['stats']['created'], 0)
+        self.assertEqual(cursor.rows, [], 'soxta ildiz yozuv yaratilmasligi kerak')
+        self.assertEqual(result['unresolvable'][0]['missing_parent_code'], '13.00.00')
 
-    def test_dry_run_writes_nothing(self):
+    def test_dry_run_is_the_default_and_writes_nothing(self):
         cursor = SeedCursor()
-        created, _updated, _skipped = upsert_fields(cursor, seed(self.ENTRIES),
-                                                    dry_run=True)
-        self.assertEqual(created, 2)
+        result = upsert_fields(cursor, seed(self.ENTRIES))
+        self.assertEqual(result['stats']['created'], 2)
         self.assertEqual(cursor.writes, 0)
         self.assertEqual(cursor.rows, [])
 
@@ -187,7 +161,7 @@ class UpsertTests(unittest.TestCase):
         upsert_fields(cursor, seed([
             {'name_uz': 'Umumiy pedagogika', 'code': '13.00.00'},
             {'name_uz': 'Umumiy pedagogika', 'code': '13.00.01'},
-        ]))
+        ]), dry_run=False)
         slugs = [r['slug'] for r in cursor.rows]
         self.assertEqual(len(slugs), len(set(slugs)))
 

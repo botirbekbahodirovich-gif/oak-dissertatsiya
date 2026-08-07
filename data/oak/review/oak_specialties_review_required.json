@@ -1,0 +1,723 @@
+{
+  "metadata": {
+    "source_file": "oak_barcha_shifrlar.md",
+    "source_path": "data/oak/source/oak_barcha_shifrlar.md",
+    "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+    "source_record_count": 289,
+    "parsed_at": "2026-08-07T00:00:00+00:00",
+    "parser_version": "1"
+  },
+  "records": [
+    {
+      "code": "01.02.02",
+      "raw_name": "Машиналар",
+      "normalized_candidate": "Машиналар",
+      "name_uz": "Mashinalar",
+      "level": 3,
+      "parent_code": "01.02.00",
+      "status": "review_required",
+      "review_reasons": [
+        "manually_flagged_possible_truncation"
+      ],
+      "curated_note": "generic plural noun (\"Машиналар\") — nom tugallanmaganga o'xshaydi",
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 23,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "01.04.02",
+      "raw_name": "Назарий физика”",
+      "normalized_candidate": "Назарий физика”",
+      "name_uz": "Nazariy fizika”",
+      "level": 3,
+      "parent_code": "01.04.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 35,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "01.04.11",
+      "raw_name": "“Лазер физикаси” ихтисослиги бўйича",
+      "normalized_candidate": "“Лазер физикаси” ихтисослиги бўйича",
+      "name_uz": "“Lazer fizikasi” ixtisosligi bo'yicha",
+      "level": 3,
+      "parent_code": "01.04.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 53,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "02.00.07",
+      "raw_name": "Композицион",
+      "normalized_candidate": "Композицион",
+      "name_uz": "Kompozision",
+      "level": 3,
+      "parent_code": "02.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "manually_flagged_possible_truncation"
+      ],
+      "curated_note": "sifat (\"Композицион\") — ergashuvchi ot yo'q",
+      "transliteration_warnings": [
+        "cyrillic_ts_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 69,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "02.00.12",
+      "raw_name": "“Нанокимё",
+      "normalized_candidate": "“Нанокимё",
+      "name_uz": "“Nanokimyo",
+      "level": 3,
+      "parent_code": "02.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_yo_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 79,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "02.00.19",
+      "raw_name": "Камёб",
+      "normalized_candidate": "Камёб",
+      "name_uz": "Kamyob",
+      "level": 3,
+      "parent_code": "02.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "manually_flagged_possible_truncation"
+      ],
+      "curated_note": "sifat (\"Камёб\") — ergashuvchi ot yo'q",
+      "transliteration_warnings": [
+        "cyrillic_yo_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 91,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "03.00.06",
+      "raw_name": "Зоология",
+      "normalized_candidate": "Зоология",
+      "name_uz": "Zoologiya",
+      "level": 3,
+      "parent_code": "03.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_06.00.03"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 103,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "03.00.13",
+      "raw_name": "Тупроқшунослик",
+      "normalized_candidate": "Тупроқшунослик",
+      "name_uz": "Tuproqshunoslik",
+      "level": 3,
+      "parent_code": "03.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_03.01.03"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 117,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "03.01.03",
+      "raw_name": "Тупроқшунослик",
+      "normalized_candidate": "Тупроқшунослик",
+      "name_uz": "Tuproqshunoslik",
+      "level": 3,
+      "parent_code": "03.01.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_03.00.13"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 125,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.01.02",
+      "raw_name": "“Тизимли таҳлил",
+      "normalized_candidate": "“Тизимли таҳлил",
+      "name_uz": "“Tizimli tahlil",
+      "level": 3,
+      "parent_code": "05.01.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 155,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.01.04",
+      "raw_name": "“Ҳисоблаш машиналари",
+      "normalized_candidate": "“Ҳисоблаш машиналари",
+      "name_uz": "“Hisoblash mashinalari",
+      "level": 3,
+      "parent_code": "05.01.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 159,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.02.03",
+      "raw_name": "“Технологик машиналар. Роботлар",
+      "normalized_candidate": "“Технологик машиналар. Роботлар",
+      "name_uz": "“Texnologik mashinalar. Robotlar",
+      "level": 3,
+      "parent_code": "05.02.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 177,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.04.01",
+      "raw_name": "“Телекоммуникация ва компютер тизимлари",
+      "normalized_candidate": "“Телекоммуникация ва компютер тизимлари",
+      "name_uz": "“Telekommunikasiya va kompyuter tizimlari",
+      "level": 3,
+      "parent_code": "05.04.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_ts_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 185,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.04.02",
+      "raw_name": "“Радиотехника",
+      "normalized_candidate": "“Радиотехника",
+      "name_uz": "“Radiotexnika",
+      "level": 3,
+      "parent_code": "05.04.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 187,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.05.02",
+      "raw_name": "“Электротехника. Электр энергия станциялари",
+      "normalized_candidate": "“Электротехника. Электр энергия станциялари",
+      "name_uz": "“Elektrotexnika. Elektr energiya stansiyalari",
+      "level": 3,
+      "parent_code": "05.05.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_ts_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 191,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.06.03",
+      "raw_name": "“Тери",
+      "normalized_candidate": "“Тери",
+      "name_uz": "“Teri",
+      "level": 3,
+      "parent_code": "05.06.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 205,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.06.04",
+      "raw_name": "“Тикувчилик буюмлари технологияси ва костюм дизайни” ихтисослиги бўйича",
+      "normalized_candidate": "“Тикувчилик буюмлари технологияси ва костюм дизайни” ихтисослиги бўйича",
+      "name_uz": "“Tikuvchilik buyumlari texnologiyasi va kostyum dizayni” ixtisosligi bo'yicha",
+      "level": 3,
+      "parent_code": "05.06.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 207,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.08.01",
+      "raw_name": "Мамлакат",
+      "normalized_candidate": "Мамлакат",
+      "name_uz": "Mamlakat",
+      "level": 3,
+      "parent_code": "05.08.00",
+      "status": "review_required",
+      "review_reasons": [
+        "manually_flagged_possible_truncation"
+      ],
+      "curated_note": "umumiy ot (\"Мамлакат\") — nom tugallanmaganga o'xshaydi",
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 211,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.08.05",
+      "raw_name": "“Темир йоълларнинг ҳаракатланувчи таркиби",
+      "normalized_candidate": "“Темир йоълларнинг ҳаракатланувчи таркиби",
+      "name_uz": "“Temir yo'llarning harakatlanuvchi tarkibi",
+      "level": 3,
+      "parent_code": "05.08.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_hard_sign_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 217,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "05.10.02",
+      "raw_name": "“Фавқулодда ҳолатларда хавфсизлик. Ёнғин",
+      "normalized_candidate": "“Фавқулодда ҳолатларда хавфсизлик. Ёнғин",
+      "name_uz": "“Favqulodda holatlarda xavfsizlik. Yong'in",
+      "level": 3,
+      "parent_code": "05.10.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_yo_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 239,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "06.00.03",
+      "raw_name": "Зоология",
+      "normalized_candidate": "Зоология",
+      "name_uz": "Zoologiya",
+      "level": 3,
+      "parent_code": "06.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_03.00.06"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 243,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "06.01.11",
+      "raw_name": "Қишлоқ хўжалиги маҳсулотларини сақлаш ва қайта ишлаш ихтисослиги",
+      "normalized_candidate": "Қишлоқ хўжалиги маҳсулотларини сақлаш ва қайта ишлаш ихтисослиги",
+      "name_uz": "Qishloq xo'jaligi mahsulotlarini saqlash va qayta ishlash ixtisosligi",
+      "level": 3,
+      "parent_code": "06.01.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 265,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "06.02.02",
+      "raw_name": "“Қишлоқ хўжалик ҳайвонларини озиқлантириш ва озуқа тайёрлаш технологияси",
+      "normalized_candidate": "“Қишлоқ хўжалик ҳайвонларини озиқлантириш ва озуқа тайёрлаш технологияси",
+      "name_uz": "“Qishloq xo'jalik hayvonlarini oziqlantirish va ozuqa tayyorlash texnologiyasi",
+      "level": 3,
+      "parent_code": "06.02.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_yo_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 269,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "09.00.04",
+      "raw_name": "Ижтимоий фалсафа. Диссертация мавзуси рўйхатга олинган рақам:",
+      "normalized_candidate": "Ижтимоий фалсафа. Диссертация мавзуси рўйхатга олинган рақам:",
+      "name_uz": "Ijtimoiy falsafa. Dissertasiya mavzusi ro'yxatga olingan raqam:",
+      "level": 3,
+      "parent_code": "09.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "foreign_text_in_name",
+        "name_ends_with_colon"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_ts_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 337,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "10.00.00",
+      "raw_name": "Матншунослик ва адаби манбашунослик",
+      "normalized_candidate": "Матншунослик ва адаби манбашунослик",
+      "name_uz": "Matnshunoslik va adabi manbashunoslik",
+      "level": 1,
+      "parent_code": null,
+      "status": "review_required",
+      "review_reasons": [
+        "code_level_conflicts_with_specialty_list"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 347,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "10.00.04",
+      "raw_name": "Европа",
+      "normalized_candidate": "Европа",
+      "name_uz": "Yevropa",
+      "level": 3,
+      "parent_code": "10.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "manually_flagged_possible_truncation"
+      ],
+      "curated_note": "atoqli ot (\"Европа\") — soha oti yo'q",
+      "transliteration_warnings": [
+        "cyrillic_ye_at_word_start"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 355,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "10.00.11",
+      "raw_name": "Амалий ва компютер лингвистикаси ихтисослиги",
+      "normalized_candidate": "Амалий ва компютер лингвистикаси ихтисослиги",
+      "name_uz": "Amaliy va kompyuter lingvistikasi ixtisosligi",
+      "level": 3,
+      "parent_code": "10.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 369,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "12.00.02",
+      "raw_name": "“Конституциявий ҳуқуқ. Маъмурий ҳуқуқ. Молия ва божхона ҳуқуқи” ихтисослиги",
+      "normalized_candidate": "“Конституциявий ҳуқуқ. Маъмурий ҳуқуқ. Молия ва божхона ҳуқуқи” ихтисослиги",
+      "name_uz": "“Konstitusiyaviy huquq. Ma'muriy huquq. Moliya va bojxona huquqi” ixtisosligi",
+      "level": 3,
+      "parent_code": "12.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_hard_sign_is_ambiguous",
+        "cyrillic_ts_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 389,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "12.00.08",
+      "raw_name": "“Жиноят ҳуқуқи. Жиноят-ижроия ҳуқуқи” ихтисослиги бўйича",
+      "normalized_candidate": "“Жиноят ҳуқуқи. Жиноят-ижроия ҳуқуқи” ихтисослиги бўйича",
+      "name_uz": "“Jinoyat huquqi. Jinoyat-ijroiya huquqi” ixtisosligi bo'yicha",
+      "level": 3,
+      "parent_code": "12.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "contains_specialty_context_suffix"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 397,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "14.00.03",
+      "raw_name": "Неврология",
+      "normalized_candidate": "Неврология",
+      "name_uz": "Nevrologiya",
+      "level": 3,
+      "parent_code": "14.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_14.00.13"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 433,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "14.00.13",
+      "raw_name": "Неврология",
+      "normalized_candidate": "Неврология",
+      "name_uz": "Nevrologiya",
+      "level": 3,
+      "parent_code": "14.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "duplicate_name_with_14.00.03"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 453,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "19.00.03",
+      "raw_name": "“Инсон касбий фаолияти психологияси",
+      "normalized_candidate": "“Инсон касбий фаолияти психологияси",
+      "name_uz": "“Inson kasbiy faoliyati psixologiyasi",
+      "level": 3,
+      "parent_code": "19.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 551,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "21.01.06",
+      "raw_name": "“Ҳарбий таълим ва тарбия",
+      "normalized_candidate": "“Ҳарбий таълим ва тарбия",
+      "name_uz": "“Harbiy ta'lim va tarbiya",
+      "level": 3,
+      "parent_code": "21.01.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [
+        "cyrillic_hard_sign_is_ambiguous"
+      ],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 561,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    },
+    {
+      "code": "22.00.02",
+      "raw_name": "“Ижтимоий тузилиш",
+      "normalized_candidate": "“Ижтимоий тузилиш",
+      "name_uz": "“Ijtimoiy tuzilish",
+      "level": 3,
+      "parent_code": "22.00.00",
+      "status": "review_required",
+      "review_reasons": [
+        "unbalanced_quotes_possible_truncation"
+      ],
+      "transliteration_warnings": [],
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 569,
+      "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+      "approved_name_uz_cyrillic": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "review_note": null
+    }
+  ]
+}

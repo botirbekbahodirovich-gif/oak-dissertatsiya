@@ -107,8 +107,27 @@ def _ensure_schema(cur):
             created_at        TIMESTAMP    NOT NULL DEFAULT NOW(),
             updated_at        TIMESTAMP    NOT NULL DEFAULT NOW()
         )""")
+    # Migratsiya 008 — manba (provenance) ustunlari. OAK dataseti import
+    # qilinganda har bir yo'nalish qayerdan kelgani kuzatiladi.
+    for column, ddl in (
+            ('raw_name', 'TEXT'),
+            ('source_line', 'INTEGER'),
+            ('source_sha256', 'CHAR(64)'),
+            ('review_status', 'VARCHAR(24)'),
+            ('reviewed_by', 'INTEGER'),
+            ('reviewed_at', 'TIMESTAMP'),
+            ('missing_parent_code', 'VARCHAR(32)')):
+        cur.execute(f"ALTER TABLE scientific_fields "
+                    f"ADD COLUMN IF NOT EXISTS {column} {ddl}")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_scientific_fields_code "
                 "ON scientific_fields (code) WHERE code IS NOT NULL AND code <> ''")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_scientific_fields_review "
+                "ON scientific_fields (review_status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_scientific_fields_missing_parent "
+                "ON scientific_fields (missing_parent_code) "
+                "WHERE missing_parent_code IS NOT NULL")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_scientific_fields_code_sort "
+                "ON scientific_fields (code)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_scientific_fields_parent "
                 "ON scientific_fields (parent_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_scientific_fields_level "
