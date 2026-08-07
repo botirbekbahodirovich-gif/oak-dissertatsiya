@@ -270,6 +270,15 @@ Fayl formati:
 
 `parent_code` berilmasa OAK shifridan hisoblanadi.
 
+### OAK ixtisosliklari dataseti
+
+Taksonomiyaning 3-darajasi (ixtisosliklar) alohida quvurdan keladi:
+OAK.UZ dan qo'lda yig'ilgan manba → `scripts/parse_oak_specialties.py` →
+`data/oak/normalized/oak_specialties_approved.json` → shu seed skripti.
+
+To'liq jarayon, normalizatsiya qoidalari, review workflow, transliteratsiya va
+yetishmayotgan guruh nomlari: **`docs/oak-specialties-import.md`**.
+
 ### Development sample production'dan ajratilgan
 
 `data/scientific_fields.sample.json` da `"sample": true` bor. Bu faylni seed
@@ -280,6 +289,11 @@ tasodifan tushmaydi.
 ---
 
 ## 9. Nima yetishmayapti: to'liq OAK dataseti
+
+> **Yangilandi.** 3-daraja (ixtisosliklar) endi mavjud: OAK manbasidan 255 ta
+> yozuv import qilinadi (`docs/oak-specialties-import.md`). Quyidagi matn
+> 1-daraja seed'i haqida va o'z kuchida qoladi; **hali ham yetishmayotgani** —
+> 2-daraja guruh nomlari (16 ta kod) va 21-fan tarmog'i nomi.
 
 `data/scientific_fields.json` da **faqat 1-daraja** — 22 ta fan tarmog'i.
 Ular repozitoriyda allaqachon tasdiqlangan holda bor edi
@@ -363,6 +377,10 @@ modul o'zgartirmaydi.
 | `tests/test_articles_migration.py` | migratsiya xavfsizligi + `_ensure_schema` bilan parity | yo'q |
 | `tests/test_articles_seed.py` | seed formati, idempotentlik, dry-run | yo'q |
 | `tests/test_articles_dbgated.py` | haqiqiy WHERE semantikasi, DB cheklovlari, CASCADE/RESTRICT | **staging** |
+| `tests/test_oak_translit.py` | kirill→lotin transliteratsiya | yo'q |
+| `tests/test_oak_parser.py` | OAK manbasini parsing va validatsiya | yo'q |
+| `tests/test_oak_import.py` | migratsiya 008, ota hal qilish, review gate | qalbaki |
+| `tests/test_oak_field_ui.py` | katta taksonomiya UI va admin filtrlari | qalbaki |
 
 Qalbaki DB (`tests/fake_pg.py`) **filtrlamaydi** — u faqat qatorlarni
 qaytaradi. Shuning uchun filtr va xavfsizlik semantikasi *yuborilgan SQL
