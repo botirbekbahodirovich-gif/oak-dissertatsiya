@@ -1,0 +1,1746 @@
+{
+  "metadata": {
+    "source_file": "oak_barcha_shifrlar.md",
+    "source_path": "data/oak/source/oak_barcha_shifrlar.md",
+    "source_sha256": "5e492b0fa56d5cde4414be718f66d1bfaca9b97f5dd7142107622574365c1792",
+    "source_record_count": 289,
+    "parsed_at": "2026-08-07T00:00:00+00:00",
+    "parser_version": "1"
+  },
+  "records": [
+    {
+      "code": "01.01.01",
+      "raw_name": "Математик анализ",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 9
+    },
+    {
+      "code": "01.01.02",
+      "raw_name": "Дифференциал тенгламалар ва математик физика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 11
+    },
+    {
+      "code": "01.01.03",
+      "raw_name": "Ҳисоблаш математикаси ва дискрет математика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 13
+    },
+    {
+      "code": "01.01.04",
+      "raw_name": "Геометрия ва топология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 15
+    },
+    {
+      "code": "01.01.05",
+      "raw_name": "“Эҳтимоллар назарияси ва математик статистика”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 17
+    },
+    {
+      "code": "01.01.06",
+      "raw_name": "Алгебра",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 19
+    },
+    {
+      "code": "01.02.01",
+      "raw_name": "Назарий механика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 21
+    },
+    {
+      "code": "01.02.02",
+      "raw_name": "Машиналар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 23
+    },
+    {
+      "code": "01.02.04",
+      "raw_name": "Деформацияланувчан қаттиқ жисм механикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 25
+    },
+    {
+      "code": "01.02.05",
+      "raw_name": "Суюқлик ва газ механикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 27
+    },
+    {
+      "code": "01.03.01",
+      "raw_name": "Астрономия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 29
+    },
+    {
+      "code": "01.03.02",
+      "raw_name": "Космос физикаси ва астрофизика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 31
+    },
+    {
+      "code": "01.04.01",
+      "raw_name": "экспериментал физиканинг асбоблари ва усуллари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 33
+    },
+    {
+      "code": "01.04.02",
+      "raw_name": "Назарий физика”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 35
+    },
+    {
+      "code": "01.04.03",
+      "raw_name": "Молекуляр физикаси ва иссиқлик физикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 37
+    },
+    {
+      "code": "01.04.04",
+      "raw_name": "Физик электроника",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 39
+    },
+    {
+      "code": "01.04.05",
+      "raw_name": "Оптика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 41
+    },
+    {
+      "code": "01.04.06",
+      "raw_name": "Полимерлар физикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 43
+    },
+    {
+      "code": "01.04.07",
+      "raw_name": "“Конденсирланган ҳолат физикаси”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 45
+    },
+    {
+      "code": "01.04.08",
+      "raw_name": "Атом ядроси ва элементар заррачалар физикаси. Тезлаштирувчи техника",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 47
+    },
+    {
+      "code": "01.04.09",
+      "raw_name": "Магнит ҳодисалар физикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 49
+    },
+    {
+      "code": "01.04.10",
+      "raw_name": "Яримўтказгичлар физикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 51
+    },
+    {
+      "code": "01.04.11",
+      "raw_name": "“Лазер физикаси” ихтисослиги бўйича",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 53
+    },
+    {
+      "code": "01.04.12",
+      "raw_name": "Наноматериаллар физикаси ва технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 55
+    },
+    {
+      "code": "02.00.01",
+      "raw_name": "Ноорганик кимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 57
+    },
+    {
+      "code": "02.00.02",
+      "raw_name": "Аналитик кимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 59
+    },
+    {
+      "code": "02.00.03",
+      "raw_name": "Органик кимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 61
+    },
+    {
+      "code": "02.00.04",
+      "raw_name": "Физик кимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 63
+    },
+    {
+      "code": "02.00.05",
+      "raw_name": "Целлюлоза ва целлюлоза-қоғоз ишлаб чиқариш кимёси ва технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 65
+    },
+    {
+      "code": "02.00.06",
+      "raw_name": "Юқори молекуляр бирикмалар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 67
+    },
+    {
+      "code": "02.00.07",
+      "raw_name": "Композицион",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 69
+    },
+    {
+      "code": "02.00.08",
+      "raw_name": "Нефт ва газ кимёси ва технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 71
+    },
+    {
+      "code": "02.00.09",
+      "raw_name": "Товарлар кимёси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 73
+    },
+    {
+      "code": "02.00.10",
+      "raw_name": "Биоорганик кимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 75
+    },
+    {
+      "code": "02.00.11",
+      "raw_name": "Коллоид ва мембрана кимёси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 77
+    },
+    {
+      "code": "02.00.12",
+      "raw_name": "“Нанокимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 79
+    },
+    {
+      "code": "02.00.13",
+      "raw_name": "Ноорганик моддалар ва улар асосидаги материаллар технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 81
+    },
+    {
+      "code": "02.00.14",
+      "raw_name": "Органик моддалар ва улар асосидаги материаллар технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 83
+    },
+    {
+      "code": "02.00.15",
+      "raw_name": "Силикат ва қийин эрийдиган нометалл материаллар технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 85
+    },
+    {
+      "code": "02.00.16",
+      "raw_name": "Кимё технологияси ва озиқ-овқат ишлаб чиқариш жараёнлари ва аппаратлари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 87
+    },
+    {
+      "code": "02.00.17",
+      "raw_name": "Қишлоқ хўжалик ва озиқ-овқат маҳсулотларига ишлов бериш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 89
+    },
+    {
+      "code": "02.00.19",
+      "raw_name": "Камёб",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 91
+    },
+    {
+      "code": "03.00.01",
+      "raw_name": "Биокимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 93
+    },
+    {
+      "code": "03.00.02",
+      "raw_name": "Биофизика ва радиобиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 95
+    },
+    {
+      "code": "03.00.03",
+      "raw_name": "Молекуляр биология. Молекуляр генетика. Молекуляр биотехнология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 97
+    },
+    {
+      "code": "03.00.04",
+      "raw_name": "Микробиология ва вирусология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 99
+    },
+    {
+      "code": "03.00.05",
+      "raw_name": "Ботаника",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 101
+    },
+    {
+      "code": "03.00.06",
+      "raw_name": "Зоология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 103
+    },
+    {
+      "code": "03.00.07",
+      "raw_name": "Ўсимликлар физиологияси ва биокимёси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 105
+    },
+    {
+      "code": "03.00.08",
+      "raw_name": "Одам ва ҳайвонлар физиологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 107
+    },
+    {
+      "code": "03.00.09",
+      "raw_name": "Умумий генетика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 109
+    },
+    {
+      "code": "03.00.10",
+      "raw_name": "Экология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 111
+    },
+    {
+      "code": "03.00.11",
+      "raw_name": "Гистология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 113
+    },
+    {
+      "code": "03.00.12",
+      "raw_name": "Биотехнология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 115
+    },
+    {
+      "code": "03.00.13",
+      "raw_name": "Тупроқшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 117
+    },
+    {
+      "code": "03.00.14",
+      "raw_name": "Геномика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 119
+    },
+    {
+      "code": "03.00.15",
+      "raw_name": "Ихтиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 121
+    },
+    {
+      "code": "03.00.17",
+      "raw_name": "Спорт физиологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 123
+    },
+    {
+      "code": "03.01.03",
+      "raw_name": "Тупроқшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 125
+    },
+    {
+      "code": "04.00.01",
+      "raw_name": "Умумий ва минтақавий геология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 127
+    },
+    {
+      "code": "04.00.03",
+      "raw_name": "Геотектоника ва геодинамика. Петрология ва литология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 129
+    },
+    {
+      "code": "04.00.04",
+      "raw_name": "Гидрогеология ва муҳандислик геологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 131
+    },
+    {
+      "code": "04.00.05",
+      "raw_name": "Палеонтология ва стратиграфия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 133
+    },
+    {
+      "code": "04.00.06",
+      "raw_name": "Геофизика. Фойдали қазилмаларни қидиришнинг геофизик усуллари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 135
+    },
+    {
+      "code": "04.00.07",
+      "raw_name": "Нефт ва газ конлари геологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 137
+    },
+    {
+      "code": "04.00.09",
+      "raw_name": "Маркшейдерия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 139
+    },
+    {
+      "code": "04.00.10",
+      "raw_name": "Геотехнология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 141
+    },
+    {
+      "code": "04.00.11",
+      "raw_name": "Қудуқларни бурғилаш ва ўзлаштириш технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 143
+    },
+    {
+      "code": "04.00.13",
+      "raw_name": "Нефт ва газ конларини ўзлаштириш ҳамда ишлатиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 145
+    },
+    {
+      "code": "04.00.14",
+      "raw_name": "Фойдали қазилмаларни бойитиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 147
+    },
+    {
+      "code": "04.00.15",
+      "raw_name": "Геологик разведка ишлари технологияси ва техникаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 149
+    },
+    {
+      "code": "04.00.16",
+      "raw_name": "Кончилик машиналари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 151
+    },
+    {
+      "code": "04.00.17",
+      "raw_name": "Кончиликда физик жараёнлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 153
+    },
+    {
+      "code": "05.01.02",
+      "raw_name": "“Тизимли таҳлил",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 155
+    },
+    {
+      "code": "05.01.03",
+      "raw_name": "“Информатиканинг назарий асослари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 157
+    },
+    {
+      "code": "05.01.04",
+      "raw_name": "“Ҳисоблаш машиналари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 159
+    },
+    {
+      "code": "05.01.05",
+      "raw_name": "“Ахборотларни ҳимоялаш усуллари ва тизимлари. Ахборот ва киберхавфсизлик”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 161
+    },
+    {
+      "code": "05.01.06",
+      "raw_name": "Ҳисоблаш техникаси ва бошқарув тизимларининг элементлари ва қурилмалари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 163
+    },
+    {
+      "code": "05.01.07",
+      "raw_name": "Математик моделлаштириш. Сонли усуллар ва дастурлар мажмуи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 165
+    },
+    {
+      "code": "05.01.08",
+      "raw_name": "Технологик жараёнлар ва ишлаб чиқаришларни автоматлаштириш ва бошқариш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 167
+    },
+    {
+      "code": "05.01.09",
+      "raw_name": "“Ҳужжатшунослик. Архившунослик. Кутубхонашунослик”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 169
+    },
+    {
+      "code": "05.01.10",
+      "raw_name": "“Ахборот олиш тизимлари ва жараёнлари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 171
+    },
+    {
+      "code": "05.01.11",
+      "raw_name": "“Рақамли технологиялар ва сунъий интеллект”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 173
+    },
+    {
+      "code": "05.02.02",
+      "raw_name": "Механизмлар ва машиналар назарияси. Машинашунослик ва машина деталлари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 175
+    },
+    {
+      "code": "05.02.03",
+      "raw_name": "“Технологик машиналар. Роботлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 177
+    },
+    {
+      "code": "05.02.04",
+      "raw_name": "“Стандартлаштириш ва маҳсулотлар сифатини бошқариш”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 179
+    },
+    {
+      "code": "05.02.08",
+      "raw_name": "Учиш аппаратларини лойиҳалаш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 181
+    },
+    {
+      "code": "05.03.01",
+      "raw_name": "Асбоблар. Ўлчаш ва назорат қилиш усуллари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 183
+    },
+    {
+      "code": "05.04.01",
+      "raw_name": "“Телекоммуникация ва компютер тизимлари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 185
+    },
+    {
+      "code": "05.04.02",
+      "raw_name": "“Радиотехника",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 187
+    },
+    {
+      "code": "05.05.01",
+      "raw_name": "“Энергетика тизимлари ва мажмуалари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 189
+    },
+    {
+      "code": "05.05.02",
+      "raw_name": "“Электротехника. Электр энергия станциялари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 191
+    },
+    {
+      "code": "05.05.04",
+      "raw_name": "“Саноат иссиқлик энергетикаси”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 193
+    },
+    {
+      "code": "05.05.05",
+      "raw_name": "Иссиқлик техникасининг назарий асослари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 195
+    },
+    {
+      "code": "05.05.06",
+      "raw_name": "“Қайта тикланадиган энергия турлари асосидаги энергия қурилмалари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 197
+    },
+    {
+      "code": "05.05.07",
+      "raw_name": "“Қишлоқ хўжалигида электр технологиялар ва электр ускуналар”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 199
+    },
+    {
+      "code": "05.06.01",
+      "raw_name": "“Тўқимачилик ва енгил саноат ишлаб чиқаришлари материалшунослиги”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 201
+    },
+    {
+      "code": "05.06.02",
+      "raw_name": "“Тўқимачилик материаллари технологияси ва хомашёга дастлабки ишлов бериш”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 203
+    },
+    {
+      "code": "05.06.03",
+      "raw_name": "“Тери",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 205
+    },
+    {
+      "code": "05.06.04",
+      "raw_name": "“Тикувчилик буюмлари технологияси ва костюм дизайни” ихтисослиги бўйича",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 207
+    },
+    {
+      "code": "05.07.02",
+      "raw_name": "Қишлоқ хўжалиги ва мелиорация техникаларини ишлатиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 209
+    },
+    {
+      "code": "05.08.01",
+      "raw_name": "Мамлакат",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 211
+    },
+    {
+      "code": "05.08.02",
+      "raw_name": "“Темир йўллар ва йўл хўжалиги”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 213
+    },
+    {
+      "code": "05.08.03",
+      "raw_name": "Темир йўл транспортини ишлатиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 215
+    },
+    {
+      "code": "05.08.05",
+      "raw_name": "“Темир йоълларнинг ҳаракатланувчи таркиби",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 217
+    },
+    {
+      "code": "05.08.06",
+      "raw_name": "“Ғилдиракли ва гусеницали машиналар ва уларни ишлатиш”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 219
+    },
+    {
+      "code": "05.09.01",
+      "raw_name": "Қурилиш конструксиялари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 221
+    },
+    {
+      "code": "05.09.02",
+      "raw_name": "“Геотехника”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 223
+    },
+    {
+      "code": "05.09.03",
+      "raw_name": "Иссиқлик таъминоти. Вентиляция",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 225
+    },
+    {
+      "code": "05.09.04",
+      "raw_name": "Сув таъминоти. Канализация. Сув ҳавзаларини муҳофазаловчи қурилиш тизимлари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 227
+    },
+    {
+      "code": "05.09.05",
+      "raw_name": "“Қурилиш материаллари ва буюмлари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 229
+    },
+    {
+      "code": "05.09.06",
+      "raw_name": "Гидротехника ва мелиорация қурилиши",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 231
+    },
+    {
+      "code": "05.09.07",
+      "raw_name": "«Гидравлика ва муҳандислик гидрологияси»",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 233
+    },
+    {
+      "code": "05.09.08",
+      "raw_name": "Қурилиш технологияси ва қурилиш жараёнларини ташкил қилиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 235
+    },
+    {
+      "code": "05.10.01",
+      "raw_name": "“Меҳнатни муҳофаза қилиш ва инсон фаолияти хавфсизлиги”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 237
+    },
+    {
+      "code": "05.10.02",
+      "raw_name": "“Фавқулодда ҳолатларда хавфсизлик. Ёнғин",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 239
+    },
+    {
+      "code": "05.10.03",
+      "raw_name": "«Сейсмик хавфсизлик».",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 241
+    },
+    {
+      "code": "06.00.03",
+      "raw_name": "Зоология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 243
+    },
+    {
+      "code": "06.01.01",
+      "raw_name": "Умумий деҳқончилик. Пахтачилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 245
+    },
+    {
+      "code": "06.01.02",
+      "raw_name": "Мелиорация ва суғорма деҳқончилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 247
+    },
+    {
+      "code": "06.01.03",
+      "raw_name": "Агротупроқшунослик ва агрофизика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 249
+    },
+    {
+      "code": "06.01.04",
+      "raw_name": "Агрокимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 251
+    },
+    {
+      "code": "06.01.05",
+      "raw_name": "Селекция  ва уруғчилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 253
+    },
+    {
+      "code": "06.01.06",
+      "raw_name": "Сабзавотчилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 255
+    },
+    {
+      "code": "06.01.07",
+      "raw_name": "Мевачилик ва узумчилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 257
+    },
+    {
+      "code": "06.01.08",
+      "raw_name": "Ўсимликшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 259
+    },
+    {
+      "code": "06.01.09",
+      "raw_name": "Ўсимликларни ҳимоя қилиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 261
+    },
+    {
+      "code": "06.01.10",
+      "raw_name": "Ер тузиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 263
+    },
+    {
+      "code": "06.01.11",
+      "raw_name": "Қишлоқ хўжалиги маҳсулотларини сақлаш ва қайта ишлаш ихтисослиги",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 265
+    },
+    {
+      "code": "06.02.01",
+      "raw_name": "Қишлоқ хўжалиги ҳайвонларини урчитиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 267
+    },
+    {
+      "code": "06.02.02",
+      "raw_name": "“Қишлоқ хўжалик ҳайвонларини озиқлантириш ва озуқа тайёрлаш технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 269
+    },
+    {
+      "code": "06.02.03",
+      "raw_name": "Хусусий зоотехния. Чорвачилик маҳсулотларини ишлаб чиқариш технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 271
+    },
+    {
+      "code": "06.02.04",
+      "raw_name": "Ипакчилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 273
+    },
+    {
+      "code": "06.02.05",
+      "raw_name": "Балиқчилик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 275
+    },
+    {
+      "code": "06.03.01",
+      "raw_name": "Ўрмон экинлари. Селекция",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 277
+    },
+    {
+      "code": "06.03.03",
+      "raw_name": "Доривор ўсимликлар интродукцияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 279
+    },
+    {
+      "code": "07.00.01",
+      "raw_name": "Ўзбекистон тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 281
+    },
+    {
+      "code": "07.00.02",
+      "raw_name": "Фан ва технологиялар тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 283
+    },
+    {
+      "code": "07.00.03",
+      "raw_name": "Жаҳон тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 285
+    },
+    {
+      "code": "07.00.04",
+      "raw_name": "Диншунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 287
+    },
+    {
+      "code": "07.00.05",
+      "raw_name": "Халқаро муносабатлар ва ташқи сиёсат тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 289
+    },
+    {
+      "code": "07.00.06",
+      "raw_name": "Археология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 291
+    },
+    {
+      "code": "07.00.07",
+      "raw_name": "Этнография",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 293
+    },
+    {
+      "code": "07.00.08",
+      "raw_name": "Тарихшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 295
+    },
+    {
+      "code": "08.00.01",
+      "raw_name": "“Иқтисодиёт назарияси”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 297
+    },
+    {
+      "code": "08.00.02",
+      "raw_name": "“Макроиқтисодиёт”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 299
+    },
+    {
+      "code": "08.00.03",
+      "raw_name": "Саноат иқтисодиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 301
+    },
+    {
+      "code": "08.00.04",
+      "raw_name": "“Қишлоқ хўжалиги иқтисодиёти”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 303
+    },
+    {
+      "code": "08.00.05",
+      "raw_name": "“Хизмат ко'рсатиш тармоқлари иқтисодиёти”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 305
+    },
+    {
+      "code": "08.00.06",
+      "raw_name": "“Эконометрика ва статистика”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 307
+    },
+    {
+      "code": "08.00.07",
+      "raw_name": "Молия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 309
+    },
+    {
+      "code": "08.00.08",
+      "raw_name": "Бухгалтерия ҳисоби",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 311
+    },
+    {
+      "code": "08.00.09",
+      "raw_name": "Жаҳон иқтисодиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 313
+    },
+    {
+      "code": "08.00.10",
+      "raw_name": "“Демография. Меҳнат иқтисодиёти”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 315
+    },
+    {
+      "code": "08.00.11",
+      "raw_name": "“Маркетинг”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 317
+    },
+    {
+      "code": "08.00.12",
+      "raw_name": "Минтақавий иқтисодиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 319
+    },
+    {
+      "code": "08.00.13",
+      "raw_name": "“Менежмент”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 321
+    },
+    {
+      "code": "08.00.14",
+      "raw_name": "“Иқтисодиётда ахборот тизимлари ва технологиялари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 323
+    },
+    {
+      "code": "08.00.15",
+      "raw_name": "“Тадбиркорлик ва кичик бизнес иқтисодиёти”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 325
+    },
+    {
+      "code": "08.00.16",
+      "raw_name": "Рақамли иқтисодиёт ва халқаро рақамли интеграция",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 327
+    },
+    {
+      "code": "08.00.17",
+      "raw_name": "Туризм ва меҳмонхона фаолияти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 329
+    },
+    {
+      "code": "09.00.01",
+      "raw_name": "Онтология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 331
+    },
+    {
+      "code": "09.00.02",
+      "raw_name": "Онг, маданият ва амалиёт шакллари фалсафаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 333
+    },
+    {
+      "code": "09.00.03",
+      "raw_name": "Фалсафа тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 335
+    },
+    {
+      "code": "09.00.04",
+      "raw_name": "Ижтимоий фалсафа. Диссертация мавзуси рўйхатга олинган рақам:",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 337
+    },
+    {
+      "code": "09.00.05",
+      "raw_name": "Миллий ғоя тарғиботи технологиялари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 339
+    },
+    {
+      "code": "09.00.06",
+      "raw_name": "Ғоялар тарихи ва методологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 341
+    },
+    {
+      "code": "09.00.07",
+      "raw_name": "Маънавият тарихи ва назарияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 343
+    },
+    {
+      "code": "09.00.09",
+      "raw_name": "“Маънавий жараёнлар ва технологиялар”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 345
+    },
+    {
+      "code": "10.00.00",
+      "raw_name": "Матншунослик ва адаби манбашунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 347
+    },
+    {
+      "code": "10.00.01",
+      "raw_name": "Ўзбек тили.",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 349
+    },
+    {
+      "code": "10.00.02",
+      "raw_name": "Ўзбек адабиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 351
+    },
+    {
+      "code": "10.00.03",
+      "raw_name": "Қорақалпоқ тили",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 353
+    },
+    {
+      "code": "10.00.04",
+      "raw_name": "Европа",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 355
+    },
+    {
+      "code": "10.00.05",
+      "raw_name": "Осиё ва Африка халқлари тили ва адабиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 357
+    },
+    {
+      "code": "10.00.06",
+      "raw_name": "Қиёсий адабиётшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 359
+    },
+    {
+      "code": "10.00.07",
+      "raw_name": "Адабиёт назарияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 361
+    },
+    {
+      "code": "10.00.08",
+      "raw_name": "Фолклоршунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 363
+    },
+    {
+      "code": "10.00.09",
+      "raw_name": "Журналистика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 365
+    },
+    {
+      "code": "10.00.10",
+      "raw_name": "Матншунослик ва адабий манбашунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 367
+    },
+    {
+      "code": "10.00.11",
+      "raw_name": "Амалий ва компютер лингвистикаси ихтисослиги",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 369
+    },
+    {
+      "code": "10.00.12",
+      "raw_name": "“Қорақалпоқ адабиёти”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 371
+    },
+    {
+      "code": "11.00.01",
+      "raw_name": "Табиий география",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 373
+    },
+    {
+      "code": "11.00.02",
+      "raw_name": "Иқтисодий ва ижтимоий география",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 375
+    },
+    {
+      "code": "11.00.03",
+      "raw_name": "Қуруқлик гидрологияси. Сув ресурслари. Гидрокимё",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 377
+    },
+    {
+      "code": "11.00.04",
+      "raw_name": "Метеорология. Иқлимшунослик. Агрометеорология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 379
+    },
+    {
+      "code": "11.00.05",
+      "raw_name": "Атроф-муҳитни муҳофаза қилиш ва табиий ресурслардан оқилона фойдаланиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 381
+    },
+    {
+      "code": "11.00.06",
+      "raw_name": "Геодезия. Картография",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 383
+    },
+    {
+      "code": "11.00.07",
+      "raw_name": "Геоинформатика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 385
+    },
+    {
+      "code": "12.00.01",
+      "raw_name": "Давлат ва ҳуқуқ назарияси ва тарихи. Ҳуқуқий таълимотлар тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 387
+    },
+    {
+      "code": "12.00.02",
+      "raw_name": "“Конституциявий ҳуқуқ. Маъмурий ҳуқуқ. Молия ва божхона ҳуқуқи” ихтисослиги",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 389
+    },
+    {
+      "code": "12.00.03",
+      "raw_name": "Фуқаролик ҳуқуқи. Тадбиркорлик ҳуқуқи. Оила ҳуқуқи. Халқаро хусусий ҳуқуқ",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 391
+    },
+    {
+      "code": "12.00.05",
+      "raw_name": "Меҳнат ҳуқуқи. Ижтимоий таъминот ҳуқуқи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 393
+    },
+    {
+      "code": "12.00.06",
+      "raw_name": "Табиий ресурслар ҳуқуқи. Аграр ҳуқуқ. Экологик ҳуқуқ",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 395
+    },
+    {
+      "code": "12.00.08",
+      "raw_name": "“Жиноят ҳуқуқи. Жиноят-ижроия ҳуқуқи” ихтисослиги бўйича",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 397
+    },
+    {
+      "code": "12.00.09",
+      "raw_name": "Жиноят процесси. Криминалистика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 399
+    },
+    {
+      "code": "12.00.10",
+      "raw_name": "Халқаро ҳуқуқ",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 401
+    },
+    {
+      "code": "12.00.11",
+      "raw_name": "Парламент ҳуқуқи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 403
+    },
+    {
+      "code": "12.00.12",
+      "raw_name": "Коррупция муаммолари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 405
+    },
+    {
+      "code": "12.00.13",
+      "raw_name": "Инсон ҳуқуқлари",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 407
+    },
+    {
+      "code": "12.00.15",
+      "raw_name": "Криминология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 409
+    },
+    {
+      "code": "13.00.01",
+      "raw_name": "Педагогика назарияси. Педагогик таълимотлар тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 411
+    },
+    {
+      "code": "13.00.02",
+      "raw_name": "Таълим ва тарбия назарияси ва методикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 413
+    },
+    {
+      "code": "13.00.03",
+      "raw_name": "Махсус педагогика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 415
+    },
+    {
+      "code": "13.00.04",
+      "raw_name": "Жисмоний тарбия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 417
+    },
+    {
+      "code": "13.00.05",
+      "raw_name": "Касб-ҳунар таълими назарияси ва методикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 419
+    },
+    {
+      "code": "13.00.06",
+      "raw_name": "Рақамли таълим назарияси ва методикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 421
+    },
+    {
+      "code": "13.00.07",
+      "raw_name": "“Таълимда менежмент”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 423
+    },
+    {
+      "code": "13.00.08",
+      "raw_name": "Мактабгача таълим ва тарбия назарияси ва методикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 425
+    },
+    {
+      "code": "13.00.09",
+      "raw_name": "Ижтимоий педагогика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 427
+    },
+    {
+      "code": "14.00.01",
+      "raw_name": "Акушерлик ва гинекология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 429
+    },
+    {
+      "code": "14.00.02",
+      "raw_name": "Морфология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 431
+    },
+    {
+      "code": "14.00.03",
+      "raw_name": "Неврология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 433
+    },
+    {
+      "code": "14.00.04",
+      "raw_name": "Оториноларингология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 435
+    },
+    {
+      "code": "14.00.05",
+      "raw_name": "Ички касалликлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 437
+    },
+    {
+      "code": "14.00.06",
+      "raw_name": "Кардиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 439
+    },
+    {
+      "code": "14.00.07",
+      "raw_name": "Гигиена",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 441
+    },
+    {
+      "code": "14.00.08",
+      "raw_name": "Офтальмология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 443
+    },
+    {
+      "code": "14.00.09",
+      "raw_name": "Педиатрия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 445
+    },
+    {
+      "code": "14.00.10",
+      "raw_name": "Юқумли касалликлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 447
+    },
+    {
+      "code": "14.00.11",
+      "raw_name": "«Дерматология ва венерология»",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 449
+    },
+    {
+      "code": "14.00.12",
+      "raw_name": "Тиббий реабилитология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 451
+    },
+    {
+      "code": "14.00.13",
+      "raw_name": "Неврология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 453
+    },
+    {
+      "code": "14.00.14",
+      "raw_name": "Онкология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 455
+    },
+    {
+      "code": "14.00.15",
+      "raw_name": "Патологик анатомия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 457
+    },
+    {
+      "code": "14.00.16",
+      "raw_name": "Нормал ва патологик физиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 459
+    },
+    {
+      "code": "14.00.17",
+      "raw_name": "Фармакология ва клиник фармакология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 461
+    },
+    {
+      "code": "14.00.18",
+      "raw_name": "Психиатрия ва наркология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 463
+    },
+    {
+      "code": "14.00.19",
+      "raw_name": "Тиббий радиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 465
+    },
+    {
+      "code": "14.00.20",
+      "raw_name": "Тиббий генетика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 467
+    },
+    {
+      "code": "14.00.21",
+      "raw_name": "Стоматология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 469
+    },
+    {
+      "code": "14.00.22",
+      "raw_name": "Травматология ва ортопедия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 471
+    },
+    {
+      "code": "14.00.23",
+      "raw_name": "Ҳамширалик ишини ташкил этиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 473
+    },
+    {
+      "code": "14.00.24",
+      "raw_name": "Суд тиббиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 475
+    },
+    {
+      "code": "14.00.25",
+      "raw_name": "Клиник лаборатор ва функционал диагностика",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 477
+    },
+    {
+      "code": "14.00.26",
+      "raw_name": "Фтизиатрия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 479
+    },
+    {
+      "code": "14.00.27",
+      "raw_name": "«Хирургия»",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 481
+    },
+    {
+      "code": "14.00.28",
+      "raw_name": "Нейрохирургия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 483
+    },
+    {
+      "code": "14.00.29",
+      "raw_name": "Гематология ва трансфузиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 485
+    },
+    {
+      "code": "14.00.30",
+      "raw_name": "Эпидемиология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 487
+    },
+    {
+      "code": "14.00.31",
+      "raw_name": "Урология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 489
+    },
+    {
+      "code": "14.00.32",
+      "raw_name": "Трансплантология ва сунъий аъзолар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 491
+    },
+    {
+      "code": "14.00.33",
+      "raw_name": "Жамият саломатлиги. Соғлиқни сақлашда менежмент",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 493
+    },
+    {
+      "code": "14.00.34",
+      "raw_name": "Юрак-қон томир хирургияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 495
+    },
+    {
+      "code": "14.00.35",
+      "raw_name": "«Болалар хирургияси»",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 497
+    },
+    {
+      "code": "14.00.36",
+      "raw_name": "Аллергология ва иммунология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 499
+    },
+    {
+      "code": "14.00.37",
+      "raw_name": "Анестезиология ва реаниматология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 501
+    },
+    {
+      "code": "14.00.38",
+      "raw_name": "Спорт тиббиёти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 503
+    },
+    {
+      "code": "14.00.39",
+      "raw_name": "Токсикология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 505
+    },
+    {
+      "code": "14.00.40",
+      "raw_name": "Шошилинч тиббиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 507
+    },
+    {
+      "code": "14.00.41",
+      "raw_name": "Халқ табобати",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 509
+    },
+    {
+      "code": "14.00.42",
+      "raw_name": "Пульмонология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 511
+    },
+    {
+      "code": "14.00.43",
+      "raw_name": "Профилактик тиббиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 513
+    },
+    {
+      "code": "14.00.44",
+      "raw_name": "Рақамли тиббиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 515
+    },
+    {
+      "code": "15.00.01",
+      "raw_name": "Дори технологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 517
+    },
+    {
+      "code": "15.00.02",
+      "raw_name": "Фармацевтик кимё ва фармакогнозия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 519
+    },
+    {
+      "code": "15.00.03",
+      "raw_name": "Фармацевтика ишини ташкил этиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 521
+    },
+    {
+      "code": "16.00.01",
+      "raw_name": "Ҳайвонлар касалликлари диагностикаси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 523
+    },
+    {
+      "code": "16.00.02",
+      "raw_name": "Ҳайвонлар патологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 525
+    },
+    {
+      "code": "16.00.03",
+      "raw_name": "Ветеринария микробиологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 527
+    },
+    {
+      "code": "16.00.04",
+      "raw_name": "Ветеринария фармакологияси ва токсикологияси. Ветеринария санитарияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 529
+    },
+    {
+      "code": "17.00.01",
+      "raw_name": "Театр санъати",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 531
+    },
+    {
+      "code": "17.00.02",
+      "raw_name": "Мусиқа санъати",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 533
+    },
+    {
+      "code": "17.00.03",
+      "raw_name": "Кино санъати. Телевидение",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 535
+    },
+    {
+      "code": "17.00.04",
+      "raw_name": "Тасвирий ва амалий безак санъати",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 537
+    },
+    {
+      "code": "17.00.05",
+      "raw_name": "Дизайн назарияси ва тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 539
+    },
+    {
+      "code": "17.00.06",
+      "raw_name": "Музейшунослик. Тарихий-маданий обектларни консервация қилиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 541
+    },
+    {
+      "code": "17.00.07",
+      "raw_name": "Маданият назарияси ва тарихи. Маданиятшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 543
+    },
+    {
+      "code": "17.00.08",
+      "raw_name": "Санъат назарияси ва тарихи",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 545
+    },
+    {
+      "code": "18.00.01",
+      "raw_name": "Архитектура назарияси ва тарихи. Архитектура ёдгорликларини таъмирлаш ва тиклаш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 547
+    },
+    {
+      "code": "19.00.01",
+      "raw_name": "Психология тарихи ва назарияси. Умумий психология. Шахс психологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 549
+    },
+    {
+      "code": "19.00.03",
+      "raw_name": "“Инсон касбий фаолияти психологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 551
+    },
+    {
+      "code": "19.00.04",
+      "raw_name": "Тиббий психология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 553
+    },
+    {
+      "code": "19.00.05",
+      "raw_name": "Ижтимоий психология. Этнопсихология",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 555
+    },
+    {
+      "code": "19.00.06",
+      "raw_name": "Ёш ва педагогик психология. Ривожланиш психологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 557
+    },
+    {
+      "code": "19.00.07",
+      "raw_name": "Дин психологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 559
+    },
+    {
+      "code": "21.01.06",
+      "raw_name": "“Ҳарбий таълим ва тарбия",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 561
+    },
+    {
+      "code": "21.01.08",
+      "raw_name": "Қуролли Кучлар фронт орти",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 563
+    },
+    {
+      "code": "21.02.23",
+      "raw_name": "Ҳарбий тиббиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 565
+    },
+    {
+      "code": "22.00.01",
+      "raw_name": "Социология назарияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 567
+    },
+    {
+      "code": "22.00.02",
+      "raw_name": "“Ижтимоий тузилиш",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 569
+    },
+    {
+      "code": "22.00.03",
+      "raw_name": "Ижтимоий онг ва ижтимоий жараёнлар социологияси",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 571
+    },
+    {
+      "code": "23.00.02",
+      "raw_name": "Сиёсий институтлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 573
+    },
+    {
+      "code": "23.00.04",
+      "raw_name": "Халқаро муносабатлар",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 575
+    },
+    {
+      "code": "23.00.05",
+      "raw_name": "“Миллий хавфсизликнинг тизимли таҳлили ва истиқболини белгилаш муаммолари”",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 577
+    },
+    {
+      "code": "24.00.01",
+      "raw_name": "Ислом тарихи ва манбашунослиги",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 579
+    },
+    {
+      "code": "24.00.02",
+      "raw_name": "Қуръоншунослик. Ҳадисшунослик",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 581
+    },
+    {
+      "code": "24.00.03",
+      "raw_name": "Фиқҳ, калом илми. Илоҳиёт",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 583
+    },
+    {
+      "code": "24.00.04",
+      "raw_name": "Мумтоз шарқ адабиёти ва манбашунослиги",
+      "source_file": "oak_barcha_shifrlar.md",
+      "source_line": 585
+    }
+  ]
+}
