@@ -77,8 +77,9 @@ qo'llaydi.
 | `/maqolalar/yonalishlar` | ierarxiya, progressive disclosure, qidiruv |
 | `/maqolalar/yonalish/<slug>` | yo'nalish + undagi maqolalar |
 | `/maqolalar/<slug>` | maqola tafsiloti |
-| `/maqolalar/<slug>/oqish` | **Phase 2B.2 viewer uchun zaxiralangan** |
-| `/maqolalar/<slug>/fayl` | PDF oqimi, `can_read_pdf` bilan qo'riqlangan |
+| `/maqolalar/<slug>/oqish` | **ichki PDF.js o'quvchisi** (Phase 2B.2) |
+| `/maqolalar/<slug>/pdf` | o'quvchi uchun himoyalangan PDF oqimi (inline, Range) |
+| `/maqolalar/<slug>/fayl` | PDF yuklab olish (attachment) — UI'da tugma yo'q |
 
 ### Admin
 
@@ -87,19 +88,22 @@ qo'llaydi.
 `/admin/articles/<id>/delete` (arxivlash),
 `/admin/scientific-fields[/new|/<id>/edit|/<id>/delete]`.
 
-### `/oqish` bo'yicha qaror
+### `/oqish` va `/pdf` ajratilishi
 
-Route **hozirdan mavjud va ishlaydi**; 404 bermaydi va tafsilotga ham
-qaytarmaydi — u o'zining minimal sahifasini ko'rsatadi.
+O'quvchi sahifasi va PDF baytlari **ataylab ikki route**:
 
-Sabab: `docs/maqolalar-route-contract.md` uni ichki viewer sifatida e'lon
-qilgan. Havolalar hozirdan shu manzilga qo'yiladi va viewer chiqqanda **faqat
-shablon almashadi** — URL o'zgarmaydi, SEO buzilmaydi, redirect zanjiri
-paydo bo'lmaydi.
+* `/oqish` — HTML karkas (`templates/maqolalar_oqish.html`). U hech qanday
+  PDF bayti bermaydi va hech qanday huquq qoidasini o'zi hisoblamaydi.
+* `/pdf` — himoyalangan oqim. PDF.js aynan shu manzildan o'qiydi.
 
-Kirish qoidasi hozirdan to'liq kuchda: PDF ochiq bo'lmasa route **404** beradi
-(fayl mavjudligi fakti ham oshkor qilinmaydi). Sahifa `noindex` — viewer
-tayyor bo'lmaguncha qidiruvdan vaqtinchalik sahifaga tushib qolinmaydi.
+Ikkalasi ham `_public_pdf_or_404()` orqali o'tadi, u esa `can_read_pdf()` ni
+chaqiradi. Qoida **nusxalanmaydi**: `/oqish` ochiq bo'lsa-yu `/pdf` ochiq
+bo'lmasligi (yoki aksincha) mumkin emas. Ruxsat yo'q bo'lsa ikkalasi ham
+`404` beradi — fayl mavjudligi fakti ham oshkor qilinmaydi.
+
+Sahifa route'i Phase 2B.1 dan beri **o'zgarmagan**: havolalar allaqachon
+`/oqish` ga qo'yilgan edi, Phase 2B.2 da faqat shablon almashdi. URL
+o'zgarmadi, redirect zanjiri paydo bo'lmadi.
 
 ---
 
@@ -181,10 +185,13 @@ Hozirgi stack'da (Pillow bor, PDF kutubxonasi yo'q) PDF ichidagi JavaScript,
 `/OpenAction` yoki o'rnatilgan fayllarni **tozalash imkoni yo'q**. Shuning
 uchun:
 
-* fayl brauzerga hech qachon inline `application/pdf` sifatida berilmaydi —
-  `/fayl` route `as_attachment=True` bilan ishlaydi;
-* Phase 2B.2 viewer faylni **o'zi** render qilishi kerak (pdf.js kabi), uni
-  `<iframe>` yoki `<embed>` bilan brauzerga topshirmasligi kerak;
+* PDF **hech qachon** brauzerning o'z plaginiga topshirilmaydi. `/pdf` route
+  `Content-Disposition: inline` beradi, lekin uni faqat PDF.js o'qiydi va
+  sahifaga `<canvas>` sifatida chizadi — `<iframe>`, `<embed>` yoki `<object>`
+  ishlatilmaydi (bu `tests/test_articles_viewer.py` bilan qulflangan);
+* PDF ichidagi JavaScript ijro etilmaydi: `enableScripting: false`, va
+  PDF.js ning `quickjs-eval` dvigateli serverga **umuman ko'chirilmagan**
+  (`static/vendor/pdfjs/README.md`);
 * admin faqat ishonchli manbadan olingan faylni joylashtirishi shart —
   huquqiy tasdiq checkboxi shu javobgarlikni qayd etadi.
 
@@ -369,7 +376,14 @@ modul o'zgartirmaydi.
   maydonlar** (author, datePublished, isPartOf, identifier/DOI, license,
   inLanguage, pagination). Taxminiy iqtibos yoki indeks ma'lumoti
   **yozilmaydi** (test buni tekshiradi).
-* Admin preview va `/oqish` — `noindex`.
+* Admin preview — `noindex, nofollow`.
+* `/oqish` — `noindex, nofollow` (meta + `X-Robots-Tag`), canonical maqola
+  tafsilotiga ishora qiladi. `base.html` da shu maqsadda `{% block robots %}`
+  va `{% block canonical %}` bloklari bor, shunda sahifada ikkita
+  qarama-qarshi direktiva qolmaydi.
+* `/pdf` va `/fayl` — `X-Robots-Tag: noindex, nofollow, noarchive`: PDF
+  matni maqola tafsiloti orqali indekslanadi, faylning o'zi `can_read_pdf()`
+  dan tashqarida turgan alohida hujjat bo'lib qolmasligi kerak.
 
 ---
 
@@ -379,6 +393,7 @@ modul o'zgartirmaydi.
 |---|---|---|
 | `tests/test_articles_rules.py` | `can_read_pdf`, litsenziya, DOI, slug, ierarxiya, halqa, PDF yuklash/saqlash | yo'q |
 | `tests/test_articles_catalog.py` | route'lar, qidiruv/filtr/sort/sahifalash SQL'i, shablonlar, SEO, accessibility | qalbaki |
+| `tests/test_articles_viewer.py` | o'quvchi kirishi, oqim sarlavhalari, Range, traversal, SEO, accessibility, dizayn tizimi, vendoring | qalbaki + haqiqiy fayl |
 | `tests/test_articles_admin.py` | avtorizatsiya, CSRF, forma validatsiyasi, PDF yuklash yo'llari | qalbaki |
 | `tests/test_articles_migration.py` | migratsiya xavfsizligi + `_ensure_schema` bilan parity | yo'q |
 | `tests/test_articles_seed.py` | seed formati, idempotentlik, dry-run | yo'q |
@@ -410,25 +425,228 @@ sahifasini tekshirib yurar edi.
 
 ---
 
-## 13. Phase 2B.2 (PDF viewer) uchun kontrakt
+## 13. Ichki PDF o'quvchisi (Phase 2B.2)
 
-Viewer yozilganda **backendga tegish shart emas**. Tayyor kontrakt:
+Maqsad: foydalanuvchi maqolani Olimlar.uz'dan **chiqmasdan** o'qiydi, PDF esa
+`can_read_pdf()` qoidasidan tashqariga chiqmaydi.
 
-| Element | Qiymat |
-|---|---|
-| Sahifa route | `GET /maqolalar/<slug>/oqish` (mavjud, ishlaydi) |
-| Almashtiriladigan shablon | `templates/maqolalar_oqish.html` |
-| Fayl manbai | `GET /maqolalar/<slug>/fayl` → `application/pdf` |
-| Kirish qoidasi | `can_read_pdf()` — ikkala route'da allaqachon qo'llangan; qo'shimcha tekshiruv **yozilmasin** |
-| Ruxsat yo'q holat | `404` (mavjudlik oshkor qilinmaydi) |
-| Shablonga keladigan kontekst | `article` — `_decorate()` dan o'tgan to'liq dict: `title`, `slug`, `pdf_size`, `pdf_original_name`, `license_label`, `source_name`, `authors`, `fields`, `can_read_pdf` |
-| Yuklab olish hisoblagichi | `/fayl` `download_count` ni oshiradi |
-| Vizual kontrakt | `docs/maqolalar-route-contract.md` — light-only, canvas'ga filtr/invert yo'q, ikonkalar Bootstrap Icons |
-| Xavfsizlik | faylni `<iframe>`/`<embed>` bilan brauzerga topshirmang — PDF sanitizatsiya qilinmagan (§5) |
+### 13.1 Arxitektura
 
-Viewer chiqqanda `maqolalar_oqish.html` dagi `noindex` olib tashlanadi va
-`maqolalar_detail.html` dagi "PDF'ni o'qish" tugmasi o'zgarishsiz qoladi —
-u allaqachon shu route'ga ishora qiladi.
+```text
+GET /maqolalar/<slug>/oqish          -> maqolalar_oqish.html (faqat karkas)
+   |  templates/maqolalar_oqish.html
+   |    data-lib     -> /static/vendor/pdfjs/pdf.min.js?v=<versiya>
+   |    data-worker  -> /static/vendor/pdfjs/pdf.worker.min.js?v=<versiya>
+   |    data-pdf-url -> /maqolalar/<slug>/pdf
+   v
+static/js/maqolalar_viewer.js        -> PDF.js ni yuklaydi, Worker'ni yaratadi
+   v
+GET /maqolalar/<slug>/pdf            -> send_file(conditional=True), Range 206
+```
+
+Server hech qachon fayl tizimidagi yo'lni yoki `pdf_path` storage kalitini
+klientga bermaydi — shablonda faqat route manzili bor.
+
+### 13.2 PDF.js
+
+| | |
+| --- | --- |
+| Versiya | **5.7.284**, `legacy` build (eskiroq brauzerlar uchun transpil qilingan) |
+| Joylashuv | `static/vendor/pdfjs/` — vendoring, runtime CDN **yo'q** |
+| Versiya manbai | `blueprints/articles.py:PDFJS_VERSION` (shablon `?v=` bilan uzatadi) |
+| Provenance | `static/vendor/pdfjs/README.md` — tarball URL, SHA-256, nima olingan/olinmagan |
+
+Upstream `web/pdf_viewer.mjs` viewer komponenti **olinmagan**: u o'zi bilan
+`pdf_viewer.css` ni olib keladi, unda esa beshta to'q rejim media so'rovi bor
+va `tests/test_light_only_theme.py` ni yiqitadi. O'rniga past darajali API
+(`getDocument` + `TextLayer`) ishlatiladi, kerakli `.textLayer` uslublari esa
+`static/css/maqolalar_viewer.css` da dizayn tizimi tokenlari bilan qayta
+yozilgan.
+
+Worker ochiq (`new Worker(..., {type:'module'})`) yaratiladi va
+`PDFWorker({port})` ga uzatiladi. Sabab: PDF.js ning "fake worker" fallback'i
+parsingni asosiy oqimga ko'chiradi va interfeys muzlaydi — bunday tanazzul
+**jimgina** bo'lmasligi kerak. Worker yuklanmasa foydalanuvchi tushunarli
+xato ko'radi, konsolda esa aniq diagnostika qoladi. Kutubxona va worker
+versiyalari runtime'da solishtiriladi.
+
+### 13.3 Himoyalangan oqim (`/maqolalar/<slug>/pdf`)
+
+| Sarlavha | Qiymat | Sabab |
+| --- | --- | --- |
+| `Content-Type` | `application/pdf` | |
+| `Content-Disposition` | `inline; filename="<slug>.pdf"` | storage kaliti oshkor qilinmaydi |
+| `X-Content-Type-Options` | `nosniff` | |
+| `X-Robots-Tag` | `noindex, nofollow, noarchive` | fayl alohida indekslanmaydi |
+| `Accept-Ranges` | `bytes` | `send_file(conditional=True)` |
+| `Cache-Control` | `private, max-age=3600` | `copyright_hold` ga o'tgan maqola ulashilgan keshdan berilib qolmasin |
+
+**Range:** `send_file(..., conditional=True)` Werkzeug'ning
+`make_conditional(accept_ranges=True)` ini chaqiradi, shuning uchun
+`Range: bytes=0-1023` so'roviga `206 Partial Content` +
+`Content-Range: bytes 0-1023/<hajm>` qaytadi. Bu PDF.js uchun **shart**, chunki
+u hujjatni bo'laklab so'raydi. Test:
+`tests/test_articles_viewer.py:ViewerResponseHeaderTests.test_range_requests_are_supported`
+(haqiqiy vaqtinchalik fayl ustida o'lchanadi, mock emas).
+
+`X-Accel-Redirect` (nginx) **ishlatilmadi**: hozirgi `deploy/olimlar.uz.conf`
+da `internal` location yo'q va uni qo'shish yangi infratuzilma bo'lardi.
+Fayl WSGI file wrapper orqali oqadi — baytlar Python xotirasiga to'liq
+o'qilmaydi. PDF chegarasi 15 MB (`ARTICLE_PDF_MAX_MB`), shuning uchun
+gunicorn uchun bu yuk sezilarli emas. Trafik o'sib ketsa `X-Accel-Redirect`
+keyingi optimizatsiya sifatida ochiq qoladi.
+
+### 13.4 CSP
+
+**O'zgartirilmadi.** `security.py:_CSP` allaqachon yetarli:
+
+* `default-src 'self'` — worker `worker-src` -> `child-src` -> `default-src`
+  zanjiri bo'yicha ruxsat oladi; worker bir xil originda, `blob:` kerak emas;
+* `isEvalSupported: false` — PDF.js `new Function` ishlatmaydi, `unsafe-eval`
+  **talab qilinmaydi**;
+* `connect-src 'self'` — Range so'rovlari, standart shriftlar va WASM
+  dekoderlari hammasi bir xil origindan.
+
+`tests/test_articles_viewer.py:ViewerSecurityContractTests` CSP'da
+`unsafe-eval` paydo bo'lishini va `worker-src` bo'shatilishini bloklaydi.
+
+### 13.5 Interfeys
+
+Yuqori panel (light, `--color-white`): maqolaga qaytish, sarlavha, panel
+tugmasi, oldingi/keyingi sahifa, sahifa raqami maydoni, kichraytirish,
+masshtab (50–300% + kenglik bo'yicha), kattalashtirish, kenglikka moslash,
+qidiruv; burish va to'liq ekran — "boshqa amallar" menyusida.
+
+ARIA `role="toolbar"` **ataylab ishlatilmagan**: u chap/o'ng strelkalarni
+fokus ko'chirishga band qiladi, bizda esa ular sahifa almashtiradi. O'rniga
+nomlangan `role="group"` guruhlari (dizayn tizimi §22 buni ochiq ruxsat
+etadi).
+
+Chap panel: sahifa eskizlari (lazy) + hujjat tuzilmasi (outline; PDF'da
+tuzilma bo'lmasa tab umuman chiqmaydi). ≤767px da panel off-canvas tortmaga
+aylanadi (`data-side="open"`), boshlang'ich holat esa CSS media so'rovi bilan
+beriladi — JS yuklanmasa ham tartib to'g'ri.
+
+Klaviatura: `←`/`PageUp`, `→`/`PageDown`, `+`/`=`, `-`, `0` (kenglikka
+moslash), `Esc` (menyu -> qidiruv -> to'liq ekran -> tortma). Maydonga fokus
+bo'lganda shortcut'lar ishlamaydi.
+
+### 13.6 Performance
+
+* Sahifalar oldindan **bo'sh oq varaq** sifatida yaratiladi (nisbat birinchi
+  sahifadan) — 300 sahifali hujjatda ham boshida bitta `getPage()` qilinadi,
+  lekin scroll balandligi to'g'ri bo'ladi va sahifa sakramaydi.
+* `IntersectionObserver` (rootMargin 120%) — faqat ko'rinadigan va yaqin
+  sahifalar chiziladi.
+* Bir vaqtda eng ko'pi **4 ta** chizilgan sahifa saqlanadi; uzoqdagilarning
+  kanvasi `width = height = 0` bilan bo'shatiladi.
+* Kanvas maydoni 8 MP bilan chegaralangan — 200% + Retina'da bitta sahifa
+  30 MB rastr bo'lib ketmasin.
+* Sahifa ko'rinishdan chiqsa `renderTask.cancel()`; masshtab chizish paytida
+  o'zgarsa vazifa `dirty` bayrog'i bilan qayta navbatga qo'yiladi.
+* Resize 150 ms debounce; qayta chizish faqat "kenglik bo'yicha" rejimda.
+* Eskizlar ham lazy, alohida observer bilan.
+* PDF baytlari **hech qachon** base64 ichiga solinmaydi — faqat URL beriladi.
+
+### 13.7 Matn qatlami va qidiruv
+
+`TextLayer` chiziladi: matn tanlash, nusxa olish va brauzerning o'z
+qidiruvi (ko'rinib turgan sahifalarda) ishlaydi. **OCR yo'q**: skanerlangan
+PDF matn qatlamisiz bo'lsa, o'quvchi shunchaki kanvas ko'rsatadi.
+
+"Hujjat ichidan qidirish" MVP darajasida: `getTextContent()` bo'yicha
+moslik topilgan **sahifaga o'tiladi**, matn ichida ajratib ko'rsatilmaydi.
+Upstream `PDFFindController` qo'shilmadi — u `EventBus` + `PDFViewer` +
+bog'langan matn qatlamlarini, ya'ni butun upstream viewer arxitekturasini
+talab qiladi (va u bilan birga dark-mode CSS'ni). Ajratib ko'rsatish
+keyingi bosqichga qoldirildi.
+
+### 13.8 Havolalar va PDF ichidagi kod
+
+PDF.js `AnnotationLayer` **ishlatilmaydi** (u ham upstream CSS'ni talab
+qiladi). O'rniga yupqa o'z qatlamimiz: faqat `Link` tipidagi annotatsiyalar
+chiziladi.
+
+* tashqi havola — `new URL()` bilan tekshiriladi, faqat `http:`/`https:`
+  o'tadi; `javascript:`, `data:`, `file:` **rad etiladi**;
+* ochilishi — `target="_blank" rel="noopener noreferrer nofollow"`;
+* hujjat ichidagi havola — `<button>`, `getDestination()`/`getPageIndex()`
+  orqali sahifaga o'tadi;
+* nomlangan amal yoki JavaScript amali — umuman chizilmaydi.
+
+PDF ichidagi JavaScript ijro etilmaydi: `enableScripting: false`, va PDF.js
+ning `quickjs-eval` dvigateli serverga umuman ko'chirilmagan.
+
+### 13.9 Yuklab olish va chop etish
+
+**Yuklab olish tugmasi o'quvchida yo'q.** Sabab: hozirgi huquqiy model faqat
+"o'qish" huquqini biladi. `can_read_pdf()` — bu **ko'rsatish** huquqi;
+`open_access` + CC BY maqola bilan `author_permission` + "faqat saytda
+o'qishga ruxsat" maqolasi ayni shu funksiyada bir xil natija beradi, shuning
+uchun uni yuklab olish huquqi deb talqin qilib bo'lmaydi.
+
+`/maqolalar/<slug>/fayl` route'i Phase 2B.1 dan qolgan va ishlaydi, lekin
+hech qayerda tugma sifatida ko'rsatilmaydi.
+
+**Keyingi bosqich uchun kontrakt** — `utils/article_rules.py` ga qo'shiladi:
+
+```text
+can_download_pdf(article):
+    can_read_pdf(article) shart, lekin YETARLI EMAS.
+    Qo'shimcha: license_type qayta tarqatishga aniq ruxsat berishi kerak —
+    {cc_by, cc_by_sa, cc_by_nc, cc_by_nc_sa, cc0, public_domain}.
+    author_permission / repository_permission uchun admin alohida bayroq
+    qo'yishi kerak (yangi ustun), chunki ruxsat matni har xil bo'ladi.
+```
+
+**Chop etish:** alohida "Chop etish" tugmasi qo'shilmadi — chop etish ham
+yuklab olish kabi litsenziyaga bog'liq. Brauzerning o'z `Ctrl+P` imkoniyati
+esa **bloklanmaydi**: bu soxta DRM bo'lardi va baribir chetlab o'tiladi.
+Chop etilganda faqat ekranda chizilgan sahifalar chiqadi, chunki hujjat
+sahifalari lazy chiziladi.
+
+### 13.10 Nusxa ko'chirishdan "himoya" — yo'q
+
+O'ng tugma bloklanmaydi, matn tanlash bloklanmaydi, skrinshot to'silmaydi,
+anti-copy JS hiylalari yo'q. Huquq **kirish nazorati va litsenziya** bilan
+boshqariladi (`tests/test_articles_viewer.py:test_no_fake_drm_tricks`).
+
+### 13.11 Ma'lum cheklovlar
+
+* **Accessibility manba PDF'ga bog'liq.** Teg qo'yilmagan yoki skanerlangan
+  PDF'da matn qatlami bo'lmaydi va skrinrider hujjat mazmunini o'qiy olmaydi.
+  O'quvchining o'z interfeysi (panel, tortma, holatlar) to'liq klaviatura va
+  ARIA bilan ishlaydi; hujjatning o'zi esa manba sifatidan nariga o'ta olmaydi.
+  Bu foydalanuvchiga sahifada ochiq yozilgan.
+* **CJK PDF.** `cmaps/` vendoring qilinmagan (1.1 MB, auditoriya o'zbek/rus/
+  ingliz). Xitoy/yapon/koreys hujjati paydo bo'lsa shriftlar chiqmaydi.
+* **Parol bilan yopilgan PDF.** Aniqlanadi va tushunarli xabar ko'rsatiladi;
+  parol yuborish tizimi **qurilmadi** — bunday fayl admin ko'rigidan o'tishi
+  kerak.
+* **PDF sanitizatsiya qilinmaydi** (§5). O'quvchi buni canvas rendering va
+  o'chirilgan skripting bilan qoplaydi, lekin faylning o'zi tozalanmagan.
+* **Brauzerda vizual QA qilinmadi** — muhitda brauzer avtomatizatsiyasi va
+  ishlaydigan DB yo'q (§12 "Lokal DB yo'q"). PDF.js integratsiyasining
+  DOM'siz qismi (parsing, viewport, matn, outline, annotatsiya) haqiqiy
+  maqola PDF'lari ustida Node'da tekshirilgan.
+
+### 13.12 Kelajakdagi AI paneli uchun kontrakt
+
+AI paneli **qurilmadi**. Qurilganda o'quvchi quyidagi kontekstni bera oladi:
+
+| Maydon | Manba |
+| --- | --- |
+| `article_id` | shablon konteksti (`article.id`) |
+| `current_page` | `ArticlePdfViewer.currentPage` |
+| `selected_text` | `window.getSelection()` — matn qatlami ustida ishlaydi |
+| `document_page_count` | `ArticlePdfViewer.pageCount` |
+
+**Majburiy shart:** AI xizmati PDF faylga klient bergan storage yo'li orqali
+murojaat qilmaydi. U `article_id` ni oladi va faylni **server tomonida**
+`_public_pdf_or_404()` (ya'ni `can_read_pdf()`) orqali ochadi. Aks holda
+kirish nazorati klientga ko'chgan bo'lardi.
+
+O'ng panel uchun tartibda joy bor, lekin hozir bo'sh panel ko'rsatilmaydi.
 
 ---
 

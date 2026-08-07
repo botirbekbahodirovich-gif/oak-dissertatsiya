@@ -35,8 +35,12 @@
   <meta name="description" content="{% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 29,000+ dissertatsiya, tadqiqotchi profillari, AI mavzu tahlili.{% endblock %}">
   <meta name="keywords" content="{% block meta_keywords %}dissertatsiya, olimlar, PhD, DSc, OAK, ilmiy tadqiqot, O'zbekiston, ilmiy rahbar, avtoreferat, himoya{% endblock %}">
   <meta name="author" content="Olimlar.uz">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="{{ request.url }}">
+  {# Sukut bo'yicha indekslanadi. Kanonik bo'lmagan ko'rish rejimlari (masalan
+     maqola PDF o'quvchisi) shu ikki blokni qayta ta'riflaydi — ikkinchi
+     <meta robots> qo'shish o'rniga, aks holda sahifada ikkita qarama-qarshi
+     direktiva qoladi. #}
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ request.url }}{% endblock %}">
 
   <!-- Open Graph -->
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">

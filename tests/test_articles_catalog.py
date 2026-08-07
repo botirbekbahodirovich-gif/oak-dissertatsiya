@@ -279,14 +279,16 @@ class ArticleDetailTests(ArticlePageTestCase):
 
 
 class ReadRouteTests(ArticlePageTestCase):
-    """§3 — /oqish Phase 2B.2 uchun zaxiralangan, lekin kirish qoidasi kuchda."""
+    """§3 — /oqish ichki PDF o'quvchisi; kirish qoidasi to'liq kuchda.
 
-    def test_open_article_reaches_the_placeholder_page(self):
+    O'quvchining o'z tafsilotlari (PDF.js, oqim, sarlavhalar, tartib)
+    tests/test_articles_viewer.py da."""
+
+    def test_open_article_reaches_the_viewer(self):
         response = self.get('/maqolalar/ochiq-maqola/oqish',
                             articles=[article()], fields=[field()])
         self.assertEqual(response.status_code, 200)
-        self.assertIn('keyingi bosqichda',
-                      response.get_data(as_text=True))
+        self.assertIn('data-mqv="root"', response.get_data(as_text=True))
 
     def test_closed_pdf_is_a_404_and_does_not_leak_existence(self):
         for overrides in ({'license_type': 'unknown'},
@@ -296,7 +298,7 @@ class ReadRouteTests(ArticlePageTestCase):
                                 articles=[article(**overrides)], fields=[field()])
             self.assertEqual(response.status_code, 404, overrides)
 
-    def test_placeholder_page_is_not_indexed(self):
+    def test_viewer_page_is_not_indexed(self):
         html = self.html('/maqolalar/ochiq-maqola/oqish',
                          articles=[article()], fields=[field()])
         self.assertIn('name="robots" content="noindex', html)

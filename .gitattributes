@@ -14,6 +14,14 @@
 *.db binary
 *.woff binary
 *.woff2 binary
+*.ttf binary
+*.pfb binary
+*.wasm binary
+
+# Vendored PDF.js (static/vendor/pdfjs) — upstream baytlari o'zgarmasin.
+# Fayl checksumlari static/vendor/pdfjs/README.md da qayd etilgan; git
+# normalizatsiyasi ularni buzsa, provenance zanjiri uziladi.
+static/vendor/** -text
 
 # OAK manba fayli — bayt-ba-bayt saqlanishi SHART. Uning SHA-256 hash'i
 # butun dataset provenance zanjirining asosi (data/oak/**, parser va testlar

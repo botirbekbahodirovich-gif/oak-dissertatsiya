@@ -1,8 +1,11 @@
 # Maqolalar katalogi — route kontrakti
 
-Ushbu hujjat ilmiy maqolalar bo'limining kelajakdagi URL tuzilmasini qayd etadi.
-Navigatsiya (`utils/navigation.py`) hozircha faqat mavjud ikkita route'ga
-havola qiladi; qolganlari implementatsiya qilingach shu yerdan qo'shiladi.
+Ushbu hujjat ilmiy maqolalar bo'limining URL tuzilmasini qayd etadi.
+Navigatsiya (`utils/navigation.py`) faqat katalog darajasidagi route'larga
+havola qiladi; qolganlari sahifa ichidagi navigatsiya orqali ochiladi.
+
+Modul tafsiloti (modellar, PDF qoidasi, o'quvchi arxitekturasi, xavfsizlik va
+cheklovlar): **`docs/articles-module.md`**. Bu yerda faqat URL kontrakti.
 
 ## Route'lar
 
@@ -12,30 +15,35 @@ havola qiladi; qolganlari implementatsiya qilingach shu yerdan qo'shiladi.
 | `/maqolalar/yonalishlar` | ✅ Phase 2B.1 | Fan yo'nalishlarining ierarxik katalogi |
 | `/maqolalar/yonalish/[slug]` | ✅ Phase 2B.1 | Bitta yo'nalish ichidagi maqolalar ro'yxati |
 | `/maqolalar/[slug]` | ✅ Phase 2B.1 | Maqola tafsiloti: metadata, annotatsiya, sitata |
-| `/maqolalar/[slug]/fayl` | ✅ Phase 2B.1 | PDF oqimi (`can_read_pdf` bilan qo'riqlangan) |
-| `/maqolalar/[slug]/oqish` | ⏳ Phase 2B.2 | **Ichki PDF viewer** — hozircha vaqtinchalik sahifa |
+| `/maqolalar/[slug]/oqish` | ✅ Phase 2B.2 | **Ichki PDF.js o'quvchisi** (HTML karkas) |
+| `/maqolalar/[slug]/pdf` | ✅ Phase 2B.2 | O'quvchi uchun himoyalangan PDF oqimi (inline, Range) |
+| `/maqolalar/[slug]/fayl` | ✅ Phase 2B.1 | PDF yuklab olish (attachment) — UI'da tugma yo'q |
 
-`/maqolalar/[slug]/oqish` atayin alohida route: u sahifa ichiga o'rnatilgan PDF
-viewer uchun mo'ljallangan (tashqi faylga to'g'ridan-to'g'ri havola emas).
-`/maqolalar/[slug]` dagi "PDF'ni o'qish" tugmasi ALLAQACHON shu route'ga
-ishora qiladi — Phase 2B.2 da faqat `templates/maqolalar_oqish.html` shabloni
-almashadi, URL o'zgarmaydi.
+`/oqish` va `/pdf` — ataylab **ikki** route: birinchisi HTML karkas, ikkinchisi
+baytlar. Ikkalasi ham `blueprints/articles.py:_public_pdf_or_404()` orqali
+o'tadi, u esa `can_read_pdf()` ni chaqiradi — qoida hech qayerda nusxalanmaydi.
+Ruxsat yo'q bo'lsa ikkalasi ham `404` beradi (fayl mavjudligi fakti ham oshkor
+qilinmaydi).
 
-Route hozirdan ishlaydi va kirish qoidasi to'liq kuchda: PDF ommaga ochiq
-bo'lmasa 404 (fayl mavjudligi fakti ham oshkor qilinmaydi). Sahifa `noindex` —
-viewer tayyor bo'lmaguncha qidiruvdan vaqtinchalik sahifaga tushib qolinmaydi.
+`/fayl` yuklab olish uchun qoladi, lekin **hech qanday tugma unga ishora
+qilmaydi**: `can_read_pdf()` — ko'rsatish huquqi, yuklab olish huquqi emas.
+Kontrakt: `docs/articles-module.md` §13.9.
+
+URL'lar Phase 2B.1 dan beri o'zgarmadi — Phase 2B.2 da faqat
+`templates/maqolalar_oqish.html` shabloni almashdi va `/pdf` qo'shildi.
 
 ## PDF viewer — vizual kontrakt (light-only)
 
-Olimlar.uz'da kun/tun almashtirgichi yo'q va qo'shilmaydi. Viewer yaratilganda
-shu qoidalarga amal qilinsin:
+Olimlar.uz'da kun/tun almashtirgichi yo'q va qo'shilmaydi. O'quvchi shu
+qoidalarga amal qiladi:
 
 - viewer sahifasi umumiy sayt bilan bir xil **light** temada bo'ladi;
 - PDF canvas oq yoki hujjatning o'z foni bilan chiziladi — canvasga filtr,
   invert yoki "dark mode" qo'llanmaydi;
-- toolbar soft-grey (`--color-background-soft`) yoki juda to'q neutral
-  bo'lishi mumkin. To'q toolbar — bu **semantik komponent tanlovi**, global
-  dark theme emas; u sahifaning qolgan qismiga tarqalmaydi;
+- toolbar **oq** (`--color-white`) — hujjat maydoni esa soft-grey
+  (`--color-background-soft`) ish stoli. To'q toolbar varianti ko'rib
+  chiqildi va tanlanmadi: light birinchi tanlov, va yangi semantik token
+  ham kerak bo'lmadi;
 - foydalanuvchi uchun theme tanlovi, `data-bs-theme` almashtirish yoki
   `localStorage` da rejim saqlash bo'lmaydi;
 - toolbar ikonkalari mavjud Bootstrap Icons to'plamidan olinadi, emoji emas.
@@ -53,10 +61,14 @@ workflow, seed formati, ma'lum cheklovlar).
 
 ## Hali qilinmagan
 
-- PDF viewer implementatsiyasi (Phase 2B.2) — kontrakti
-  `docs/articles-module.md` §13 da;
-- fan yo'nalishlarining 2-3 darajasi: rasmiy OAK registri hali topilmadi,
-  sun'iy kategoriyalar ATAYIN kiritilmadi (`docs/articles-module.md` §9).
+- PDF ichida moslikni **ajratib ko'rsatish** (upstream `PDFFindController`);
+  hozir qidiruv moslik topilgan sahifaga o'tadi
+  (`docs/articles-module.md` §13.7);
+- `can_download_pdf()` va yuklab olish tugmasi (§13.9 dagi kontrakt);
+- AI paneli (§13.12 dagi kontrakt: `article_id`, `current_page`,
+  `selected_text`, `document_page_count`);
+- CJK hujjatlar uchun `cmaps/` vendoring;
+- Phase 2C.1 — DOI orqali metadata autofill.
 
 ## Mavjud, aralashtirmaslik kerak bo'lgan bo'lim
 

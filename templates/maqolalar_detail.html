@@ -36,7 +36,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page">
   {% set crumb_list = [('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar')] %}
   {% for node in field_crumbs %}
     {% set _ = crumb_list.append((node.name_uz, '/maqolalar/yonalish/' ~ node.slug)) %}
@@ -66,7 +66,7 @@
 
   <div class="mq-detail">
     <div class="mq-detail__main">
-      <p class="ol-body-lg" style="margin-top:0;">
+      <p class="ol-body-lg mq-flush-top">
         {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}
       </p>
       <p class="ol-body ol-muted">
@@ -93,7 +93,7 @@
       {% if article.abstract %}
       <section class="ol-section" aria-labelledby="mq-annotatsiya">
         <h2 id="mq-annotatsiya" class="ol-h4">Annotatsiya</h2>
-        <p class="ol-body" style="white-space:pre-line;">{{ article.abstract }}</p>
+        <p class="ol-body mq-pre-line">{{ article.abstract }}</p>
       </section>
       {% endif %}
 
@@ -153,7 +153,7 @@
           {% if article.copyright_note %}<dt>Mualliflik huquqi</dt><dd>{{ article.copyright_note }}</dd>{% endif %}
         </dl>
 
-        <p class="ol-meta" style="margin-top:var(--space-16);">
+        <p class="ol-meta mq-gap-top">
           Bu nusxa &laquo;{{ article.version_label }}&raquo; versiyasi. Yakuniy nashr
           etilgan variant jurnal saytida farq qilishi mumkin.
         </p>
@@ -162,7 +162,7 @@
 
     <aside class="mq-detail__aside" aria-label="Maqola ma'lumotlari">
       <div class="ol-card">
-        <h2 class="ol-h5" style="margin-top:0;">Nashr ma'lumotlari</h2>
+        <h2 class="ol-h5 mq-flush-top">Nashr ma'lumotlari</h2>
         <dl class="mq-deflist">
           {% if article.journal_name %}<dt>Jurnal</dt><dd>{{ article.journal_name }}</dd>{% endif %}
           {% if article.publication_year %}<dt>Yil</dt><dd>{{ article.publication_year }}</dd>{% endif %}
@@ -181,9 +181,9 @@
       </div>
 
       <div class="ol-card">
-        <h2 class="ol-h5" style="margin-top:0;">Iqtibos</h2>
+        <h2 class="ol-h5 mq-flush-top">Iqtibos</h2>
         {# Minimal mavjud format — to'liq iqtibos generatori keyingi bosqichda. #}
-        <p class="ol-small" style="overflow-wrap:anywhere;">
+        <p class="ol-small mq-wrap-any">
           {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}.
           {{ article.title }}.
           {%- if article.journal_name %} {{ article.journal_name }}.{% endif %}
@@ -196,7 +196,7 @@
 
       {% if not article.can_read_pdf and article.access_type == 'metadata_only' %}
       <div class="mq-notice">
-        <p class="ol-small" style="margin:0;">
+        <p class="ol-small mq-flush">
           Bu yozuv faqat bibliografik ma'lumot sifatida saqlanadi — to'liq matn
           Olimlar.uz'da joylashtirilmagan.
         </p>
