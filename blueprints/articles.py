@@ -23,8 +23,9 @@ Routes (public):
   GET /maqolalar/yonalishlar        — fan yo'nalishlari ierarxiyasi
   GET /maqolalar/yonalish/<slug>    — bitta yo'nalish + undagi maqolalar
   GET /maqolalar/<slug>             — maqola tafsiloti
-  GET /maqolalar/<slug>/oqish       — Phase 2B.2 PDF viewer uchun zaxiralangan
-  GET /maqolalar/<slug>/fayl        — PDF oqimi (can_read_pdf bilan qo'riqlangan)
+  GET /maqolalar/<slug>/oqish       — ichki PDF.js o'quvchisi (Phase 2B.2)
+  GET /maqolalar/<slug>/pdf         — o'quvchi uchun himoyalangan PDF oqimi
+  GET /maqolalar/<slug>/fayl        — PDF yuklab olish (attachment)
 
 Routes (admin):
   /admin/articles[/new|/<id>/edit|/<id>/review|/<id>/delete|/<id>/preview]
@@ -34,8 +35,8 @@ import math
 import os
 from datetime import date, datetime
 
-from flask import (Blueprint, abort, flash, redirect, render_template, request,
-                   send_file)
+from flask import (Blueprint, abort, current_app, flash, g, redirect,
+                   render_template, request, send_file)
 from flask_login import current_user, login_required
 
 from data import get_connection
@@ -79,6 +80,23 @@ SORT_OPTIONS = {
 DEFAULT_SORT = 'yangi'
 
 VIEW_MODES = ('karta', 'jadval')
+
+# ── PDF o'quvchisi (Phase 2B.2) ─────────────────────────────────────────────
+# Vendor qilingan PDF.js build'i — static/vendor/pdfjs/README.md da versiya,
+# manba va checksumlar. Bu qiymat shablonga `?v=` cache-buster sifatida
+# beriladi (nginx /static/ ni 7 kun keshlaydi) va asosiy skript bilan worker
+# bitta versiyadan ekanini testda tekshirish uchun yagona manba bo'lib turadi.
+PDFJS_VERSION = '5.7.284'
+
+# O'quvchining o'z CSS/JS fayllari uchun cache-buster.
+VIEWER_ASSET_VERSION = '20260807'
+
+# PDF oqimi keshi. `private`: umumiy proksi keshlamaydi, chunki maqola
+# `copyright_hold` ga o'tsa yoki litsenziya olib tashlansa can_read_pdf()
+# darhol yopiladi — ulashilgan kesh esa eski nusxani berishda davom etardi.
+# Brauzer keshi (1 soat) sahifa yangilanganda PDF qayta yuklanmasligi uchun
+# yetarli; ETag/Last-Modified bilan revalidatsiya baribir ishlaydi.
+PDF_STREAM_MAX_AGE = 3600
 
 
 # ── Sxema ────────────────────────────────────────────────────────────────────
@@ -904,39 +922,51 @@ def article_detail(slug):
                            field_crumbs=crumbs, preview=False)
 
 
-@articles_bp.route('/maqolalar/<slug>/oqish')
-def article_read(slug):
-    """Phase 2B.2 PDF viewer uchun zaxiralangan route.
+def _log_missing_pdf(article):
+    """DB "PDF bor" deydi, disk "yo'q" deydi.
 
-    QAROR (docs/articles-module.md): route 404 BERMAYDI va maqola tafsilotiga
-    ham qaytarmaydi — u o'zining minimal sahifasini ko'rsatadi. Sabab: route
-    kontrakti (docs/maqolalar-route-contract.md) uni ichki viewer sifatida
-    e'lon qilgan, shuning uchun havolalar hozirdan shu manzilga qo'yiladi va
-    viewer chiqqanda faqat shablon almashadi — URL o'zgarmaydi, SEO buzilmaydi.
-
-    Kirish qoidasi HOZIRDAN to'liq ishlaydi: PDF ochiq bo'lmasa 404 (mavjudlik
-    faktini ham oshkor qilmaydi), aks holda viewer o'rniga vaqtinchalik sahifa.
+    Bu jimgina 500 bo'lmasligi kerak, lekin yo'qolib ham ketmasin: adminga
+    korrelyatsiya ID bilan log qoladi, foydalanuvchi esa 404 oladi va fayl
+    tuzilmasi haqida hech narsa bilmaydi. `security.log_exception` bu yerda
+    ishlamaydi — u faol istisno kontekstini talab qiladi, bu yerda esa istisno
+    yo'q, shunchaki nomuvofiqlik.
     """
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            _ensure_schema(cur)
-            conn.commit()
-            article = _load_article(cur, slug=slug)
-    finally:
-        conn.close()
+    current_app.logger.error(
+        'Maqola #%s uchun PDF diskda topilmadi (pdf_path=%r) request_id=%s',
+        article.get('id'), article.get('pdf_path'),
+        getattr(g, 'request_id', '-'))
+
+
+def _public_pdf_or_404(cur, slug):
+    """(article, absolute_path) — yoki 404.
+
+    PDF beradigan HAR BIR route (o'quvchi sahifasi, oqim, yuklab olish) aynan
+    shu yerdan o'tadi. Kirish qoidasi nusxalanmaydi: yagona manba
+    `can_read_pdf()`. Fayl yo'li DB dagi `pdf_path` kalitidan olinadi va
+    `resolve_private_pdf` realpath solishtiruvi bilan storage_dir() ichida
+    qolishga majburlanadi — so'rovdan kelgan hech qanday matn yo'lga
+    aralashmaydi, shuning uchun `..` bilan chiqib bo'lmaydi.
+    """
+    article = _load_article(cur, slug=slug)
     if article is None or not article['can_read_pdf']:
         abort(404)
-    return render_template('maqolalar_oqish.html', article=article)
+    path = resolve_private_pdf(storage_dir(), article['pdf_path'])
+    if not path:
+        _log_missing_pdf(article)
+        abort(404)
+    return article, path
 
 
-@articles_bp.route('/maqolalar/<slug>/fayl')
-def article_file(slug):
-    """PDF oqimi — Phase 2B.2 viewer ham shu route'dan o'qiydi.
+@articles_bp.route('/maqolalar/<slug>/oqish')
+def article_read(slug):
+    """Ichki PDF o'quvchisi (PDF.js) — foydalanuvchi saytdan chiqmaydi.
 
-    `as_attachment=True` ataylab: PDF brauzerda inline ochilmaydi, chunki fayl
-    ichidagi JavaScript tozalanmagan (security_uploads.validate_pdf_upload
-    izohiga qarang). Viewer chiqqanda u faylni o'zi render qiladi.
+    Sahifa faqat karkasni beradi; PDF baytlari alohida himoyalangan oqim
+    route'idan (`/maqolalar/<slug>/pdf`) keladi va u kirish qoidasini QAYTA
+    tekshiradi. Shablon hech qanday huquq qoidasini o'zi hisoblamaydi.
+
+    Ko'rishlar soni bu yerda oshirilmaydi: u maqola tafsiloti route'ida
+    hisoblanadi (§26) va o'quvchi sahifasi shu tashrifning davomi.
     """
     conn = get_connection()
     try:
@@ -946,19 +976,87 @@ def article_file(slug):
             article = _load_article(cur, slug=slug)
             if article is None or not article['can_read_pdf']:
                 abort(404)
-            path = resolve_private_pdf(storage_dir(), article['pdf_path'])
-            if not path:
-                # DB PDF bor deydi, disk yo'q deydi — bu jimgina 500 bo'lmasin.
-                log_exception(FileNotFoundError(article['pdf_path']))
-                abort(404)
+            rows_by_id = {r['id']: r for r in _load_fields(cur, only_active=False)}
+            crumbs = _primary_field_crumbs(rows_by_id, article)
+    finally:
+        conn.close()
+
+    response = current_app.make_response(render_template(
+        'maqolalar_oqish.html', article=article, field_crumbs=crumbs,
+        pdfjs_version=PDFJS_VERSION, asset_version=VIEWER_ASSET_VERSION))
+    # Kanonik ilmiy sahifa — maqola tafsiloti; o'quvchi uning ko'rish rejimi.
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response
+
+
+def _stream_headers(response):
+    """PDF oqimi uchun umumiy sarlavhalar (oqim ham, yuklab olish ham)."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    # PDF matni maqola tafsiloti orqali indekslanadi; faylning o'zi qidiruv
+    # natijasida can_read_pdf() dan tashqarida turgan alohida hujjat bo'lib
+    # qolmasligi kerak.
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
+    return response
+
+
+@articles_bp.route('/maqolalar/<slug>/pdf')
+def article_pdf_stream(slug):
+    """O'quvchi o'qiydigan himoyalangan PDF oqimi.
+
+    * `conditional=True` — Werkzeug `Accept-Ranges: bytes` beradi va `Range:`
+      so'roviga 206 + `Content-Range` bilan javob qaytaradi. PDF.js aynan
+      shunga tayanadi: u hujjatni bo'laklab so'raydi, shuning uchun katta
+      fayl birinchi sahifa uchun to'liq yuklanmaydi.
+    * Fayl WSGI file wrapper orqali oqadi — baytlar Python xotirasiga to'liq
+      o'qilmaydi.
+    * `Content-Disposition: inline` — o'quvchi uni o'zi render qiladi.
+      Yuklab olish taklif qilinmaydi (§23: o'qish huquqi = yuklab olish
+      huquqi EMAS); nom slug'dan olinadi, storage kaliti oshkor qilinmaydi.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            conn.commit()
+            _article, path = _public_pdf_or_404(cur, slug)
+    finally:
+        conn.close()
+
+    response = send_file(path, mimetype='application/pdf', as_attachment=False,
+                         conditional=True, max_age=PDF_STREAM_MAX_AGE)
+    response.headers['Content-Disposition'] = (
+        'inline; filename="%s"' % sanitize_pdf_filename(f'{slug}.pdf'))
+    response.cache_control.public = False
+    response.cache_control.private = True
+    response.cache_control.max_age = PDF_STREAM_MAX_AGE
+    return _stream_headers(response)
+
+
+@articles_bp.route('/maqolalar/<slug>/fayl')
+def article_file(slug):
+    """PDF yuklab olish (attachment).
+
+    Bu route Phase 2B.1 dan qolgan va ATAYIN hech qayerda tugma sifatida
+    ko'rsatilmaydi: hozirgi huquqiy model faqat "o'qish" huquqini biladi,
+    yuklab olish/qayta tarqatish huquqi litsenziyaga bog'liq va alohida
+    `can_download_pdf()` kontrakti bilan hal qilinadi (docs/articles-module.md).
+    O'quvchi o'rniga `/pdf` oqimidan foydalanadi.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            conn.commit()
+            article, path = _public_pdf_or_404(cur, slug)
             cur.execute("UPDATE scientific_articles SET download_count = download_count + 1 "
                         "WHERE id = %s", (article['id'],))
             conn.commit()
             download_name = article.get('pdf_original_name') or f"{slug}.pdf"
     finally:
         conn.close()
-    return send_file(path, mimetype='application/pdf', as_attachment=True,
-                     download_name=sanitize_pdf_filename(download_name))
+    response = send_file(path, mimetype='application/pdf', as_attachment=True,
+                         download_name=sanitize_pdf_filename(download_name))
+    return _stream_headers(response)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1188,8 +1286,8 @@ def _delete_stored_pdf(relative_path):
     if path:
         try:
             os.unlink(path)
-        except OSError as exc:      # disk xatosi maqolani buzmasin
-            log_exception(exc)
+        except OSError:             # disk xatosi maqolani buzmasin
+            log_exception(current_app.logger, 'Eski maqola PDF fayli o\'chirilmadi')
 
 
 ARTICLE_WRITE_COLUMNS = (
@@ -1612,8 +1710,8 @@ def admin_field_review():
                 doc = json.load(fh)
             metadata = doc.get('metadata') or {}
             records = doc.get('records') or []
-        except (ValueError, OSError) as exc:
-            log_exception(exc)
+        except (ValueError, OSError):
+            log_exception(current_app.logger, 'OAK review faylini o\'qib bo\'lmadi')
             error = "Review faylini o'qib bo'lmadi (format buzilgan bo'lishi mumkin)."
 
     pending = [r for r in records if not (r.get('approved_name_uz_cyrillic')
