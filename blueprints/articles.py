@@ -29,18 +29,24 @@ Routes (public):
 
 Routes (admin):
   /admin/articles[/new|/<id>/edit|/<id>/review|/<id>/delete|/<id>/preview]
+  POST /admin/articles/metadata/lookup — DOI bo'yicha tashqi metadata (faqat
+       o'qish; hech qachon DB'ga yozmaydi — services/article_metadata)
   /admin/scientific-fields[/new|/<id>/edit|/<id>/delete]
 """
+import json
 import math
 import os
+import re
 from datetime import date, datetime
 
-from flask import (Blueprint, abort, current_app, flash, g, redirect,
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect,
                    render_template, request, send_file)
 from flask_login import current_user, login_required
 
 from data import get_connection
 from security import log_exception
+from services.article_metadata import (MetadataLookupError, describe_configuration,
+                                       fetch_article_metadata, flask_cache_adapters)
 from security_uploads import (MAX_PDF_BYTES, UploadValidationError,
                               resolve_private_pdf, sanitize_pdf_filename,
                               save_private_pdf, validate_pdf_upload)
@@ -217,6 +223,32 @@ def _ensure_schema(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_views "
                 "ON scientific_articles (view_count DESC)")
 
+    # Migratsiya 009 — tashqi identifikatorlar va metadata provenance.
+    # Xom API javobi bu yerga SAQLANMAYDI; `metadata_source_summary` faqat
+    # "qaysi maydon qaysi provayderdan" xaritasi (§19, §20).
+    for column, ddl in (
+            ('openalex_id', 'VARCHAR(32)'),
+            ('crossref_member_id', 'VARCHAR(32)'),
+            ('primary_issn', 'VARCHAR(20)'),
+            ('is_retracted', 'BOOLEAN NOT NULL DEFAULT FALSE'),
+            ('citation_count', 'INTEGER'),
+            ('citation_count_source', 'VARCHAR(24)'),
+            ('citation_count_checked_at', 'TIMESTAMP'),
+            ('metadata_last_synced_at', 'TIMESTAMP'),
+            ('metadata_source_summary', 'JSONB')):
+        cur.execute(f"ALTER TABLE scientific_articles "
+                    f"ADD COLUMN IF NOT EXISTS {column} {ddl}")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_scientific_articles_openalex "
+                "ON scientific_articles (openalex_id) "
+                "WHERE openalex_id IS NOT NULL AND openalex_id <> ''")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_primary_issn "
+                "ON scientific_articles (primary_issn) "
+                "WHERE primary_issn IS NOT NULL")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_retracted "
+                "ON scientific_articles (is_retracted) WHERE is_retracted")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_metadata_synced "
+                "ON scientific_articles (metadata_last_synced_at NULLS FIRST)")
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS article_authors (
             id                  SERIAL PRIMARY KEY,
@@ -234,6 +266,13 @@ def _ensure_schema(cur):
                 "ON article_authors (article_id, author_order)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_article_authors_name "
                 "ON article_authors (author_name)")
+    # Migratsiya 009 — OpenAlex muallif ID'si. Institutlar alohida modelga
+    # majburan normalizatsiya QILINMAYDI: `affiliation` matni yetarli (§18).
+    cur.execute("ALTER TABLE article_authors "
+                "ADD COLUMN IF NOT EXISTS openalex_author_id VARCHAR(32)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_article_authors_openalex "
+                "ON article_authors (openalex_author_id) "
+                "WHERE openalex_author_id IS NOT NULL")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS article_scientific_fields (
@@ -369,7 +408,8 @@ def _attach_authors_and_fields(cur, articles):
         a['primary_field'] = None
 
     cur.execute("""SELECT article_id, author_name, author_order, orcid, affiliation,
-                          linked_user_id, linked_scientist_id, is_corresponding
+                          linked_user_id, linked_scientist_id, is_corresponding,
+                          openalex_author_id
                      FROM article_authors
                     WHERE article_id = ANY(%s)
                     ORDER BY article_id, author_order, id""", (ids,))
@@ -401,7 +441,10 @@ ARTICLE_COLUMNS = """
     a.index_scopus, a.index_wos, a.index_doaj, a.index_other,
     a.verification_status, a.publication_status, a.is_featured,
     a.view_count, a.download_count, a.created_by, a.reviewed_by, a.reviewed_at,
-    a.created_at, a.updated_at
+    a.created_at, a.updated_at,
+    a.openalex_id, a.crossref_member_id, a.primary_issn, a.is_retracted,
+    a.citation_count, a.citation_count_source, a.citation_count_checked_at,
+    a.metadata_last_synced_at, a.metadata_source_summary
 """
 
 # Ommaga ko'rinadigan maqola: nashr etilgan VA tekshirilgan. Bu shart har bir
@@ -1084,6 +1127,11 @@ def _form_values():
             'orcid': (form.getlist('author_orcid')[index:index + 1] or [''])[0].strip()[:64] or None,
             'affiliation': (form.getlist('author_affiliation')[index:index + 1] or [''])[0].strip()[:400] or None,
             'is_corresponding': str(index) in form.getlist('author_corresponding'),
+            # DOI autofill to'ldiradigan yashirin maydon. Admin uni qo'lda
+            # tahrirlamaydi, lekin forma qayta ko'rsatilganda yo'qolmasligi
+            # kerak — shuning uchun u ham `values` ichida yuradi.
+            'openalex_author_id': (form.getlist('author_openalex_id')[index:index + 1]
+                                   or [''])[0].strip()[:32] or None,
         })
     return {
         'title': get('title')[:500],
@@ -1114,6 +1162,17 @@ def _form_values():
         'verification_status': get('verification_status') or 'draft',
         'publication_status': get('publication_status') or 'draft',
         'is_featured': bool(get('is_featured')),
+        # ── Tashqi metadata (Phase 2C.1) ────────────────────────────────────
+        # Bu qiymatlar DOI autofill panelidan keladi va faqat admin formani
+        # YUBORGANDA saqlanadi. Lookup endpointi hech nima yozmaydi (§13).
+        'openalex_id': get('openalex_id')[:32],
+        'crossref_member_id': get('crossref_member_id')[:32],
+        'primary_issn': get('primary_issn')[:20],
+        'is_retracted': bool(get('is_retracted')),
+        'citation_count': get('citation_count'),
+        'citation_count_source': get('citation_count_source')[:24],
+        'citation_count_checked_at': get('citation_count_checked_at'),
+        'metadata_source_summary': get('metadata_source_summary'),
         'rights_confirmed': bool(get('rights_confirmed')),
         'remove_pdf': bool(get('remove_pdf')),
         'primary_field_id': get('primary_field_id'),
@@ -1121,6 +1180,103 @@ def _form_values():
                             if v.strip()][:MAX_EXTRA_FIELDS],
         'authors': authors,
     }
+
+
+_OPENALEX_WORK_RE = re.compile(r'^W\d{4,15}$')
+_ISSN_RE = re.compile(r'^\d{4}-\d{3}[\dX]$')
+_CITATION_SOURCES = ('openalex',)
+MAX_SOURCE_SUMMARY_KEYS = 40
+
+
+def _normalize_external_metadata(cur, values, article_id=None):
+    """DOI autofill'dan kelgan yashirin maydonlarni tozalaydi.
+
+    Bu qiymatlarni odam yozmaydi — ularni panel to'ldiradi. Shuning uchun
+    noto'g'ri format admin oldiga xato sifatida CHIQARILMAYDI (u tuzata
+    olmaydi): qiymat shunchaki tashlanadi va maqola qolgan ma'lumot bilan
+    saqlanadi. Bundan istisno — OpenAlex ID to'qnashuvi: u bir maqola ikki
+    marta kiritilganini bildiradi va admin buni bilishi SHART.
+    """
+    openalex_id = (values.get('openalex_id') or '').strip()
+    values['openalex_id'] = openalex_id if _OPENALEX_WORK_RE.match(openalex_id) else None
+    if values['openalex_id']:
+        if article_id:
+            cur.execute("SELECT id, title FROM scientific_articles "
+                        "WHERE openalex_id = %s AND id <> %s",
+                        (values['openalex_id'], article_id))
+        else:
+            cur.execute("SELECT id, title FROM scientific_articles "
+                        "WHERE openalex_id = %s", (values['openalex_id'],))
+        duplicate = cur.fetchone()
+        if duplicate:
+            raise ArticleValidationError(
+                'Bu OpenAlex yozuvi "%s" maqolasida allaqachon mavjud (#%s).'
+                % (duplicate[1], duplicate[0]), 'doi')
+
+    member = (values.get('crossref_member_id') or '').strip()
+    values['crossref_member_id'] = member if member.isdigit() else None
+
+    issn = (values.get('primary_issn') or '').strip().upper()
+    values['primary_issn'] = issn if _ISSN_RE.match(issn) else None
+
+    count = (values.get('citation_count') or '').strip()
+    try:
+        parsed = int(count)
+    except (TypeError, ValueError):
+        parsed = None
+    values['citation_count'] = parsed if parsed is not None and 0 <= parsed < 10_000_000 else None
+
+    source = (values.get('citation_count_source') or '').strip().lower()
+    values['citation_count_source'] = source if source in _CITATION_SOURCES else None
+
+    checked = (values.get('citation_count_checked_at') or '').strip()
+    values['citation_count_checked_at'] = _parse_iso_datetime(checked)
+
+    # Iqtibos soni MANBASIZ va SANASIZ saqlanmaydi: u vaqtga bog'liq
+    # ko'rsatkich, kontekstsiz esa doimiy fakt bo'lib ko'rinib qolardi (§27).
+    if values['citation_count'] is None or not values['citation_count_source']:
+        values['citation_count'] = None
+        values['citation_count_source'] = None
+        values['citation_count_checked_at'] = None
+    elif values['citation_count_checked_at'] is None:
+        values['citation_count_checked_at'] = datetime.now()
+
+    values['metadata_source_summary'] = _parse_source_summary(
+        values.get('metadata_source_summary'))
+    return values
+
+
+def _parse_iso_datetime(raw):
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+    except ValueError:
+        return None
+
+
+def _parse_source_summary(raw):
+    """{"title": "crossref", ...} — qaysi maydon qaysi provayderdan (§19).
+
+    Xom API javobi EMAS va bo'la olmaydi: faqat qisqa satrlar, cheklangan
+    kalitlar soni bilan. Format buzilgan bo'lsa None.
+    """
+    if not raw:
+        return None
+    if isinstance(raw, dict):
+        parsed = raw
+    else:
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            return None
+    if not isinstance(parsed, dict) or not parsed:
+        return None
+    clean = {}
+    for key, value in list(parsed.items())[:MAX_SOURCE_SUMMARY_KEYS]:
+        if isinstance(key, str) and isinstance(value, str) and value:
+            clean[key[:64]] = value[:64]
+    return json.dumps(clean, ensure_ascii=False) if clean else None
 
 
 def _validate_article(cur, values, article_id=None, pdf_present=False):
@@ -1196,6 +1352,8 @@ def _validate_article(cur, values, article_id=None, pdf_present=False):
 
     if not values['license_url'] and values['license_type'] in LICENSE_URLS:
         values['license_url'] = LICENSE_URLS[values['license_type']]
+
+    _normalize_external_metadata(cur, values, article_id=article_id)
     return values
 
 
@@ -1209,10 +1367,11 @@ def _write_associations(cur, article_id, values):
     for author in values['authors']:
         cur.execute("""INSERT INTO article_authors
                        (article_id, author_name, author_order, orcid, affiliation,
-                        is_corresponding)
-                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                        is_corresponding, openalex_author_id)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s)""",
                     (article_id, author['author_name'], author['author_order'],
-                     author['orcid'], author['affiliation'], author['is_corresponding']))
+                     author['orcid'], author['affiliation'], author['is_corresponding'],
+                     author.get('openalex_author_id')))
 
     cur.execute("DELETE FROM article_scientific_fields WHERE article_id = %s", (article_id,))
     for field_id in values['extra_field_ids']:
@@ -1297,6 +1456,12 @@ ARTICLE_WRITE_COLUMNS = (
     'source_type', 'source_name', 'source_url', 'copyright_note', 'permission_note',
     'index_scopus', 'index_wos', 'index_doaj', 'index_other',
     'verification_status', 'publication_status', 'is_featured',
+    # Phase 2C.1 — tashqi identifikatorlar. `metadata_last_synced_at` bu
+    # ro'yxatda YO'Q: uni forma emas, server qo'yadi (rights_confirmed_at
+    # bilan bir xil naqsh).
+    'openalex_id', 'crossref_member_id', 'primary_issn', 'is_retracted',
+    'citation_count', 'citation_count_source', 'citation_count_checked_at',
+    'metadata_source_summary',
 )
 
 
@@ -1311,7 +1476,136 @@ def _admin_form_context(cur, values=None, article=None, error=None):
         'pdf_allowed_access': sorted(PDF_ALLOWED_ACCESS_TYPES),
         'max_pdf_mb': round(MAX_PDF_BYTES / (1024 * 1024), 1),
         'values': values, 'article': article, 'error': error,
+        'metadata_providers': describe_configuration(),
+        'metadata_summary_json': _summary_json(values, article),
+        'asset_version': VIEWER_ASSET_VERSION,
     }
+
+
+def _summary_json(values, article):
+    """Yashirin maydon uchun matn ko'rinishidagi manba xaritasi.
+
+    Forma qayta ko'rsatilganda u satr (`values`), tahrirlashda esa JSONB
+    dan kelgan dict (`article`) bo'ladi — shablon ikkalasini ham bir xil
+    ko'rishi uchun shu yerda satrga keltiriladi.
+    """
+    raw = None
+    if values and values.get('metadata_source_summary'):
+        raw = values['metadata_source_summary']
+    elif article and article.get('metadata_source_summary'):
+        raw = article['metadata_source_summary']
+    if not raw:
+        return ''
+    if isinstance(raw, str):
+        return raw
+    try:
+        return json.dumps(raw, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return ''
+
+
+# ── DOI metadata autofill (Phase 2C.1) ──────────────────────────────────────
+
+# Bitta admin sekundiga o'nlab so'rov yubormasin. Loyihadagi mavjud naqsh
+# (app.py:api_protection, app.py:_username_rate_limited) — Flask-Caching
+# hisoblagichi; yangi infra qo'shilmaydi (§22).
+METADATA_RATE_LIMIT = 20           # so'rov
+METADATA_RATE_WINDOW = 60          # soniya
+
+
+def _metadata_rate_limited(actor_id):
+    from extensions import cache
+    key = 'article_metadata_lookup:%s' % actor_id
+    try:
+        current = cache.get(key) or 0
+        if current >= METADATA_RATE_LIMIT:
+            return True
+        cache.set(key, current + 1, timeout=METADATA_RATE_WINDOW)
+    except Exception:                  # kesh yotsa lookup bloklanmasin
+        log_exception(current_app.logger, 'Metadata lookup limitini o\'qib bo\'lmadi')
+    return False
+
+
+def _metadata_cache_adapters():
+    """Kesh Flask-Caching `FileSystemCache` ustida — worker'lar orasida
+    bo'linadi (app.py). Jarayon ichidagi lug'at ishlatilmaydi (§21)."""
+    try:
+        from extensions import cache
+        return flask_cache_adapters(cache)
+    except Exception:
+        return None, None
+
+
+@articles_bp.route('/admin/articles/metadata/lookup', methods=['POST'])
+@login_required
+def admin_article_metadata_lookup():
+    """DOI bo'yicha tashqi metadata — FAQAT o'qish, DB'ga hech nima yozmaydi.
+
+    Bu endpoint maqola yaratmaydi, tahrirlamaydi va PDF yuklamaydi (§13, §14).
+    U admin formasiga NOMZOD qiymatlar beradi; saqlash qarorini admin oddiy
+    forma yuborish orqali qabul qiladi.
+
+    CSRF global `CSRFProtect` bilan ta'minlangan (app.py) — JS `X-CSRFToken`
+    sarlavhasini yuboradi. Kalitlar va e-mail javobga ham, log'ga ham
+    chiqmaydi (§23, §33).
+    """
+    _require_admin()
+
+    if _metadata_rate_limited(getattr(current_user, 'id', 'anon')):
+        return jsonify({'error': 'rate_limited',
+                        'message': "Juda ko'p so'rov. Bir daqiqadan keyin "
+                                   "urinib ko'ring."}), 429
+
+    payload = request.get_json(silent=True) or {}
+    raw_doi = payload.get('doi') if isinstance(payload, dict) else None
+    if not isinstance(raw_doi, str):
+        raw_doi = request.form.get('doi') or ''
+
+    cache_get, cache_set = _metadata_cache_adapters()
+    try:
+        result = fetch_article_metadata(raw_doi[:300], cache_get=cache_get,
+                                        cache_set=cache_set)
+    except MetadataLookupError as exc:
+        return jsonify({'error': exc.code, 'message': exc.public_message}), 400
+    except Exception:
+        # Kutilmagan xato adminga stacktrace sifatida KO'RSATILMAYDI (§12).
+        log_exception(current_app.logger, 'DOI metadata lookup bajarilmadi')
+        return jsonify({'error': 'internal',
+                        'message': 'Ma\'lumot olishda kutilmagan xato yuz berdi.'}), 502
+
+    body = result.to_public_dict()
+    body['existing_article'] = _existing_article_for_doi(
+        result.doi, result.metadata.openalex_id)
+    return jsonify(body)
+
+
+def _existing_article_for_doi(doi, openalex_id=None):
+    """Shu DOI/OpenAlex ID bilan maqola allaqachon bormi (faqat SELECT).
+
+    Admin dublikat yaratmasligi uchun ogohlantirish; UNIQUE indeks baribir
+    ikkinchi to'siq bo'lib turadi.
+    """
+    if not doi:
+        return None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            conn.commit()
+            if openalex_id:
+                cur.execute("SELECT id, title, slug FROM scientific_articles "
+                            "WHERE doi = %s OR openalex_id = %s LIMIT 1",
+                            (doi, openalex_id))
+            else:
+                cur.execute("SELECT id, title, slug FROM scientific_articles "
+                            "WHERE doi = %s LIMIT 1", (doi,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    return {'id': row[0], 'title': row[1],
+            'edit_url': '/admin/articles/%d/edit' % row[0]}
 
 
 @articles_bp.route('/admin/articles')
@@ -1411,6 +1705,9 @@ def admin_article_new():
                 if values['verification_status'] == 'verified':
                     columns += ['reviewed_by', 'reviewed_at']
                     data += [current_user.id, datetime.now()]
+                if values['metadata_source_summary']:
+                    columns += ['metadata_last_synced_at']
+                    data += [datetime.now()]
                 placeholders = ', '.join(['%s'] * len(columns))
                 cur.execute(
                     f"INSERT INTO scientific_articles ({', '.join(columns)}) "
@@ -1470,6 +1767,8 @@ def admin_article_edit(article_id):
                     assignments.append('reviewed_by = %s')
                     data.append(current_user.id)
                     assignments.append('reviewed_at = NOW()')
+                if values['metadata_source_summary']:
+                    assignments.append('metadata_last_synced_at = NOW()')
                 cur.execute(
                     f"UPDATE scientific_articles SET {', '.join(assignments)} WHERE id = %s",
                     data + [article_id])

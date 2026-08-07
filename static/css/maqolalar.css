@@ -125,11 +125,84 @@
 .mq-form__grid { display: grid; gap: var(--space-16); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .mq-form__full { grid-column: 1 / -1; }
 .mq-form__check { display: flex; align-items: center; gap: var(--space-8); min-height: 44px; }
+/* Ko'p qatorli tushuntirishli checkbox — belgi matnning birinchi qatoriga
+   to'g'rilanadi (ilgari inline style edi). */
+.mq-form__check--top { align-items: flex-start; }
 .mq-form__error { border: 1px solid var(--color-error); background: var(--color-error-soft);
   color: var(--color-error); border-radius: var(--radius-default); padding: var(--space-12) var(--space-16);
   margin-bottom: var(--space-20); }
 .mq-authorrow { display: grid; gap: var(--space-8); grid-template-columns: 2fr 1fr 2fr auto;
   align-items: end; margin-bottom: var(--space-12); }
+
+/* ── DOI metadata autofill paneli (Phase 2C.1) ────────────────────────────── */
+
+.mq-meta__doi { display: flex; gap: var(--space-8); align-items: flex-start; flex-wrap: wrap; }
+.mq-meta__doi .ol-field { flex: 1 1 220px; min-width: 0; }
+.mq-meta__fetch { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+
+.mq-meta {
+  grid-column: 1 / -1;
+  margin-top: var(--space-20);
+  padding: var(--space-16);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+.mq-meta[hidden] { display: none; }
+.mq-meta__status { margin: 0 0 var(--space-12); font-size: var(--text-small);
+  color: var(--color-text-secondary); }
+
+/* Provayder holati — rang YAKKA belgi emas: har bir chip ichida nom va
+   holat matni bor (dizayn tizimi §5.2). */
+.mq-meta__providers { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin: 0 0 var(--space-12); padding: 0; list-style: none; }
+.mq-meta__provider {
+  display: inline-flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-rounded);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+.mq-meta__provider--ok { border-color: var(--color-success); color: var(--color-success); }
+.mq-meta__provider--warn { border-color: var(--color-notice); color: var(--color-text-secondary); }
+.mq-meta__provider--off { background: var(--color-background-soft); color: var(--color-text-muted); }
+
+.mq-meta__alerts { display: flex; flex-direction: column; gap: var(--space-8); }
+.mq-meta__alerts:not(:empty) { margin-bottom: var(--space-12); }
+.mq-meta__alert {
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-action-blue);
+  border-radius: var(--radius-default);
+  background: var(--color-blue-soft);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+.mq-meta__alert--notice { border-left-color: var(--color-notice);
+  background: var(--color-notice-soft); }
+.mq-meta__alert--error { border-left-color: var(--color-error);
+  background: var(--color-error-soft); color: var(--color-error); }
+
+.mq-meta__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.mq-meta__actions .ol-btn { min-height: 44px; }
+.mq-meta__details { margin-top: var(--space-16); }
+.mq-meta__details[hidden] { display: none; }
+
+.mq-meta__table td { vertical-align: top; overflow-wrap: anywhere; }
+.mq-meta__value { display: block; max-width: 34ch; }
+.mq-meta__value--empty { color: var(--color-text-muted); }
+.mq-meta__row--differs td { background: var(--color-notice-soft); }
+.mq-meta__apply { min-height: 44px; white-space: nowrap; }
+.mq-meta__source { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); }
+
+.mq-meta__group { margin-top: var(--space-20); }
+.mq-meta__group h4 { margin: 0 0 var(--space-8); font-size: var(--text-body);
+  font-weight: 600; color: var(--color-text-primary); }
+.mq-meta__list { margin: 0; padding-left: var(--space-20);
+  font-size: var(--text-small); color: var(--color-text-secondary); }
+.mq-meta__list li + li { margin-top: var(--space-4); }
+.mq-meta__note { margin: var(--space-8) 0 0; font-size: var(--text-meta);
+  color: var(--color-text-muted); }
 
 /* ── Moslashuvchanlik ─────────────────────────────────────────────────────── */
 

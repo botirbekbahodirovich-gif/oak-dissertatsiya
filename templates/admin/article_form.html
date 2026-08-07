@@ -5,7 +5,7 @@
 {% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 
 {% block extra_head %}
-<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+<link href="/static/css/maqolalar.css?v={{ asset_version }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -91,6 +91,11 @@
                    value="{{ loop.index0 }}" {{ 'checked' if a.is_corresponding }}>
             Mas'ul
           </label>
+          {# OpenAlex muallif ID'si — DOI autofill to'ldiradi. Ko'rinadigan
+             maydon emas: admin uni qo'lda yozmaydi, lekin forma xato bilan
+             qaytganda ham yo'qolmasligi kerak. #}
+          <input type="hidden" name="author_openalex_id"
+                 value="{{ a.openalex_author_id or '' }}">
         </div>
         {% endfor %}
       </div>
@@ -131,10 +136,20 @@
         </div>
         <div class="ol-field-group">
           <label class="ol-label" for="f-doi">DOI</label>
-          <input class="ol-field" id="f-doi" name="doi" value="{{ d.doi or '' }}"
-                 placeholder="10.1234/abcd.2024.01"
-                 aria-describedby="f-doi-help">
-          <span class="ol-meta" id="f-doi-help">https://doi.org/ prefiksi avtomatik olib tashlanadi.</span>
+          {# Tugma DOI maydoni bilan bitta qatorda: u shu maydonga tegishli
+             amal. `--secondary`, chunki sahifadagi yagona asosiy amal —
+             "Saqlash" (dizayn tizimi §10.1). #}
+          <div class="mq-meta__doi">
+            <input class="ol-field" id="f-doi" name="doi" value="{{ d.doi or '' }}"
+                   placeholder="10.1234/abcd.2024.01"
+                   aria-describedby="f-doi-help">
+            <button type="button" class="ol-btn ol-btn--secondary mq-meta__fetch"
+                    data-mq-meta-fetch aria-controls="mq-meta-panel">
+              <i class="bi bi-cloud-download" aria-hidden="true"></i>Ma'lumotlarni olish</button>
+          </div>
+          <span class="ol-meta" id="f-doi-help">https://doi.org/ prefiksi avtomatik olib
+            tashlanadi. Tashqi manbalardan olingan ma'lumot faqat taklif bo'ladi —
+            u "Saqlash" bosilmaguncha bazaga yozilmaydi.</span>
         </div>
         <div class="ol-field-group mq-form__full">
           <label class="ol-label" for="f-external">Tashqi havola (jurnal sahifasi)</label>
@@ -142,6 +157,48 @@
                  maxlength="1000" value="{{ d.external_url or '' }}">
         </div>
       </div>
+
+      {# ── DOI autofill paneli ───────────────────────────────────────────────
+         Panel FAQAT taklif ko'rsatadi. Hech bir maydon avtomatik almashmaydi:
+         bo'sh maydonlar guruh tugmasi bilan to'ldiriladi, to'lgan maydon esa
+         yonma-yon solishtiriladi va alohida "Almashtirish" bilan yangilanadi
+         (spetsifikatsiya §11). Panel mazmunini JS quradi; matn qiymatlari
+         `textContent` orqali qo'yiladi, hech qachon HTML sifatida emas. #}
+      <section class="mq-meta" id="mq-meta-panel" data-mq-meta
+               data-endpoint="/admin/articles/metadata/lookup"
+               aria-labelledby="mq-meta-title" hidden>
+        <h3 class="ol-h5 mq-flush-top" id="mq-meta-title">Tashqi manbalardan topilgan ma'lumot</h3>
+
+        <p class="mq-meta__status" role="status" data-mq-meta-status></p>
+        <ul class="mq-meta__providers" data-mq-meta-providers></ul>
+        <div class="mq-meta__alerts" data-mq-meta-alerts></div>
+
+        <div class="mq-meta__actions">
+          <button type="button" class="ol-btn ol-btn--secondary" data-mq-meta-fill hidden>
+            <i class="bi bi-check2-square" aria-hidden="true"></i>Bo'sh maydonlarni to'ldirish</button>
+          <button type="button" class="ol-btn ol-btn--tertiary" data-mq-meta-toggle
+                  aria-expanded="false" aria-controls="mq-meta-details" hidden>
+            Topilgan ma'lumotlarni ko'rish</button>
+        </div>
+
+        <div class="mq-meta__details" id="mq-meta-details" data-mq-meta-details hidden>
+          <div class="ol-table-wrap">
+            <table class="ol-table mq-meta__table">
+              <caption class="mq-sr-only">Formadagi joriy qiymat va tashqi manba taklifi</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Maydon</th>
+                  <th scope="col">Formadagi qiymat</th>
+                  <th scope="col">Manba taklifi</th>
+                  <th scope="col">Amal</th>
+                </tr>
+              </thead>
+              <tbody data-mq-meta-rows></tbody>
+            </table>
+          </div>
+          <div data-mq-meta-extras></div>
+        </div>
+      </section>
     </fieldset>
 
     <!-- 4. Fan yo'nalishlari -->
@@ -287,7 +344,7 @@
       </div>
 
       <!-- 8-bo'limga kirmaydigan, lekin PDF bilan bevosita bog'liq huquqiy tasdiq -->
-      <label class="mq-form__check" for="f-rights" style="align-items:flex-start;">
+      <label class="mq-form__check mq-form__check--top" for="f-rights">
         <input type="checkbox" id="f-rights" name="rights_confirmed" value="1"
                {{ 'checked' if (article and article.rights_confirmed_at) or (values and values.rights_confirmed) }}>
         <span>Ushbu faylni Olimlar.uz serverida saqlash va foydalanuvchilarga
@@ -324,7 +381,55 @@
           <input type="checkbox" id="f-featured" name="is_featured" value="1"
                  {{ 'checked' if d.is_featured }}> Tavsiya etilgan
         </label>
+        {# Chaqirib olish (retraction) — OpenAlex signali jimgina yo'qolmasligi
+           kerak (§26). Bayroq ko'rinadigan va admin boshqaradigan maydon:
+           autofill uni faqat YOQADI, hech qachon o'chirmaydi. #}
+        <label class="mq-form__check" for="f-retracted">
+          <input type="checkbox" id="f-retracted" name="is_retracted" value="1"
+                 {{ 'checked' if d.is_retracted }}
+                 aria-describedby="f-retracted-help">
+          Chaqirib olingan (retracted)
+        </label>
+        <p class="ol-meta mq-form__full" id="f-retracted-help">
+          Chaqirib olingan maqola avtomatik nashr etilmaydi — nashr holatini
+          o'zingiz belgilaysiz.
+        </p>
       </div>
+
+      {# ── Tashqi identifikatorlar ──────────────────────────────────────────
+         Bu qiymatlarni odam kiritmaydi: ularni DOI autofill paneli to'ldiradi
+         va admin "Saqlash" bosgandagina bazaga tushadi. Ko'rinadigan maydon
+         qilinmadi — tahrirlash imkoni foyda bermaydi, xato esa kiritadi. #}
+      <input type="hidden" name="openalex_id" value="{{ d.openalex_id or '' }}"
+             data-mq-meta-hidden="openalex_id">
+      <input type="hidden" name="crossref_member_id" value="{{ d.crossref_member_id or '' }}"
+             data-mq-meta-hidden="crossref_member_id">
+      <input type="hidden" name="primary_issn" value="{{ d.primary_issn or '' }}"
+             data-mq-meta-hidden="primary_issn">
+      <input type="hidden" name="citation_count" value="{{ d.citation_count if d.citation_count is not none else '' }}"
+             data-mq-meta-hidden="citation_count">
+      <input type="hidden" name="citation_count_source" value="{{ d.citation_count_source or '' }}"
+             data-mq-meta-hidden="citation_count_source">
+      <input type="hidden" name="citation_count_checked_at"
+             value="{{ d.citation_count_checked_at or '' }}"
+             data-mq-meta-hidden="citation_count_checked_at">
+      <input type="hidden" name="metadata_source_summary" value="{{ metadata_summary_json }}"
+             data-mq-meta-hidden="metadata_source_summary">
+
+      {% if article and (article.openalex_id or article.metadata_last_synced_at) %}
+      <dl class="mq-deflist mq-gap-top">
+        {% if article.openalex_id %}
+        <dt>OpenAlex</dt><dd class="mq-wrap-any">{{ article.openalex_id }}</dd>{% endif %}
+        {% if article.primary_issn %}<dt>Asosiy ISSN</dt><dd>{{ article.primary_issn }}</dd>{% endif %}
+        {% if article.citation_count is not none %}
+        <dt>Iqtiboslar</dt>
+        <dd>{{ article.citation_count }}
+          {%- if article.citation_count_source %} ({{ article.citation_count_source }}{% if article.citation_count_checked_at %}, {{ article.citation_count_checked_at }}{% endif %}){% endif %}</dd>
+        {% endif %}
+        {% if article.metadata_last_synced_at %}
+        <dt>Oxirgi sinxronizatsiya</dt><dd>{{ article.metadata_last_synced_at }}</dd>{% endif %}
+      </dl>
+      {% endif %}
     </fieldset>
 
     <div class="mq-detail__actions">
@@ -340,5 +445,10 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+<script src="/static/js/maqolalar.js?v={{ asset_version }}" defer></script>
+{# DOI autofill faqat admin formasida kerak — katalog sahifalariga
+   yuborilmaydi. Provayder sozlanmagan bo'lsa panel buni ochiq aytadi. #}
+<script src="/static/js/maqolalar_metadata.js?v={{ asset_version }}"
+        defer
+        data-providers="{{ metadata_providers|tojson|forceescape }}"></script>
 {% endblock %}

@@ -44,7 +44,8 @@ def link(article_id=1, field_id=1, primary=True, name='Pedagogika fanlari',
 def author(article_id=1, name='Karimov Sardor', order=1, **extra):
     row = {'article_id': article_id, 'author_name': name, 'author_order': order,
            'orcid': None, 'affiliation': None, 'linked_user_id': None,
-           'linked_scientist_id': None, 'is_corresponding': False}
+           'linked_scientist_id': None, 'is_corresponding': False,
+           'openalex_author_id': None}
     row.update(extra)
     return row
 

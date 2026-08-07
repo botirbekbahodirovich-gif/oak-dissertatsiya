@@ -84,6 +84,7 @@ qo'llaydi.
 ### Admin
 
 `/admin/articles`, `/admin/articles/new`, `/admin/articles/<id>/edit`,
+`POST /admin/articles/metadata/lookup` (DOI autofill — faqat o'qish),
 `/admin/articles/<id>/review`, `/admin/articles/<id>/preview`,
 `/admin/articles/<id>/delete` (arxivlash),
 `/admin/scientific-fields[/new|/<id>/edit|/<id>/delete]`.
@@ -394,6 +395,9 @@ modul o'zgartirmaydi.
 | `tests/test_articles_rules.py` | `can_read_pdf`, litsenziya, DOI, slug, ierarxiya, halqa, PDF yuklash/saqlash | yo'q |
 | `tests/test_articles_catalog.py` | route'lar, qidiruv/filtr/sort/sahifalash SQL'i, shablonlar, SEO, accessibility | qalbaki |
 | `tests/test_articles_viewer.py` | o'quvchi kirishi, oqim sarlavhalari, Range, traversal, SEO, accessibility, dizayn tizimi, vendoring | qalbaki + haqiqiy fayl |
+| `tests/test_article_metadata_providers.py` | Crossref/OpenAlex/Unpaywall klientlari, timeout, 429, sxema | yo'q |
+| `tests/test_article_metadata_merge.py` | ustuvorlik, konflikt, muallif moslashtirish, orkestratsiya | yo'q |
+| `tests/test_article_metadata_admin.py` | lookup endpointi, DB'ga yozmaslik, javob xavfsizligi, forma UI, sxema 009 | qalbaki |
 | `tests/test_articles_admin.py` | avtorizatsiya, CSRF, forma validatsiyasi, PDF yuklash yo'llari | qalbaki |
 | `tests/test_articles_migration.py` | migratsiya xavfsizligi + `_ensure_schema` bilan parity | yo'q |
 | `tests/test_articles_seed.py` | seed formati, idempotentlik, dry-run | yo'q |
@@ -650,17 +654,42 @@ O'ng panel uchun tartibda joy bor, lekin hozir bo'sh panel ko'rsatilmaydi.
 
 ---
 
-## 14. Migratsiya va rollback
+## 14. DOI metadata autofill (Phase 2C.1)
+
+Admin DOI kiritganda Crossref / OpenAlex / Unpaywall'dan bibliografik
+ma'lumot olinadi va admin formasiga NOMZOD sifatida taklif qilinadi.
+
+To'liq hujjat: **[`docs/article-metadata-integration.md`](article-metadata-integration.md)**
+(provayderlar, sozlamalar, manba ustuvorligi, konflikt qoidalari, OA va
+huquqiy kirish turi farqi, PDF nomzodi siyosati, kesh, rate limit,
+xavfsizlik, bulk import kontrakti).
+
+Bu yerdagi modul uchun eng muhim uchta natija:
+
+* `scientific_articles` ga tashqi identifikatorlar va provenance ustunlari
+  qo'shildi (migratsiya 009, §15 dagi rollback naqshi bilan bir xil);
+* `access_type` va `license_type` **hech qachon** avtomatik to'ldirilmaydi —
+  ular huquqiy qaror va `can_read_pdf()` ga to'g'ridan-to'g'ri ta'sir qiladi;
+* `is_retracted` bayrog'i paydo bo'ldi: chaqirib olingan maqola signali
+  jimgina yo'qolmaydi.
+
+---
+
+## 15. Migratsiya va rollback
 
 ```bash
 psql "$DATABASE_URL" -f migrations/007_create_article_catalog.sql
+psql "$DATABASE_URL" -f migrations/008_scientific_field_provenance.sql
+psql "$DATABASE_URL" -f migrations/009_article_external_metadata.sql
 ```
 
-Bitta tranzaksiya, to'liq idempotent, mavjud jadvallarga **tegmaydi**, seed
-ma'lumoti ichida yo'q. Rollback SQL fayl oxirida izoh sifatida (ataylab
-bajarilmaydigan holda) yozilgan — u ma'lumotni yo'q qiladi va faqat butun
-Phase 2B.1 ni qaytarishda ishlatiladi. `storage/articles/` dagi PDF fayllar
-rollback bilan o'chirilmaydi.
+Har biri bitta tranzaksiya, to'liq idempotent, seed ma'lumoti ichida yo'q.
+007 modul jadvallarini yaratadi va mavjud jadvallarga umuman tegmaydi;
+008 va 009 esa faqat SHU modulning jadvallariga NULLable ustun qo'shadi
+(`ADD COLUMN IF NOT EXISTS`) — mavjud qatorlar o'qilmaydi va qayta
+yozilmaydi. Rollback SQL fayl oxirida izoh sifatida (ataylab bajarilmaydigan
+holda) yozilgan — u ma'lumotni yo'q qiladi. `storage/articles/` dagi PDF
+fayllar rollback bilan o'chirilmaydi.
 
 Server `blueprints/articles.py:_ensure_schema` orqali birinchi so'rovda
 o'zini-o'zi migratsiya qiladi (grants/conferences konvensiyasi), shuning uchun

@@ -25,7 +25,7 @@ FIELD_ROW_COLUMNS = ['id', 'parent_id', 'name_uz', 'name_uz_cyrillic', 'name_ru'
 
 AUTHOR_ROW_COLUMNS = ['article_id', 'author_name', 'author_order', 'orcid',
                       'affiliation', 'linked_user_id', 'linked_scientist_id',
-                      'is_corresponding']
+                      'is_corresponding', 'openalex_author_id']
 
 LINK_ROW_COLUMNS = ['article_id', 'is_primary', 'id', 'name_uz', 'slug', 'code', 'level']
 
@@ -173,6 +173,19 @@ class FakeCursor:
         if sql.startswith('SELECT id, title FROM scientific_articles WHERE checksum'):
             return ([(99, 'Boshqa maqola')] if self.store.get('duplicate_checksum')
                     else []), [('id',), ('title',)]
+
+        if sql.startswith('SELECT id, title FROM scientific_articles WHERE openalex_id'):
+            return ([(99, 'Boshqa maqola')] if self.store.get('duplicate_openalex')
+                    else []), [('id',), ('title',)]
+
+        # DOI autofill dublikat tekshiruvi (blueprints/articles.py:
+        # _existing_article_for_doi). Qalbaki kursor FILTRLAMAYDI — u shunchaki
+        # bor maqolani qaytaradi; testlar `articles=[]` bilan "yo'q" holatini
+        # beradi.
+        if sql.startswith('SELECT id, title, slug FROM scientific_articles'):
+            rows = [(a['id'], a['title'], a['slug'])
+                    for a in self.store['articles']][:1]
+            return rows, [('id',), ('title',), ('slug',)]
 
         return [], None
 
