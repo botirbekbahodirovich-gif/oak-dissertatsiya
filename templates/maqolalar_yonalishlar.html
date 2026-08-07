@@ -20,7 +20,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page">
   {{ page_header(
        "Fan yo'nalishlari",
        "Maqolalar katalogi OAK klassifikatsiyasiga mos ierarxiya bo'yicha tartiblangan: fan tarmog'i, ixtisoslik guruhi va ixtisoslik.",
@@ -31,7 +31,7 @@
     <h2 id="mq-yonalish-qidiruv" class="mq-sr-only">Yo'nalishlar bo'yicha qidiruv</h2>
     <form class="ol-filters" method="get" action="/maqolalar/yonalishlar" role="search">
       <div class="ol-filters__row">
-        <div class="ol-field-group" style="flex:1 1 300px;">
+        <div class="ol-field-group mq-field--grow">
           <label class="ol-label" for="mq-field-q">Yo'nalish nomi yoki shifri</label>
           <input class="ol-field" type="search" id="mq-field-q" name="q" value="{{ query }}"
                  placeholder="Masalan: kiberxavfsizlik yoki 05.01"
@@ -40,7 +40,7 @@
             Shifr bo'yicha prefiks ham ishlaydi: <code>05.01</code>
           </span>
         </div>
-        <div class="ol-field-group" style="min-width:220px;">
+        <div class="ol-field-group mq-field--fixed">
           <label class="ol-label" for="mq-branch">Fan tarmog'i</label>
           <select class="ol-field" id="mq-branch" name="tarmoq">
             <option value="">Barcha tarmoqlar</option>
@@ -50,7 +50,7 @@
             {% endfor %}
           </select>
         </div>
-        <label class="ol-facets__opt" for="mq-only-with" style="flex:0 0 auto;min-height:44px;">
+        <label class="ol-facets__opt mq-check" for="mq-only-with">
           <input type="checkbox" id="mq-only-with" name="bor" value="1"
                  {{ 'checked' if only_with_articles }}>
           Faqat maqolasi mavjud yo'nalishlar
@@ -116,13 +116,13 @@
   <section class="ol-section" aria-labelledby="mq-yonalish-manba">
     <h2 id="mq-yonalish-manba" class="ol-h4">Ma'lumot manbasi</h2>
     <div class="ol-card">
-      <p class="ol-body" style="margin:0;">
-        Fan tarmoqlari va ixtisosliklar OAK klassifikatsiyasiga asoslanadi.
-        Har bir yozuvning rasmiy kirill nomi saqlanadi; lotin varianti
-        deterministik transliteratsiya orqali hosil qilingan va rasmiy tarjima
-        emas. Ba'zi ixtisosliklarning guruh (2-daraja) nomi rasmiy manbadan
-        hali olinmagan — bunday holatda sun'iy nom yaratilmaydi, faqat shifr
-        ko'rsatiladi.
+      <p class="ol-body mq-flush">
+        Ierarxiya OAK klassifikatsiyasiga asoslanadi: fan tarmog'i,
+        ixtisosliklar guruhi va ixtisoslik. Tarmoq va guruh nomlari
+        &laquo;Oliy malakali ilmiy va ilmiy-pedagog kadrlar ixtisosliklari
+        ro'yxati&raquo; (OAK, 2021) hujjatidan olingan. Har bir yozuvning
+        rasmiy kirill nomi saqlanadi; lotin varianti deterministik
+        transliteratsiya orqali hosil qilingan va rasmiy tarjima emas.
       </p>
     </div>
   </section>

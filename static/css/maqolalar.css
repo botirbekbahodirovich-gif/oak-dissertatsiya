@@ -187,3 +187,41 @@
   .mq-results__count { margin-left: 0; }
   .mq-results__context { font-size: var(--text-meta); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Modul utility klasslari — inline `style="..."` o'rniga.
+   Dizayn tizimi qoidasi: sahifa ichida xom qiymat yozilmaydi, hamma narsa
+   nomlangan, prefiksli klass va token orqali beriladi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mq-flush { margin: 0; }
+.mq-flush-top { margin-top: 0; }
+.mq-gap-top { margin-top: var(--space-16); }
+.mq-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin-bottom: var(--space-24); }
+.mq-toolbar .ol-btn { min-height: 44px; }
+.mq-wrap-any { overflow-wrap: anywhere; }
+.mq-steps { margin: 0; padding-left: var(--space-20); }
+.mq-steps li + li { margin-top: var(--space-8); }
+
+/* Filtr paneli maydonlari — flex-basis qiymatlari bitta joyda. */
+.mq-field--grow { flex: 1 1 300px; }
+.mq-field--fixed { flex: 0 1 auto; min-width: 220px; }
+.mq-check { flex: 0 0 auto; }
+
+/* Nofaol jadval qatori. Shaffoflik YAGONA belgi emas — qator ichida
+   "Nofaol" yorlig'i ham bor (holat rang bilan berilmaydi). */
+.mq-row--inactive { opacity: 0.55; }
+
+/* ── 44px interaktiv o'lcham — modul ichida scoped ───────────────────────────
+   Dizayn tizimida `.ol-pager` 40px, `.ol-chip` va `.ol-facets__opt` 32px
+   bo'lib qolgan (legacy istisno). Ularni global o'zgartirish 50+ eski
+   sahifaning tartibiga ta'sir qiladi, shuning uchun accessibility tuzatishi
+   FAQAT maqolalar moduli sahifalari ichida qo'llanadi (`.mq-page`).
+   Global migratsiya alohida vazifa. */
+.mq-page .ol-pager a,
+.mq-page .ol-pager button { min-width: 44px; min-height: 44px; }
+.mq-page .ol-chip { min-height: 44px; }
+.mq-page .ol-facets__opt { min-height: 44px; }
+.mq-notice--spaced { margin-bottom: var(--space-16); }
+.mq-notice__text { margin: 0 0 var(--space-12); }

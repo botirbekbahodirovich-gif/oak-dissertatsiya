@@ -60,6 +60,11 @@ kodsiz    →  kichik yo'nalish    (otasi + 1)
 **10 ta sun'iy kategoriya yo'q** — daraxt to'liq recursive va kamida 4 darajani
 qo'llaydi.
 
+> **QAT'IY QOIDA.** Rasmiy 2-daraja guruh mavjud bo'lsa, 3-daraja ixtisoslik
+> HECH QACHON to'g'ridan-to'g'ri 1-daraja fan tarmog'iga bog'lanmaydi.
+> Guruh bazada bo'lmasa yozuv import qilinmaydi va hisobotda ko'rsatiladi
+> (`docs/oak-specialties-import.md` §8).
+
 ---
 
 ## 2. Route'lar
@@ -290,10 +295,11 @@ tasodifan tushmaydi.
 
 ## 9. Nima yetishmayapti: to'liq OAK dataseti
 
-> **Yangilandi.** 3-daraja (ixtisosliklar) endi mavjud: OAK manbasidan 255 ta
-> yozuv import qilinadi (`docs/oak-specialties-import.md`). Quyidagi matn
-> 1-daraja seed'i haqida va o'z kuchida qoladi; **hali ham yetishmayotgani** —
-> 2-daraja guruh nomlari (16 ta kod) va 21-fan tarmog'i nomi.
+> **Yangilandi (2-marta).** Taksonomiya endi TO'LIQ: 23 ta fan tarmog'i,
+> 19 ta rasmiy ixtisosliklar guruhi va 255 ta ixtisoslik. 2-daraja guruh
+> nomlari va 21-fan tarmog'i («Ҳарбий фанлар») rasmiy OAK 2021 ro'yxatidan
+> olindi — `docs/oak-specialties-import.md` §9. Quyidagi matn 1-daraja
+> repozitoriy seed'i haqida va o'z kuchida qoladi.
 
 `data/scientific_fields.json` da **faqat 1-daraja** — 22 ta fan tarmog'i.
 Ular repozitoriyda allaqachon tasdiqlangan holda bor edi

@@ -21,7 +21,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page">
   {% set crumb_list = [('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar'),
                        ("Fan yo'nalishlari", '/maqolalar/yonalishlar')] %}
   {% for node in crumbs %}
@@ -36,13 +36,13 @@
 
   {# Rasmiy kirill nomi — ikkilamchi metadata; lotin nomi sarlavhada (§17). #}
   {% if field.name_uz_cyrillic and field.name_uz_cyrillic != field.name_uz %}
-  <p class="ol-body-lg ol-muted" lang="uz-Cyrl" style="margin-top:0;">{{ field.name_uz_cyrillic }}</p>
+  <p class="ol-body-lg ol-muted mq-flush-top" lang="uz-Cyrl">{{ field.name_uz_cyrillic }}</p>
   {% endif %}
 
   {% if field.missing_parent_code %}
   {# Ota guruhning RASMIY NOMI yo'q. Sun'iy nom chiqarilmaydi — faqat shifr. #}
   <div class="mq-notice">
-    <p class="ol-body" style="margin:0;">
+    <p class="ol-body mq-flush">
       Bu ixtisoslik <strong>{{ field.missing_parent_code }}</strong> guruhiga tegishli.
       Guruhning rasmiy nomi hali OAK manbasidan olinmagan, shuning uchun bu yerda
       faqat shifr ko'rsatilmoqda.
@@ -68,8 +68,8 @@
 
     {# Qamrov ochiq ko'rsatiladi (§21): foydalanuvchi qaysi maqolalarni
        ko'rayotganini bilishi va uni almashtira olishi shart. #}
-    <div class="mq-notice mq-notice--info" style="margin-bottom:var(--space-16);">
-      <p class="ol-body" style="margin:0 0 var(--space-8);">
+    <div class="mq-notice mq-notice--info mq-notice--spaced">
+      <p class="ol-body mq-notice__text">
         {% if include_descendants %}
         Ichki yo'nalishlardagi maqolalar ham ko'rsatilmoqda.
         {% else %}

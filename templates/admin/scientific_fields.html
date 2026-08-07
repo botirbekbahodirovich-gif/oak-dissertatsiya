@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page">
   {{ page_header("Fan yo'nalishlari",
                  "OAK klassifikatsiyasiga mos ierarxiya. Sun'iy kategoriya qo'shmang — faqat tasdiqlangan manbadan.",
                  crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')],
@@ -22,7 +22,7 @@
     {% for m in msgs %}<div class="mq-notice" role="status">{{ m }}</div>{% endfor %}
   {% endwith %}
 
-  <div class="mq-detail__actions" style="margin-bottom:var(--space-24);">
+  <div class="mq-toolbar">
     <a class="ol-btn ol-btn--primary" href="/admin/scientific-fields/new">
       <i class="bi bi-plus-lg" aria-hidden="true"></i>Yangi yo'nalish</a>
     <a class="ol-btn ol-btn--secondary" href="/admin/scientific-fields/review">
@@ -81,7 +81,7 @@
           <option value="nofaol" {{ 'selected' if request.args.get('status') == 'nofaol' }}>Nofaol</option>
         </select>
       </div>
-      <label class="ol-facets__opt" for="sf-orphan" style="flex:0 0 auto;min-height:44px;">
+      <label class="ol-facets__opt mq-check" for="sf-orphan">
         <input type="checkbox" id="sf-orphan" name="yetim" value="1"
                {{ 'checked' if request.args.get('yetim') == '1' }}>
         Guruh nomi yo'q
@@ -122,10 +122,14 @@
       </thead>
       <tbody>
         {% for row in rows %}
-        <tr {% if not row.is_active %}style="opacity:.55;"{% endif %}>
+        <tr {% if not row.is_active %}class="mq-row--inactive"{% endif %}>
           <th scope="row" class="mq-tree__code">{{ row.code or '—' }}</th>
           <td class="mq-admin-name">
             {{ row.name_uz }}
+            {# Holat rang/shaffoflik bilan EMAS, matn bilan ham beriladi. #}
+            {% if not row.is_active %}
+            <span class="ol-badge ol-badge--neutral">Nofaol</span>
+            {% endif %}
             {% if row.name_uz_cyrillic and row.name_uz_cyrillic != row.name_uz %}
             <span class="mq-admin-raw" lang="uz-Cyrl">{{ row.name_uz_cyrillic }}</span>
             {% endif %}

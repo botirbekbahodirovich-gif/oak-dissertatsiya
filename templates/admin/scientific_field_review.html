@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page">
   {{ page_header("OAK ixtisosliklari — review navbati",
                  "Manbada shubhali topilgan yozuvlar. Ular bazaga IMPORT QILINMAGAN.",
                  crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'),
@@ -22,16 +22,16 @@
   {% endif %}
 
   <div class="mq-notice mq-notice--info">
-    <h2 class="ol-h5" style="margin-top:0;">Tasdiqlash tartibi</h2>
-    <p class="ol-body" style="margin-bottom:var(--space-12);">
+    <h2 class="ol-h5 mq-flush-top">Tasdiqlash tartibi</h2>
+    <p class="ol-body mq-notice__text">
       Bu sahifa faqat ko'rish uchun — bu yerda nom o'zgartirilmaydi. Sabab:
       tasdiqlangan nom manba fayliga yozilishi va git tarixida qolishi kerak,
       shunda keyingi re-parse uni yo'qotmaydi.
     </p>
-    <ol class="ol-body" style="margin:0;padding-left:var(--space-20);">
+    <ol class="ol-body mq-steps">
       <li>Rasmiy OAK manbasidan to'liq nomni aniqlang (taxmin qilmang).</li>
       <li>Quyidagi faylda tegishli yozuvni toping:
-        <code style="overflow-wrap:anywhere;">{{ queue_path }}</code></li>
+        <code class="mq-wrap-any">{{ queue_path }}</code></li>
       <li><code>approved_name_uz_cyrillic</code>, <code>reviewer</code> va
         <code>reviewed_at</code> maydonlarini to'ldiring (uchalasi ham shart).</li>
       <li><code>python scripts/parse_oak_specialties.py</code> — tasdiqlangan
@@ -42,9 +42,9 @@
   </div>
 
   {% if metadata %}
-  <p class="ol-meta" style="margin-top:var(--space-16);">
+  <p class="ol-meta mq-gap-top">
     Manba: {{ metadata.source_file }} &middot;
-    SHA-256: <code style="overflow-wrap:anywhere;">{{ metadata.source_sha256 }}</code> &middot;
+    SHA-256: <code class="mq-wrap-any">{{ metadata.source_sha256 }}</code> &middot;
     parse: {{ metadata.parsed_at }}
   </p>
   {% endif %}

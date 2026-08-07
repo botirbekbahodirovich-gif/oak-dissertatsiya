@@ -57,11 +57,16 @@ from utils.scientific_fields import (branch_code, field_slug,  # noqa: E402
 # qiymat — jumladan `review_required` — rad etiladi.
 ALLOWED_REVIEW_STATUSES = frozenset({
     'auto_clean', 'auto_normalized', 'manual_approved', 'seed',
+    # Rasmiy OAK hujjatidan AYNAN ko'chirilgan yozuv (1- va 2-daraja).
+    'official_source',
 })
 
-# Ota yozuvni hal qilish natijasi (§16).
+# Ota yozuvni hal qilish natijasi.
 PARENT_EXISTS = 'parent_exists'
-PARENT_MISSING_KNOWN_CODE = 'parent_missing_but_known_code'
+# Rasmiy ota shifri ma'lum, lekin u hali bazada yo'q -> yozuv KUTIB TURADI.
+# Ilgari bunday yozuv "eng yaqin fan tarmog'iga" bog'lanardi; bu vaqtinchalik
+# yechim edi va endi ishlatilmaydi (quyidagi resolve_parent izohiga qarang).
+PARENT_PENDING = 'parent_pending_official_group'
 PARENT_UNRESOLVABLE = 'parent_unresolvable'
 
 
@@ -170,12 +175,22 @@ def _unique_slug(cur, base, exclude_id=None):
 
 
 def resolve_parent(entry, by_code):
-    """(status, parent_record_or_None, missing_parent_code_or_None) — §16.
+    """(status, parent_record_or_None, expected_parent_code_or_None).
 
-    Ota yozuv bazada bo'lmasa SUN'IY OTA YARATILMAYDI (uning rasmiy nomi
-    yo'q). Buning o'rniga eng yaqin MAVJUD ajdod (odatda fan tarmog'i)
-    topiladi va haqiqiy ota shifri `missing_parent_code` da saqlanadi —
-    UI shu KODni ko'rsatadi, o'ylab topilgan nomni emas.
+    QAT'IY QOIDA: rasmiy OAK shifri ierarxiyani aniq belgilaydi, shuning
+    uchun 3-daraja ixtisoslik HECH QACHON to'g'ridan-to'g'ri 1-daraja fan
+    tarmog'iga bog'lanmaydi. Uning rasmiy 2-daraja guruhi bazada bo'lishi
+    SHART.
+
+    Ilgari bu yerda "eng yaqin mavjud ajdod" fallback'i bor edi: guruh nomi
+    noma'lum bo'lganda ixtisoslik tarmoqqa bog'lanib, haqiqiy guruh shifri
+    `missing_parent_code` da saqlanardi. U vaqtinchalik yechim edi va
+    production ierarxiyasi sifatida qolmasligi kerak — rasmiy guruh nomlari
+    OAK ro'yxatidan olingandan keyin butunlay olib tashlandi.
+
+    Guruh hali bazada bo'lmasa yozuv IMPORT QILINMAYDI (PARENT_PENDING) va
+    hisobotda ko'rsatiladi. Noto'g'ri joyga qo'yilgandan ko'ra
+    ko'rinmagani yaxshi.
     """
     target = entry['parent_code']
     if not target:
@@ -185,12 +200,7 @@ def resolve_parent(entry, by_code):
     if parent is not None:
         return PARENT_EXISTS, parent, None
 
-    ancestor_code = branch_code(entry['code']) if entry['code'] else None
-    ancestor = by_code.get(ancestor_code) if ancestor_code else None
-    if ancestor is not None and ancestor_code != target:
-        return PARENT_MISSING_KNOWN_CODE, ancestor, target
-
-    return PARENT_UNRESOLVABLE, None, target
+    return PARENT_PENDING, None, target
 
 
 WRITE_COLUMNS = ('parent_id', 'name_uz', 'name_uz_cyrillic', 'name_ru', 'code',
@@ -203,28 +213,23 @@ def upsert_fields(cur, entries, dry_run=True, update_names=False):
     """Idempotent upsert. Natija — batafsil hisobot lug'ati."""
     by_code, by_slug = _existing_index(cur)
     stats = {'created': 0, 'updated': 0, 'skipped': 0, 'conflict': 0,
-             'unresolvable': 0}
+             'pending': 0}
     conflicts = []
-    unresolvable = []
-    missing_parent = []
+    pending = []
     fake_id = 0
 
     for entry in entries:
         status, parent, missing_code = resolve_parent(entry, by_code)
 
-        if status == PARENT_UNRESOLVABLE:
-            # Bog'lash mumkin bo'lgan hech qanday ajdod yo'q. Bunday yozuvni
-            # parent_id=NULL bilan kiritish uni daraxtda soxta ILDIZ qilib
-            # ko'rsatardi — bu noto'g'ri, shuning uchun o'tkazib yuboriladi.
-            stats['unresolvable'] += 1
-            unresolvable.append({'code': entry['code'], 'name_uz': entry['name_uz'],
-                                 'missing_parent_code': missing_code})
+        if status != PARENT_EXISTS:
+            # Rasmiy ota bazada yo'q. Yozuvni parent_id=NULL bilan kiritish
+            # uni daraxtda soxta ILDIZ qilib ko'rsatardi, tarmoqqa bog'lash
+            # esa rasmiy ierarxiyani buzardi — shuning uchun o'tkazib
+            # yuboriladi va hisobotda ko'rsatiladi.
+            stats['pending'] += 1
+            pending.append({'code': entry['code'], 'name_uz': entry['name_uz'],
+                            'expected_parent_code': missing_code})
             continue
-
-        if status == PARENT_MISSING_KNOWN_CODE:
-            missing_parent.append({'code': entry['code'],
-                                   'missing_parent_code': missing_code,
-                                   'attached_to': parent['code']})
 
         parent_id = parent['id'] if parent else None
         parent_level = parent['level'] if parent else None
@@ -267,7 +272,7 @@ def upsert_fields(cur, entries, dry_run=True, update_names=False):
                                       source_name = %s, source_url = %s,
                                       source_updated_at = %s, raw_name = %s,
                                       source_line = %s, source_sha256 = %s,
-                                      review_status = %s, missing_parent_code = %s,
+                                      review_status = %s, missing_parent_code = NULL,
                                       updated_at = NOW()
                                 WHERE id = %s""",
                             (entry['name_uz'], entry['name_uz_cyrillic'],
@@ -276,7 +281,7 @@ def upsert_fields(cur, entries, dry_run=True, update_names=False):
                              entry['source_url'], entry['source_updated_at'],
                              entry['raw_name'], entry['source_line'],
                              entry['source_sha256'], entry['review_status'],
-                             missing_code, existing['id']))
+                             existing['id']))
             stats['updated'] += 1
             existing.update(name_uz=entry['name_uz'], description=entry['description'],
                             parent_id=parent_id, level=level,
@@ -295,7 +300,7 @@ def upsert_fields(cur, entries, dry_run=True, update_names=False):
             'raw_name': entry['raw_name'], 'source_line': entry['source_line'],
             'source_sha256': entry['source_sha256'],
             'review_status': entry['review_status'],
-            'missing_parent_code': missing_code,
+            'missing_parent_code': None,
         }
         if dry_run:
             # Dry-run'da ham keyingi bolalar ota ID sini topa olishi kerak,
@@ -320,8 +325,83 @@ def upsert_fields(cur, entries, dry_run=True, update_names=False):
         by_slug[slug] = record
         stats['created'] += 1
 
-    return {'stats': stats, 'conflicts': conflicts, 'unresolvable': unresolvable,
-            'missing_parent': missing_parent}
+    return {'stats': stats, 'conflicts': conflicts, 'pending': pending}
+
+
+def repair_hierarchy(cur, dry_run=True):
+    """Vaqtinchalik ierarxiya fallback'larini rasmiy ota bilan almashtiradi.
+
+    Ilgari rasmiy 2-daraja guruh nomi noma'lum bo'lgani uchun ixtisosliklar
+    "eng yaqin fan tarmog'iga" bog'langan va haqiqiy guruh shifri
+    `missing_parent_code` da saqlangan edi. Rasmiy guruhlar import
+    qilingandan keyin bu funksiya o'sha yozuvlarni HAQIQIY otaga ko'chiradi.
+
+    Maqola bog'lanishlariga TEGILMAYDI: yozuvning `id` si o'zgarmaydi,
+    faqat `parent_id` yangilanadi, shuning uchun
+    `article_scientific_fields` qatorlar butunligicha qoladi. Slug ham
+    o'zgarmaydi — mavjud URL'lar ishlashda davom etadi.
+
+    Ikkita manba bo'yicha ishlaydi:
+      1. `missing_parent_code` to'ldirilgan qatorlar (eski fallback izi);
+      2. shifri rasmiy 2-daraja guruhni ko'rsatadigan, lekin 1-darajaga
+         bog'langan qatorlar (bayroqsiz qolgan eski yozuvlar).
+    """
+    cur.execute("SELECT COUNT(*) FROM article_scientific_fields")
+    links_before = int(cur.fetchone()[0])
+
+    cur.execute("""SELECT id, code, parent_id, level, missing_parent_code, name_uz
+                     FROM scientific_fields""")
+    rows = [{'id': r[0], 'code': r[1], 'parent_id': r[2], 'level': r[3],
+             'missing_parent_code': r[4], 'name_uz': r[5]} for r in cur.fetchall()]
+    by_code = {r['code']: r for r in rows if r['code']}
+    by_id = {r['id']: r for r in rows}
+
+    reparented, unblocked, still_missing = [], [], []
+    for row in rows:
+        if not row['code']:
+            continue
+        expected = row['missing_parent_code'] or parent_code(row['code'])
+        if not expected:
+            continue
+        official = by_code.get(expected)
+        current = by_id.get(row['parent_id'])
+        if official is None:
+            if row['missing_parent_code'] or (current and current['code'] != expected):
+                still_missing.append({'code': row['code'],
+                                      'expected_parent_code': expected})
+            continue
+        if row['parent_id'] == official['id'] and not row['missing_parent_code']:
+            continue
+
+        level = level_from_code(row['code']) or row['level']
+        if not dry_run:
+            cur.execute("""UPDATE scientific_fields
+                              SET parent_id = %s, level = %s,
+                                  missing_parent_code = NULL, updated_at = NOW()
+                            WHERE id = %s""", (official['id'], level, row['id']))
+        entry = {'code': row['code'], 'name_uz': row['name_uz'],
+                 'from_parent_code': current['code'] if current else None,
+                 'to_parent_code': official['code']}
+        reparented.append(entry)
+        if row['missing_parent_code']:
+            unblocked.append(row['code'])
+        row['parent_id'] = official['id']
+        row['missing_parent_code'] = None
+
+    cur.execute("SELECT COUNT(*) FROM article_scientific_fields")
+    links_after = int(cur.fetchone()[0])
+
+    return {
+        'specialties_reparented': len(reparented),
+        'records_unblocked': len(unblocked),
+        'article_links_before': links_before,
+        'article_links_after': links_after,
+        'article_links_preserved': links_before == links_after,
+        'still_missing_parents': sorted({i['expected_parent_code']
+                                         for i in still_missing}),
+        'still_missing_records': sorted(i['code'] for i in still_missing),
+        'reparented': reparented,
+    }
 
 
 def entries_from_dissertations(cur):
@@ -376,7 +456,7 @@ def _print_report(result, dry_run):
     print('  Yangilangan  : %d' % stats['updated'])
     print("  O'zgarishsiz : %d" % stats['skipped'])
     print('  Konflikt     : %d' % stats['conflict'])
-    print('  Ota topilmadi: %d' % stats['unresolvable'])
+    print('  Kutilmoqda   : %d  (rasmiy ota bazada yo\'q)' % stats['pending'])
 
     if result['conflicts']:
         print('\nNOM KONFLIKTLARI (yozuvlar O\'ZGARTIRILMADI — --update-names kerak):')
@@ -384,22 +464,34 @@ def _print_report(result, dry_run):
             print('  %s  mavjud: %r' % (item['code'], item['existing_name_uz']))
             print('  %s  kelgan: %r' % (' ' * len(item['code']), item['incoming_name_uz']))
 
-    if result['unresolvable']:
-        print('\nOTA YO\'NALISH TOPILMADI — bu yozuvlar IMPORT QILINMADI:')
-        for item in result['unresolvable']:
-            print('  %s  (kerakli ota: %s)  %s'
-                  % (item['code'], item['missing_parent_code'], item['name_uz']))
-
-    if result['missing_parent']:
-        groups = sorted({i['missing_parent_code'] for i in result['missing_parent']})
-        print('\nRASMIY GURUH NOMI YO\'Q — %d ta yozuv eng yaqin mavjud tarmoqqa '
-              'bog\'landi,' % len(result['missing_parent']))
-        print('haqiqiy ota shifri missing_parent_code da saqlandi (sun\'iy nom '
-              'YARATILMADI):')
+    if result['pending']:
+        groups = sorted({i['expected_parent_code'] for i in result['pending']})
+        print('\nRASMIY OTA BAZADA YO\'Q — %d ta yozuv IMPORT QILINMADI '
+              '(noto\'g\'ri joyga qo\'yilgandan ko\'ra ko\'rinmagani yaxshi):'
+              % len(result['pending']))
         for code in groups:
-            count = sum(1 for i in result['missing_parent']
-                        if i['missing_parent_code'] == code)
-            print('  %s  — %d ta ixtisoslik' % (code, count))
+            count = sum(1 for i in result['pending']
+                        if i['expected_parent_code'] == code)
+            print('  kerakli ota %s — %d ta ixtisoslik' % (code, count))
+
+
+def _print_repair_report(repair):
+    print('\nIERARXIYA TUZATISH:')
+    print('  Ko\'chirilgan ixtisosliklar : %d' % repair['specialties_reparented'])
+    print('  Bloki ochilgan yozuvlar    : %d' % repair['records_unblocked'])
+    print('  Maqola bog\'lanishlari      : %d -> %d  (%s)'
+          % (repair['article_links_before'], repair['article_links_after'],
+             'saqlandi' if repair['article_links_preserved'] else 'O\'ZGARDI!'))
+    if repair['still_missing_parents']:
+        print('  Hali rasmiy otasi yo\'q     : %s'
+              % ', '.join(repair['still_missing_parents']))
+    else:
+        print('  Hali rasmiy otasi yo\'q     : 0')
+    for item in repair['reparented'][:10]:
+        print('    %s : %s -> %s' % (item['code'], item['from_parent_code'],
+                                     item['to_parent_code']))
+    if len(repair['reparented']) > 10:
+        print('    ... jami %d ta' % len(repair['reparented']))
 
 
 def main(argv=None):
@@ -411,6 +503,9 @@ def main(argv=None):
     parser.add_argument('--dry-run', action='store_true',
                         help='aniqlik uchun; --apply bilan birga berilmasin')
     parser.add_argument('--update-names', action='store_true')
+    parser.add_argument('--repair-hierarchy', action='store_true',
+                        help="vaqtinchalik ota bog'lanishlarini rasmiy "
+                             "guruhga ko'chiradi (importdan keyin)")
     parser.add_argument('--from-dissertations', action='store_true')
     parser.add_argument('--allow-sample', action='store_true')
     args = parser.parse_args(argv)
@@ -456,11 +551,17 @@ def main(argv=None):
             result = upsert_fields(cur, entries, dry_run=dry_run,
                                    update_names=args.update_names)
 
+            repair = None
+            if args.repair_hierarchy:
+                repair = repair_hierarchy(cur, dry_run=dry_run)
+
         if dry_run:
             conn.rollback()
         else:
             conn.commit()
         _print_report(result, dry_run)
+        if repair is not None:
+            _print_repair_report(repair)
         if dry_run:
             print('\nDRY-RUN — hech narsa yozilmadi. Yozish uchun: --apply')
         else:

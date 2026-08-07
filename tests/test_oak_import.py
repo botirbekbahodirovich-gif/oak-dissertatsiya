@@ -13,9 +13,9 @@ import os
 import re
 import unittest
 
-from scripts.seed_scientific_fields import (PARENT_EXISTS, PARENT_MISSING_KNOWN_CODE,
-                                            PARENT_UNRESOLVABLE, SeedError,
-                                            load_seed, normalize_entries,
+from scripts.seed_scientific_fields import (PARENT_EXISTS, PARENT_PENDING,
+                                            SeedError, load_seed,
+                                            normalize_entries, repair_hierarchy,
                                             resolve_parent, upsert_fields)
 from tests.fake_seed_cursor import SeedCursor
 
@@ -23,6 +23,8 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BRANCH_SEED = os.path.join(_REPO_ROOT, 'data', 'scientific_fields.json')
 OAK_APPROVED = os.path.join(_REPO_ROOT, 'data', 'oak', 'normalized',
                             'oak_specialties_approved.json')
+OAK_GROUPS = os.path.join(_REPO_ROOT, 'data', 'oak', 'normalized',
+                          'oak_specialty_groups.json')
 OAK_REVIEW = os.path.join(_REPO_ROOT, 'data', 'oak', 'review',
                           'oak_specialties_review_required.json')
 MIGRATION = os.path.join(_REPO_ROOT, 'migrations',
@@ -33,12 +35,20 @@ PROVENANCE_COLUMNS = ('raw_name', 'source_line', 'source_sha256', 'review_status
                       'reviewed_by', 'reviewed_at', 'missing_parent_code')
 
 
-def seeded_cursor():
-    """22 ta fan tarmog'i allaqachon kiritilgan jadval."""
-    cursor = SeedCursor()
+def seeded_cursor(with_groups=True, article_links=0):
+    """Repozitoriy tarmoqlari (+ ixtiyoriy rasmiy guruhlar) kiritilgan jadval."""
+    cursor = SeedCursor(article_links=article_links)
     doc, fields = load_seed(BRANCH_SEED)
     upsert_fields(cursor, normalize_entries(doc, fields), dry_run=False)
+    if with_groups:
+        doc, records = load_seed(OAK_GROUPS)
+        upsert_fields(cursor, normalize_entries(doc, records), dry_run=False)
     return cursor
+
+
+def group_entries():
+    doc, records = load_seed(OAK_GROUPS)
+    return normalize_entries(doc, records)
 
 
 def oak_entries():
@@ -96,7 +106,7 @@ class MigrationSafetyTests(unittest.TestCase):
 
 
 class ParentResolutionTests(unittest.TestCase):
-    """§16 — ota topilmasa sun'iy nom YARATILMAYDI."""
+    """Rasmiy ota bo'lmasa yozuv KUTIB TURADI — tarmoqqa bog'lanmaydi."""
 
     def index(self, *codes):
         return {code: {'id': i, 'code': code, 'level': 1, 'name_uz': code}
@@ -115,20 +125,99 @@ class ParentResolutionTests(unittest.TestCase):
         self.assertEqual(status, PARENT_EXISTS)
         self.assertIsNone(parent)
 
-    def test_a_missing_group_falls_back_to_the_branch_and_keeps_the_real_code(self):
+    def test_a_missing_group_never_falls_back_to_the_branch(self):
+        # ENG MUHIM QOIDA: rasmiy 2-daraja guruh mavjud bo'lsa, 3-daraja
+        # ixtisoslik 1-daraja tarmoqqa BOG'LANMAYDI. Guruh bazada bo'lmasa
+        # yozuv kutib turadi.
         entry = {'code': '05.01.05', 'parent_code': '05.01.00'}
         status, parent, missing = resolve_parent(entry, self.index('05.00.00'))
-        self.assertEqual(status, PARENT_MISSING_KNOWN_CODE)
-        self.assertEqual(parent['code'], '05.00.00')
-        self.assertEqual(missing, '05.01.00',
-                         'haqiqiy guruh shifri saqlanishi kerak')
+        self.assertEqual(status, PARENT_PENDING)
+        self.assertIsNone(parent, 'tarmoqqa fallback qilinmasligi kerak')
+        self.assertEqual(missing, '05.01.00')
 
-    def test_a_missing_branch_is_unresolvable(self):
+    def test_an_existing_group_is_used_directly(self):
+        entry = {'code': '05.01.05', 'parent_code': '05.01.00'}
+        status, parent, missing = resolve_parent(
+            entry, self.index('05.00.00', '05.01.00'))
+        self.assertEqual(status, PARENT_EXISTS)
+        self.assertEqual(parent['code'], '05.01.00')
+        self.assertIsNone(missing)
+
+    def test_a_missing_branch_is_pending_too(self):
         entry = {'code': '21.01.06', 'parent_code': '21.01.00'}
         status, parent, missing = resolve_parent(entry, self.index('05.00.00'))
-        self.assertEqual(status, PARENT_UNRESOLVABLE)
+        self.assertEqual(status, PARENT_PENDING)
         self.assertIsNone(parent)
         self.assertEqual(missing, '21.01.00')
+
+
+class OfficialGroupDatasetTests(unittest.TestCase):
+    """Rasmiy OAK hujjatidan olingan 1- va 2-daraja yozuvlar."""
+
+    @classmethod
+    def setUpClass(cls):
+        with io.open(OAK_GROUPS, encoding='utf-8') as fh:
+            cls.doc = json.load(fh)
+        cls.records = cls.doc['records']
+        cls.by_code = {r['code']: r for r in cls.records}
+
+    def test_every_previously_missing_group_is_now_present(self):
+        for code in ('01.01.00', '01.02.00', '01.03.00', '01.04.00',
+                     '05.01.00', '05.02.00', '05.03.00', '05.05.00', '05.06.00',
+                     '05.07.00', '05.08.00', '05.09.00', '05.10.00',
+                     '06.01.00', '06.02.00', '06.03.00'):
+            self.assertIn(code, self.by_code, code)
+
+    def test_the_military_branch_is_present_with_its_groups(self):
+        self.assertIn('21.00.00', self.by_code)
+        self.assertEqual(self.by_code['21.00.00']['level'], 1)
+        self.assertIsNone(self.by_code['21.00.00']['parent_code'])
+        for code in ('21.01.00', '21.02.00'):
+            self.assertIn(code, self.by_code, code)
+            self.assertEqual(self.by_code[code]['parent_code'], '21.00.00')
+
+    def test_names_come_from_the_official_document_verbatim(self):
+        # Rasmiy PDF ning o'zbek kirill bo'limidan AYNAN ko'chirilgan.
+        self.assertEqual(self.by_code['21.00.00']['name_uz_cyrillic'],
+                         'Ҳарбий фанлар')
+        self.assertEqual(self.by_code['01.01.00']['name_uz_cyrillic'], 'Математика')
+        self.assertEqual(self.by_code['05.01.00']['name_uz_cyrillic'],
+                         'Ахборот технологиялари, бошқарув ва компьютер графикаси')
+        self.assertEqual(self.by_code['06.03.00']['name_uz_cyrillic'],
+                         'Ўрмон хўжалиги')
+
+    def test_every_record_carries_authoritative_provenance(self):
+        for record in self.records:
+            self.assertEqual(record['review_status'], 'official_source', record['code'])
+            self.assertIn('oak.uz', record['source_url'], record['code'])
+            self.assertEqual(record['source_year'], 2021, record['code'])
+            self.assertTrue(record['source_page'], record['code'])
+            self.assertIn('%d-bet' % record['source_page'], record['source_name'])
+            self.assertTrue(record['source_sha256'], record['code'])
+            self.assertTrue(record['source_updated_at'], record['code'])
+
+    def test_the_whole_dataset_shares_one_verified_source(self):
+        meta = self.doc['metadata']
+        self.assertEqual(meta['source_year'], 2021)
+        self.assertEqual(meta['record_count'], len(self.records))
+        self.assertEqual({r['source_sha256'] for r in self.records},
+                         {meta['source_sha256']})
+
+    def test_levels_follow_the_code_shape(self):
+        for record in self.records:
+            branch, group, specialty = record['code'].split('.')
+            self.assertEqual(specialty, '00', record['code'])
+            expected = 1 if group == '00' else 2
+            self.assertEqual(record['level'], expected, record['code'])
+
+    def test_latin_names_are_generated_and_never_empty(self):
+        for record in self.records:
+            self.assertTrue(record['name_uz'].strip(), record['code'])
+            self.assertNotRegex(record['name_uz'], r'[\u0400-\u04ff]', record['code'])
+
+    def test_slugs_are_unique(self):
+        slugs = [r['slug'] for r in self.records]
+        self.assertEqual(len(slugs), len(set(slugs)))
 
 
 class OakDatasetImportTests(unittest.TestCase):
@@ -147,13 +236,72 @@ class OakDatasetImportTests(unittest.TestCase):
             self.assertTrue(entry['source_sha256'], entry['code'])
             self.assertTrue(entry['name_uz_cyrillic'], entry['code'])
 
-    def test_import_creates_the_specialties_under_the_existing_branches(self):
+    def test_all_255_specialties_import_once_the_groups_exist(self):
         cursor = seeded_cursor()
-        before = len(cursor.rows)
         result = upsert_fields(cursor, self.entries, dry_run=False)
-        self.assertEqual(result['stats']['created'], 253)
+        self.assertEqual(result['stats']['created'], 255)
         self.assertEqual(result['stats']['conflict'], 0)
-        self.assertEqual(len(cursor.rows), before + 253)
+        self.assertEqual(result['stats']['pending'], 0)
+
+    def test_the_two_military_specialties_are_no_longer_blocked(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        codes = {r['code'] for r in cursor.rows}
+        self.assertIn('21.01.08', codes)
+        self.assertIn('21.02.23', codes)
+
+    def test_specialties_hang_off_their_official_group_not_the_branch(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        by_id = {r['id']: r for r in cursor.rows}
+        by_code = {r['code']: r for r in cursor.rows}
+        for code, group in (('05.01.05', '05.01.00'), ('01.01.01', '01.01.00'),
+                            ('06.01.01', '06.01.00'), ('21.02.23', '21.02.00')):
+            parent = by_id[by_code[code]['parent_id']]
+            self.assertEqual(parent['code'], group, code)
+            self.assertEqual(parent['level'], 2, code)
+
+    def test_no_specialty_is_attached_to_a_branch_that_has_an_official_group(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        by_id = {r['id']: r for r in cursor.rows}
+        by_code = {r['code']: r for r in cursor.rows}
+        offenders = []
+        for row in cursor.rows:
+            if not row.get('code') or row.get('level') != 3:
+                continue
+            expected_group = row['code'][:5] + '.00'
+            if expected_group.endswith('.00.00') or expected_group not in by_code:
+                continue
+            parent = by_id.get(row['parent_id'])
+            if not parent or parent['code'] != expected_group:
+                offenders.append(row['code'])
+        self.assertEqual(offenders, [])
+
+    def test_no_record_keeps_a_temporary_fallback_marker(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        flagged = [r['code'] for r in cursor.rows if r.get('missing_parent_code')]
+        self.assertEqual(flagged, [])
+
+    def test_a_three_level_chain_exists(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        by_id = {r['id']: r for r in cursor.rows}
+        by_code = {r['code']: r for r in cursor.rows}
+        node, chain = by_code['05.01.05'], []
+        while node:
+            chain.append(node['code'])
+            node = by_id.get(node.get('parent_id'))
+        self.assertEqual(chain, ['05.01.05', '05.01.00', '05.00.00'])
+
+    def test_specialties_are_pending_when_the_groups_are_absent(self):
+        cursor = seeded_cursor(with_groups=False)
+        result = upsert_fields(cursor, self.entries, dry_run=False)
+        self.assertGreater(result['stats']['pending'], 0)
+        pending = {p['code'] for p in result['pending']}
+        self.assertIn('05.01.05', pending)
+        self.assertNotIn('05.01.05', {r['code'] for r in cursor.rows})
 
     def test_existing_branch_ids_are_preserved(self):
         cursor = seeded_cursor()
@@ -179,36 +327,18 @@ class OakDatasetImportTests(unittest.TestCase):
         rows_before = len(cursor.rows)
         writes_before = cursor.writes
         result = upsert_fields(cursor, self.entries)
-        self.assertEqual(result['stats']['created'], 253)
+        self.assertEqual(result['stats']['created'], 255)
         self.assertEqual(len(cursor.rows), rows_before)
         self.assertEqual(cursor.writes, writes_before)
-
-    def test_records_without_a_reachable_branch_are_skipped_not_orphaned(self):
-        cursor = seeded_cursor()
-        result = upsert_fields(cursor, self.entries, dry_run=False)
-        self.assertEqual(result['stats']['unresolvable'], 2)
-        skipped = {item['code'] for item in result['unresolvable']}
-        self.assertEqual(skipped, {'21.01.08', '21.02.23'})
-        for code in skipped:
-            self.assertFalse(any(r['code'] == code for r in cursor.rows), code)
-
-    def test_specialties_with_an_unknown_group_keep_the_real_group_code(self):
-        cursor = seeded_cursor()
-        result = upsert_fields(cursor, self.entries, dry_run=False)
-        self.assertEqual(len(result['missing_parent']), 70)
-        row = next(r for r in cursor.rows if r['code'] == '05.01.05')
-        self.assertEqual(row['missing_parent_code'], '05.01.00')
-        branch = next(r for r in cursor.rows if r['code'] == '05.00.00')
-        self.assertEqual(row['parent_id'], branch['id'])
 
     def test_no_artificial_group_record_is_created(self):
         cursor = seeded_cursor()
         upsert_fields(cursor, self.entries, dry_run=False)
-        group_codes = [r['code'] for r in cursor.rows
-                       if r['code'] and r['code'].endswith('.00')
-                       and not r['code'].endswith('.00.00')]
-        self.assertEqual(group_codes, [],
-                         "rasmiy nomi yo'q guruh yozuvi yaratilmasligi kerak")
+        groups = {r['code'] for r in cursor.rows
+                  if r.get('code') and r['code'].endswith('.00')
+                  and not r['code'].endswith('.00.00')}
+        official = {r['code'] for r in group_entries() if r['level'] == 2}
+        self.assertEqual(groups - official, set())
 
     def test_no_record_is_deleted_when_it_disappears_from_the_dataset(self):
         cursor = seeded_cursor()
@@ -231,7 +361,102 @@ class OakDatasetImportTests(unittest.TestCase):
         upsert_fields(cursor, self.entries, dry_run=False)
         row = next(r for r in cursor.rows if r['code'] == '01.01.01')
         self.assertEqual(row['name_uz'], 'Matematik analiz')
-        self.assertEqual(row['name_uz_cyrillic'], 'Математик анализ')
+        self.assertEqual(row['name_uz_cyrillic'],
+                         'Математик анализ')
+
+    def test_duplicate_names_under_different_codes_stay_separate(self):
+        """Identity — SHIFR, nom emas."""
+        cursor = seeded_cursor()
+        upsert_fields(cursor, self.entries, dry_run=False)
+        codes = [r['code'] for r in cursor.rows if r.get('code')]
+        self.assertEqual(len(codes), len(set(codes)))
+        zoology = [r['code'] for r in cursor.rows
+                   if (r.get('name_uz') or '').lower().startswith('zoologiya')]
+        self.assertEqual(len(zoology), len(set(zoology)))
+
+
+class HierarchyRepairTests(unittest.TestCase):
+    """--repair-hierarchy: vaqtinchalik fallback'ni rasmiy otaga ko'chiradi."""
+
+    def legacy_cursor(self, article_links=7):
+        """Eski holat: guruh yo'q, ixtisoslik to'g'ridan-to'g'ri tarmoqqa ulangan."""
+        cursor = seeded_cursor(with_groups=False, article_links=article_links)
+        branch = next(r for r in cursor.rows if r['code'] == '05.00.00')
+        cursor.rows.append({
+            'id': 9001, 'code': '05.01.05', 'slug': 'kiberxavfsizlik-050105',
+            'name_uz': 'Axborotlarni himoyalash', 'parent_id': branch['id'],
+            'level': 3, 'missing_parent_code': '05.01.00', 'description': None,
+            'review_status': 'auto_normalized', 'source_sha256': 'x',
+        })
+        return cursor
+
+    def add_groups(self, cursor):
+        doc, records = load_seed(OAK_GROUPS)
+        upsert_fields(cursor, normalize_entries(doc, records), dry_run=False)
+
+    def test_repair_moves_the_record_under_its_official_group(self):
+        cursor = self.legacy_cursor()
+        self.add_groups(cursor)
+        report = repair_hierarchy(cursor, dry_run=False)
+        row = next(r for r in cursor.rows if r['id'] == 9001)
+        group = next(r for r in cursor.rows if r['code'] == '05.01.00')
+        self.assertEqual(row['parent_id'], group['id'])
+        self.assertIsNone(row['missing_parent_code'])
+        self.assertGreaterEqual(report['specialties_reparented'], 1)
+        self.assertGreaterEqual(report['records_unblocked'], 1)
+
+    def test_repair_preserves_the_slug_so_urls_keep_working(self):
+        cursor = self.legacy_cursor()
+        self.add_groups(cursor)
+        repair_hierarchy(cursor, dry_run=False)
+        row = next(r for r in cursor.rows if r['id'] == 9001)
+        self.assertEqual(row['slug'], 'kiberxavfsizlik-050105')
+
+    def test_repair_never_touches_article_associations(self):
+        cursor = self.legacy_cursor(article_links=7)
+        self.add_groups(cursor)
+        report = repair_hierarchy(cursor, dry_run=False)
+        self.assertEqual(report['article_links_before'], 7)
+        self.assertEqual(report['article_links_after'], 7)
+        self.assertTrue(report['article_links_preserved'])
+
+    def test_repair_keeps_the_record_id_so_links_resolve(self):
+        cursor = self.legacy_cursor()
+        self.add_groups(cursor)
+        repair_hierarchy(cursor, dry_run=False)
+        self.assertEqual(len([r for r in cursor.rows if r['id'] == 9001]), 1)
+
+    def test_repair_dry_run_changes_nothing(self):
+        cursor = self.legacy_cursor()
+        self.add_groups(cursor)
+        writes = cursor.writes
+        report = repair_hierarchy(cursor, dry_run=True)
+        self.assertGreaterEqual(report['specialties_reparented'], 1)
+        self.assertEqual(cursor.writes, writes)
+        row = next(r for r in cursor.rows if r['id'] == 9001)
+        self.assertEqual(row['missing_parent_code'], '05.01.00')
+
+    def test_a_second_repair_run_changes_nothing(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, oak_entries(), dry_run=False)
+        repair_hierarchy(cursor, dry_run=False)
+        writes = cursor.writes
+        report = repair_hierarchy(cursor, dry_run=False)
+        self.assertEqual(report['specialties_reparented'], 0)
+        self.assertEqual(report['records_unblocked'], 0)
+        self.assertEqual(cursor.writes, writes)
+
+    def test_repair_reports_a_group_that_is_still_missing(self):
+        cursor = self.legacy_cursor()
+        report = repair_hierarchy(cursor, dry_run=False)
+        self.assertIn('05.01.00', report['still_missing_parents'])
+        self.assertEqual(report['specialties_reparented'], 0)
+
+    def test_the_full_chain_leaves_no_missing_parent(self):
+        cursor = seeded_cursor()
+        upsert_fields(cursor, oak_entries(), dry_run=False)
+        report = repair_hierarchy(cursor, dry_run=False)
+        self.assertEqual(report['still_missing_parents'], [])
 
 
 class ReviewGateTests(unittest.TestCase):

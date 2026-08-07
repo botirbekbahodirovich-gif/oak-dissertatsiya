@@ -212,85 +212,118 @@ o'tadi, warning esa hisobotda qoladi.
 
 ---
 
-## 8. Ierarxiya va yetishmayotgan ota yo'nalishlar
+## 8. Ierarxiya qoidasi
 
 Daraja va ota shifr **koddan hisoblanadi**:
 
 ```
 XX.00.00 → level 1 (fan tarmog'i)
-XX.YY.00 → level 2 (ixtisoslik guruhi)
+XX.YY.00 → level 2 (ixtisosliklar guruhi)
 XX.YY.ZZ → level 3 (ixtisoslik)
 ```
 
-Manbada deyarli faqat **level 3** yozuvlar bor (288 ta; bittasi — yuqoridagi
-buzilgan `10.00.00`). Guruh (level 2) nomlari manbada **umuman yo'q**.
+> **QAT'IY QOIDA.** Rasmiy 2-daraja guruh mavjud bo'lsa, 3-daraja ixtisoslik
+> HECH QACHON to'g'ridan-to'g'ri 1-daraja fan tarmog'iga bog'lanmaydi.
+>
+> *Official OAK level-3 specialties must never be attached directly to a
+> level-1 branch when an official level-2 group exists.*
 
-### Qaror: sun'iy ota yozuv YARATILMAYDI
+Guruh bazada bo'lmasa yozuv **import qilinmaydi** (`parent_pending_official_group`)
+va hisobotda ko'rsatiladi. Noto'g'ri joyga qo'yilgandan ko'ra ko'rinmagani
+yaxshi — sun'iy ota ham, "eng yaqin tarmoq" fallback'i ham yo'q.
 
-DB cheklovlari tekshirildi: `scientific_fields.parent_id` — NULLable,
-`ON DELETE RESTRICT`, `level` esa mustaqil ustun (daraxt chuqurligidan
-hisoblanmaydi). Ya'ni model bir necha xatti-harakatga ruxsat beradi. Tanlangan
-strategiya:
+### Olib tashlangan vaqtinchalik yechim
 
-| Holat | Nima bo'ladi |
-|---|---|
-| `parent_exists` | ota bazada bor → to'g'ridan-to'g'ri bog'lanadi |
-| `parent_missing_but_known_code` | guruh nomi noma'lum → yozuv **eng yaqin mavjud ajdodga** (fan tarmog'iga) bog'lanadi, haqiqiy guruh shifri `missing_parent_code` ustunida saqlanadi |
-| `parent_unresolvable` | hech qanday ajdod yo'q → yozuv **import qilinmaydi** |
+Oldingi bosqichda guruh nomlari noma'lum edi va ixtisosliklar **eng yaqin
+mavjud ajdodga** (fan tarmog'iga) bog'lanib, haqiqiy guruh shifri
+`missing_parent_code` ustunida saqlanardi. Bu ataylab vaqtinchalik edi.
+Rasmiy guruh nomlari olingandan keyin fallback `resolve_parent()` dan
+**butunlay olib tashlandi**; mavjud qatorlarni tuzatish uchun
+`--repair-hierarchy` rejimi qo'shildi (§11).
 
-Nima uchun aynan shunday:
+`missing_parent_code` ustuni saqlanadi, lekin endi u faqat eski fallback izini
+topish uchun kerak — muvaffaqiyatli tuzatishdan keyin barcha qatorlarda `NULL`.
 
-* **Sun'iy nom yaratilmaydi.** `05.01.00` uchun "Informatika guruhi" kabi nom
-  o'ylab topilmaydi — u rasmiy manbadan kelishi kerak.
-* **Yozuv yo'qolmaydi.** Maqola aniq `05.01.05` ixtisosligiga bog'lanishi
-  mumkin; guruh nomi keyin to'ldiriladi.
-* **Soxta ildiz yaratilmaydi.** `parent_id = NULL` bilan kiritilgan ixtisoslik
-  daraxtda fan tarmog'i kabi ko'rinardi — bu noto'g'ri, shuning uchun
-  `parent_unresolvable` yozuvlar butunlay o'tkazib yuboriladi.
-* **UI faqat SHIFRNI ko'rsatadi.** `/maqolalar/yonalish/<slug>` sahifasida
-  "Bu ixtisoslik **05.01.00** guruhiga tegishli. Guruhning rasmiy nomi hali
-  OAK manbasidan olinmagan" deb yoziladi. Hech qanday soxta soha nomi
-  chiqmaydi.
+### Guruhi bo'lmagan tarmoqlar
 
-Guruh nomi olingach: uni `data/oak/normalized/oak_specialties_approved.json`
-ga level-2 yozuv sifatida qo'shing va importni qayta ishga tushiring —
-u idempotent, bolalarni yangi otaga qayta bog'laydi.
+OAK klassifikatsiyasida faqat **01, 05, 06 va 21** tarmoqlarida ixtisosliklar
+guruhi bor. Qolgan tarmoqlarda ixtisoslik shifri `XX.00.ZZ` ko'rinishida
+bo'ladi va uning otasi to'g'ridan-to'g'ri tarmoq (`XX.00.00`) — bu rasmiy
+tuzilma, fallback emas. Bunday yozuvning `level` qiymati koddan kelib chiqib
+3 bo'ladi, daraxt chuqurligi esa 2.
 
 ---
 
-## 9. Nima aynan yetishmayapti
+## 9. Rasmiy 1- va 2-daraja dataseti
 
-### 16 ta ixtisoslik guruhi (level 2) — 70 ta yozuvga ta'sir qiladi
+**Manba:** «Олий малакали илмий ва илмий-педагог кадрлар ихтисосликлари
+рўйхати» (OAK, 2021)
+`https://oak.uz/userfiles/files/Ixtisosliklar_ro'yxati_2021.pdf`
+SHA-256 `39e4e3fd2641f359de4e36c0dc16f7c6862bc96e4c78db9b422df3355e21ed6a`
 
-```
-01.01.00  01.02.00  01.03.00  01.04.00
-05.01.00  05.02.00  05.03.00  05.05.00  05.06.00
-05.07.00  05.08.00  05.09.00  05.10.00
-06.01.00  06.02.00  06.03.00
-```
+Hujjat bitta PDF ichida jadvalni **uch marta** takrorlaydi: o'zbek kirill,
+rus, ingliz. Bizga o'zbek kirill bo'limi kerak.
 
-(Butun manba bo'yicha 20 ta; qolgan 4 tasi — `03.01.00`, `05.04.00` — faqat
-review'dagi yozuvlarga tegishli.)
+**Dataset:** `data/oak/normalized/oak_specialty_groups.json` — 20 ta yozuv
+(1 ta fan tarmog'i + 19 ta guruh). Har birida to'liq provenance:
+`source_name` (hujjat + bet raqami), `source_url`, `source_page`,
+`source_year`, `source_sha256`, `source_updated_at`, `review_status:
+official_source`.
 
-### 1 ta fan tarmog'i (level 1) — 2 ta yozuv import qilinmadi
+Qayta yaratish: `scripts/extract_oak_groups.py` (PDF repozitoriyga
+qo'shilmagan — 1 MB, rasmiy sayt hosting qiladi; script hash'ni tekshiradi).
 
-```
-21.00.00  — repozitoriydagi 22 ta tarmoq ro'yxatida YO'Q
-21.01.00, 21.02.00 — uning guruhlari
-```
+### Topilgan nomlar
 
-Import qilinmagan yozuvlar: `21.01.08` (Qurolli Kuchlar front orti),
-`21.02.23` (Harbiy tibbiyot). Uchinchisi — `21.01.06` — allaqachon review'da
-(yopilmagan qo'shtirnoq).
+| Kod | Rasmiy nom (uz-Cyrl) | Lotin | Bet |
+|---|---|---|---|
+| 21.00.00 | Ҳарбий фанлар | Harbiy fanlar | 42 |
+| 01.01.00 | Математика | Matematika | 4 |
+| 01.02.00 | Механика | Mexanika | 4 |
+| 01.03.00 | Астрономия | Astronomiya | 5 |
+| 01.04.00 | Физика | Fizika | 5 |
+| 05.01.00 | Ахборот технологиялари, бошқарув ва компьютер графикаси | Axborot texnologiyalari, boshqaruv va kompyuter grafikasi | 13 |
+| 05.02.00 | Машинасозлик ва машинашунослик. … | Mashinasozlik va mashinashunoslik. … | 14 |
+| 05.03.00 | Асбобсозлик, метрология ва ахборот-ўлчов асбоблари ва тизимлари | Asbobsozlik, metrologiya … | 16 |
+| 05.04.00 | Радиотехника ва алоқа | Radiotexnika va aloqa | 16 |
+| 05.05.00 | Энергетика ва электротехника. … | Energetika va elektrotexnika. … | 16 |
+| 05.06.00 | Тўқимачилик ва енгил саноат материаллари ва буюмлари технологияси | To'qimachilik va yengil sanoat … | 17 |
+| 05.07.00 | Қишлоқ хўжалиги ишлаб чиқаришини механизациялаш технологияси | Qishloq xo'jaligi … mexanizasiyalash | 18 |
+| 05.08.00 | Транспорт | Transport | 18 |
+| 05.09.00 | Қурилиш | Qurilish | 19 |
+| 05.10.00 | Инсон фаолияти хавфсизлиги | Inson faoliyati xavfsizligi | 20 |
+| 06.01.00 | Агрономия | Agronomiya | 21 |
+| 06.02.00 | Зоотехния | Zootexniya | 22 |
+| 06.03.00 | Ўрмон хўжалиги | O'rmon xo'jaligi | 23 |
+| 21.01.00 | Ҳарбий-назарий фанлар | Harbiy-nazariy fanlar | 42 |
+| 21.02.00 | Ҳарбий-махсус фанлар | Harbiy-maxsus fanlar | 43 |
 
-`app.py:SPECIALTY_NAMES` da 22 ta tarmoq bor (01–19, 22, 23, 24) va 21-tarmoq
-("Harbiy fanlar") yo'q. Uning rasmiy nomi hech qanday mavjud manbada topilmadi.
+Nomlar hujjatdan **aynan ko'chirilgan**; lotin varianti
+`utils/oak_translit.py` orqali hosil qilingan va rasmiy tarjima emas.
 
-**Kerak:** rasmiy OAK registridan yuqoridagi 16 guruh va 1 tarmoq nomi.
+### 21.00.00 — Ҳарбий фанлар
+
+Rasmiy 2021 ro'yxatida **23 ta fan tarmog'i** bor: 01–19, 21, 22, 23, 24
+(20 yo'q). Repozitoriydagi `app.py:SPECIALTY_NAMES` da 22 tasi bor edi —
+aynan **21** yetishmayotgan edi. Bu son ko'r-ko'rona 23 ga o'zgartirilmadi:
+u rasmiy hujjatdagi tarmoq sarlavhalarini sanash orqali aniqlandi.
+
+`SPECIALTY_NAMES` **o'zgartirilmadi**: u OAK **jurnallarini** seed qilish
+uchun ishlatiladi va kalitlari `seed_data.JOURNALS_BY_SPECIALTY` bilan bir
+xil bo'lishi kerak (21-tarmoq uchun OAK jurnali ro'yxati yo'q). 21.00.00
+alohida, rasmiy manbali datasetdan keladi — bu ikkala ro'yxatning kelib
+chiqishi ham to'g'ri qoladi.
+
+Ikkinchi rasmiy manba — «Ихтисосликлар паспорти»
+(`https://oak.uz/userfiles/files/Ixtisosliklar%20pasporti.pdf`, SHA-256
+`06be7263900db6b4fea196b593627fc33e831cd786b7abad354867c9936331d9`) — 16 ta
+guruh nomini **tasdiqlaydi**, lekin faqat rus tilida va unda 21-tarmoq yo'q
+(u 01–19 + 22 ni qamraydi). Shuning uchun asosiy manba sifatida 2021 yilgi
+ro'yxat ishlatildi.
 
 ---
 
-## 10. 22 ta mavjud fan tarmog'i bilan birlashtirish
+## 10. Mavjud fan tarmoqlari bilan birlashtirish
 
 Tarmoqlar `data/scientific_fields.json` da (manba: `app.py:SPECIALTY_NAMES` +
 `seed_data.JOURNALS_BY_SPECIALTY`). Ixtisosliklar ular ostiga **kod bo'yicha**
@@ -314,43 +347,66 @@ Kafolatlar (testlar bilan qo'riqlangan):
 ## 11. Import
 
 ```bash
-# 1) migratsiya (bir marta)
+# 1) migratsiyalar (bir marta)
+psql "$DATABASE_URL" -f migrations/007_create_article_catalog.sql
 psql "$DATABASE_URL" -f migrations/008_scientific_field_provenance.sql
 
-# 2) 22 ta fan tarmog'i
+# 2) repozitoriy fan tarmoqlari (22 ta)
 DATABASE_URL=... python scripts/seed_scientific_fields.py \
     --file data/scientific_fields.json --apply
 
-# 3) OAK ixtisosliklari — avval dry-run
+# 3) RASMIY 1- va 2-daraja (21-tarmoq + 19 guruh) — ixtisosliklardan OLDIN
 DATABASE_URL=... python scripts/seed_scientific_fields.py \
-    --file data/oak/normalized/oak_specialties_approved.json
+    --file data/oak/normalized/oak_specialty_groups.json --apply
 
-# 4) qo'llash
+# 4) ixtisosliklar — avval dry-run
 DATABASE_URL=... python scripts/seed_scientific_fields.py \
-    --file data/oak/normalized/oak_specialties_approved.json --apply
+    --file data/oak/normalized/oak_specialties_approved.json --repair-hierarchy
+
+# 5) qo'llash
+DATABASE_URL=... python scripts/seed_scientific_fields.py \
+    --file data/oak/normalized/oak_specialties_approved.json \
+    --repair-hierarchy --apply
 ```
 
-> `--apply` berilmasa script **dry-run** rejimida ishlaydi. Bu ataylab: 289
-> yozuvli datasetni tasodifan productionga tushirib yuborish oson.
+> `--apply` berilmasa script **dry-run** rejimida ishlaydi.
+
+**Tartib muhim:** guruhlar ixtisosliklardan oldin kiritilishi shart, aks
+holda ixtisosliklar `pending` bo'lib qoladi (bu xato emas — keyingi run
+ularni oladi).
+
+### `--repair-hierarchy`
+
+Eski vaqtinchalik bog'lanishlarni rasmiy otaga ko'chiradi. Ikkita manba
+bo'yicha ishlaydi: `missing_parent_code` to'ldirilgan qatorlar, va shifri
+rasmiy guruhni ko'rsatadigan, lekin tarmoqqa bog'langan qatorlar.
+
+Kafolatlar:
+
+* **Maqola bog'lanishlariga tegilmaydi** — yozuvning `id` si o'zgarmaydi,
+  faqat `parent_id` yangilanadi, shuning uchun `article_scientific_fields`
+  butunligicha qoladi. Hisobot bog'lanishlar sonini oldin/keyin solishtiradi.
+* **Slug o'zgarmaydi** — mavjud URL'lar ishlashda davom etadi.
+* Hamma narsa bitta tranzaksiyada; dry-run hech nima yozmaydi.
+* Ikkinchi run — 0 o'zgarish.
+
+Hisobot: `specialties_reparented`, `records_unblocked`,
+`article_links_before/after`, `article_links_preserved`,
+`still_missing_parents`.
 
 Kutilayotgan natija (xotiradagi model ustida tekshirilgan):
 
 ```
-Yangi        : 253
-Yangilangan  : 0
-O'zgarishsiz : 0
-Konflikt     : 0
-Ota topilmadi: 2      (21.01.08, 21.02.23)
+1) 22 tarmoq       : created 22
+2) rasmiy guruhlar : created 20   (21.00.00 + 19 guruh)
+3) 255 ixtisoslik  : created 255, conflict 0, pending 0
+4) repair          : still_missing_parents = []
 
-RASMIY GURUH NOMI YO'Q — 70 ta yozuv eng yaqin mavjud tarmoqqa bog'landi
+level bo'yicha: {1: 23, 2: 19, 3: 255}   — jami 297 yozuv
+05.01.05 zanjiri: 05.00.00 -> 05.01.00 -> 05.01.05
 ```
 
-Ikkinchi run: `Yangi 0 / Yangilangan 0 / O'zgarishsiz 253`.
-
-Migratsiya 008 `scientific_fields` ga faqat NULLable ustunlar qo'shadi
-(`raw_name`, `source_line`, `source_sha256`, `review_status`, `reviewed_by`,
-`reviewed_at`, `missing_parent_code`) va uchta indeks. Bitta tranzaksiya,
-idempotent, `DROP`/`DELETE`/`UPDATE` yo'q. Rollback fayl oxirida izohda.
+Ikkinchi run: 0 yozuv, 0 reparent.
 
 ---
 
@@ -426,7 +482,7 @@ Daraxt ko'rinishi `?view=daraxt` bilan.
 |---|---|
 | `tests/test_oak_translit.py` | transliteratsiya, o'zbek maxsus harflari, noaniqlik warninglari |
 | `tests/test_oak_parser.py` | parsing, normalizatsiya qoidalari, review sabablari, SHA, determinizm, haqiqiy manba ustidagi sonlar |
-| `tests/test_oak_import.py` | migratsiya 008 xavfsizligi, ota hal qilish, idempotentlik, review gate |
+| `tests/test_oak_import.py` | migratsiya 008, rasmiy guruh dataseti, ota hal qilish (fallback yo'q), `--repair-hierarchy`, idempotentlik, review gate |
 | `tests/test_oak_field_ui.py` | katta taksonomiya UI, sahifalash, missing-parent ko'rinishi, admin filtrlari, review navbati |
 
 Manba fayl o'zgarsa `test_the_curated_list_is_pinned_to_the_committed_source`
@@ -439,13 +495,18 @@ darhol yiqiladi — jimgina boshqa dataset importga tushib ketmaydi.
 * **Manba rasmiy emas.** U qo'lda yig'ilgan; 34 ta yozuv odam tasdig'ini
   kutmoqda. Rasmiy OAK registri olingach, ideal yo'l — butun datasetni o'shandan
   qayta qurish.
-* **16 guruh + 1 tarmoq nomi yo'q** (§9). Shu sababli 70 ta ixtisoslik daraxtda
-  bir daraja yuqorida ko'rinadi va 2 tasi umuman import qilinmagan.
+* ~~16 guruh + 1 tarmoq nomi yo'q~~ — **hal qilindi**: rasmiy 2021 yilgi OAK
+  ro'yxatidan olindi (§9). Endi `missing official parent = 0`.
 * **Transliteratsiya rasmiy tarjima emas.** 102 ta yozuvda noaniqlik warningi
   bor (asosan `ё`, `ц`, `ъ`).
 * **Lokal DB yo'q** (eskirgan Neon kredensiallari — alohida texnik qarz), shu
-  sababli import xotiradagi model ustida tekshirilgan; haqiqiy DB ustida
-  bajarilmagan.
+  sababli import va ierarxiya tuzatish xotiradagi model ustida tekshirilgan;
+  haqiqiy DB ustida bajarilmagan.
+* **34 ta review yozuvi hali navbatda.** Rasmiy 2021 ro'yxatida ularning
+  to'liq nomlari bor, lekin ular jadval kataklarida qatorlarga bo'linib
+  ketgan va ishonchli avtomatik ajratish uchun alohida ish talab qiladi —
+  bu bosqichda ular AVTOMATIK tuzatilmadi (§12 dagi qo'lda tasdiqlash oqimi
+  o'z kuchida).
 * **Manbadagi imlo xatolari saqlangan** (`Темир йоъллар`, kichik harf bilan
   boshlanish) — ular tuzatilmaydi, chunki normalizatsiya qoidalari ro'yxatida
   yo'q va ular manba muammosining belgisi bo'lishi mumkin.

@@ -144,10 +144,10 @@ class UpsertTests(unittest.TestCase):
         cursor = SeedCursor()
         result = upsert_fields(cursor, seed([{'name_uz': 'Yetim', 'code': '13.00.01'}]),
                                dry_run=False)
-        self.assertEqual(result['stats']['unresolvable'], 1)
+        self.assertEqual(result['stats']['pending'], 1)
         self.assertEqual(result['stats']['created'], 0)
         self.assertEqual(cursor.rows, [], 'soxta ildiz yozuv yaratilmasligi kerak')
-        self.assertEqual(result['unresolvable'][0]['missing_parent_code'], '13.00.00')
+        self.assertEqual(result['pending'][0]['expected_parent_code'], '13.00.00')
 
     def test_dry_run_is_the_default_and_writes_nothing(self):
         cursor = SeedCursor()
