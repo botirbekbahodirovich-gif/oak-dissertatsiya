@@ -69,6 +69,12 @@ Rules / Conventions
 - CRITICAL: `app.py` is currently a 212KB monolith with ~79 routes. Never read
   or rewrite the whole `app.py` file unless explicitly ordered. Focus only on
   the modular blueprints (auth, cabinet, data, analytics, upload).
+- CRITICAL: before any UI-related task (templates/, static/css/, static/js/,
+  a new rendered route, navigation, charts), read
+  `.claude/skills/olimlar-design-system/SKILL.md` and follow it strictly.
+  Human-facing rationale: `docs/olimlar-design-system.md`. Token source of
+  truth: `static/css/olimlar-design-system.css` — light-only, `.ol-*`
+  components, no raw HEX.
 - UI text stays in Uzbek.
 - All secrets must be stored in `.env` and never committed.
 - Never commit virtual environments (venv/, .venv/, wsl_venv/), get-pip.py,
