@@ -544,6 +544,8 @@ def _load_fields(cur, only_active=True):
         SELECT f.id, f.parent_id, f.name_uz, f.name_uz_cyrillic, f.name_ru, f.code,
                f.slug, f.level, f.description, f.sort_order, f.is_active,
                f.source_name, f.source_url, f.source_updated_at,
+               f.raw_name, f.source_line, f.source_sha256, f.review_status,
+               f.missing_parent_code,
                COALESCE(c.cnt, 0) AS article_count
           FROM scientific_fields f
      LEFT JOIN (
@@ -666,11 +668,25 @@ def _active_filter_chips(tree):
     return chips
 
 
+FIELDS_PER_PAGE = 40
+
+
 @articles_bp.route('/maqolalar/yonalishlar')
 def fields_index():
-    """Fan yo'nalishlari ierarxiyasi — progressive disclosure (§20)."""
+    """Fan yo'nalishlari ierarxiyasi — progressive disclosure (§20).
+
+    Ikki rejim bor, chunki taksonomiya katta (OAK 289 ixtisoslik):
+
+      * qidiruvsiz — DARAXT. Faqat fan tarmoqlari ko'rinadi, ichki
+        yo'nalishlar tugma ortida. Yuzlab yozuv bir vaqtda yoyilmaydi.
+      * qidiruv/tarmoq filtri bilan — TEKIS, SAHIFALANGAN ro'yxat. 289 ta
+        yozuv ichidan izlaganda daraxt konteksti emas, natija muhim; har bir
+        natijada ota konteksti alohida ko'rsatiladi.
+    """
     only_with_articles = _flag_arg('bor')
     query = (request.args.get('q') or '').strip()[:120]
+    branch_slug = (request.args.get('tarmoq') or '').strip()[:200]
+    page = _int_arg('page', 1, minimum=1, maximum=MAX_PAGE) or 1
 
     conn = get_connection()
     try:
@@ -683,15 +699,91 @@ def fields_index():
     finally:
         conn.close()
 
+    rows_by_id = {r['id']: r for r in rows}
+    branches = [dict(r) for r in rows if not r.get('parent_id')]
+
     if only_with_articles:
         tree = _prune_empty(tree)
-    if query:
-        tree = _filter_tree(tree, query)
+
+    flat_results = None
+    pages = 1
+    total_matches = 0
+    if query or branch_slug:
+        matches = _flat_field_matches(rows, rows_by_id, query, branch_slug,
+                                      only_with_articles, tree)
+        total_matches = len(matches)
+        pages = max(1, math.ceil(total_matches / FIELDS_PER_PAGE))
+        page = min(page, pages)
+        start = (page - 1) * FIELDS_PER_PAGE
+        flat_results = matches[start:start + FIELDS_PER_PAGE]
 
     return render_template('maqolalar_yonalishlar.html',
                            field_tree=tree, field_total=len(rows),
-                           article_total=article_total,
-                           query=query, only_with_articles=only_with_articles)
+                           article_total=article_total, branches=branches,
+                           query=query, branch_slug=branch_slug,
+                           only_with_articles=only_with_articles,
+                           flat_results=flat_results, total_matches=total_matches,
+                           page=page, pages=pages, qs=_query_string)
+
+
+def _flat_field_matches(rows, rows_by_id, query, branch_slug, only_with_articles,
+                        tree):
+    """Qidiruv/filtr natijasi — tekis ro'yxat, har birida ota konteksti.
+
+    Kod bo'yicha qidiruv ataylab alohida: "05.01" yozilganda nomlarda emas,
+    shifrda prefiks bo'yicha topilishi kerak.
+    """
+    from utils.search_helper import matches_query
+
+    totals = {}
+
+    def collect(nodes):
+        for node in nodes:
+            totals[node['id']] = node.get('total_count') or 0
+            collect(node['children'])
+    collect(tree)
+
+    branch_id = None
+    if branch_slug:
+        branch = next((r for r in rows if r['slug'] == branch_slug
+                       and not r.get('parent_id')), None)
+        if branch is None:
+            return []
+        branch_id = branch['id']
+
+    needle = (query or '').lower()
+    results = []
+    for row in rows:
+        if branch_id is not None and _root_id_of(row, rows_by_id) != branch_id:
+            continue
+        if only_with_articles and not totals.get(row['id']):
+            continue
+        if query:
+            code = (row.get('code') or '').lower()
+            hit = (needle in code
+                   or matches_query(query, row.get('name_uz'),
+                                    row.get('name_uz_cyrillic'), row.get('name_ru')))
+            if not hit:
+                continue
+        entry = dict(row)
+        entry['total_count'] = totals.get(row['id'], row.get('article_count') or 0)
+        entry['ancestors'] = _field_breadcrumb(rows_by_id, row)
+        results.append(entry)
+
+    results.sort(key=lambda r: (r.get('code') or 'zz', r.get('name_uz') or ''))
+    return results
+
+
+def _root_id_of(row, rows_by_id):
+    """Yozuvning eng yuqori ajdodi (fan tarmog'i) ID si. Halqada tugaydi."""
+    current, seen = row, set()
+    while current.get('parent_id') and current['id'] not in seen:
+        seen.add(current['id'])
+        parent = rows_by_id.get(current['parent_id'])
+        if parent is None:
+            break
+        current = parent
+    return current['id']
 
 
 def _prune_empty(nodes):
@@ -700,22 +792,6 @@ def _prune_empty(nodes):
         node = dict(node, children=_prune_empty(node['children']))
         if node.get('total_count') or node['children']:
             kept.append(node)
-    return kept
-
-
-def _filter_tree(nodes, query):
-    """Nom yoki kod bo'yicha qidiruv — mos kelgan tugunning ota-onalari saqlanadi."""
-    from utils.search_helper import matches_query
-
-    needle = query.lower()
-    kept = []
-    for node in nodes:
-        children = _filter_tree(node['children'], query)
-        hit = (needle in (node.get('code') or '').lower()
-               or matches_query(query, node.get('name_uz'), node.get('name_uz_cyrillic'),
-                                node.get('name_ru')))
-        if hit or children:
-            kept.append(dict(node, children=children, expanded=True))
     return kept
 
 
@@ -1411,10 +1487,37 @@ def admin_article_delete(article_id):
 #  Admin — fan yo'nalishlari
 # ═══════════════════════════════════════════════════════════════════════════
 
+ADMIN_FIELDS_PER_PAGE = 50
+
+REVIEW_STATUS_LABELS = {
+    'auto_clean': 'Avtomatik (toza)',
+    'auto_normalized': 'Avtomatik (formatlangan)',
+    'manual_approved': "Qo'lda tasdiqlangan",
+    'seed': 'Repozitoriy seed',
+}
+
+
 @articles_bp.route('/admin/scientific-fields')
 @login_required
 def admin_fields():
+    """Taksonomiya boshqaruvi — sahifalangan jadval + daraxt ko'rinishi.
+
+    OAK dataseti bilan bu jadvalda 275+ yozuv bo'ladi, shuning uchun
+    hammasi bir sahifaga render QILINMAYDI (§18): default — filtrlanadigan,
+    sahifalangan tekis jadval. Daraxt ko'rinishi `?view=daraxt` bilan
+    ochiladi va u ham progressive disclosure ishlatadi.
+    """
     _require_admin()
+    view_mode = _choice_arg('view', ('jadval', 'daraxt'), 'jadval')
+    page = _int_arg('page', 1, minimum=1, maximum=MAX_PAGE) or 1
+    query = (request.args.get('q') or '').strip()[:120]
+    code_query = (request.args.get('code') or '').strip()[:32]
+    level = _int_arg('level', minimum=1, maximum=6)
+    review_status = (request.args.get('review') or '').strip()[:24]
+    source_query = (request.args.get('source') or '').strip()[:120]
+    status_filter = (request.args.get('status') or '').strip()
+    missing_only = _flag_arg('yetim')
+
     conn = get_connection()
     try:
         with conn.cursor() as cur:
@@ -1423,8 +1526,103 @@ def admin_fields():
             tree, rows = _field_tree(cur, only_active=False)
     finally:
         conn.close()
+
+    rows_by_id = {r['id']: r for r in rows}
+    sources = sorted({(r.get('source_name') or '').strip()
+                      for r in rows if (r.get('source_name') or '').strip()})
+    review_values = sorted({(r.get('review_status') or '').strip()
+                            for r in rows if (r.get('review_status') or '').strip()})
+
+    from utils.search_helper import matches_query
+    filtered = []
+    for row in rows:
+        if code_query and not (row.get('code') or '').startswith(code_query):
+            continue
+        if query and not matches_query(query, row.get('name_uz'),
+                                       row.get('name_uz_cyrillic'),
+                                       row.get('raw_name')):
+            continue
+        if level and (row.get('level') or 0) != level:
+            continue
+        if review_status and (row.get('review_status') or '') != review_status:
+            continue
+        if source_query and source_query.lower() not in (row.get('source_name') or '').lower():
+            continue
+        if status_filter == 'faol' and not row.get('is_active'):
+            continue
+        if status_filter == 'nofaol' and row.get('is_active'):
+            continue
+        if missing_only and not row.get('missing_parent_code'):
+            continue
+        entry = dict(row)
+        entry['ancestors'] = _field_breadcrumb(rows_by_id, row)
+        filtered.append(entry)
+
+    filtered.sort(key=lambda r: (r.get('code') or 'zz', r.get('name_uz') or ''))
+    total = len(filtered)
+    pages = max(1, math.ceil(total / ADMIN_FIELDS_PER_PAGE))
+    page = min(page, pages)
+    start = (page - 1) * ADMIN_FIELDS_PER_PAGE
+    page_rows = filtered[start:start + ADMIN_FIELDS_PER_PAGE]
+
     return render_template('admin/scientific_fields.html', field_tree=tree,
-                           field_total=len(rows))
+                           field_total=len(rows), rows=page_rows, total=total,
+                           page=page, pages=pages, view_mode=view_mode,
+                           sources=sources, review_values=review_values,
+                           review_labels=REVIEW_STATUS_LABELS,
+                           missing_parent_total=sum(
+                               1 for r in rows if r.get('missing_parent_code')),
+                           qs=_query_string)
+
+
+def review_queue_path():
+    """Parser chiqargan review navbati fayli (§13)."""
+    from flask import current_app
+    configured = os.environ.get('OAK_REVIEW_FILE')
+    if configured:
+        return configured
+    return os.path.join(current_app.root_path, 'data', 'oak', 'review',
+                        'oak_specialties_review_required.json')
+
+
+@articles_bp.route('/admin/scientific-fields/review')
+@login_required
+def admin_field_review():
+    """OAK review navbati — FAQAT KO'RISH.
+
+    Bu ataylab yangi moderatsiya tizimi EMAS (§13). Tasdiqlash ish oqimi
+    fayl ustida: admin `approved_name_uz_cyrillic`, `reviewer` va
+    `reviewed_at` maydonlarini to'ldiradi, so'ng parser qayta ishga
+    tushiriladi va u tasdiqlangan yozuvni approved datasetga o'tkazadi.
+    Sahifa shu jarayon uchun kerak bo'lgan hamma narsani ko'rsatadi: shifr,
+    asl nom, normalizatsiya nomzodi, manba qatori va sabablar.
+
+    Yozuvlar bazada YO'Q — ular ataylab import qilinmagan.
+    """
+    _require_admin()
+    path = review_queue_path()
+    records, error, metadata = [], None, {}
+    if not os.path.isfile(path):
+        error = ("Review fayli topilmadi: %s — avval "
+                 "scripts/parse_oak_specialties.py ni ishga tushiring." % path)
+    else:
+        try:
+            import json
+            with open(path, encoding='utf-8') as fh:
+                doc = json.load(fh)
+            metadata = doc.get('metadata') or {}
+            records = doc.get('records') or []
+        except (ValueError, OSError) as exc:
+            log_exception(exc)
+            error = "Review faylini o'qib bo'lmadi (format buzilgan bo'lishi mumkin)."
+
+    pending = [r for r in records if not (r.get('approved_name_uz_cyrillic')
+                                          and r.get('reviewer')
+                                          and r.get('reviewed_at'))]
+    approved = [r for r in records if r not in pending]
+    return render_template('admin/scientific_field_review.html',
+                           pending=pending, approved=approved, metadata=metadata,
+                           error=error, queue_path=path)
 
 
 def _field_form_values():

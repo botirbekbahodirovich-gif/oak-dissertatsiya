@@ -34,9 +34,26 @@
        crumbs=crumb_list,
        meta=([field.code] if field.code else []) + ['%d ta maqola' % total]) }}
 
+  {# Rasmiy kirill nomi — ikkilamchi metadata; lotin nomi sarlavhada (§17). #}
+  {% if field.name_uz_cyrillic and field.name_uz_cyrillic != field.name_uz %}
+  <p class="ol-body-lg ol-muted" lang="uz-Cyrl" style="margin-top:0;">{{ field.name_uz_cyrillic }}</p>
+  {% endif %}
+
+  {% if field.missing_parent_code %}
+  {# Ota guruhning RASMIY NOMI yo'q. Sun'iy nom chiqarilmaydi — faqat shifr. #}
+  <div class="mq-notice">
+    <p class="ol-body" style="margin:0;">
+      Bu ixtisoslik <strong>{{ field.missing_parent_code }}</strong> guruhiga tegishli.
+      Guruhning rasmiy nomi hali OAK manbasidan olinmagan, shuning uchun bu yerda
+      faqat shifr ko'rsatilmoqda.
+    </p>
+  </div>
+  {% endif %}
+
   {% if field.source_name %}
   <p class="ol-meta">Manba: {{ field.source_name }}{% if field.source_updated_at %},
-    tekshirilgan sana: {{ field.source_updated_at }}{% endif %}</p>
+    tekshirilgan sana: {{ field.source_updated_at }}{% endif %}{% if field.source_line %},
+    manba qatori: {{ field.source_line }}{% endif %}</p>
   {% endif %}
 
   {% if children %}

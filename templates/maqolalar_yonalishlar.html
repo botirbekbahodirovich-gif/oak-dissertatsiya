@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "components/page_header.html" import page_header %}
-{% from "components/field_tree.html" import tree %}
+{% from "components/field_tree.html" import tree, field_results %}
+{% from "components/article_bits.html" import pager %}
 
 {% block title %}Fan yo'nalishlari | Olimlar.uz{% endblock %}
 {% block meta_description %}Ilmiy maqolalar uchun fan yo'nalishlari katalogi — OAK klassifikatsiyasiga mos ierarxiya: fan tarmog'i, ixtisoslik guruhi va ixtisoslik.{% endblock %}
@@ -30,10 +31,24 @@
     <h2 id="mq-yonalish-qidiruv" class="mq-sr-only">Yo'nalishlar bo'yicha qidiruv</h2>
     <form class="ol-filters" method="get" action="/maqolalar/yonalishlar" role="search">
       <div class="ol-filters__row">
-        <div class="ol-field-group" style="flex:1 1 320px;">
+        <div class="ol-field-group" style="flex:1 1 300px;">
           <label class="ol-label" for="mq-field-q">Yo'nalish nomi yoki shifri</label>
           <input class="ol-field" type="search" id="mq-field-q" name="q" value="{{ query }}"
-                 placeholder="Masalan: pedagogika yoki 13.00.01">
+                 placeholder="Masalan: kiberxavfsizlik yoki 05.01"
+                 aria-describedby="mq-field-q-help">
+          <span class="ol-meta" id="mq-field-q-help">
+            Shifr bo'yicha prefiks ham ishlaydi: <code>05.01</code>
+          </span>
+        </div>
+        <div class="ol-field-group" style="min-width:220px;">
+          <label class="ol-label" for="mq-branch">Fan tarmog'i</label>
+          <select class="ol-field" id="mq-branch" name="tarmoq">
+            <option value="">Barcha tarmoqlar</option>
+            {% for branch in branches %}
+            <option value="{{ branch.slug }}" {{ 'selected' if branch_slug == branch.slug }}>
+              {{ branch.name_uz }}{% if branch.code %} ({{ branch.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
         </div>
         <label class="ol-facets__opt" for="mq-only-with" style="flex:0 0 auto;min-height:44px;">
           <input type="checkbox" id="mq-only-with" name="bor" value="1"
@@ -48,18 +63,41 @@
     </form>
   </section>
 
+  {% if flat_results is not none %}
+  {# ── Qidiruv/filtr rejimi: tekis, sahifalangan ro'yxat ── #}
+  <section class="ol-section" aria-labelledby="mq-yonalish-natija">
+    <h2 id="mq-yonalish-natija" class="ol-h4">Natijalar</h2>
+    <p class="mq-resultbar__count" role="status">
+      <strong>{{ total_matches }}</strong> ta yo'nalish topildi
+    </p>
+
+    {% if flat_results %}
+      {{ field_results(flat_results) }}
+      {{ pager(page, pages, qs) }}
+    {% else %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Yo'nalish topilmadi</h3>
+      <p class="ol-body">Boshqa nom yoki shifr bilan qidirib ko'ring.</p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">Barcha yo'nalishlar</a>
+    </div>
+    {% endif %}
+  </section>
+
+  {% else %}
+  {# ── Ko'rib chiqish rejimi: daraxt, hammasi yopiq ── #}
   <section class="ol-section" aria-labelledby="mq-yonalish-royxat">
     <h2 id="mq-yonalish-royxat" class="ol-h4">Yo'nalishlar katalogi</h2>
 
     {% if field_tree %}
-      {{ tree(field_tree) }}
-    {% elif query or only_with_articles %}
-    <div class="ol-empty">
-      <h3 class="ol-h5">Yo'nalish topilmadi</h3>
-      <p class="ol-body">
-        {% if only_with_articles %}Hozircha maqolasi mavjud yo'nalish yo'q.
-        {% else %}Boshqa nom yoki shifr bilan qidirib ko'ring.{% endif %}
+      <p class="ol-meta">
+        Fan tarmog'ini ochish uchun yonidagi tugmani bosing.
+        Ixtisosliklar shifr bo'yicha tartiblangan.
       </p>
+      {{ tree(field_tree) }}
+    {% elif only_with_articles %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Maqolasi mavjud yo'nalish yo'q</h3>
+      <p class="ol-body">Maqolalar joylashtirilgach bu ro'yxat to'ladi.</p>
       <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">Barcha yo'nalishlar</a>
     </div>
     {% else %}
@@ -72,6 +110,21 @@
       <a class="ol-btn ol-btn--secondary" href="/maqolalar">Maqolalar katalogiga qaytish</a>
     </div>
     {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="mq-yonalish-manba">
+    <h2 id="mq-yonalish-manba" class="ol-h4">Ma'lumot manbasi</h2>
+    <div class="ol-card">
+      <p class="ol-body" style="margin:0;">
+        Fan tarmoqlari va ixtisosliklar OAK klassifikatsiyasiga asoslanadi.
+        Har bir yozuvning rasmiy kirill nomi saqlanadi; lotin varianti
+        deterministik transliteratsiya orqali hosil qilingan va rasmiy tarjima
+        emas. Ba'zi ixtisosliklarning guruh (2-daraja) nomi rasmiy manbadan
+        hali olinmagan — bunday holatda sun'iy nom yaratilmaydi, faqat shifr
+        ko'rsatiladi.
+      </p>
+    </div>
   </section>
 </div>
 {% endblock %}

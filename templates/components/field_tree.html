@@ -1,12 +1,28 @@
 {# Fan yo'nalishlari daraxti — progressive disclosure (§20).
 
-   Yuzlab yo'nalish bir vaqtda ochilmaydi: 1-daraja (fan tarmoqlari) doim
-   ko'rinadi, qolgani "kengaytirish" tugmasi ortida. Qidiruv natijasi bo'lsa
-   server `expanded` bayrog'ini qo'yadi va zanjir ochiq keladi.
+   MUHIM: hech qanday daraja SUKUT BO'YICHA OCHIQ EMAS. OAK taksonomiyasida
+   bitta fan tarmog'i ostida 40+ ixtisoslik bor (05 — texnika: 44 ta), shuning
+   uchun ildizlarni ochib qo'yish sahifaga 250+ qatorni birdan tushirardi.
+   Foydalanuvchi qaysi tarmoq kerakligini o'zi ochadi; qidiruv esa daraxt
+   emas, tekis sahifalangan ro'yxat qaytaradi (blueprints/articles.py).
 
-   JS'siz ham ishlaydi: panel `hidden` atributi bilan yopiladi, lekin har bir
-   yo'nalishning O'Z sahifasi (/maqolalar/yonalish/<slug>) mavjud, shuning
-   uchun daraxtni ocholmagan foydalanuvchi ham hech nimadan mahrum bo'lmaydi. #}
+   JS'siz ham ishlaydi: har bir yo'nalishning O'Z sahifasi bor
+   (/maqolalar/yonalish/<slug>), daraxtni ocholmagan foydalanuvchi ham
+   hech nimadan mahrum bo'lmaydi.
+
+   NOM KO'RSATISH QOIDASI (§17): lotin nomi ASOSIY, rasmiy kirill nomi
+   ikkilamchi metadata. Ota guruh nomi noma'lum bo'lsa SUN'IY NOM
+   CHIQARILMAYDI — faqat shifr ko'rsatiladi. #}
+
+{% macro field_labels(node) %}
+<a class="mq-tree__name" href="/maqolalar/yonalish/{{ node.slug }}">{{ node.name_uz }}</a>
+{% if node.code %}<span class="mq-tree__code">{{ node.code }}</span>{% endif %}
+{% if node.missing_parent_code %}
+{# Rasmiy guruh nomi hali yo'q — faqat shifr, o'ylab topilgan nom emas. #}
+<span class="ol-badge ol-badge--neutral" title="Ushbu ixtisoslikning rasmiy guruh nomi hali kiritilmagan">
+  {{ node.missing_parent_code[:5] }} guruhi</span>
+{% endif %}
+{% endmacro %}
 
 {% macro tree(nodes, depth=0, id_prefix='ft') %}
 <ul class="mq-tree" {% if depth == 0 %}role="tree"{% endif %}>
@@ -15,7 +31,7 @@
     <div class="mq-tree__row">
       {% if node.children %}
       <button type="button" class="mq-tree__toggle" data-mq-tree-toggle
-              aria-expanded="{{ 'true' if node.expanded or depth == 0 else 'false' }}"
+              aria-expanded="{{ 'true' if node.expanded else 'false' }}"
               aria-controls="{{ id_prefix }}-{{ node.id }}"
               aria-label="{{ node.name_uz }} ichki yo'nalishlarini ochish">
         <i class="bi bi-chevron-right" aria-hidden="true"></i>
@@ -24,23 +40,54 @@
       <span class="mq-tree__spacer" aria-hidden="true"></span>
       {% endif %}
 
-      <a class="mq-tree__name" href="/maqolalar/yonalish/{{ node.slug }}">{{ node.name_uz }}</a>
-      {% if node.code %}<span class="mq-tree__code">{{ node.code }}</span>{% endif %}
+      <span class="mq-tree__labels">
+        {{ field_labels(node) }}
+        {% if node.name_uz_cyrillic and node.name_uz_cyrillic != node.name_uz %}
+        <span class="mq-tree__cyrillic" lang="uz-Cyrl">{{ node.name_uz_cyrillic }}</span>
+        {% endif %}
+      </span>
 
       <span class="mq-tree__counts">
-        {% if node.children %}
-        <span>{{ node.child_count }} ta ichki yo'nalish</span>
-        {% endif %}
+        {% if node.children %}<span>{{ node.child_count }} ta ichki yo'nalish</span>{% endif %}
         <span>{{ node.total_count }} ta maqola</span>
       </span>
     </div>
 
     {% if node.children %}
     <div class="mq-tree__panel" id="{{ id_prefix }}-{{ node.id }}"
-         {% if not (node.expanded or depth == 0) %}hidden{% endif %}>
+         {% if not node.expanded %}hidden{% endif %}>
       {{ tree(node.children, depth + 1, id_prefix) }}
     </div>
     {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{# Qidiruv natijasi — daraxt emas, tekis ro'yxat. Har bir natijada ota
+   konteksti ko'rsatiladi, chunki daraxt ierarxiyasi bu yerda ko'rinmaydi. #}
+{% macro field_results(results) %}
+<ul class="mq-results">
+  {% for node in results %}
+  <li class="mq-results__item">
+    <div class="mq-results__head">{{ field_labels(node) }}</div>
+    {% if node.name_uz_cyrillic and node.name_uz_cyrillic != node.name_uz %}
+    <p class="mq-results__cyrillic" lang="uz-Cyrl">{{ node.name_uz_cyrillic }}</p>
+    {% endif %}
+    <p class="mq-results__context">
+      {% if node.ancestors %}
+        {% for parent in node.ancestors %}
+        <a href="/maqolalar/yonalish/{{ parent.slug }}">{{ parent.name_uz }}</a>
+        <span aria-hidden="true">&rarr;</span>
+        {% endfor %}
+      {% endif %}
+      {% if node.missing_parent_code %}
+      <span class="ol-muted">{{ node.missing_parent_code[:5] }} guruhi</span>
+      <span aria-hidden="true">&rarr;</span>
+      {% endif %}
+      <span>{{ node.code or node.name_uz }}</span>
+      <span class="mq-results__count">{{ node.total_count }} ta maqola</span>
+    </p>
   </li>
   {% endfor %}
 </ul>

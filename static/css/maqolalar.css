@@ -151,3 +151,39 @@
   .mq-tree .mq-tree { margin-left: var(--space-8); padding-left: var(--space-8); }
   .mq-tree__name { min-width: 100%; }
 }
+
+/* ── Yo'nalish qidiruv natijalari (katta taksonomiya) ─────────────────────── */
+
+.mq-tree__labels { flex: 1; min-width: 200px; display: flex; flex-wrap: wrap;
+  align-items: baseline; gap: var(--space-8); }
+.mq-tree__labels .mq-tree__name { flex: 0 1 auto; min-width: 0; }
+.mq-tree__cyrillic { flex-basis: 100%; font-size: var(--text-small);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+
+.mq-results { list-style: none; margin: 0; padding: 0; }
+.mq-results__item { padding: var(--space-16) 0;
+  border-bottom: 1px solid var(--color-border-subtle); }
+.mq-results__item:last-child { border-bottom: 0; }
+.mq-results__head { display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--space-8); }
+.mq-results__head .mq-tree__name { min-height: 44px; display: inline-flex;
+  align-items: center; }
+.mq-results__cyrillic { margin: var(--space-4) 0 0; font-size: var(--text-small);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+.mq-results__context { margin: var(--space-8) 0 0; display: flex; flex-wrap: wrap;
+  gap: var(--space-8); align-items: center;
+  font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-results__count { margin-left: auto; white-space: nowrap; }
+
+/* ── Admin taksonomiya jadvali ────────────────────────────────────────────── */
+
+.mq-admin-name { max-width: 420px; overflow-wrap: anywhere; }
+.mq-admin-raw { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+.mq-review__reasons { display: flex; flex-wrap: wrap; gap: var(--space-6);
+  margin: var(--space-8) 0 0; padding: 0; list-style: none; }
+
+@media (max-width: 767px) {
+  .mq-results__count { margin-left: 0; }
+  .mq-results__context { font-size: var(--text-meta); }
+}

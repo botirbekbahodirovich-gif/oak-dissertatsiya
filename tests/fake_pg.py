@@ -16,10 +16,12 @@ from blueprints.articles import ARTICLE_COLUMNS
 
 ARTICLE_FIELDS = [c.strip().split('.')[-1] for c in ARTICLE_COLUMNS.split(',') if c.strip()]
 
+# blueprints/articles.py:_load_fields SELECT ustunlari — tartibi MUHIM.
 FIELD_ROW_COLUMNS = ['id', 'parent_id', 'name_uz', 'name_uz_cyrillic', 'name_ru',
                      'code', 'slug', 'level', 'description', 'sort_order',
                      'is_active', 'source_name', 'source_url', 'source_updated_at',
-                     'article_count']
+                     'raw_name', 'source_line', 'source_sha256', 'review_status',
+                     'missing_parent_code', 'article_count']
 
 AUTHOR_ROW_COLUMNS = ['article_id', 'author_name', 'author_order', 'orcid',
                       'affiliation', 'linked_user_id', 'linked_scientist_id',
@@ -57,7 +59,9 @@ def field(**overrides):
         'name_uz_cyrillic': None, 'name_ru': None, 'code': '13.00.00',
         'slug': 'pedagogika-fanlari-130000', 'level': 1, 'description': None,
         'sort_order': 130, 'is_active': True, 'source_name': 'OAK', 'source_url': None,
-        'source_updated_at': None, 'article_count': 1,
+        'source_updated_at': None, 'raw_name': None, 'source_line': None,
+        'source_sha256': None, 'review_status': 'seed', 'missing_parent_code': None,
+        'article_count': 1,
     }
     row.update(overrides)
     return row
