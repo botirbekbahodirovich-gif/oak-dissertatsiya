@@ -14,14 +14,17 @@ from services.article_import.parser import ImportParseError
 from services.article_import.state import (ALREADY_EXISTS, APPROVED,
                                             DUPLICATE_IN_BATCH, FAILED,
                                             INVALID_DOI, METADATA_NOT_FOUND,
-                                            PENDING, PROVIDER_FAILED,
+                                            PARTIAL_METADATA, PENDING,
+                                            PROVIDER_FAILED,
                                             READY_FOR_REVIEW, REJECTED,
                                             RETRACTED, SKIPPED)
 from services.article_metadata.models import (CROSSREF, LOOKUP_FAILED,
                                               LOOKUP_NOT_FOUND, LOOKUP_OK,
+                                              LOOKUP_PARTIAL,
                                               AuthorCandidate,
                                               MetadataLookupResult,
-                                              NormalizedArticleMetadata)
+                                              NormalizedArticleMetadata,
+                                              Warning_)
 from tests.fake_article_import_pg import FakeImportCursor, new_store
 
 TEST_CONFIG = ArticleImportConfig(max_items=500, chunk_size=10, max_attempts=3)
@@ -29,14 +32,26 @@ TEST_CONFIG = ArticleImportConfig(max_items=500, chunk_size=10, max_attempts=3)
 
 def make_fetcher(status=LOOKUP_OK, title='Sample Title', is_retracted=False,
                  doi_override=None):
-    """`fetch_article_metadata` o'rnini bosuvchi — tarmoqqa chiqmaydi."""
+    """`fetch_article_metadata` o'rnini bosuvchi — tarmoqqa chiqmaydi.
+
+    Haqiqiy `fetch_article_metadata()` LOOKUP_PARTIAL bo'lsa `partial_success`
+    ogohlantirishini o'zi qo'shadi (services/article_metadata/service.py).
+    Bu fake orkestratordan chetlab o'tadi, shuning uchun xuddi shu
+    ogohlantirishni takrorlaydi — `processor.py` uni ITEMga to'g'ri
+    ko'chirishini (pass-through) tekshirish uchun.
+    """
     def fetch(doi, *, config=None, cache_get=None, cache_set=None):
         metadata = NormalizedArticleMetadata(
             doi=doi_override or doi, title=title, is_retracted=is_retracted,
             journal_name='Test Journal', publication_year=2024,
             authors=[AuthorCandidate(name='Karimov Sardor', order=1)])
+        warnings = []
+        if status == LOOKUP_PARTIAL:
+            warnings.append(Warning_(code='partial_success',
+                                     message="Ba'zi manbalar javob bermadi.",
+                                     severity='notice'))
         return MetadataLookupResult(doi=doi, status=status, metadata=metadata,
-                                    providers={}, conflicts=[], warnings=[])
+                                    providers={}, conflicts=[], warnings=warnings)
     return fetch
 
 
@@ -344,6 +359,130 @@ class BulkApproveTests(unittest.TestCase):
         self.assertEqual(len(summary['approved']), 1)
         self.assertEqual(len(summary['skipped_unsafe']), 1)
         self.assertEqual(len(self.store['articles']), 1)
+
+
+class PartialMetadataWorkflowTests(unittest.TestCase):
+    """Hardening audit (Phase 2C.2.1), §3 — `partial_metadata` dead-end
+    bo'lmasligini QULFLAYDI: review_count'ga kiradi, admin explicit
+    approve/reject/skip qila oladi, lekin bulk approve'dan chetlanadi."""
+
+    def setUp(self):
+        self.store = new_store()
+        self.cur = FakeImportCursor(self.store)
+        self.batch_id = svc.create_import_batch(
+            self.cur, created_by=1, source_type='doi_list', raw_text='10.1000/a',
+            config=TEST_CONFIG)
+        svc.process_import_batch(self.cur, self.batch_id, config=TEST_CONFIG,
+                                 fetch=make_fetcher(status=LOOKUP_PARTIAL))
+        self.item_id = svc.list_items(self.cur, self.batch_id)[0][0]['id']
+
+    def test_partial_lookup_lands_on_partial_metadata_status(self):
+        item = svc.get_item(self.cur, self.item_id)
+        self.assertEqual(item['status'], PARTIAL_METADATA)
+
+    def test_partial_metadata_counts_toward_batch_review_count(self):
+        batch = svc.get_batch(self.cur, self.batch_id)
+        self.assertEqual(batch['review_count'], 1)
+        self.assertEqual(batch['status'], 'needs_review')
+
+    def test_admin_can_explicitly_approve_partial_metadata(self):
+        result = svc.approve_import_item(self.cur, self.item_id, actor_id=1)
+        self.assertFalse(result['already_approved'])
+        self.assertEqual(len(self.store['articles']), 1)
+        self.assertEqual(svc.get_item(self.cur, self.item_id)['status'], APPROVED)
+
+    def test_admin_can_reject_partial_metadata(self):
+        svc.reject_import_item(self.cur, self.item_id, actor_id=1)
+        self.assertEqual(svc.get_item(self.cur, self.item_id)['status'], REJECTED)
+
+    def test_admin_can_skip_partial_metadata(self):
+        svc.skip_import_item(self.cur, self.item_id, actor_id=1)
+        self.assertEqual(svc.get_item(self.cur, self.item_id)['status'], SKIPPED)
+
+    def test_partial_metadata_excluded_from_bulk_approve(self):
+        summary = svc.bulk_approve_safe_items(self.cur, self.batch_id, actor_id=1,
+                                              item_ids=[self.item_id])
+        self.assertEqual(summary['approved'], [])
+        self.assertEqual(summary['skipped_unsafe'], [self.item_id])
+        self.assertEqual(self.store['articles'], [])
+
+    def test_partial_success_warning_is_recorded_for_admin_context(self):
+        item = svc.get_item(self.cur, self.item_id)
+        codes = [w.get('code') for w in (item['warnings'] or [])]
+        self.assertIn('partial_success', codes)
+
+
+class ChunkConcurrencyTests(unittest.TestCase):
+    """Hardening audit (Phase 2C.2.1), §4 — bitta elementga eng ko'p bitta
+    faol "processing" urinishi bo'lishini QULFLAYDI.
+
+    `persistence.fetch_pending_chunk` SQL darajasida `FOR UPDATE SKIP
+    LOCKED` ishlatadi (haqiqiy Postgres'da tekshiriladi — bu qalbaki
+    kursor buni simulyatsiya QILMAYDI, chunki bu real DB lock semantikasi).
+    Bu yerda ISHLAYDIGAN qatlam — `mark_item_processing`dagi atomic
+    compare-and-set (`WHERE status = 'pending'`) — ikkinchi "worker" xuddi
+    shu itemni claim qila olmasligini isbotlaydi, DB lokidan MUSTAQIL.
+    """
+
+    def setUp(self):
+        self.store = new_store()
+        self.cur = FakeImportCursor(self.store)
+        self.batch_id = svc.create_import_batch(
+            self.cur, created_by=1, source_type='doi_list',
+            raw_text='10.1000/a\n10.1000/b\n10.1000/c', config=TEST_CONFIG)
+
+    def test_second_claim_of_the_same_item_is_rejected_by_cas(self):
+        ids = persistence.fetch_pending_chunk(self.cur, self.batch_id, 10)
+        first_claim = persistence.mark_item_processing(self.cur, ids[0])
+        second_claim = persistence.mark_item_processing(self.cur, ids[0])
+        self.assertTrue(first_claim)
+        self.assertFalse(second_claim)
+
+    def test_item_already_processing_is_invisible_to_a_fresh_chunk_fetch(self):
+        """Ikkinchi "so'rov" (masalan, ikkinchi brauzer tabi) xuddi shu
+        vaqtda chunk so'rasa, allaqachon claim qilingan itemni QAYTA
+        olmaydi — real Postgres'da FOR UPDATE SKIP LOCKED, bu yerda
+        status='pending' filtri (item endi 'processing')."""
+        first_chunk = persistence.fetch_pending_chunk(self.cur, self.batch_id, 1)
+        persistence.mark_item_processing(self.cur, first_chunk[0])
+        second_chunk = persistence.fetch_pending_chunk(self.cur, self.batch_id, 10)
+        self.assertNotIn(first_chunk[0], second_chunk)
+
+    def test_two_overlapping_process_chunk_calls_never_double_process_an_item(self):
+        """`process_chunk` darajasida to'liq oqim: ikkita "parallel"
+        chaqiruv simulyatsiyasi — ikkinchisi hech qachon birinchisi
+        allaqachon ishlagan itemni qayta ishlamaydi."""
+        from services.article_import import processor
+
+        # 1-"so'rov" bitta elementni chunk_size=1 bilan claim qiladi va
+        # ULGURMASDAN commit qilmasdan turib (bu qalbaki DB'da tabiiy —
+        # hech qanday alohida tranzaksiya yo'q), 2-"so'rov" xuddi shu
+        # batch uchun chunk so'raydi.
+        small = ArticleImportConfig(max_items=500, chunk_size=1, max_attempts=3)
+        first = processor.process_chunk(self.cur, self.batch_id, small,
+                                        fetch=make_fetcher())
+        second = processor.process_chunk(self.cur, self.batch_id, small,
+                                         fetch=make_fetcher())
+        first_ids = {item_id for item_id, _status in first}
+        second_ids = {item_id for item_id, _status in second}
+        self.assertEqual(first_ids & second_ids, set())
+
+    def test_double_click_process_endpoint_processes_disjoint_items(self):
+        """To'liq batch darajasida double-click simulyatsiyasi: ikkita
+        ketma-ket `process_import_batch` chaqiruvi (masalan, admin ikki
+        marta tez bosgan) bir xil elementni ikki marta ISHLAMAYDI."""
+        small = ArticleImportConfig(max_items=500, chunk_size=2, max_attempts=3)
+        result1 = svc.process_import_batch(self.cur, self.batch_id, config=small,
+                                           fetch=make_fetcher())
+        result2 = svc.process_import_batch(self.cur, self.batch_id, config=small,
+                                           fetch=make_fetcher())
+        ids1 = {item_id for item_id, _s in result1['items']}
+        ids2 = {item_id for item_id, _s in result2['items']}
+        self.assertEqual(ids1 & ids2, set())
+        # Uchala element ham ROVND aynan BIR marta ishlangan.
+        items, _ = svc.list_items(self.cur, self.batch_id)
+        self.assertTrue(all(i['status'] == READY_FOR_REVIEW for i in items))
+        self.assertEqual(len(items), 3)
 
 
 if __name__ == '__main__':

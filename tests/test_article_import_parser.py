@@ -105,6 +105,23 @@ class CsvParsingTests(unittest.TestCase):
             parse_csv(raw, max_rows=5)
         self.assertEqual(ctx.exception.code, 'too_many_rows')
 
+    def test_oversized_field_in_header_raises_safe_error_not_csv_error(self):
+        """Hardening audit (Phase 2C.2.1), §7 — bitta maydon
+        `csv.field_size_limit()`dan (131072) katta bo'lsa, xom `csv.Error`
+        500 sifatida CHIQMASLIGI kerak."""
+        huge = 'x' * 200_000
+        raw = (huge + '\ndoi\n10.1000/a\n').encode('utf-8')
+        with self.assertRaises(ImportParseError) as ctx:
+            parse_csv(raw)
+        self.assertEqual(ctx.exception.code, 'malformed_csv')
+
+    def test_oversized_field_in_data_row_raises_safe_error(self):
+        huge = 'x' * 200_000
+        raw = ('doi\n' + huge + '\n10.1000/a\n').encode('utf-8')
+        with self.assertRaises(ImportParseError) as ctx:
+            parse_csv(raw)
+        self.assertEqual(ctx.exception.code, 'malformed_csv')
+
 
 class NormalizeRowsTests(unittest.TestCase):
     def test_valid_doi_normalized(self):
