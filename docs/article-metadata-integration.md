@@ -4,6 +4,10 @@ Admin maqola formasiga DOI kiritib, Crossref / OpenAlex / Unpaywall'dan
 bibliografik ma'lumot oladi. Modulning qolgan qismi:
 [`docs/articles-module.md`](articles-module.md).
 
+Bitta DOI o'rniga o'nlab/yuzlab DOI/CSV ommaviy yuborish va ko'rib chiqish
+navbati — [`docs/article-bulk-import.md`](article-bulk-import.md) (Phase
+2C.2). U shu yerdagi `fetch_article_metadata()`ni bevosita qayta ishlatadi.
+
 **Bir jumlada:** tashqi metadata hech qachon avtomatik haqiqat emas — u
 NOMZOD. Uni saqlash qarorini faqat odam qabul qiladi.
 

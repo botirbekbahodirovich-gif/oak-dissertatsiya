@@ -12,6 +12,14 @@ Bu hujjat `docs/maqolalar-route-contract.md` ni **almashtirmaydi**: u route
 kontrakti va PDF viewer'ning vizual (light-only) kontraktini saqlaydi; bu yerda
 esa ma'lumotlar modeli, huquqiy qoidalar va admin ish oqimi.
 
+Bitta DOI qo'lda kiritish o'rniga o'nlab/yuzlab maqolani DOI ro'yxati yoki
+CSV orqali ommaviy import qilish, ko'rib chiqish va tasdiqlash —
+[`docs/article-bulk-import.md`](article-bulk-import.md) (Phase 2C.2,
+`services/article_import/` + `blueprints/article_import.py`). U shu yerdagi
+`scientific_articles`/`article_authors`/`article_scientific_fields`
+jadvallariga AYNAN bir xil qoidalar bilan yozadi — parallel ma'lumot modeli
+YARATILMAGAN.
+
 ---
 
 ## 1. Modellar
