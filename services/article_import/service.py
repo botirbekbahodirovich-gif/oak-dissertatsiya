@@ -236,10 +236,19 @@ def approve_import_item(cur, item_id, actor_id, *, primary_field_id=None,
                                        REVIEW_BUCKET_STATUSES,
                                        created_article_id=article_id)
     if not ok:
-        # O'ta kam ehtimolli poyga: shu tranzaksiya ichida status allaqachon
-        # o'zgargan. Yaratilgan maqola baribir haqiqiy — item shunchaki
-        # yangilanmadi; qayta yuklash to'g'ri holatni ko'rsatadi.
-        pass
+        # Amalda yuz BERMASLIGI kerak: `item['status']` shu FUNKSIYA
+        # boshida REVIEW_BUCKET_STATUSES ichida ekani tekshirilgan va bu
+        # bitta tranzaksiya/kursor — hech qanday parallel yozuvchi orada
+        # holatni o'zgartira olmaydi. Agar baribir CAS muvaffaqiyatsiz
+        # bo'lsa, buni yashirib "success" qaytarish YARATILGAN maqolani
+        # itemga BOG'LAMAY qoldiradi (orphan article, counter drift) —
+        # shuning uchun baland ovozda xato beramiz: route buni ROLLBACK
+        # qiladi va yaratilgan maqola HAM birga bekor bo'ladi (§32 —
+        # hammasi commit bo'ladi yoki hech biri).
+        raise ImportServiceError(
+            'article_created_but_item_not_linked',
+            "Ichki nomuvofiqlik: maqola yaratildi, lekin import elementi "
+            "bilan bog'lab bo'lmadi. Qayta urinib ko'ring.")
     persistence.recompute_batch_counts(cur, item['batch_id'])
     return {'article_id': article_id, 'already_approved': False}
 

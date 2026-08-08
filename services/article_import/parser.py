@@ -109,6 +109,9 @@ def parse_csv(raw_bytes, max_rows=None):
         header = next(reader)
     except StopIteration:
         raise ImportParseError("CSV fayl bo'sh.", code='empty_file')
+    except csv.Error as exc:
+        raise ImportParseError("CSV fayl formati noto'g'ri.",
+                               code='malformed_csv') from exc
 
     header_norm = [(h or '').strip().lower() for h in header]
     if len(set(header_norm)) != len(header_norm):
@@ -130,7 +133,20 @@ def parse_csv(raw_bytes, max_rows=None):
     blanks = 0
     seen_lines = 0
     row_number = 0
-    for raw_row in reader:
+    # `csv.reader` — LAZY iterator: xato (masalan, bitta maydon
+    # `csv.field_size_limit()`dan katta) istalgan qatorda, nafaqat
+    # sarlavhada, chiqishi mumkin. `for` sikli o'rniga qo'lda `next()`
+    # ishlatiladi — shunda har bir qatorni o'qishda `csv.Error` ADMIN'GA
+    # 500 sifatida emas, aniq xato sifatida chiqadi (§13 — "malformed CSV").
+    while True:
+        try:
+            raw_row = next(reader)
+        except StopIteration:
+            break
+        except csv.Error as exc:
+            raise ImportParseError(
+                "CSV fayl %d-qatordan keyin buzilgan." % (seen_lines + 1),
+                code='malformed_csv') from exc
         seen_lines += 1
         if doi_col >= len(raw_row):
             blanks += 1
