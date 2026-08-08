@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Import tarixi (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260808" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Import tarixi', 'Barcha ommaviy DOI/CSV import partiyalari.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')],
+                 meta=['Jami: %d ta partiya' % total]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="ai-actions-row">
+    <a class="ol-btn ol-btn--primary" href="/admin/articles/import">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>Yangi import</a>
+  </div>
+
+  {% if batches %}
+  <div class="ol-table-wrap">
+    <table class="ol-table">
+      <caption class="ol-meta">Import partiyalari</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Manba</th>
+          <th scope="col">Yaratuvchi</th>
+          <th scope="col">Sana</th>
+          <th scope="col">Jami</th>
+          <th scope="col">Holat</th>
+          <th scope="col">Tasdiqlangan</th>
+          <th scope="col">Xato</th>
+          <th scope="col">Tekshirish</th>
+          <th scope="col">Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in batches %}
+        <tr>
+          <th scope="row">#{{ b.id }}</th>
+          <td>{{ 'CSV' if b.source_type == 'csv' else 'DOI ro\'yxati' }}
+              {% if b.original_filename %}<br><span class="ol-meta">{{ b.original_filename }}</span>{% endif %}</td>
+          <td>{{ b.created_by }}</td>
+          <td>{{ b.created_at.strftime('%Y-%m-%d %H:%M') if b.created_at else '—' }}</td>
+          <td>{{ b.total_items }}</td>
+          <td><span class="ol-badge">{{ status_labels.get(b.status, b.status) }}</span></td>
+          <td>{{ b.approved_count }}</td>
+          <td>{{ b.failed_count }}</td>
+          <td>{{ b.review_count }}</td>
+          <td>
+            <a class="ol-btn ol-btn--tertiary" href="/admin/articles/imports/{{ b.id }}">Ko'rish</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="ol-pager" aria-label="Sahifalash">
+    {% for p in range(1, pages + 1) %}
+    <a href="?page={{ p }}" {{ 'aria-current=page'|safe if p == page }}>{{ p }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Hali ommaviy import yaratilmagan.</h2>
+    <p class="ol-body"><a href="/admin/articles/import">Yangi import yaratish</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

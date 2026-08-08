@@ -805,6 +805,9 @@ from blueprints.data_quality import data_quality_bp
 # articles_bp — saytning O'Z maqolalar katalogi (/maqolalar). maqolalar_bp bilan
 # adashtirmang: u OpenAlex nashr tahlili (/maqolalar-tahlili), boshqa modul.
 from blueprints.articles import articles_bp
+# article_import_bp — DOI/CSV ommaviy import + ko'rib chiqish navbati (Phase
+# 2C.2). articles_bp'dan ATAYIN ajratilgan (u allaqachon 2000+ qator).
+from blueprints.article_import import article_import_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -840,6 +843,7 @@ app.register_blueprint(share_bp)
 app.register_blueprint(kafedra_bp)
 app.register_blueprint(data_quality_bp)
 app.register_blueprint(articles_bp)
+app.register_blueprint(article_import_bp)
 
 # ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])

@@ -230,6 +230,8 @@ ADMIN_SERVICES: tuple[NavItem, ...] = (
             description="ATMOS to'lovlari"),
     NavItem("Reyting", "/admin/reyting", icon="bi-award",
             description="H-index snapshotlari"),
+    NavItem("Maqolalar importi", "/admin/articles/import", icon="bi-cloud-arrow-down",
+            description="DOI/CSV orqali ommaviy import va ko'rib chiqish"),
 )
 
 # Avatar dropdown'idagi qisqa admin bloki. To'liq ro'yxat admin panelida.

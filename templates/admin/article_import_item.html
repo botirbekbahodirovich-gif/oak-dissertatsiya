@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Import elementi #{{ item.id }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260808" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% set meta = item.metadata_candidate or {} %}
+{% set authors = meta.get('authors') or [] %}
+{% set is_reviewable = item.status in ('ready_for_review', 'partial_metadata', 'retracted') %}
+{% set has_critical = (item.conflicts or []) | selectattr('severity', 'equalto', 'critical') | list %}
+<div class="ol-page">
+  {{ page_header('Import elementi: %s' % (item.normalized_doi or item.raw_input),
+                 'Holat: %s' % item_status_labels.get(item.status, item.status),
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                         ('Import tarixi', '/admin/articles/imports'),
+                         ('Import #%d' % batch.id, '/admin/articles/imports/%d' % batch.id)]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if item.is_retracted %}
+  <div class="ol-badge ol-badge--error" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Diqqat: bu maqola manbalarga ko'ra CHAQIRIB OLINGAN (retracted). Tasdiqlashdan
+    oldin buni albatta hisobga oling.
+  </div>
+  {% endif %}
+
+  {% if item.existing_article_id %}
+  <div class="ol-badge ol-badge--notice" role="status" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Bu DOI bilan maqola bazada allaqachon mavjud:
+    <a href="/admin/articles/{{ item.existing_article_id }}/edit">{{ existing_article.title if existing_article else 'Ochish' }}</a>
+  </div>
+  {% endif %}
+
+  {% if item.created_article_id %}
+  <div class="ol-badge ol-badge--success" role="status" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Tasdiqlangan — yaratilgan maqola:
+    <a href="/admin/articles/{{ item.created_article_id }}/edit">{{ created_article.title if created_article else 'Ochish' }}</a>
+    (qoralama, tekshiruv kutilmoqda)
+  </div>
+  {% endif %}
+
+  {% if item.last_error_message %}
+  <div class="ol-badge ol-badge--error" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Xato: {{ item.last_error_message }}
+  </div>
+  {% endif %}
+
+  <div class="ai-detail-grid">
+    <div><div class="ai-detail-item__label">Sarlavha</div>
+      <div class="ai-detail-item__value">{{ meta.get('title') or '—' }}</div></div>
+    <div><div class="ai-detail-item__label">Jurnal</div>
+      <div class="ai-detail-item__value">{{ meta.get('journal_name') or '—' }}</div></div>
+    <div><div class="ai-detail-item__label">Yil</div>
+      <div class="ai-detail-item__value">{{ meta.get('publication_year') or '—' }}</div></div>
+    <div><div class="ai-detail-item__label">Iqtibos soni</div>
+      <div class="ai-detail-item__value">{{ meta.get('citation_count') if meta.get('citation_count') is not none else '—' }}</div></div>
+    <div><div class="ai-detail-item__label">Tashqi OA holati</div>
+      <div class="ai-detail-item__value">{{ item.oa_status or '—' }}</div></div>
+    <div><div class="ai-detail-item__label">OpenAlex ID</div>
+      <div class="ai-detail-item__value">{{ meta.get('openalex_id') or '—' }}</div></div>
+  </div>
+
+  <section class="ol-section" aria-labelledby="ai-sec-abstract">
+    <h2 id="ai-sec-abstract" class="ol-h4">Annotatsiya</h2>
+    <p class="ol-body">{{ meta.get('abstract') or 'Annotatsiya topilmadi.' }}</p>
+  </section>
+
+  <section class="ol-section" aria-labelledby="ai-sec-authors">
+    <h2 id="ai-sec-authors" class="ol-h4">Mualliflar</h2>
+    {% if authors %}
+    <ul class="ai-warning-list">
+      {% for a in authors %}
+      <li>{{ a.get('name') }}{% if a.get('orcid') %} — ORCID: {{ a.get('orcid') }}{% endif %}
+        {% if a.get('affiliation') %} — {{ a.get('affiliation') }}{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="ol-body">Muallif topilmadi.</p>{% endif %}
+  </section>
+
+  <section class="ol-section" aria-labelledby="ai-sec-providers">
+    <h2 id="ai-sec-providers" class="ol-h4">Manba holati</h2>
+    <div class="ai-provider-list">
+      {% for name, p in (item.provider_status_summary or {}).items() %}
+      <span class="ol-badge">{{ p.get('label', name) }}: {{ p.get('status_label', p.get('status')) }}</span>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if item.conflicts %}
+  <section class="ol-section" aria-labelledby="ai-sec-conflicts">
+    <h2 id="ai-sec-conflicts" class="ol-h4">Nomuvofiqliklar</h2>
+    <ul class="ai-conflict-list">
+      {% for c in item.conflicts %}
+      <li data-severity="{{ c.get('severity', 'review') }}">
+        <strong>{{ c.get('label', c.get('field')) }}:</strong>
+        {{ c.get('preferred') }} ({{ c.get('preferred_source') }})
+        {% if c.get('alternatives') %} — muqobil: {% for alt in c['alternatives'] %}{{ alt.value }} ({{ alt.source }}){% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if item.warnings %}
+  <section class="ol-section" aria-labelledby="ai-sec-warnings">
+    <h2 id="ai-sec-warnings" class="ol-h4">Ogohlantirishlar</h2>
+    <ul class="ai-warning-list">
+      {% for w in item.warnings %}<li>{{ w.get('message', w.get('code')) }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if meta.get('license_candidates') %}
+  <section class="ol-section" aria-labelledby="ai-sec-license">
+    <h2 id="ai-sec-license" class="ol-h4">Litsenziya nomzodlari</h2>
+    <ul class="ai-warning-list">
+      {% for lic in meta['license_candidates'] %}
+      <li>{{ lic.get('label') or lic.get('license_type') or '—' }} ({{ lic.get('source') }})
+        {% if lic.get('url') %} — <a href="{{ lic['url'] }}" rel="noopener">havola</a>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <p class="ai-help">Bular faqat NOMZOD — yakuniy litsenziya avtomatik qo'llanmaydi.</p>
+  </section>
+  {% endif %}
+
+  {% if meta.get('external_locations') %}
+  <section class="ol-section" aria-labelledby="ai-sec-oa">
+    <h2 id="ai-sec-oa" class="ol-h4">Ochiq kirish nusxalari (faqat ma'lumot)</h2>
+    <ul class="ai-warning-list">
+      {% for loc in meta['external_locations'] %}
+      <li>{{ loc.get('host_type') or '—' }} — {{ loc.get('license') or 'litsenziya noma\'lum' }}
+        {% if loc.get('landing_page_url') %} — <a href="{{ loc['landing_page_url'] }}" rel="noopener">sahifa</a>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    <p class="ai-help">PDF hech qachon avtomatik yuklanmaydi — bu havolalar faqat admin ma'lumoti uchun.</p>
+  </section>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="ai-sec-actions">
+    <h2 id="ai-sec-actions" class="ol-h4">Amallar</h2>
+
+    {% if is_reviewable %}
+    <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/approve"
+          class="ol-field-group" style="margin-bottom:var(--space-16);">
+      {{ csrf_token()|safe }}
+      <label class="ol-label" for="ai-primary-field">Asosiy fan yo'nalishi (ixtiyoriy)</label>
+      <select class="ol-field" id="ai-primary-field" name="primary_field_id">
+        <option value="">— Tanlanmagan (keyinroq belgilanadi) —</option>
+        {% for node in field_tree %}
+        <option value="{{ node.id }}">{{ node.name_uz }}</option>
+        {% for child in node.children %}
+        <option value="{{ child.id }}">— {{ child.name_uz }}</option>
+        {% endfor %}
+        {% endfor %}
+      </select>
+
+      {% if item.is_retracted %}
+      <label class="ol-facets__opt" style="min-height:44px;">
+        <input type="checkbox" name="confirm_retracted" value="1" required>
+        Chaqirib olingan (retracted) ekanini tushunaman va baribir davom etaman
+      </label>
+      {% endif %}
+      {% if has_critical %}
+      <label class="ol-facets__opt" style="min-height:44px;">
+        <input type="checkbox" name="confirm_critical" value="1" required>
+        Kritik nomuvofiqlikni ko'rib chiqdim va davom etaman
+      </label>
+      {% endif %}
+
+      <div class="ai-actions-row">
+        <button type="submit" class="ol-btn ol-btn--primary">
+          <i class="bi bi-check-lg" aria-hidden="true"></i>Tasdiqlash</button>
+      </div>
+    </form>
+
+    <div class="ai-actions-row">
+      <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/reject">
+        {{ csrf_token()|safe }}
+        <button type="submit" class="ol-btn ol-btn--danger">Rad etish</button>
+      </form>
+      <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/skip">
+        {{ csrf_token()|safe }}
+        <button type="submit" class="ol-btn ol-btn--secondary">O'tkazib yuborish</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if item.status in ('provider_failed', 'failed') %}
+    <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/retry">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--primary">
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Qayta urinish</button>
+    </form>
+    {% endif %}
+
+    {% if item.status in ('already_exists', 'invalid_doi', 'duplicate_in_batch', 'metadata_not_found') %}
+    <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/skip">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--secondary">O'tkazib yuborish</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <a class="ol-btn ol-btn--tertiary" href="/admin/articles/imports/{{ batch.id }}">
+    &larr; Import #{{ batch.id }}ga qaytish</a>
+</div>
+{% endblock %}
