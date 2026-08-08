@@ -430,6 +430,74 @@
         <dt>Oxirgi sinxronizatsiya</dt><dd>{{ article.metadata_last_synced_at }}</dd>{% endif %}
       </dl>
       {% endif %}
+
+      {# ── Metadata sinxronizatsiyasi (Phase 2C.3A) ────────────────────────
+         DOI'li MAVJUD maqolani qayta tekshirish: fetch -> diff -> admin
+         tanlaydi -> explicit apply. Hech qachon avtomatik overwrite emas
+         (§2, §14). Alohida `<form>` EMAS — asosiy formaning ICHIDA, lekin
+         faqat `type="button"` amallar bilan (nested form taqiqlangan),
+         xuddi DOI autofill paneli bilan bir xil naqsh. #}
+      {% if edit_mode and article and article.doi %}
+      <section class="mq-sync" id="mq-sync-panel" data-mq-sync
+               data-article-id="{{ article.id }}"
+               data-check-endpoint="/admin/articles/{{ article.id }}/metadata/check"
+               data-apply-endpoint="/admin/articles/{{ article.id }}/metadata/apply"
+               aria-labelledby="mq-sync-title">
+        <h3 class="ol-h5 mq-flush-top" id="mq-sync-title">Metadata sinxronizatsiyasi</h3>
+        <p class="ol-body">
+          Oxirgi tekshiruv:
+          {% if sync_history %}{{ sync_history[0].checked_at }}
+            ({{ sync_history[0].status }}){% else %}hali tekshirilmagan{% endif %}
+        </p>
+
+        <div class="mq-sync__actions">
+          <button type="button" class="ol-btn ol-btn--secondary" data-mq-sync-check>
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>Metadata'ni tekshirish</button>
+        </div>
+
+        <p class="mq-sync__status" role="status" aria-live="polite" data-mq-sync-status hidden></p>
+
+        <div class="mq-sync__result" data-mq-sync-result hidden>
+          <p class="mq-sync__summary" data-mq-sync-summary></p>
+          <div class="mq-sync__warnings" data-mq-sync-warnings></div>
+
+          <div class="ol-table-wrap">
+            <table class="ol-table mq-sync__table">
+              <caption class="mq-sr-only">Metadata o'zgarishlari</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><span class="ol-body">Tanlash</span></th>
+                  <th scope="col">Maydon</th>
+                  <th scope="col">Eski qiymat</th>
+                  <th scope="col">Yangi qiymat</th>
+                  <th scope="col">Manba</th>
+                  <th scope="col">Holat</th>
+                </tr>
+              </thead>
+              <tbody data-mq-sync-rows></tbody>
+            </table>
+          </div>
+
+          <div class="mq-sync__confirm" data-mq-sync-confirm-retraction hidden>
+            <label class="ol-facets__opt" style="min-height:44px;">
+              <input type="checkbox" data-mq-sync-confirm-retraction-input>
+              Chaqirib olingan (retraction) o'zgarishini tushunaman va tasdiqlayman
+            </label>
+          </div>
+          <div class="mq-sync__confirm" data-mq-sync-confirm-doi hidden>
+            <label class="ol-facets__opt" style="min-height:44px;">
+              <input type="checkbox" data-mq-sync-confirm-doi-input>
+              DOI nomuvofiqligini tushunaman va baribir davom etaman
+            </label>
+          </div>
+
+          <div class="mq-sync__actions">
+            <button type="button" class="ol-btn ol-btn--primary" data-mq-sync-apply disabled>
+              Tanlangan o'zgarishlarni qo'llash</button>
+          </div>
+        </div>
+      </section>
+      {% endif %}
     </fieldset>
 
     <div class="mq-detail__actions">
@@ -451,4 +519,7 @@
 <script src="/static/js/maqolalar_metadata.js?v={{ asset_version }}"
         defer
         data-providers="{{ metadata_providers|tojson|forceescape }}"></script>
+{% if edit_mode and article and article.doi %}
+<script src="/static/js/article_metadata_sync.js?v={{ asset_version }}" defer></script>
+{% endif %}
 {% endblock %}

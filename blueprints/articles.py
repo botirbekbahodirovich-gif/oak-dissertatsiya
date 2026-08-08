@@ -45,6 +45,7 @@ from flask_login import current_user, login_required
 
 from data import get_connection
 from security import log_exception
+from services import article_sync
 from services.article_metadata import (MetadataLookupError, describe_configuration,
                                        fetch_article_metadata, flask_cache_adapters)
 from security_uploads import (MAX_PDF_BYTES, UploadValidationError,
@@ -1467,6 +1468,11 @@ ARTICLE_WRITE_COLUMNS = (
 
 def _admin_form_context(cur, values=None, article=None, error=None):
     tree, rows = _field_tree(cur, only_active=False)
+    sync_history = []
+    if article and article.get('doi'):
+        # Faqat bitta so'rov, faqat GET (§20 — "Oxirgi tekshiruv"). Yozish
+        # yo'q — sinxronizatsiya tarixi shu yerda faqat KO'RSATILADI.
+        sync_history = article_sync.list_sync_history(cur, article['id'], limit=5)
     return {
         'field_tree': tree, 'field_rows': rows,
         'access_types': ACCESS_TYPES, 'licenses': LICENSES,
@@ -1479,6 +1485,7 @@ def _admin_form_context(cur, values=None, article=None, error=None):
         'metadata_providers': describe_configuration(),
         'metadata_summary_json': _summary_json(values, article),
         'asset_version': VIEWER_ASSET_VERSION,
+        'sync_history': sync_history,
     }
 
 
@@ -1606,6 +1613,89 @@ def _existing_article_for_doi(doi, openalex_id=None):
         return None
     return {'id': row[0], 'title': row[1],
             'edit_url': '/admin/articles/%d/edit' % row[0]}
+
+
+# ── Mavjud maqola metadata sinxronizatsiyasi (Phase 2C.3A) ─────────────────
+# Bu ikki endpoint biznes logikani o'zida ushlamaydi — hammasi
+# `services/article_sync/` da. Route faqat: avtorizatsiya, tranzaksiya
+# chegarasi, JSON shakllantirish (§3 — "Route ichida business logic yozma").
+
+@articles_bp.route('/admin/articles/<int:article_id>/metadata/check', methods=['POST'])
+@login_required
+def admin_article_metadata_check(article_id):
+    """DOI orqali FRESH metadata oladi va diff qaytaradi — DB'dagi maqola
+    maydonlariga HECH NARSA yozmaydi (§14)."""
+    _require_admin()
+    if _metadata_rate_limited(getattr(current_user, 'id', 'anon')):
+        return jsonify({'error': 'rate_limited',
+                        'message': "Juda ko'p so'rov. Bir daqiqadan keyin "
+                                   "urinib ko'ring."}), 429
+
+    cache_get, cache_set = _metadata_cache_adapters()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            try:
+                result = article_sync.check_article_metadata(
+                    cur, article_id, current_user.id, cache_get=cache_get,
+                    cache_set=cache_set)
+                conn.commit()
+            except article_sync.ArticleSyncError as exc:
+                conn.rollback()
+                status = 404 if exc.code == 'not_found' else 400
+                return jsonify({'error': exc.code, 'message': exc.public_message}), status
+            except Exception:
+                conn.rollback()
+                log_exception(current_app.logger, 'Metadata sinxronizatsiyasi bajarilmadi')
+                return jsonify({'error': 'internal',
+                                'message': "Ma'lumot olishda kutilmagan xato yuz berdi."}), 502
+    finally:
+        conn.close()
+    return jsonify(result.to_public_dict())
+
+
+@articles_bp.route('/admin/articles/<int:article_id>/metadata/apply', methods=['POST'])
+@login_required
+def admin_article_metadata_apply(article_id):
+    """Admin tanlagan maydonlarni SAQLANGAN sync yozuvidan qo'llaydi.
+
+    Client `sync_id` + tanlangan maydon nomlarini yuboradi; yangi
+    QIYMATLARNI EMAS — ular serverda saqlangan `diff_summary`dan o'qiladi
+    (§16). Stale-check va idempotency `services.article_sync.service`da.
+    """
+    _require_admin()
+    payload = request.get_json(silent=True) or {}
+    sync_id = payload.get('sync_id')
+    selected_fields = payload.get('fields') or []
+    confirm_retraction = bool(payload.get('confirm_retraction'))
+    confirm_doi_mismatch = bool(payload.get('confirm_doi_mismatch'))
+
+    if not isinstance(sync_id, int) or not isinstance(selected_fields, list):
+        return jsonify({'error': 'invalid_request',
+                        'message': "So'rov formati noto'g'ri."}), 400
+    selected_fields = [f for f in selected_fields if isinstance(f, str)][:40]
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            try:
+                result = article_sync.apply_article_metadata_changes(
+                    cur, article_id, sync_id, current_user.id, selected_fields,
+                    confirm_retraction=confirm_retraction,
+                    confirm_doi_mismatch=confirm_doi_mismatch)
+                conn.commit()
+            except article_sync.ArticleSyncError as exc:
+                conn.rollback()
+                status = 404 if exc.code == 'not_found' else 400
+                return jsonify({'error': exc.code, 'message': exc.public_message}), status
+            except Exception:
+                conn.rollback()
+                log_exception(current_app.logger, "Metadata o'zgarishlarini qo'llash bajarilmadi")
+                return jsonify({'error': 'internal',
+                                'message': 'Kutilmagan ichki xato.'}), 502
+    finally:
+        conn.close()
+    return jsonify(result)
 
 
 @articles_bp.route('/admin/articles')

@@ -204,6 +204,46 @@
 .mq-meta__note { margin: var(--space-8) 0 0; font-size: var(--text-meta);
   color: var(--color-text-muted); }
 
+/* ── Metadata sinxronizatsiyasi (Phase 2C.3A) — .mq-meta bilan bir xil
+   qatlam qoidalari, alohida namespace ── */
+.mq-sync {
+  grid-column: 1 / -1;
+  margin-top: var(--space-20);
+  padding: var(--space-16);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+.mq-sync__actions { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin-top: var(--space-8); }
+.mq-sync__actions .ol-btn { min-height: 44px; }
+.mq-sync__status { margin: var(--space-8) 0 0; font-size: var(--text-small);
+  color: var(--color-text-secondary); }
+.mq-sync__result[hidden] { display: none; }
+.mq-sync__result { margin-top: var(--space-16); }
+.mq-sync__summary { margin: 0 0 var(--space-12); font-size: var(--text-small);
+  color: var(--color-text-secondary); font-weight: 600; }
+
+.mq-sync__warnings { display: flex; flex-direction: column; gap: var(--space-8); }
+.mq-sync__warnings:not(:empty) { margin-bottom: var(--space-12); }
+.mq-sync__warning {
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-notice);
+  border-radius: var(--radius-default);
+  background: var(--color-notice-soft);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+
+.mq-sync__table td { vertical-align: top; overflow-wrap: anywhere; }
+.mq-sync__row--critical td { background: var(--color-error-soft); }
+.mq-sync__row--review td { background: var(--color-notice-soft); }
+.mq-sync__row--safe td { background: var(--color-success-soft); }
+.mq-sync__note { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); margin-top: var(--space-4); }
+
+.mq-sync__confirm[hidden] { display: none; }
+.mq-sync__confirm { margin-top: var(--space-12); }
+
 /* ── Moslashuvchanlik ─────────────────────────────────────────────────────── */
 
 @media (max-width: 1023px) {
