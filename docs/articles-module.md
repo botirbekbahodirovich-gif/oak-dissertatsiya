@@ -20,6 +20,11 @@ CSV orqali ommaviy import qilish, ko'rib chiqish va tasdiqlash —
 jadvallariga AYNAN bir xil qoidalar bilan yozadi — parallel ma'lumot modeli
 YARATILMAGAN.
 
+Bazada ALLAQACHON mavjud maqolani DOI orqali qayta tekshirish (diff + xavfsiz
+apply) — [`docs/article-metadata-sync.md`](article-metadata-sync.md) (Phase
+2C.3A, `services/article_sync/`). Admin maqola tahrirlash sahifasidagi
+"Metadata sinxronizatsiyasi" bo'limi.
+
 ---
 
 ## 1. Modellar

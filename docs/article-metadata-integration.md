@@ -8,6 +8,10 @@ Bitta DOI o'rniga o'nlab/yuzlab DOI/CSV ommaviy yuborish va ko'rib chiqish
 navbati — [`docs/article-bulk-import.md`](article-bulk-import.md) (Phase
 2C.2). U shu yerdagi `fetch_article_metadata()`ni bevosita qayta ishlatadi.
 
+Bazada ALLAQACHON mavjud DOI'li maqolani qayta tekshirish, diff va xavfsiz
+apply — [`docs/article-metadata-sync.md`](article-metadata-sync.md) (Phase
+2C.3A). U ham shu yerdagi `fetch_article_metadata()`ni qayta ishlatadi.
+
 **Bir jumlada:** tashqi metadata hech qachon avtomatik haqiqat emas — u
 NOMZOD. Uni saqlash qarorini faqat odam qabul qiladi.
 
