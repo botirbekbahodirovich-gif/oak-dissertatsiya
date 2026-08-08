@@ -187,6 +187,15 @@ class FakeCursor:
                     for a in self.store['articles']][:1]
             return rows, [('id',), ('title',), ('slug',)]
 
+        # Metadata sinxronizatsiyasi tarixi (Phase 2C.3A,
+        # services/article_sync/persistence.py:list_syncs_for_article) —
+        # bu qalbaki DB hech qanday sync yozuvi bilmaydi, shuning uchun
+        # doim bo'sh natija (lekin `description` MUTLAQO bo'lishi kerak,
+        # aks holda `_dict_rows` `cur.description`ni iteratsiya qilib
+        # TypeError beradi — description=None emas, bo'sh ustun ro'yxati).
+        if sql.startswith('SELECT * FROM article_metadata_syncs'):
+            return [], []
+
         return [], None
 
 
