@@ -124,13 +124,99 @@ class EnqueueTests(unittest.TestCase):
         self.assertEqual(batch['total_items'], 1)
         self.assertEqual(batch['pending_count'], 1)
 
-    def test_no_new_candidates_creates_empty_batch_no_items(self):
+    def test_no_new_candidates_creates_no_orphan_batch(self):
+        """§9 — yangi DOI yo'q bo'lsa hech qanday batch (bo'sh ham) YARATILMAYDI."""
         result = bridge.enqueue_discovery_candidates(
             self.cur, admin_id=1, query=QUERY,
             candidates=[_candidate('10.1000/a', classification=EXISTING_ARTICLE)],
             total_count=1, excluded_no_doi_count=0)
         self.assertEqual(result['queued'], [])
+        self.assertIsNone(result['batch_id'])
+        self.assertFalse(result['created'])
         self.assertEqual(len(self.store['items']), 0)
+        self.assertEqual(len(self.store['batches']), 0)
+
+    def test_created_flag_true_on_first_enqueue(self):
+        result = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=[_candidate('10.1000/a')],
+            total_count=1, excluded_no_doi_count=0)
+        self.assertTrue(result['created'])
+
+
+class RequestIdIdempotencyTests(unittest.TestCase):
+    """Phase 2D.1.1 — batch-level idempotency `request_id` orqali (§5-§6)."""
+
+    def setUp(self):
+        self.store = new_store()
+        self.cur = FakeDiscoveryCursor(self.store)
+
+    def test_sequential_double_submit_same_request_id_returns_same_batch(self):
+        candidates = [_candidate('10.1000/a')]
+        first = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=candidates,
+            total_count=1, excluded_no_doi_count=0, request_id='req-abc')
+        second = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=candidates,
+            total_count=1, excluded_no_doi_count=0, request_id='req-abc')
+        self.assertEqual(first['batch_id'], second['batch_id'])
+        self.assertTrue(first['created'])
+        self.assertFalse(second['created'])
+        self.assertEqual(len(self.store['batches']), 1)
+        self.assertEqual(len(self.store['items']), 1)
+
+    def test_second_submit_does_not_reinsert_items(self):
+        candidates = [_candidate('10.1000/a'), _candidate('10.1000/b')]
+        bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=candidates,
+            total_count=2, excluded_no_doi_count=0, request_id='req-xyz')
+        second = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=candidates,
+            total_count=2, excluded_no_doi_count=0, request_id='req-xyz')
+        self.assertEqual(second['queued'], [])
+        self.assertEqual(len(self.store['items']), 2)
+
+    def test_different_request_ids_create_separate_batches(self):
+        bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=[_candidate('10.1000/a')],
+            total_count=1, excluded_no_doi_count=0, request_id='req-1')
+        result_two = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=[_candidate('10.1000/b')],
+            total_count=1, excluded_no_doi_count=0, request_id='req-2')
+        self.assertEqual(len(self.store['batches']), 2)
+        self.assertTrue(result_two['created'])
+
+    def test_zero_eligible_with_prior_batch_returns_existing_batch(self):
+        """Birinchi so'rov batch yaratdi; xuddi shu request_id bilan
+        takroriy so'rov endi yangi DOI hisoblamasa ham, ESKI batch qaytadi
+        (yangi bo'sh batch EMAS)."""
+        first = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY, candidates=[_candidate('10.1000/a')],
+            total_count=1, excluded_no_doi_count=0, request_id='req-reuse')
+        second = bridge.enqueue_discovery_candidates(
+            self.cur, admin_id=1, query=QUERY,
+            candidates=[_candidate('10.1000/a', classification=ALREADY_QUEUED)],
+            total_count=1, excluded_no_doi_count=0, request_id='req-reuse')
+        self.assertEqual(second['batch_id'], first['batch_id'])
+        self.assertFalse(second['created'])
+        self.assertEqual(len(self.store['batches']), 1)
+
+    def test_concurrent_style_double_insert_only_one_batch_survives(self):
+        """Haqiqiy parallelism'ni qalbaki kursor bilan simulyatsiya qilib
+        bo'lmaydi (haqiqiy DB constraint kerak, tests/test_article_discovery_dbgated.py
+        ga qarang) — lekin BU YERDA ikkita KETMA-KET chaqiruv, xuddi ikkita
+        tranzaksiya BIR XIL natijaga kelgandek, faqat BITTA batch qoldirishini
+        tekshiradi (ON CONFLICT DO NOTHING yo'lini majburlaydi)."""
+        candidates = [_candidate('10.1000/race')]
+        results = [
+            bridge.enqueue_discovery_candidates(
+                self.cur, admin_id=1, query=QUERY, candidates=candidates,
+                total_count=1, excluded_no_doi_count=0, request_id='req-race')
+            for _ in range(5)
+        ]
+        batch_ids = {r['batch_id'] for r in results}
+        self.assertEqual(batch_ids, {results[0]['batch_id']})
+        self.assertEqual(len(self.store['batches']), 1)
+        self.assertEqual(sum(1 for r in results if r['created']), 1)
 
 
 if __name__ == '__main__':

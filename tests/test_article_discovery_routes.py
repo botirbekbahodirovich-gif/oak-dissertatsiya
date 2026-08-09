@@ -209,6 +209,79 @@ class SearchFormTests(AdminTestCase):
         self.assertEqual(first.headers['Location'], second.headers['Location'])
         self.assertEqual(len(connection.store['batches']), 1)
 
+    def test_double_submit_survives_consumed_marker_eviction(self):
+        """Phase 2D.1.1, §6 — cache 'consumed' belgisi (best-effort) yo'qolib
+        qolsa ham, DB'dagi `source_request_id` yakuniy himoya bo'lib qoladi:
+        ikkinchi POST hali ham bir xil batch'ga qaytadi, YANGI/bo'sh batch
+        yaratmaydi."""
+        connection = FakeDiscoveryConnection(new_store())
+        cache = FakeCache()
+        preview = DiscoveryPreviewResult(
+            status=OK,
+            query=ArticleDiscoveryQuery(keyword='oncology', from_date=date(2024, 1, 1),
+                                        to_date=date(2024, 1, 31), oak_field_id=None,
+                                        limit=50),
+            candidates=[DiscoveryCandidate(doi='10.1000/a', classification='new')])
+        from services.article_discovery import service as discovery_service
+        token = discovery_service.store_preview(cache.set, admin_id=1,
+                                                preview=preview, config=CONFIGURED)
+        with fake_discovery_env(connection, cache=cache):
+            first = self.client.post('/admin/articles/discovery/enqueue',
+                                     data={'preview_token': token}, follow_redirects=False)
+            # Cache eviction simulyatsiyasi — "consumed" belgisi yo'qoladi,
+            # lekin preview entry hali ham bor (TTL bir xil emas amalda ham).
+            cache.store.pop('article_discovery:preview:%s:consumed' % token, None)
+            second = self.client.post('/admin/articles/discovery/enqueue',
+                                      data={'preview_token': token}, follow_redirects=False)
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 302)
+        self.assertEqual(first.headers['Location'], second.headers['Location'])
+        self.assertEqual(len(connection.store['batches']), 1)
+        self.assertEqual(len(connection.store['items']), 1)
+
+    def test_raw_token_never_persisted_in_batch_row(self):
+        connection = FakeDiscoveryConnection(new_store())
+        cache = FakeCache()
+        preview = DiscoveryPreviewResult(
+            status=OK,
+            query=ArticleDiscoveryQuery(keyword='oncology', from_date=date(2024, 1, 1),
+                                        to_date=date(2024, 1, 31), oak_field_id=None,
+                                        limit=50),
+            candidates=[DiscoveryCandidate(doi='10.1000/a', classification='new')])
+        from services.article_discovery import service as discovery_service
+        token = discovery_service.store_preview(cache.set, admin_id=1,
+                                                preview=preview, config=CONFIGURED)
+        with fake_discovery_env(connection, cache=cache):
+            self.client.post('/admin/articles/discovery/enqueue',
+                             data={'preview_token': token}, follow_redirects=False)
+        batch = connection.store['batches'][0]
+        self.assertNotEqual(batch['source_request_id'], token)
+        for value in batch.values():
+            self.assertNotEqual(value, token)
+        # Hash — deterministik, lekin xom token QIYMATINING o'zi emas.
+        self.assertIsNotNone(batch['source_request_id'])
+        self.assertEqual(len(batch['source_request_id']), 64)  # sha256 hex
+
+    def test_zero_eligible_candidates_creates_no_batch_and_redirects_to_search(self):
+        connection = FakeDiscoveryConnection(new_store())
+        cache = FakeCache()
+        preview = DiscoveryPreviewResult(
+            status=OK,
+            query=ArticleDiscoveryQuery(keyword='oncology', from_date=date(2024, 1, 1),
+                                        to_date=date(2024, 1, 31), oak_field_id=None,
+                                        limit=50),
+            candidates=[DiscoveryCandidate(doi='10.1000/a', classification='existing_article')])
+        from services.article_discovery import service as discovery_service
+        token = discovery_service.store_preview(cache.set, admin_id=1,
+                                                preview=preview, config=CONFIGURED)
+        with fake_discovery_env(connection, cache=cache):
+            response = self.client.post('/admin/articles/discovery/enqueue',
+                                        data={'preview_token': token}, follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/admin/articles/discovery', response.headers['Location'])
+        self.assertNotIn('/admin/articles/imports/', response.headers['Location'])
+        self.assertEqual(connection.store['batches'], [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -29,9 +29,22 @@ def _strip_comments(sql):
 
 
 class MigrationNumberingTests(unittest.TestCase):
-    def test_014_is_the_next_free_number(self):
-        others = [n for n in EXISTING_MIGRATION_NUMBERS if n != 14]
-        self.assertEqual(max(others) + 1, 14)
+    """Raqamlash — 014 yozilgan paytda "keyingi bo'sh raqam" edi (013'dan
+    keyin). Keyinroq 015+ qo'shilishi kutilgan (Phase 2D.1.1), shuning uchun
+    bu yerda "014 = eng kattasi" deb QOTIRILMAYDI — buning o'rniga umumiy,
+    vaqt o'tishi bilan buzilmaydigan invariant tekshiriladi."""
+
+    def test_014_file_exists_and_immediately_follows_013(self):
+        self.assertIn(13, EXISTING_MIGRATION_NUMBERS)
+        self.assertIn(14, EXISTING_MIGRATION_NUMBERS)
+
+    def test_migration_numbers_have_no_gaps(self):
+        numbers = sorted(EXISTING_MIGRATION_NUMBERS)
+        self.assertEqual(numbers, list(range(1, len(numbers) + 1)))
+
+    def test_no_duplicate_migration_numbers(self):
+        self.assertEqual(len(EXISTING_MIGRATION_NUMBERS),
+                         len(set(EXISTING_MIGRATION_NUMBERS)))
 
 
 class MigrationSafetyTests(unittest.TestCase):

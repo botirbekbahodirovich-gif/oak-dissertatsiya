@@ -19,7 +19,7 @@ from tests.fake_article_import_pg import (BATCH_COLUMNS, ITEM_COLUMNS,
 
 DISCOVERY_BATCH_COLUMNS = BATCH_COLUMNS + [
     'source_provider', 'source_query', 'source_oak_field_id',
-    'source_result_count', 'excluded_no_doi_count',
+    'source_result_count', 'excluded_no_doi_count', 'source_request_id',
 ]
 DISCOVERY_ITEM_COLUMNS = ITEM_COLUMNS + ['external_source_id']
 
@@ -35,11 +35,20 @@ class FakeDiscoveryCursor(FakeImportCursor):
         if sql.startswith('SELECT normalized_doi, id, batch_id FROM '
                           'article_import_items WHERE normalized_doi = ANY'):
             return self._find_active_dois(p)
+        if sql.startswith('SELECT id FROM article_import_batches WHERE '
+                          "source_type = 'discovery' AND source_request_id"):
+            return self._find_discovery_batch_by_request_id(p)
         return super()._dispatch(sql, p)
 
     def _insert_discovery_batch(self, p):
         (created_by, status, source_provider, source_query, source_oak_field_id,
-         source_result_count, excluded_no_doi_count) = p
+         source_result_count, excluded_no_doi_count, source_request_id) = p
+        if source_request_id is not None:
+            conflict = any(
+                r['source_type'] == 'discovery' and r['source_request_id'] == source_request_id
+                for r in self.store['batches'])
+            if conflict:
+                return [], [('id',)]            # ON CONFLICT DO NOTHING
         batch_id = self.store['next_batch_id']
         self.store['next_batch_id'] += 1
         row = {c: None for c in DISCOVERY_BATCH_COLUMNS}
@@ -50,6 +59,7 @@ class FakeDiscoveryCursor(FakeImportCursor):
             'source_oak_field_id': source_oak_field_id,
             'source_result_count': source_result_count,
             'excluded_no_doi_count': excluded_no_doi_count,
+            'source_request_id': source_request_id,
             'total_items': 0, 'pending_count': 0, 'processing_count': 0,
             'review_count': 0, 'approved_count': 0, 'rejected_count': 0,
             'failed_count': 0, 'duplicate_count': 0, 'skipped_count': 0,
@@ -57,6 +67,15 @@ class FakeDiscoveryCursor(FakeImportCursor):
         })
         self.store['batches'].append(row)
         return [(batch_id,)], [('id',)]
+
+    def _find_discovery_batch_by_request_id(self, p):
+        source_request_id = p[0]
+        row = next((r for r in self.store['batches']
+                    if r['source_type'] == 'discovery'
+                    and r['source_request_id'] == source_request_id), None)
+        if row is None:
+            return [], [('id',)]
+        return [(row['id'],)], [('id',)]
 
     def _insert_discovery_item(self, p):
         batch_id, row_number, raw_input, normalized_doi, external_source_id = p
