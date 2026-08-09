@@ -232,6 +232,8 @@ ADMIN_SERVICES: tuple[NavItem, ...] = (
             description="H-index snapshotlari"),
     NavItem("Maqolalar importi", "/admin/articles/import", icon="bi-cloud-arrow-down",
             description="DOI/CSV orqali ommaviy import va ko'rib chiqish"),
+    NavItem("Yangi maqolalarni qidirish", "/admin/articles/discovery", icon="bi-search",
+            description="OpenAlex'dan kalit so'z bo'yicha nomzod maqolalar topish"),
     NavItem("Maqolalar metadata nazorati", "/admin/articles/metadata-sync",
             icon="bi-arrow-repeat",
             description="Tashqi manbalarda topilgan o'zgarishlarni ko'rib chiqish"),

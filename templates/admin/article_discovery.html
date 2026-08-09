@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Yangi ilmiy maqolalarni qidirish (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260809" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Yangi ilmiy maqolalarni qidirish', 'OpenAlex\'dan kalit so\'z va sana oralig\'i bo\'yicha nomzod maqolalarni topadi — hech narsa avtomatik yaratilmaydi.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="ai-actions-row">
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles/import">
+      <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>DOI/CSV importi</a>
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles/imports">
+      <i class="bi bi-clock-history" aria-hidden="true"></i>Import tarixi</a>
+  </div>
+
+  {% if not configured %}
+  <div class="ol-badge ol-badge--error" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    OpenAlex ulanishi sozlanmagan. Server <code>.env</code> fayliga
+    <code>OPENALEX_API_KEY</code> yoki <code>OPENALEX_MAILTO</code> qo'shing.
+  </div>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="ad-search-heading">
+    <h2 id="ad-search-heading" class="ol-h4">Qidiruv</h2>
+    <form method="POST" action="/admin/articles/discovery/search" class="ol-filters">
+      {{ csrf_token()|safe }}
+      <p class="ai-help">Manba: OpenAlex</p>
+      <div class="ol-filters__row">
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-keyword">Kalit so'z</label>
+          <input class="ol-field" type="text" id="ad-keyword" name="keyword"
+                 minlength="3" maxlength="300" required
+                 value="{{ (form.keyword if form else '') }}"
+                 placeholder="masalan: machine learning in oncology">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-from-date">Boshlanish sanasi</label>
+          <input class="ol-field" type="date" id="ad-from-date" name="from_date"
+                 value="{{ (form.from_date if form else '') }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-to-date">Tugash sanasi</label>
+          <input class="ol-field" type="date" id="ad-to-date" name="to_date"
+                 value="{{ (form.to_date if form else '') }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-limit">Natijalar limiti</label>
+          <input class="ol-field" type="number" id="ad-limit" name="limit"
+                 min="1" max="{{ config.hard_result_limit }}"
+                 value="{{ (form.limit if form else config.default_result_limit) }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-oak-field">OAK yo'nalishi — ixtiyoriy</label>
+          <select class="ol-field" id="ad-oak-field" name="oak_field_id">
+            <option value="">— Tanlanmagan —</option>
+            {% for node in field_tree %}
+            <option value="{{ node.id }}">{{ node.name_uz }}</option>
+            {% for child in node.children %}
+            <option value="{{ child.id }}">&nbsp;&nbsp;{{ child.name_uz }}</option>
+            {% endfor %}
+            {% endfor %}
+          </select>
+          <p class="ai-help">Faqat qidiruv niyati sifatida saqlanadi — maqolaga avtomatik biriktirilmaydi.</p>
+        </div>
+      </div>
+      <div class="ol-filters__actions">
+        <button type="submit" class="ol-btn ol-btn--primary" {{ 'disabled' if not configured }}>
+          <i class="bi bi-search" aria-hidden="true"></i>Qidirish</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

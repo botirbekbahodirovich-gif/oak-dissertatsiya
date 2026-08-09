@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Qidiruv natijalari — maqolalar (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260809" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Qidiruv natijalari', '"' + preview.query.keyword + '" — ' + preview.query.from_date.isoformat() + ' dan ' + preview.query.to_date.isoformat() + ' gacha.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                        ('Qidirish', '/admin/articles/discovery')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if field_label %}
+  <p class="ai-help">OAK yo'nalishi (qidiruv niyati): {{ field_label }}</p>
+  {% endif %}
+
+  <div class="ai-summary-grid">
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.total_count }}</div>
+      <div class="ai-summary-item__label">Manbada mos</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.inspected_count }}</div>
+      <div class="ai-summary-item__label">Ko'rib chiqildi</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.new_count }}</div>
+      <div class="ai-summary-item__label">Yangi</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.existing_count }}</div>
+      <div class="ai-summary-item__label">Bazadagi</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.already_queued_count }}</div>
+      <div class="ai-summary-item__label">Import navbatida</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.no_doi_count }}</div>
+      <div class="ai-summary-item__label">DOI yo'q</div>
+    </div>
+    <div class="ai-summary-item">
+      <div class="ai-summary-item__value">{{ summary.duplicate_in_result_count }}</div>
+      <div class="ai-summary-item__label">Takroriy</div>
+    </div>
+  </div>
+
+  {% if summary.total_count > preview.candidates|length + summary.no_doi_count %}
+  <p class="ai-help">Manbada bundan ko'proq natija bor — faqat birinchi {{ preview.inspected_count }} tasi ko'rib chiqildi (bounded qidiruv).</p>
+  {% endif %}
+
+  {% if preview.candidates %}
+  <div class="ol-table-wrap">
+    <table class="ol-table">
+      <thead>
+        <tr>
+          <th scope="col">Sarlavha</th>
+          <th scope="col">DOI</th>
+          <th scope="col">Jurnal / manba</th>
+          <th scope="col">Sana</th>
+          <th scope="col">OpenAlex ID</th>
+          <th scope="col">Holat</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in preview.candidates %}
+        <tr>
+          <td>{{ c.title or '—' }}
+            {% if c.is_retracted %}
+            <br><span class="ol-badge ol-badge--error">Chaqirib olingan (retracted)</span>
+            {% endif %}
+          </td>
+          <td>{{ c.doi }}</td>
+          <td>{{ c.source_name or '—' }}</td>
+          <td>{{ c.publication_date.isoformat() if c.publication_date else '—' }}</td>
+          <td>{{ c.external_source_id or '—' }}</td>
+          <td>
+            {% if c.classification == 'new' %}
+            <span class="ol-badge ol-badge--success">Yangi</span>
+            {% elif c.classification == 'existing_article' %}
+            <span class="ol-badge">Bazadagi
+              {% if c.existing_article_slug %} — <a href="/maqolalar/{{ c.existing_article_slug }}">ko'rish</a>{% endif %}
+            </span>
+            {% elif c.classification == 'already_queued' %}
+            <span class="ol-badge">Import navbatida</span>
+            {% elif c.classification == 'duplicate_in_result' %}
+            <span class="ol-badge">Takroriy</span>
+            {% else %}
+            <span class="ol-badge">{{ c.classification_label }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="POST" action="/admin/articles/discovery/enqueue" class="ai-actions-row">
+    {{ csrf_token()|safe }}
+    <input type="hidden" name="preview_token" value="{{ token }}">
+    <button type="submit" class="ol-btn ol-btn--primary" {{ 'disabled' if summary.new_count == 0 }}>
+      <i class="bi bi-inbox" aria-hidden="true"></i>
+      Yangi maqolalarni ko'rib chiqish navbatiga yuborish ({{ summary.new_count }})
+    </button>
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles/discovery">
+      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Yangi qidiruv</a>
+  </form>
+  {% else %}
+  <div class="ol-empty">
+    <p>Hech qanday nomzod topilmadi. Kalit so'z yoki sana oralig'ini o'zgartirib ko'ring.</p>
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles/discovery">Yangi qidiruv</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
