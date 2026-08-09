@@ -55,11 +55,11 @@ deploy/deploy-staging.sh.example --sha <reviewed-40-char-sha> --execute --restar
 ## 4. Migrations
 
 The project has no standalone migration-apply script. Schema for the
-`migrations/007`–`015` range is applied lazily by each module's idempotent
+`migrations/008`–`016` range is applied lazily by each module's idempotent
 `_ensure_schema()` / `ensure_schema()` function (identical DDL to the
 matching `migrations/*.sql` file, `CREATE TABLE/INDEX IF NOT EXISTS` and
 `ADD COLUMN IF NOT EXISTS`), invoked on first DB access after the app
-restarts. No manual `psql -f` step against `migrations/007+` is required or
+restarts. No manual `psql -f` step against `migrations/008+` is required or
 expected; do not hand-run those files.
 
 Order: current DB state → app restart (step 3) triggers schema ensure calls
@@ -135,4 +135,4 @@ scheduler dry-run → manual scheduler run → cron enable
   be paused
 - Database: restore from the step-2 backup only if data corruption is
   suspected; this has not been necessary in any of the additive migrations
-  007–015
+  008–016

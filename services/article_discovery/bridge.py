@@ -10,11 +10,11 @@ navbatdagi va takroriy nomzodlar YO'Q ORTIQCHA faol element yaratmaydi (§13,
 §28).
 
 ENQUEUE IDEMPOTENCY (Phase 2D.1.1). Item-level `uq_article_import_items_active_doi`
-(migrations/014) bitta DOI'ni ikki marta navbatga qo'yishning oldini oladi,
+(migrations/015) bitta DOI'ni ikki marta navbatga qo'yishning oldini oladi,
 lekin BATCH darajasida hech narsa yo'q edi — ikkinchi (double-click yoki
 parallel) enqueue so'rovi o'zining (odatda bo'sh) batch'ini yaratardi. Endi
 `request_id` (chaqiruvchidan — preview token hash'i) batch darajasida ham
-`ON CONFLICT ... DO NOTHING` (migrations/015) orqali bir xil so'rov uchun
+`ON CONFLICT ... DO NOTHING` (migrations/016) orqali bir xil so'rov uchun
 FAQAT BITTA batch kafolatlaydi.
 """
 from __future__ import annotations
@@ -71,7 +71,7 @@ def enqueue_discovery_candidates(cur, admin_id, query, candidates, *,
             cur, batch_id, row_number, candidate.doi, candidate.external_source_id)
         if item_id is None:
             # Boshqa (parallel) so'rov shu DOI bilan ULGURDI — final DB himoya
-            # (uq_article_import_items_active_doi, migrations/014) ishladi.
+            # (uq_article_import_items_active_doi, migrations/015) ishladi.
             conflicted.append(candidate.doi)
         else:
             queued.append({'item_id': item_id, 'doi': candidate.doi})

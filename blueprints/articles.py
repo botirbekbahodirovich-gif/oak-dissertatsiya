@@ -109,7 +109,7 @@ PDF_STREAM_MAX_AGE = 3600
 # ── Sxema ────────────────────────────────────────────────────────────────────
 
 def _ensure_schema(cur):
-    """migrations/007 bilan bir xil DDL, idempotent (grants konvensiyasi)."""
+    """migrations/008 bilan bir xil DDL, idempotent (grants konvensiyasi)."""
     global _schema_ready
     if _schema_ready:
         return

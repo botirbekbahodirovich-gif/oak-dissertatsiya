@@ -43,7 +43,7 @@ SYNC_COLUMNS = ['id', 'article_id', 'status', 'checked_at', 'checked_by',
                 'has_retraction_change', 'has_citation_change',
                 'has_author_change', 'has_provider_issue', 'created_at']
 
-# `article_metadata_sync_runs` (migrations/013, Phase 2C.3C) — scheduler run
+# `article_metadata_sync_runs` (migrations/014, Phase 2C.3C) — scheduler run
 # audit. Dashboard'ning "Avtomatik metadata tekshiruvi" bloki
 # `list_recent_scheduler_runs()` orqali shu jadvalni o'qiydi (Phase 2C.3D).
 RUN_COLUMNS = ['id', 'started_at', 'finished_at', 'status', 'trigger_type',

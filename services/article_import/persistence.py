@@ -2,7 +2,7 @@
 """DB qatlami — `article_import_batches` / `article_import_items` (Phase 2C.2).
 
 Konvensiya (grants/conferences/saved/articles bilan bir xil, CLAUDE.md):
-  * Sxema lazy + idempotent (`ensure_schema`) — migrations/010 bilan AYNAN
+  * Sxema lazy + idempotent (`ensure_schema`) — migrations/011 bilan AYNAN
     bir xil DDL.
   * DB — xom psycopg2 kursor, ORM yo'q.
   * Har bir status o'tishi `services.article_import.state` orqali TEKSHIRILADI
@@ -31,7 +31,7 @@ _schema_ready = False
 # ── Sxema ────────────────────────────────────────────────────────────────────
 
 def ensure_schema(cur):
-    """migrations/010 bilan bir xil DDL, idempotent."""
+    """migrations/011 bilan bir xil DDL, idempotent."""
     global _schema_ready
     if _schema_ready:
         return
@@ -106,7 +106,7 @@ def ensure_schema(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_article_import_items_batch_status "
                 "ON article_import_items (batch_id, status, row_number)")
 
-    # migrations/014 bilan AYNAN bir xil — Phase 2D.1 discovery provenance.
+    # migrations/015 bilan AYNAN bir xil — Phase 2D.1 discovery provenance.
     cur.execute("""
         ALTER TABLE article_import_batches
             ADD COLUMN IF NOT EXISTS source_provider      VARCHAR(24),
@@ -134,7 +134,7 @@ def ensure_schema(cur):
             )
     """)
 
-    # migrations/015 bilan AYNAN bir xil — Phase 2D.1.1 discovery enqueue
+    # migrations/016 bilan AYNAN bir xil — Phase 2D.1.1 discovery enqueue
     # idempotency (bitta preview -> bitta batch, concurrent double-submit'da
     # ham). `source_request_id` — raw preview token EMAS, uning hash'i.
     cur.execute("ALTER TABLE article_import_batches "
@@ -177,7 +177,7 @@ def get_or_create_discovery_batch(cur, created_by, *, source_provider, source_qu
                                   source_oak_field_id, source_result_count,
                                   excluded_no_doi_count, source_request_id=None):
     """Phase 2D.1.1 — `source_type='discovery'` partiyasi, provenance bilan
-    (migrations/014) VA enqueue idempotency bilan (migrations/015).
+    (migrations/015) VA enqueue idempotency bilan (migrations/016).
 
     `source_request_id` berilgan bo'lsa: `ON CONFLICT ... DO NOTHING` —
     `uq_article_import_batches_discovery_request` bilan AYNAN bir xil
@@ -227,7 +227,7 @@ def insert_discovery_item(cur, batch_id, row_number, normalized_doi,
     """Bitta discovery nomzodini `pending` sifatida yozadi.
 
     `ON CONFLICT ... DO NOTHING` — `uq_article_import_items_active_doi`
-    (migrations/014) bilan AYNAN bir xil predicate. Bu YAKUNIY himoya (§16):
+    (migrations/015) bilan AYNAN bir xil predicate. Bu YAKUNIY himoya (§16):
     ikki admin bir xil DOI'ni bir vaqtda navbatga qo'ysa, faqat BITTASI qator
     yozadi — ikkinchisi `None` oladi (chaqiruvchi buni "allaqachon navbatda"
     deb talqin qiladi, 500 EMAS).

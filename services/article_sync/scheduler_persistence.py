@@ -11,7 +11,7 @@ _schema_ready = False
 
 
 def ensure_schema(cur):
-    """migrations/013 bilan bir xil DDL, idempotent."""
+    """migrations/014 bilan bir xil DDL, idempotent."""
     global _schema_ready
     if _schema_ready:
         return

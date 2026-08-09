@@ -2,7 +2,7 @@
 """Discovery — haqiqiy Postgres ustidagi integratsiya/concurrency testlari
 (Phase 2D.1, §42).
 
-`uq_article_import_items_active_doi` (migrations/014) haqiqiy partial UNIQUE
+`uq_article_import_items_active_doi` (migrations/015) haqiqiy partial UNIQUE
 index sifatida ikkita PARALLEL tranzaksiyada bir xil DOI'ni bloklashini
 tekshiradi — buni qalbaki kursor bilan mazmunli sinab bo'lmaydi (haqiqiy
 constraint yo'q).
@@ -164,7 +164,7 @@ class ActiveDoiUniqueIndexTests(unittest.TestCase):
 
 @unittest.skipUnless(TEST_DB, 'TEST_DATABASE_URL sozlanmagan (faqat staging)')
 class DiscoveryBatchIdempotencyTests(unittest.TestCase):
-    """`uq_article_import_batches_discovery_request` (migrations/015) —
+    """`uq_article_import_batches_discovery_request` (migrations/016) —
     Phase 2D.1.1, §12: ikkita HAQIQIY parallel tranzaksiya bir xil
     `source_request_id` bilan batch yaratmoqchi bo'lsa, faqat BITTASI
     yozadi va hech qanday bo'sh "orphan" ikkinchi batch qolmaydi."""

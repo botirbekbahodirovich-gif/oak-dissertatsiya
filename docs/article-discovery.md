@@ -177,7 +177,7 @@ maqola yaratgan bo'lsa — item bekorga provayder so'rovisiz to'g'ridan-to'g'ri
 `already_exists`ga o'tadi. Bu himoya faqat discovery uchun emas — CSV/DOI-list
 import uchun ham amal qiladi (`processor.py` umumiy).
 
-## 10. Provenance (migrations/014)
+## 10. Provenance (migrations/015)
 
 | Ustun | Jadval | Ma'no |
 | --- | --- | --- |

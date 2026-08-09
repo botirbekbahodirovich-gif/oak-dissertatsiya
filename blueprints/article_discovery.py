@@ -176,7 +176,7 @@ def discovery_enqueue():
     request_id = _request_id_for_token(current_user.id, token)
 
     # Tezkor yo'l — best-effort, cache eviction/restart bo'lsa ham DB
-    # (source_request_id, migrations/015) YAKUNIY himoya bo'lib qoladi (§3).
+    # (source_request_id, migrations/016) YAKUNIY himoya bo'lib qoladi (§3).
     consumed = discovery_service.load_consumed(cache.get, token)
     if consumed and consumed.get('consumed'):
         return redirect('/admin/articles/imports/%s' % consumed['batch_id'])
