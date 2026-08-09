@@ -18,3 +18,5 @@ bleach==6.4.0
 python-docx==1.2.0
 Pillow==12.3.0
 rapidfuzz==3.14.5
+# Telegram Login OIDC id_token verification (RS256 signature via JWKS).
+PyJWT[crypto]==2.7.0

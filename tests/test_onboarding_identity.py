@@ -139,12 +139,20 @@ class OnboardingIdentityTests(unittest.TestCase):
 
     def test_telegram_login_source_has_no_username_or_email_fallback(self):
         # Source-level guard against reintroducing the takeover-prone fallback:
-        # the login flow must select users only by telegram_id.
+        # the shared helper both the legacy widget and the OIDC callback call
+        # into must select users only by telegram_id.
         import inspect
-        src = inspect.getsource(auth.telegram_login)
-        self.assertIn("WHERE telegram_id = %s", src)
-        self.assertNotIn("WHERE email = %s", src)
-        self.assertNotIn("WHERE username = %s", src)
+        helper_src = inspect.getsource(auth._login_or_register_telegram_user)
+        self.assertIn("WHERE telegram_id = %s", helper_src)
+        self.assertNotIn("WHERE email = %s", helper_src)
+        self.assertNotIn("WHERE username = %s", helper_src)
+
+        # Both entry points must route through that one audited helper,
+        # rather than each growing their own (possibly diverging) lookup.
+        self.assertIn("_login_or_register_telegram_user",
+                       inspect.getsource(auth.telegram_login))
+        self.assertIn("_login_or_register_telegram_user",
+                       inspect.getsource(auth.telegram_login_callback))
 
     # ── Onboarding flow ──────────────────────────────────────────────────
 

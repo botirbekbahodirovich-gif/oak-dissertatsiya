@@ -7,6 +7,7 @@ from flask import (Blueprint, current_app, render_template, request, redirect,
 from flask_login import current_user, login_user, logout_user, login_required
 from dotenv import load_dotenv
 from security import log_exception
+import telegram_oidc
 load_dotenv()
 
 TELEGRAM_BOT_USERNAME = os.environ.get('TELEGRAM_BOT_USERNAME', 'send_kod_bot')
@@ -215,9 +216,66 @@ def _find_or_create_google_user(email, name):
         conn.close()
 
 
+def _login_or_register_telegram_user(tg_id):
+    """users jadvalida telegram_id bo'yicha topadi yoki yaratadi.
+
+    Bitta manba — eski widget (HMAC) va yangi OIDC oqimlari bir xil
+    hisob-yaratish/bog'lash mantig'idan foydalanishi uchun (ikkalasi ham
+    faqat Telegram'ning o'zgarmas raqamli ID'siga bog'laydi, hech qachon
+    mutable username'ga emas). (User, is_new) qaytaradi.
+    """
+    from app import User
+    is_new = False
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, username, email FROM users WHERE telegram_id = %s",
+            (tg_id,))
+        user_row = cur.fetchone()
+
+        if not user_row:
+            username = f"tg_{tg_id}"
+            email = f"telegram_{tg_id}@auth.local"
+            cur.execute(
+                "INSERT INTO users "
+                "(username, email, password_hash, is_admin, telegram_id) "
+                "VALUES (%s, %s, %s, %s, %s) "
+                "RETURNING id, username, email",
+                (username, email, 'telegram_auth', False, tg_id)
+            )
+            user_row = cur.fetchone()
+            conn.commit()
+            is_new = True
+        user_id = user_row[0]
+        username = user_row[1]
+        email = user_row[2]
+
+        # Har login bo'lganda tashriflar sonini oshiramiz (so'rovnoma gate'i uchun).
+        cur.execute(
+            "UPDATE users SET visit_count = COALESCE(visit_count, 0) + 1 WHERE id = %s",
+            (user_id,))
+        conn.commit()
+        # Telegram chat id — obuna/eslatma xabarlarini bot orqali yuborish
+        # uchun (blueprints/subscriptions.py o'qiydi). Xato loginni buzmaydi.
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT")
+            cur.execute("UPDATE users SET telegram_chat_id = %s WHERE id = %s",
+                        (int(tg_id), user_id))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+        cur.close()
+    finally:
+        conn.close()
+    return User(user_id, username, email), is_new
+
+
 @auth_bp.route('/login/telegram', methods=['POST'])
 def telegram_login():
-    from app import User
+    """Legacy widget callback (HMAC payload). Kept for backward compatibility
+    while any page still embeds telegram-widget.js; the main /login page no
+    longer does (see /login/telegram/start for the current OIDC flow)."""
     raw = request.get_json(silent=True) or {}
 
     if not TELEGRAM_BOT_TOKEN:
@@ -249,58 +307,14 @@ def telegram_login():
         if not tg_id:
             return jsonify({'success': False, 'error': 'Telegram ID topilmadi'}), 400
 
-        is_new = False
-        conn = get_connection()
-        try:
-            cur = conn.cursor()
-            # Bind only by Telegram's immutable, signed ID. Display usernames are
-            # mutable and must never be used for account linking.
-            cur.execute(
-                "SELECT id, username, email FROM users WHERE telegram_id = %s",
-                (tg_id,))
-            user_row = cur.fetchone()
-
-            if not user_row:
-                username = f"tg_{tg_id}"
-                email = f"telegram_{tg_id}@auth.local"
-                cur.execute(
-                    "INSERT INTO users "
-                    "(username, email, password_hash, is_admin, telegram_id) "
-                    "VALUES (%s, %s, %s, %s, %s) "
-                    "RETURNING id, username, email",
-                    (username, email, 'telegram_auth', False, tg_id)
-                )
-                user_row = cur.fetchone()
-                conn.commit()
-                is_new = True
-            user_id = user_row[0]
-            username = user_row[1]
-            email = user_row[2]
-
-            # Har login bo'lganda tashriflar sonini oshiramiz (so'rovnoma gate'i uchun).
-            cur.execute(
-                "UPDATE users SET visit_count = COALESCE(visit_count, 0) + 1 WHERE id = %s",
-                (user_id,))
-            conn.commit()
-            # Telegram chat id — obuna/eslatma xabarlarini bot orqali yuborish
-            # uchun (blueprints/subscriptions.py o'qiydi). Xato loginni buzmaydi.
-            try:
-                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT")
-                cur.execute("UPDATE users SET telegram_chat_id = %s WHERE id = %s",
-                            (int(tg_id), user_id))
-                conn.commit()
-            except Exception:
-                conn.rollback()
-            cur.close()
-        finally:
-            conn.close()
+        user, is_new = _login_or_register_telegram_user(tg_id)
 
     except Exception:
         log_exception(current_app.logger, "Telegram login bajarilmadi")
         return jsonify({'success': False, 'error': "Tizimga kirib bo'lmadi."}), 500
 
     session.permanent = True
-    login_user(User(user_id, username, email), remember=True)
+    login_user(user, remember=True)
     session['just_registered' if is_new else 'just_logged_in'] = True
     if is_new:
         session['prefill_ism'] = (data.get('first_name') or '').strip().title()
@@ -308,3 +322,113 @@ def telegram_login():
     session.modified = True   # sessiya cookie brauzerga aniq yozilishi uchun
     dest = _post_login_dest('/')
     return jsonify({'success': True, 'redirect': '/cabinet/onboarding' if is_new else dest})
+
+
+# ── Telegram Login — OpenID Connect (current) ────────────────────────────────
+# Legacy iframe widget above is kept only for other pages that still embed
+# it; the /login page itself now uses this server-side Authorization Code +
+# PKCE flow. See telegram_oidc.py for the endpoint/verification details.
+_TG_OIDC_SESSION_KEYS = (
+    'tg_oidc_state', 'tg_oidc_verifier', 'tg_oidc_nonce',
+    'tg_oidc_next', 'tg_oidc_expires',
+)
+_TG_OIDC_FLOW_TTL_SECONDS = 600
+
+
+def _telegram_oidc_redirect_uri():
+    # request.url_root already resolves to the correct scheme+host via
+    # ProxyFix, matching the same pattern as _google_redirect_uri().
+    return request.url_root.rstrip('/') + '/login/telegram/callback'
+
+
+def _clear_telegram_oidc_session():
+    for key in _TG_OIDC_SESSION_KEYS:
+        session.pop(key, None)
+
+
+@auth_bp.route('/login/telegram/start')
+def telegram_login_start():
+    if current_user.is_authenticated:
+        return redirect(_post_login_dest(url_for('index')))
+    if not telegram_oidc.is_configured():
+        return render_template('login.html', error="Telegram login sozlanmagan.", registered=None)
+
+    state = telegram_oidc.generate_state()
+    verifier = telegram_oidc.generate_pkce_verifier()
+    challenge = telegram_oidc.pkce_challenge(verifier)
+    nonce = telegram_oidc.generate_state()
+    nxt = _safe_next(request.args.get('next')) or _safe_next(session.get('login_next')) or '/'
+
+    session['tg_oidc_state'] = state
+    session['tg_oidc_verifier'] = verifier
+    session['tg_oidc_nonce'] = nonce
+    session['tg_oidc_next'] = nxt
+    session['tg_oidc_expires'] = time.time() + _TG_OIDC_FLOW_TTL_SECONDS
+    session.modified = True
+
+    auth_url = telegram_oidc.build_authorization_url(
+        _telegram_oidc_redirect_uri(), state, challenge, nonce)
+    return redirect(auth_url)
+
+
+@auth_bp.route('/login/telegram/callback')
+def telegram_login_callback():
+    if request.args.get('error'):
+        _clear_telegram_oidc_session()
+        return render_template(
+            'login.html', error="Telegram orqali kirish bekor qilindi.", registered=None)
+
+    expected_state = session.get('tg_oidc_state')
+    verifier = session.get('tg_oidc_verifier')
+    nonce = session.get('tg_oidc_nonce')
+    expires = session.get('tg_oidc_expires') or 0
+    nxt = session.get('tg_oidc_next') or '/'
+    # Single-use regardless of outcome: a replayed callback URL must fail
+    # closed (no verifier/state left to complete the exchange).
+    _clear_telegram_oidc_session()
+
+    if not expected_state or not verifier or time.time() > expires:
+        return render_template(
+            'login.html',
+            error="Kirish seansi muddati tugagan. Qaytadan urinib ko'ring.",
+            registered=None)
+
+    got_state = request.args.get('state', '')
+    if not got_state or not hmac.compare_digest(got_state, expected_state):
+        return render_template(
+            'login.html',
+            error="Xavfsizlik tekshiruvi muvaffaqiyatsiz o'tmadi. Qaytadan urinib ko'ring.",
+            registered=None)
+
+    code = request.args.get('code')
+    if not code:
+        return render_template(
+            'login.html', error="Telegram tasdiqlash kodi topilmadi.", registered=None)
+
+    try:
+        id_token = telegram_oidc.exchange_code_for_id_token(
+            code, _telegram_oidc_redirect_uri(), verifier)
+        claims = telegram_oidc.verify_id_token(id_token, nonce=nonce)
+    except telegram_oidc.TelegramOIDCError:
+        log_exception(current_app.logger, "Telegram OIDC almashinuvi bajarilmadi")
+        return render_template(
+            'login.html', error="Telegram bilan bog'lanishda xatolik yuz berdi.", registered=None)
+
+    tg_id = claims['id']
+    first_name = (claims.get('given_name') or '').strip()
+    last_name = (claims.get('family_name') or '').strip()
+
+    try:
+        user, is_new = _login_or_register_telegram_user(tg_id)
+    except Exception:
+        log_exception(current_app.logger, "Telegram foydalanuvchisini saqlab bo'lmadi")
+        return render_template('login.html', error="Tizimga kirib bo'lmadi.", registered=None)
+
+    session.permanent = True
+    login_user(user, remember=True)
+    session['just_registered' if is_new else 'just_logged_in'] = True
+    if is_new:
+        session['prefill_ism'] = first_name.title()
+        session['prefill_familiya'] = last_name.title()
+    session.modified = True
+    return redirect('/cabinet/onboarding' if is_new else nxt)
