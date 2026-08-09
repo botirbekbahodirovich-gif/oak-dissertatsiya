@@ -213,7 +213,7 @@
   "@context": "https://schema.org", "@type": "Person",
   "name": {{ olim_name|tojson }},
   "alternateName": {{ (olim_name | to_latin) | tojson }},
-  "url": "https://www.olimlar.uz{{ ('/@' ~ profile.slug) if (profile and profile.slug) else ('/olim/' ~ olim_name|urlencode) }}"
+  "url": "https://www.olimlar.uz{{ ('/' ~ profile.slug) if (profile and profile.slug) else (('/' ~ public_id) if public_id else ('/olim/' ~ olim_name|urlencode)) }}"
   {%- if profile and profile.institution %}, "affiliation": {"@type": "Organization", "name": {{ profile.institution|tojson }}}{% endif %}
   {%- set _same = [] %}
   {%- if profile %}{% for u in [profile.orcid_url, profile.scholar_url, profile.scopus_url, profile.wos_url] %}{% if u %}{% set _ = _same.append(u) %}{% endif %}{% endfor %}{% endif %}
@@ -222,7 +222,7 @@
 </script>
 <script>
 function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
-  navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if profile else "" }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent=old;},1200);});}
+  navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if (profile and profile.slug) else (public_id or "") }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent=old;},1200);});}
 </script>
 {% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
 {% set gender = detect_gender(olim_name) %}
@@ -247,13 +247,20 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
       {% if profile and profile.slug %}
       <div class="op-uname">
-        <span class="username-badge" title="Sayt ichidagi nom">@{{ profile.slug }}</span>
+        <span class="username-badge" title="Sayt ichidagi nom">{{ profile.slug }}</span>
         <span class="op-uname-txt" id="op-uname">olimlar.uz/{{ profile.slug }}</span>
         <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
         <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
       </div>
+      {% elif public_id %}
+      <div class="op-uname">
+        <span class="username-badge" title="Doimiy Olimlar ID">{{ public_id }}</span>
+        <span class="op-uname-txt" id="op-uname">olimlar.uz/{{ public_id }}</span>
+        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
+        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ public_id)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
+      </div>
       {% elif is_owner %}
-      <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">🔗 Sodda sahifa manzili (@username) o'rnating</a></div>
+      <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">🔗 Sodda sahifa manzili (username) o'rnating</a></div>
       {% endif %}
       <div class="op-degs">
         {% if stats.phd %}<span class="deg-pill phd">{{ stats.phd }} PhD</span>{% endif %}
@@ -267,7 +274,30 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <span><b>{{ stats.opponent_count }}</b> opponentlik</span>
         <span><b>{{ stats.supervisor_count or 0 }}</b> shogird</span>
       </div>
-      {% if h_index %}
+      {% if profile and profile.institution %}
+      <div class="op-uname">
+        {% if profile.university_name %}
+        <a class="op-uname-set" href="/university/{{ profile.university_name|urlencode }}">🏛️ {{ profile.institution }}</a>
+        {% else %}
+        <span class="op-uname-txt">🏛️ {{ profile.institution }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if research_metrics %}
+      <a href="/reyting" class="op-hidx" title="H-index reyting — uz.h-index.com">
+        <span class="op-hidx-ttl">📊 H-index va O‘zbekiston bo‘yicha o‘rin</span>
+        <span class="op-hidx-nums">
+          {% for metric in research_metrics %}
+          <span>
+            {% if metric.source == 'scopus' %}Scopus{% elif metric.source == 'scholar' %}Google Scholar{% elif metric.source == 'wos' %}WoS{% else %}{{ metric.source }}{% endif %}
+            <b>{{ metric.h_index if metric.h_index is not none else '—' }}</b>
+            {% if metric.rank %}· #{{ metric.rank }}{% endif %}
+          </span>
+          {% endfor %}
+        </span>
+        <span class="op-hidx-src">Manba: uz.h-index.com{% if research_metrics[0].snapshot_date %} ({{ research_metrics[0].snapshot_date }}){% endif %}</span>
+      </a>
+      {% elif h_index %}
       <a href="/reyting" class="op-hidx" title="H-index reyting — uz.h-index.com">
         <span class="op-hidx-ttl">📊 H-index{% if h_index.rank %} · <b>{{ h_index.rank }}-o'rin</b>{% endif %}</span>
         <span class="op-hidx-nums">

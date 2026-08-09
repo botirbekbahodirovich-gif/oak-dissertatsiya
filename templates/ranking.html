@@ -123,6 +123,13 @@
   <!-- ── OLIMLAR ── -->
   <section id="pane-scholars">
     <div class="rk-filter">
+      <div class="rk-fld">
+        <label class="rk-lbl" for="sch-source">Reyting manbasi</label>
+        <select id="sch-source">
+          <option value="scopus">Scopus TOP 1000</option>
+          <option value="scholar">Google Scholar TOP 1000</option>
+        </select>
+      </div>
       <div class="rk-fld grow">
         <label class="rk-lbl" for="sch-search">Qidiruv (ism / tashkilot)</label>
         <input type="text" id="sch-search" placeholder="Masalan: Karimov yoki universitet" autocomplete="off">
@@ -144,12 +151,10 @@
             <th class="num">O'rin</th>
             <th>Olim</th>
             <th>Tashkilot</th>
-            <th class="num sortable" data-sort="h_scopus">H-Scopus <span class="arr">▾</span></th>
-            <th class="num sortable" data-sort="h_wos">H-WoS <span class="arr">▾</span></th>
-            <th class="num sortable" data-sort="h_scholar">H-Scholar <span class="arr">▾</span></th>
+            <th class="num sortable" id="sch-h-label" data-sort="h_index">H-<span id="sch-source-label">Scopus</span> <span class="arr">▾</span></th>
           </tr>
         </thead>
-        <tbody><tr><td colspan="6" class="rk-state"><span class="rk-spin"></span>Yuklanmoqda…</td></tr></tbody>
+        <tbody><tr><td colspan="4" class="rk-state"><span class="rk-spin"></span>Yuklanmoqda…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -204,7 +209,7 @@
   };
   var state = {
     tab: 'scholars',
-    scholars: { data: [], snapshot: 'latest', sort: null, dir: -1 },
+    scholars: { data: [], snapshot: 'latest', source: 'scopus', sort: null, dir: -1 },
     institutions: { data: [], snapshot: 'latest', sort: null, dir: -1 }
   };
 
@@ -269,19 +274,20 @@
 
   function renderScholars(items) {
     var tb = document.querySelector('#sch-tbl tbody');
-    document.getElementById('sch-count').textContent = items.length + ' ta olim';
-    if (!items.length) { tb.innerHTML = '<tr><td colspan="6" class="rk-state">Mos olim topilmadi</td></tr>'; return; }
+    var sourceName = state.scholars.source === 'scholar' ? 'Google Scholar' : 'Scopus';
+    document.getElementById('sch-count').textContent = items.length + ' ta ' + sourceName + ' olimi';
+    if (!items.length) { tb.innerHTML = '<tr><td colspan="4" class="rk-state">Mos olim topilmadi</td></tr>'; return; }
     var html = '';
     items.forEach(function (s, i) {
-      var name = s.olim_match
-        ? '<a href="/olim/' + encodeURIComponent(s.olim_match) + '">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
+      var name = s.profile_url
+        ? '<a href="' + esc(s.profile_url) + '">' + esc(s.scholar_name) + ' <span class="link-ic">↗</span></a>'
         : esc(s.scholar_name);
       var orcid = s.orcid ? ' <a class="rk-orcid" href="https://orcid.org/' + encodeURIComponent(s.orcid.replace(/^https?:\/\/orcid\.org\//, '')) + '" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill"></i></a>' : '';
       html += '<tr>' +
         '<td class="rk-rank">' + medal(s.rank, i) + '</td>' +
         '<td class="rk-name">' + name + orcid + '</td>' +
         '<td>' + esc(s.institution || '—') + '</td>' +
-        hcell(s.h_scopus) + hcell(s.h_wos) + hcell(s.h_scholar) + '</tr>';
+        hcell(s.h_index) + '</tr>';
     });
     tb.innerHTML = html;
   }
@@ -310,7 +316,9 @@
   function load(tab) {
     var mySeq = ++seq;
     var st = state[tab];
-    var url = '/api/v1/ranking/' + tab + '?snapshot=' + encodeURIComponent(st.snapshot);
+    var url = tab === 'scholars'
+      ? '/api/v1/ranking/researchers?source=' + encodeURIComponent(st.source)
+      : '/api/v1/ranking/institutions?snapshot=' + encodeURIComponent(st.snapshot);
     fetch(url).then(function (r) { return r.json(); }).then(function (d) {
       if (mySeq !== seq) return;
       if (!d.ok) return;
@@ -360,6 +368,14 @@
   });
   var catEl = document.getElementById('inst-cat');
   if (catEl) catEl.addEventListener('change', function () { applyView('institutions'); });
+  var sourceEl = document.getElementById('sch-source');
+  if (sourceEl) sourceEl.addEventListener('change', function () {
+    state.scholars.source = this.value === 'scholar' ? 'scholar' : 'scopus';
+    state.scholars.data = [];
+    state.scholars.sort = null;
+    document.getElementById('sch-source-label').textContent = state.scholars.source === 'scholar' ? 'Scholar' : 'Scopus';
+    load('scholars');
+  });
 
   // ── init ──
   rkSwitch(INITIAL_TAB === 'institutions' ? 'institutions' : 'scholars');
