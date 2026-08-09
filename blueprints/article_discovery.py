@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Manual OpenAlex Article Discovery — admin panel (Phase 2D.1).
+"""Manual Article Discovery (OpenAlex + Crossref) — admin panel (Phase 2D.1/2D.2).
 
 Bu blueprint faqat HTTP orkestratsiya: qidiruv/klassifikatsiya/preview token
 mantig'i — barchasi `services/article_discovery/`da (§77 naqsh —
@@ -14,22 +14,42 @@ maqola FAQAT mavjud import review navbatida, admin aniq approve qilgandan
 keyin yaratiladi.
 
 Routes (admin, barchasi login + is_admin talab qiladi):
-  GET  /admin/articles/discovery         — qidiruv formasi
-  POST /admin/articles/discovery/search  — OpenAlex qidiruv (tashqi xarajat!)
-  POST /admin/articles/discovery/enqueue — server-side preview tokenidan
-                                            yangi import partiyasi yaratadi
+  GET  /admin/articles/discovery                          — qidiruv formasi
+                                                              + saqlangan
+                                                              so'rovlar
+  POST /admin/articles/discovery/search                    — qidiruv
+                                                              (tashqi xarajat!)
+  POST /admin/articles/discovery/enqueue                   — server-side
+                                                              preview
+                                                              tokenidan
+                                                              import
+                                                              partiyasi
+  POST /admin/articles/discovery/saved-queries              — joriy formani
+                                                              nomlab saqlash
+  POST /admin/articles/discovery/saved-queries/<id>/run     — ishga tushirish
+                                                              (tashqi xarajat!)
+  GET  /admin/articles/discovery/saved-queries/<id>/edit    — tahrirlash
+                                                              formasi
+  POST /admin/articles/discovery/saved-queries/<id>/update  — yangilash
+  POST /admin/articles/discovery/saved-queries/<id>/deactivate — soft
+                                                              faolsizlantirish
+
+Saqlangan so'rov FAQAT konfiguratsiyani eslab qoladi — hech qachon
+o'zi-o'zidan ishga tushmaydi (rejalashtirilgan discovery — Phase 2D.3, bu
+yerda YO'Q, §11).
 """
 from __future__ import annotations
 
-from flask import (Blueprint, current_app, flash, redirect, render_template,
-                   request)
+from flask import (Blueprint, abort, current_app, flash, redirect,
+                   render_template, request)
 from flask_login import current_user, login_required
 
 from data import get_connection
 from security import log_exception
-from services.article_discovery import bridge
+from services.article_discovery import bridge, saved_queries
 from services.article_discovery.config import config_from_env
-from services.article_discovery.models import (DiscoveryValidationError,
+from services.article_discovery.models import (PROVIDER_LABELS, SUPPORTED_PROVIDERS,
+                                                DiscoveryValidationError,
                                                 ENQUEUABLE_CLASSIFICATIONS)
 from services.article_discovery import service as discovery_service
 from services.article_metadata.models import NOT_CONFIGURED, OK
@@ -61,11 +81,11 @@ def _field_tree_context(cur):
 
 
 PROVIDER_ERROR_MESSAGES = {
-    'not_found': 'OpenAlex bu so\'rov uchun hech narsa topmadi.',
-    'timeout': 'OpenAlex javob bermadi (timeout). Birozdan keyin qayta urinib ko\'ring.',
-    'rate_limited': 'OpenAlex so\'rovlar chegarasiga yetdi. Birozdan keyin qayta urinib ko\'ring.',
-    'unavailable': 'OpenAlex hozircha ishlamayapti. Birozdan keyin qayta urinib ko\'ring.',
-    'invalid_response': 'OpenAlex javobi tushunarsiz formatda edi.',
+    'not_found': 'Manba bu so\'rov uchun hech narsa topmadi.',
+    'timeout': 'Manba javob bermadi (timeout). Birozdan keyin qayta urinib ko\'ring.',
+    'rate_limited': 'Manba so\'rovlar chegarasiga yetdi. Birozdan keyin qayta urinib ko\'ring.',
+    'unavailable': 'Manba hozircha ishlamayapti. Birozdan keyin qayta urinib ko\'ring.',
+    'invalid_response': 'Manba javobi tushunarsiz formatda edi.',
 }
 
 
@@ -80,14 +100,43 @@ def _field_tree():
     return tree
 
 
+def _saved_queries():
+    """Faqat FAOL saqlangan so'rovlar — `scientific_fields WHERE is_active`
+    bilan bir xil konvensiya: `is_active=False` ro'yxatdan yashiradi
+    (audit/tarix uchun qatorning o'zi DB'da qoladi, UI'da qayta
+    faollashtirish tugmasi YO'Q — §11 UI ro'yxati faqat Run/Edit/Deactivate)."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            rows = saved_queries.list_all(cur, include_inactive=False)
+            conn.commit()
+    finally:
+        conn.close()
+    # Jinja shablonlari Python funksiyasini to'g'ridan-to'g'ri chaqira
+    # olmaydi — OAK yo'nalishi nomi shu yerda oldindan hisoblanadi (preview
+    # shablonidagi `field_label` bilan bir xil naqsh).
+    tree = _field_tree()
+    for row in rows:
+        row['oak_field_label'] = (_find_field_label(tree, row['oak_field_id'])
+                                  if row.get('oak_field_id') else None)
+    return rows
+
+
 @article_discovery_bp.route('/admin/articles/discovery')
 @login_required
 def discovery_search_form():
     _require_admin()
     config = config_from_env()
-    return render_template('admin/article_discovery.html', config=config,
-                           configured=config.is_configured,
-                           field_tree=_field_tree())
+    return render_template('admin/article_discovery.html',
+                           **_search_form_context(config, configured=config.is_configured))
+
+
+def _search_form_context(config, **extra):
+    ctx = {'config': config, 'field_tree': _field_tree(),
+          'saved_queries': _saved_queries(), 'providers': SUPPORTED_PROVIDERS,
+          'provider_labels': PROVIDER_LABELS}
+    ctx.update(extra)
+    return ctx
 
 
 @article_discovery_bp.route('/admin/articles/discovery/search', methods=['POST'])
@@ -101,44 +150,43 @@ def discovery_search():
                                               config=config):
         flash("Qidiruvlar chegarasiga yetdingiz — bir necha soniyadan keyin "
              "qayta urinib ko'ring.")
-        return render_template('admin/article_discovery.html', config=config,
-                               configured=config.is_configured,
-                               field_tree=_field_tree()), 429
+        return render_template('admin/article_discovery.html',
+                               **_search_form_context(config, configured=config.is_configured)), 429
 
     try:
         query = discovery_service.validate_query(request.form, config=config)
     except DiscoveryValidationError as exc:
         flash(exc.public_message)
         return render_template(
-            'admin/article_discovery.html', config=config,
-            configured=config.is_configured, form=request.form,
-            field_tree=_field_tree()), 400
+            'admin/article_discovery.html',
+            **_search_form_context(config, configured=config.is_configured,
+                                   form=request.form)), 400
 
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            preview = discovery_service.run_discovery_search(cur, query, config=config)
+            preview = discovery_service.run_multi_provider_search(cur, query, config=config)
             conn.commit()
     except Exception:
         conn.rollback()
         log_exception(current_app.logger, 'Discovery qidiruv muvaffaqiyatsiz')
         flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
-        return render_template('admin/article_discovery.html', config=config,
-                               configured=config.is_configured, form=request.form,
-                               field_tree=_field_tree()), 502
+        return render_template('admin/article_discovery.html',
+                               **_search_form_context(config, configured=config.is_configured,
+                                                      form=request.form)), 502
     finally:
         conn.close()
 
     if preview.status == NOT_CONFIGURED:
-        return render_template('admin/article_discovery.html', config=config,
-                               configured=False, form=request.form,
-                               field_tree=_field_tree())
+        return render_template('admin/article_discovery.html',
+                               **_search_form_context(config, configured=False,
+                                                      form=request.form))
     if preview.status != OK:
         flash(PROVIDER_ERROR_MESSAGES.get(preview.status,
-                                          'OpenAlex so\'rovi muvaffaqiyatsiz bo\'ldi.'))
-        return render_template('admin/article_discovery.html', config=config,
-                               configured=config.is_configured, form=request.form,
-                               field_tree=_field_tree())
+                                          'Qidiruv so\'rovi muvaffaqiyatsiz bo\'ldi.'))
+        return render_template('admin/article_discovery.html',
+                               **_search_form_context(config, configured=config.is_configured,
+                                                      form=request.form))
 
     token = discovery_service.store_preview(cache.set, current_user.id, preview,
                                             config=config)
@@ -148,7 +196,7 @@ def discovery_search():
 
     return render_template('admin/article_discovery_preview.html', config=config,
                            preview=preview, summary=preview.summary(), token=token,
-                           field_label=field_label,
+                           field_label=field_label, provider_labels=PROVIDER_LABELS,
                            enqueuable=ENQUEUABLE_CLASSIFICATIONS)
 
 
@@ -187,14 +235,20 @@ def discovery_enqueue():
         return redirect('/admin/articles/discovery')
 
     from services.article_discovery.models import ArticleDiscoveryQuery
+    from services.article_metadata.models import OPENALEX
     from datetime import date as _date
     query_data = entry['query']
+    # `providers` bo'lmasa (masalan 2D.1 davridan qolgan eski kesh entry'si)
+    # — OpenAlex-only fallback, `ArticleDiscoveryQuery.providers` default'i
+    # bilan bir xil (§Backward compat).
+    providers = tuple(query_data.get('providers') or (OPENALEX,))
     query = ArticleDiscoveryQuery(
         keyword=query_data['keyword'],
         from_date=_date.fromisoformat(query_data['from_date']),
         to_date=_date.fromisoformat(query_data['to_date']),
         oak_field_id=query_data.get('oak_field_id'),
-        limit=query_data['limit'])
+        limit=query_data['limit'],
+        providers=providers)
     candidates = bridge.candidates_from_cache(entry['candidates'])
 
     conn = get_connection()
@@ -243,3 +297,168 @@ def _find_field_label(nodes, field_id):
         if found:
             return found
     return None
+
+
+# ── Saqlangan so'rovlar (Phase 2D.2, §9-§11) ─────────────────────────────────
+# Egalik siyosati: `services/article_discovery/saved_queries.py` docstring'iga
+# qarang — istalgan admin istalgan saqlangan so'rovni ko'radi/boshqaradi
+# (mavjud import-partiya konvensiyasi bilan bir xil, per-admin devor yo'q).
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries', methods=['POST'])
+@login_required
+def saved_query_create():
+    _require_admin()
+    config = config_from_env()
+    try:
+        query = discovery_service.validate_query(request.form, config=config)
+        name = saved_queries.validate_name(request.form.get('name'))
+    except DiscoveryValidationError as exc:
+        flash(exc.public_message)
+        return render_template(
+            'admin/article_discovery.html',
+            **_search_form_context(config, configured=config.is_configured,
+                                   form=request.form)), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            saved_queries.create(cur, current_user.id, name, query)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Saqlangan qidiruv yaratilmadi')
+        flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
+        return redirect('/admin/articles/discovery')
+    finally:
+        conn.close()
+
+    flash('Qidiruv "%s" nomi bilan saqlandi.' % name)
+    return redirect('/admin/articles/discovery')
+
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/run',
+                            methods=['POST'])
+@login_required
+def saved_query_run(query_id):
+    """Saqlangan so'rovni AYNAN saqlangan holicha ishga tushiradi — tashqi
+    API chaqiruvi FAQAT shu yerda, ro'yxatni ko'rish/yuklashda EMAS (§14)."""
+    _require_admin()
+    config = config_from_env()
+    cache = _cache()
+
+    if not discovery_service.check_rate_limit(cache.get, cache.set, current_user.id,
+                                              config=config):
+        flash("Qidiruvlar chegarasiga yetdingiz — bir necha soniyadan keyin "
+             "qayta urinib ko'ring.")
+        return redirect('/admin/articles/discovery')
+
+    query, preview = None, None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            row = saved_queries.get(cur, query_id)
+            if row is not None:
+                query = saved_queries.to_query(row)
+                preview = discovery_service.run_multi_provider_search(cur, query, config=config)
+                if preview.status == OK:
+                    saved_queries.touch_last_used(cur, query_id)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Saqlangan qidiruvni ishga tushirish muvaffaqiyatsiz')
+        flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
+        return redirect('/admin/articles/discovery')
+    finally:
+        conn.close()
+
+    if preview is None:
+        flash("Saqlangan qidiruv topilmadi.")
+        return redirect('/admin/articles/discovery')
+    if preview.status == NOT_CONFIGURED:
+        flash('OpenAlex ulanishi sozlanmagan.')
+        return redirect('/admin/articles/discovery')
+    if preview.status != OK:
+        flash(PROVIDER_ERROR_MESSAGES.get(preview.status,
+                                          'Qidiruv so\'rovi muvaffaqiyatsiz bo\'ldi.'))
+        return redirect('/admin/articles/discovery')
+
+    token = discovery_service.store_preview(cache.set, current_user.id, preview,
+                                            config=config)
+    field_label = None
+    if query.oak_field_id:
+        field_label = _find_field_label(_field_tree(), query.oak_field_id)
+    return render_template('admin/article_discovery_preview.html', config=config,
+                           preview=preview, summary=preview.summary(), token=token,
+                           field_label=field_label, provider_labels=PROVIDER_LABELS,
+                           enqueuable=ENQUEUABLE_CLASSIFICATIONS)
+
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/edit')
+@login_required
+def saved_query_edit_form(query_id):
+    _require_admin()
+    config = config_from_env()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            row = saved_queries.get(cur, query_id)
+            conn.commit()
+    finally:
+        conn.close()
+    if row is None:
+        abort(404)
+    return render_template('admin/article_discovery_saved_query_edit.html',
+                           config=config, field_tree=_field_tree(),
+                           providers=SUPPORTED_PROVIDERS,
+                           provider_labels=PROVIDER_LABELS, saved_query=row)
+
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/update',
+                            methods=['POST'])
+@login_required
+def saved_query_update(query_id):
+    _require_admin()
+    config = config_from_env()
+    try:
+        query = discovery_service.validate_query(request.form, config=config)
+        name = saved_queries.validate_name(request.form.get('name'))
+    except DiscoveryValidationError as exc:
+        flash(exc.public_message)
+        return redirect('/admin/articles/discovery/saved-queries/%d/edit' % query_id)
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            found = saved_queries.update(cur, query_id, name, query)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Saqlangan qidiruvni yangilash muvaffaqiyatsiz')
+        flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
+        return redirect('/admin/articles/discovery')
+    finally:
+        conn.close()
+
+    flash('Qidiruv yangilandi.' if found else 'Saqlangan qidiruv topilmadi.')
+    return redirect('/admin/articles/discovery')
+
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/deactivate',
+                            methods=['POST'])
+@login_required
+def saved_query_deactivate(query_id):
+    _require_admin()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            found = saved_queries.set_active(cur, query_id, False)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Saqlangan qidiruvni faolsizlantirish muvaffaqiyatsiz')
+        flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
+        return redirect('/admin/articles/discovery')
+    finally:
+        conn.close()
+    flash('Qidiruv faolsizlantirildi.' if found else 'Saqlangan qidiruv topilmadi.')
+    return redirect('/admin/articles/discovery')

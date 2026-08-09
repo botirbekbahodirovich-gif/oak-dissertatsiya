@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Manual OpenAlex Article Discovery (Phase 2D.1).
+"""Manual Article Discovery — OpenAlex + Crossref (Phase 2D.1/2D.2).
 
-Deterministic scholarly discovery pipeline: admin keyword/date so'rov beradi,
-OpenAlex'dan DOI-only nomzod ro'yxati topiladi, mavjud dublikat/navbat bilan
-klassifikatsiya qilinadi va FAQAT yangi nomzodlar mavjud
+Deterministic scholarly discovery pipeline: admin keyword/date/provider(lar)
+so'rov beradi (yoki saqlangan so'rovni ishga tushiradi, `saved_queries.py`),
+OpenAlex va/yoki Crossref'dan DOI-only nomzod ro'yxati topiladi, mavjud
+dublikat/navbat bilan klassifikatsiya qilinadi (ko'p-provayderli holatda —
+provayderlar orasida ham) va FAQAT yangi nomzodlar mavjud
 `services.article_import` navbatiga qo'shiladi.
 
 Discovery ≠ article creation. Discovery ≠ publication. Discovery ≠ metadata

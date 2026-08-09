@@ -20,7 +20,7 @@ KALIT SIYOSATI — `services/article_metadata/openalex.py` bilan bir xil (§7):
 """
 from __future__ import annotations
 
-from services.article_discovery.models import DiscoveryCandidate
+from services.article_discovery.models import DiscoveryCandidate, DiscoverySearchResult
 from services.article_metadata.http import fetch_json
 from services.article_metadata.models import (INVALID_RESPONSE, NOT_CONFIGURED,
                                               OK, OPENALEX)
@@ -34,27 +34,6 @@ MAX_TOPICS = 3
 # candidate'ga yozilmaydi (§10).
 SELECT_FIELDS = ('id,doi,title,display_name,publication_date,'
                  'primary_location,is_retracted,primary_topic')
-
-
-class DiscoverySearchResult:
-    """`ProviderResult` (article_metadata) bilan bir xil naqsh — lekin
-    ro'yxat natijasi uchun."""
-
-    __slots__ = ('status', 'candidates', 'total_count', 'excluded_no_doi_count',
-                'http_status', 'error_code')
-
-    def __init__(self, status, candidates=None, total_count=0,
-                excluded_no_doi_count=0, http_status=None, error_code=None):
-        self.status = status
-        self.candidates = candidates or []
-        self.total_count = total_count
-        self.excluded_no_doi_count = excluded_no_doi_count
-        self.http_status = http_status
-        self.error_code = error_code
-
-    @property
-    def ok(self):
-        return self.status == OK
 
 
 def search(query, config, *, sleep=None):
@@ -145,6 +124,7 @@ def _extract_candidate(work):
         source_name=clean_text(source.get('display_name'), 300),
         is_retracted=bool(work.get('is_retracted')),
         topics=topics[:MAX_TOPICS],
+        providers=[OPENALEX],
     )
 
 

@@ -6,11 +6,25 @@
 
 {% block extra_head %}
 <link href="/static/css/article_import.css?v=20260809" rel="stylesheet">
+<style>
+  .ad-provider-options { display: flex; gap: var(--space-16); flex-wrap: wrap; }
+  .ad-provider-option {
+    display: inline-flex; align-items: center; gap: var(--space-8);
+    min-height: 44px;
+  }
+  .ad-provider-option input { accent-color: var(--color-action-blue); cursor: pointer; }
+  .ad-saved-name-row {
+    display: flex; gap: var(--space-16); flex-wrap: wrap; align-items: flex-end;
+    margin-top: var(--space-16); padding-top: var(--space-16);
+    border-top: 1px solid var(--color-border-subtle);
+  }
+  .ad-saved-name-row .ol-field-group { flex: 1 1 260px; }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="ol-page">
-  {{ page_header('Yangi ilmiy maqolalarni qidirish', 'OpenAlex\'dan kalit so\'z va sana oralig\'i bo\'yicha nomzod maqolalarni topadi — hech narsa avtomatik yaratilmaydi.',
+  {{ page_header('Yangi ilmiy maqolalarni qidirish', 'OpenAlex va Crossref\'dan kalit so\'z va sana oralig\'i bo\'yicha nomzod maqolalarni topadi — hech narsa avtomatik yaratilmaydi.',
                  crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')]) }}
 
   {% with msgs = get_flashed_messages() %}
@@ -26,8 +40,9 @@
 
   {% if not configured %}
   <div class="ol-badge ol-badge--error" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
-    OpenAlex ulanishi sozlanmagan. Server <code>.env</code> fayliga
-    <code>OPENALEX_API_KEY</code> yoki <code>OPENALEX_MAILTO</code> qo'shing.
+    OpenAlex ulanishi sozlanmagan (Crossref ta'sirlanmaydi — u kalitsiz ishlaydi).
+    Server <code>.env</code> fayliga <code>OPENALEX_API_KEY</code> yoki
+    <code>OPENALEX_MAILTO</code> qo'shing.
   </div>
   {% endif %}
 
@@ -35,7 +50,6 @@
     <h2 id="ad-search-heading" class="ol-h4">Qidiruv</h2>
     <form method="POST" action="/admin/articles/discovery/search" class="ol-filters">
       {{ csrf_token()|safe }}
-      <p class="ai-help">Manba: OpenAlex</p>
       <div class="ol-filters__row">
         <div class="ol-field-group">
           <label class="ol-label" for="ad-keyword">Kalit so'z</label>
@@ -73,12 +87,92 @@
           </select>
           <p class="ai-help">Faqat qidiruv niyati sifatida saqlanadi — maqolaga avtomatik biriktirilmaydi.</p>
         </div>
+        <div class="ol-field-group">
+          <span class="ol-label" id="ad-providers-label">Manbalar</span>
+          <div class="ad-provider-options" role="group" aria-labelledby="ad-providers-label">
+            {% for p in providers %}
+            <label class="ad-provider-option">
+              <input type="checkbox" name="providers" value="{{ p }}" checked>
+              {{ provider_labels[p] }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="ad-saved-name-row">
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-save-name">Saqlash nomi — ixtiyoriy</label>
+          <input class="ol-field" type="text" id="ad-save-name" name="name" maxlength="120"
+                 placeholder="masalan: Onkologiya — haftalik">
+          <p class="ai-help">Qidiruvni saqlash uchun nom kiriting, keyin "Qidiruvni saqlash" tugmasini bosing.</p>
+        </div>
       </div>
       <div class="ol-filters__actions">
-        <button type="submit" class="ol-btn ol-btn--primary" {{ 'disabled' if not configured }}>
+        <button type="submit" class="ol-btn ol-btn--primary"
+                formaction="/admin/articles/discovery/search">
           <i class="bi bi-search" aria-hidden="true"></i>Qidirish</button>
+        <button type="submit" class="ol-btn ol-btn--secondary"
+                formaction="/admin/articles/discovery/saved-queries">
+          <i class="bi bi-bookmark-plus" aria-hidden="true"></i>Qidiruvni saqlash</button>
       </div>
     </form>
+  </section>
+
+  <section class="ol-section" aria-labelledby="ad-saved-heading">
+    <h2 id="ad-saved-heading" class="ol-h4">Saqlangan qidiruvlar</h2>
+    {% if saved_queries %}
+    <div class="ol-table-wrap">
+      <table class="ol-table">
+        <thead>
+          <tr>
+            <th scope="col">Nom</th>
+            <th scope="col">Kalit so'z</th>
+            <th scope="col">Manbalar</th>
+            <th scope="col">Sana oralig'i</th>
+            <th scope="col">OAK yo'nalishi</th>
+            <th scope="col">Oxirgi ishlatilgan</th>
+            <th scope="col">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sq in saved_queries %}
+          <tr>
+            <td>{{ sq.name }}</td>
+            <td>{{ sq.keyword }}</td>
+            <td>
+              {% for p in (sq.providers or []) %}
+              <span class="ol-badge">{{ provider_labels.get(p, p) }}</span>
+              {% endfor %}
+            </td>
+            <td>{{ sq.from_date.isoformat() }} — {{ sq.to_date.isoformat() }}</td>
+            <td>{{ sq.oak_field_label or '—' }}</td>
+            <td>{{ sq.last_used_at.strftime('%Y-%m-%d %H:%M') if sq.last_used_at else 'Hech qachon' }}</td>
+            <td>
+              <div class="ai-actions-row" style="margin-bottom:0;">
+                <form method="POST" action="/admin/articles/discovery/saved-queries/{{ sq.id }}/run">
+                  {{ csrf_token()|safe }}
+                  <button type="submit" class="ol-btn ol-btn--secondary">
+                    <i class="bi bi-play-fill" aria-hidden="true"></i>Run</button>
+                </form>
+                <a class="ol-btn ol-btn--tertiary"
+                   href="/admin/articles/discovery/saved-queries/{{ sq.id }}/edit">Tahrirlash</a>
+                <form method="POST" action="/admin/articles/discovery/saved-queries/{{ sq.id }}/deactivate">
+                  {{ csrf_token()|safe }}
+                  <button type="submit" class="ol-btn ol-btn--tertiary">Faolsizlantirish</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="ol-empty">
+      <p>Hali saqlangan qidiruv yo'q. Yuqoridagi formani to'ldirib, nom bering va
+        "Qidiruvni saqlash" tugmasini bosing.</p>
+    </div>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

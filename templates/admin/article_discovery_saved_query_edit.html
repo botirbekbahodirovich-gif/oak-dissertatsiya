@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Saqlangan qidiruvni tahrirlash (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260809" rel="stylesheet">
+<style>
+  .ad-provider-options { display: flex; gap: var(--space-16); flex-wrap: wrap; }
+  .ad-provider-option {
+    display: inline-flex; align-items: center; gap: var(--space-8);
+    min-height: 44px;
+  }
+  .ad-provider-option input { accent-color: var(--color-action-blue); cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Saqlangan qidiruvni tahrirlash', saved_query.name,
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                        ('Qidirish', '/admin/articles/discovery')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <section class="ol-section" aria-labelledby="ad-edit-heading">
+    <h2 id="ad-edit-heading" class="ol-h4">Qidiruv parametrlari</h2>
+    <form method="POST"
+          action="/admin/articles/discovery/saved-queries/{{ saved_query.id }}/update"
+          class="ol-filters">
+      {{ csrf_token()|safe }}
+      <div class="ol-filters__row">
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-name">Nom</label>
+          <input class="ol-field" type="text" id="ad-edit-name" name="name"
+                 maxlength="120" required value="{{ saved_query.name }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-keyword">Kalit so'z</label>
+          <input class="ol-field" type="text" id="ad-edit-keyword" name="keyword"
+                 minlength="3" maxlength="300" required value="{{ saved_query.keyword }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-from-date">Boshlanish sanasi</label>
+          <input class="ol-field" type="date" id="ad-edit-from-date" name="from_date"
+                 value="{{ saved_query.from_date.isoformat() }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-to-date">Tugash sanasi</label>
+          <input class="ol-field" type="date" id="ad-edit-to-date" name="to_date"
+                 value="{{ saved_query.to_date.isoformat() }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-limit">Natijalar limiti</label>
+          <input class="ol-field" type="number" id="ad-edit-limit" name="limit"
+                 min="1" max="{{ config.hard_result_limit }}"
+                 value="{{ saved_query.result_limit }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-oak-field">OAK yo'nalishi — ixtiyoriy</label>
+          <select class="ol-field" id="ad-edit-oak-field" name="oak_field_id">
+            <option value="">— Tanlanmagan —</option>
+            {% for node in field_tree %}
+            <option value="{{ node.id }}" {{ 'selected' if node.id == saved_query.oak_field_id }}>{{ node.name_uz }}</option>
+            {% for child in node.children %}
+            <option value="{{ child.id }}" {{ 'selected' if child.id == saved_query.oak_field_id }}>&nbsp;&nbsp;{{ child.name_uz }}</option>
+            {% endfor %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <span class="ol-label" id="ad-edit-providers-label">Manbalar</span>
+          <div class="ad-provider-options" role="group" aria-labelledby="ad-edit-providers-label">
+            {% for p in providers %}
+            <label class="ad-provider-option">
+              <input type="checkbox" name="providers" value="{{ p }}"
+                     {{ 'checked' if p in (saved_query.providers or []) }}>
+              {{ provider_labels[p] }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="ol-filters__actions">
+        <button type="submit" class="ol-btn ol-btn--primary">
+          <i class="bi bi-check-lg" aria-hidden="true"></i>Saqlash</button>
+        <a class="ol-btn ol-btn--secondary" href="/admin/articles/discovery">
+          <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Bekor qilish</a>
+      </div>
+    </form>
+
+    <form method="POST"
+          action="/admin/articles/discovery/saved-queries/{{ saved_query.id }}/deactivate"
+          class="ai-actions-row" style="margin-top:var(--space-24);">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--danger">
+        <i class="bi bi-trash3" aria-hidden="true"></i>Faolsizlantirish</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

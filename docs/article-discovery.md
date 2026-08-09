@@ -1,7 +1,9 @@
-# Manual OpenAlex Article Discovery (Phase 2D.1)
+# Manual Article Discovery — OpenAlex + Crossref (Phase 2D.1/2D.2)
 
-Admin kalit so'z va sana oralig'i bo'yicha OpenAlex'dan nomzod maqolalarni
-qidiradi. Tizim hech narsani avtomatik yaratmaydi — faqat mavjud
+Admin kalit so'z va sana oralig'i bo'yicha OpenAlex va/yoki Crossref'dan
+nomzod maqolalarni qidiradi (Phase 2D.2 — provayder tanlovi va saqlangan
+so'rovlar; Phase 2D.1'da faqat OpenAlex bor edi). Tizim hech narsani
+avtomatik yaratmaydi — faqat mavjud
 [`docs/article-bulk-import.md`](article-bulk-import.md) (Phase 2C.2) navbatiga
 "yangi" (bazada yo'q, hech qanday navbatda yo'q) DOI'larni qo'shadi. Bundan
 keyingi hamma narsa — metadata olish, ko'rib chiqish, tasdiqlash — ANIQ shu
@@ -240,23 +242,194 @@ konteksti). MVP'da:
 - **CSRF/Auth** — mavjud global `CSRFProtect` + `login_required` +
   `_require_admin()`, `blueprints/article_import.py` bilan bir xil naqsh.
 
-## 14. Chegaralar (Phase 2D.1 doirasidan TASHQARIDA)
+## 14. Chegaralar (Phase 2D.1 doirasidan TASHQARIDA — 2D.2'da hal qilindi/qolganlari)
 
-Qat'iyan yaratilmagan: Crossref discovery provider, scheduler/cron, saqlangan
-so'rovlar, `ArticleDiscoveryRun` jadvali, avtonom agent, AI klassifikator,
-semantik/rank qidiruv, avto-approve, avto-publish, authoritative OAK
-biriktirish, PDF yuklab olish, DOI'siz maqola, Scopus/WoS/Google Scholar
-scraping, publisher-maxsus discovery, Celery/Redis.
+Phase 2D.1'da qat'iyan yaratilmagan bo'lib, 2D.2'da qo'shilganlar: Crossref
+discovery provider (§16), saqlangan so'rovlar (§17). Hali ham YO'Q:
+scheduler/cron, `ArticleDiscoveryRun` jadvali, avtonom agent, AI
+klassifikator, semantik/rank qidiruv, avto-approve, avto-publish,
+authoritative OAK biriktirish, PDF yuklab olish, DOI'siz maqola, Scopus/WoS/
+Google Scholar/Europe PMC/DataCite scraping, publisher-maxsus discovery,
+Celery/Redis, AI so'rov kengaytirish.
 
 `services/article_sync/` va sync scheduler fayllariga tegilmagan.
 
-## 15. Kelajak — Phase 2D.2/2D.3/2D.4 (tayyorgarlik)
+## 16. Phase 2D.2 — Crossref provider va ko'p-provayderli qidiruv
 
-- **2D.2** — Crossref (yoki qo'shimcha) discovery provider; `openalex.py`
-  bilan bir xil `DiscoverySearchResult` kontraktini qondirishi kifoya —
-  `service.py` provayderdan mustaqil.
-- **2D.3** — saqlangan so'rovlar / scheduled discovery (ehtiyotkorlik bilan:
-  bu "AI agent" chegarasiga yaqinlashadi, aniq skop kerak).
+### 16.1. Nega Crossref qo'shildi
+
+OpenAlex — hosila (derived) grafik, ba'zi yangi/kichik jurnal yozuvlarini
+kech ko'rsatishi mumkin. Crossref — DOI registratsiya agentligi, bibliografik
+ma'lumotning BIRLAMCHI manbai (`services/article_metadata/crossref.py`
+metadata boyitishda buni allaqachon ishlatadi). Discovery uchun ikkalasini
+ham so'rash qamrovni kengaytiradi — bitta provayder o'tkazib yuborgan
+nomzodni ikkinchisi topishi mumkin.
+
+### 16.2. Rasmiy Crossref REST API kontrakti (2026-08 tekshirilgan)
+
+Eski `github.com/CrossRef/rest-api-doc/rest_api.md` **DEPRECATED** deb
+belgilangan — joriy hujjat `api.crossref.org/` (Swagger) va
+`crossref.org/documentation/retrieve-metadata/rest-api/{,rest-api-filters}/`
++ `github.com/CrossRef/rest-api-doc/api_tips.md` (hali amaldagi, tavsiya
+etilgan).
+
+| Jihat | Rasmiy kontrakt |
+| --- | --- |
+| Qidiruv maydoni | `query.bibliographic` — rasmiy tavsiya: oddiy `query` butun yozuvni (jumladan bibliografik bo'lmagan maydonlarni) qidiradi, "ko'proq yolg'on-musbat" beradi; `query.bibliographic` aniqroq. |
+| Sana filtri | `filter=from-pub-date:YYYY-MM-DD,until-pub-date:YYYY-MM-DD` (chiziqcha bilan — OpenAlex'ning `from_publication_date`dan farqli yozilish). |
+| Tur filtri | `filter=type:journal-article` — Crossref taksonomiyasida OpenAlex'ning `type:article`iga 1:1 mos qiymat YO'Q (§16.4 chegara). |
+| `rows` | Hujjatda qattiq raqamli cheklov YO'Q; loyiha siyosati 100 dan oshirmaydi (Phase 2D.1 bilan bir xil). |
+| Chuqur sahifalash | `api_tips.md`: "Don't use rows/offsets... they are expensive and slow. Use cursors instead." Biz `offset` UMUMAN yubormaymiz — faqat BITTA chegaralangan sahifa (chuqur sahifalash emas). |
+| `mailto` | Query parametr — "polite pool" (odobli navbat), ixtiyoriy. |
+| API kaliti | SHART EMAS ("No sign-up is required to use the REST API"). |
+| Javob konverti | `{"status":"ok","message-type":"work-list","message":{"total-results":N,"items":[...]}}` — har bir item `/works/{doi}` bilan bir xil sxema. |
+| Chaqirib olish belgisi | `update-to[].type == "retraction"` (Retraction Watch integratsiyasi). |
+| Rate limit | IP bo'yicha; 429/5xx/timeout'da eksponensial backoff tavsiya etiladi — `services/article_metadata/http.py:fetch_json` buni ALLAQACHON qiladi (qayta yozilmagan). |
+
+### 16.3. Fayl xaritasi (yangi)
+
+| Qism | Joyi |
+| --- | --- |
+| Crossref ro'yxat/qidiruv adapteri | `services/article_discovery/crossref.py` |
+| Provider-neutral `DiscoverySearchResult`, `providers` provenance maydoni | `services/article_discovery/models.py` (avval `openalex.py` ichida edi) |
+| Ko'p-provayderli orkestratsiya | `services/article_discovery/service.py:run_multi_provider_search` |
+| Saqlangan so'rovlar persistence/servis | `services/article_discovery/saved_queries.py` |
+| Saqlangan so'rovlar sxemasi | `migrations/017_article_discovery_saved_queries.sql` |
+
+`openalex.py` **o'zgarmagan xulq-atvor** — faqat `DiscoverySearchResult`
+importi `models.py`ga ko'chirildi va har bir candidate'ga
+`providers=['openalex']` qo'shildi (provenance uchun, mavjud maydonlarga
+tegmasdan).
+
+### 16.4. Ma'lum cheklov — Crossref tur filtri
+
+Crossref'da OpenAlex'ning `type:article` bilan aniq 1:1 mos keladigan
+qiymat YO'Q (Crossref taksonomiyasi boshqacha: `journal-article`,
+`proceedings-article`, `posted-content`, ...). Biz `type:journal-article`ni
+tanladik — eng yaqin ekvivalent, lekin bu ATAYIN preprint/proceedings kabi
+turlarni chiqarib tashlaydi. Bu chegara soxta moslikni yashirmaydi —
+ochiq hujjatlashtirilgan (kelajakda kengaytirish mumkin, hozircha skop
+tashqarisida).
+
+### 16.5. Ko'p-provayderli dedup va provenance (§7-§8, §16 ticket)
+
+`run_multi_provider_search()` (bitta provayder tanlansa `run_discovery_search()`ga
+ANIQ delegatsiya qiladi — Phase 2D.1 xulq-atvori/testlari o'zgarishsiz):
+
+1. Tanlangan provayderlar **PARALLEL** so'raladi (`ThreadPoolExecutor`,
+   `services/article_metadata/service.py` bilan bir xil naqsh), umumiy vaqt
+   byudjeti bilan (`config.total_budget`, standart 20s).
+2. Natijalar **DETERMINISTIK** tartibda birlashtiriladi — `SUPPORTED_PROVIDERS`
+   tartibi (OpenAlex, keyin Crossref), concurrent HTTP tugash tartibidan
+   MUSTAQIL.
+3. Bir xil DOI ikkala provayderda ham topilsa: FAQAT birinchi uchrashuv
+   "canonical" (keyinroq NEW/EXISTING/... klassifikatsiya qilinadi);
+   ikkinchisi bitta-provayderli same-response dublikat kabi
+   `duplicate_in_result` bo'ladi (final "yangi" hisobda IKKI marta
+   SANALMAYDI). Farqi: `providers` ro'yxati (masalan `["openalex",
+   "crossref"]`) birinchisiga QO'SHILADI — provenance yo'qolmaydi.
+4. Ko'rsatish maydonlari (title/source_name/publication_date/
+   external_source_id/topics) — DETERMINISTIK ustunlik: OpenAlex maydoni
+   bo'lsa saqlanadi, bo'sh bo'lsa Crossref'dan to'ldiriladi.
+   `is_retracted` — OR birlashtiriladi (ikkalasidan biri "true" desa, true).
+   Bu **to'liq metadata-merger EMAS** (`services/article_metadata/merger.py`
+   bilan chalkashtirilmasin) — faqat preview uchun kerakli oz sonli maydon.
+5. Bitta provayder muvaffaqiyatsiz bo'lsa, ikkinchisining natijasi
+   YO'QOLMAYDI — `DiscoveryPreviewResult.provider_status` har bir
+   provayderning holati/sonini alohida saqlaydi
+   (`{'openalex': {'status': 'ok', 'count': 12}, 'crossref': {'status':
+   'timeout', 'count': 0}}`). Hammasi muvaffaqiyatsiz bo'lsa —
+   `status != 'ok'`, candidate YO'Q, admin uchun aniq xato.
+6. `article_import_batches.source_provider` — bitta provayder tanlansa
+   uning nomi, ikkitasi tanlansa `'multi'`
+   (`ArticleDiscoveryQuery.source_provider_label`).
+
+### 16.6. DOI-only siyosat — Crossref uchun qat'iyroq
+
+Crossref natijalari OpenAlex'dan farqli, kuratsiya darajasi pastroq bo'lishi
+mumkin — shuning uchun `crossref.py` oddiy `normalize_doi()` emas, to'liq
+`utils.article_rules.validate_doi()` ishlatadi (import bulk'dagi bir xil
+qoida — `services/article_import/validator.py`). Bo'sh VA formati
+noto'g'ri DOI ikkalasi ham bir xil "DOI yo'q" hisobiga qo'shiladi (§19 UI
+spetsifikatsiyasi bitta "DOI yo'q" sonini so'raydi, ikkinchi ajratilgan
+bucket qo'shilmadi).
+
+## 17. Phase 2D.2 — Saqlangan qidiruv so'rovlari
+
+### 17.1. Semantika: "eslab qol", "avtomatik ishga tushirmaydi"
+
+`article_discovery_saved_queries` (migrations/017) — admin qidiruv formasini
+(kalit so'z, sana oralig'i, provayder(lar), OAK yo'nalishi, limit) nomlab
+saqlaydi. Bu FAQAT konfiguratsiyani eslab qolish — hech qanday fon
+jarayoni/cron/scheduler YO'Q (Phase 2D.3 uchun ATAYIN qoldirilgan). Ro'yxatni
+ko'rish (`GET /admin/articles/discovery`) tashqi API'ga UMUMAN chiqmaydi;
+faqat admin aniq "Run" bosganda (`POST .../saved-queries/<id>/run`)
+`run_multi_provider_search()` chaqiriladi — xuddi oddiy qidiruvdek.
+
+Saqlangan sana oralig'i **AYNAN saqlangan holicha** qayta ishlatiladi ("last
+30 days" kabi nisbiy oyna EMAS) — admin yangi oyna bilan qidirishni
+xohlasa, "Tahrirlash" orqali sanalarni yangilaydi.
+
+### 17.2. Sxema va FK konvensiyasi (audit natijasi)
+
+```sql
+article_discovery_saved_queries (
+  id, name, created_by, keyword, from_date, to_date,
+  oak_field_id, providers JSONB, result_limit,
+  is_active, created_at, updated_at, last_used_at
+)
+```
+
+- `created_by` — oddiy `INTEGER`, `users(id)`ga FK **YO'Q**. Audit:
+  loyihada ikkala konvensiya ham mavjud (masalan `migrations/004` FK
+  qo'yadi), lekin BEVOSITA shu import/discovery pipeline oilasi
+  (`article_import_batches.created_by`, `migrations/011`) izchil ravishda
+  FK qo'shmaydi — shu YAQIN, lokal konvensiya davom ettirildi.
+- `oak_field_id` — `article_import_batches.source_oak_field_id` bilan AYNAN
+  bir xil: `REFERENCES scientific_fields(id) ON DELETE SET NULL`.
+- `is_active` — soft deactivate, hard `DELETE` YO'Q (loyiha konvensiyasi —
+  `scientific_fields.is_active` bilan bir xil "holat ustuni" yondashuvi).
+  Deactivate qilingan qator UI ro'yxatidan yashiriladi (audit uchun DB'da
+  qoladi), qayta faollashtirish tugmasi UI'da YO'Q.
+
+### 17.3. Egalik siyosati
+
+`created_by` FAQAT audit/provenance — kirish nazorati EMAS. Loyihaning
+boshqa admin-panel resurslari (`article_import_batches`, data-quality
+navbati) HAM bitta `is_admin` bayrog'i bilan barcha adminlarga ochiq, per-
+admin devor yo'q; saqlangan so'rovlar shu konvensiyani davom ettiradi —
+istalgan admin istalgan saqlangan so'rovni ko'radi/ishga tushiradi/
+tahrirlaydi/faolsizlantiradi.
+
+### 17.4. Validatsiya — ikkinchi validator YO'Q
+
+Saqlangan so'rov yaratish/yangilash `discovery_service.validate_query()`ni
+QAYTA ishlatadi (keyword/sana/provider enum/limit/OAK — bir xil qoidalar,
+ikki joyda emas). Faqat nom (`saved_queries.validate_name`, 1-120 belgi)
+alohida tekshiriladi.
+
+### 17.5. Routes
+
+```
+GET  /admin/articles/discovery                          — forma + saqlangan ro'yxat
+POST /admin/articles/discovery/saved-queries              — joriy formani saqlash
+POST /admin/articles/discovery/saved-queries/<id>/run     — ishga tushirish (tashqi so'rov!)
+GET  /admin/articles/discovery/saved-queries/<id>/edit    — tahrirlash formasi
+POST /admin/articles/discovery/saved-queries/<id>/update  — yangilash
+POST /admin/articles/discovery/saved-queries/<id>/deactivate — soft o'chirish
+```
+
+Barchasi admin-only (`_require_admin`), yozuvchi POST'lar CSRF talab qiladi
+(global `CSRFProtect`). Faqat `/run` rate-limitga tushadi (haqiqiy tashqi
+so'rov) — save/update/deactivate/list oddiy DB operatsiyasi, rate limit
+shart emas.
+
+## 18. Kelajak — Phase 2D.3/2D.4 (tayyorgarlik)
+
+- **2D.3** — rejalashtirilgan (scheduled) discovery: saqlangan so'rovlarni
+  cron bo'yicha AVTOMATIK ishga tushirish. Bu Phase 2D.2'da ATAYIN
+  YO'Q (ehtiyotkorlik bilan qilinishi kerak: "AI agent" chegarasiga
+  yaqinlashadi, aniq skop/tezlik-cheklov/monitoring talab qiladi).
 - **2D.4** — semantik/rank qidiruv, OAK yo'nalishidan avtomatik query
   generatsiya (hozircha ATAYIN yo'q, §21).
 

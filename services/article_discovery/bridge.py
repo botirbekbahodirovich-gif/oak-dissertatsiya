@@ -52,7 +52,8 @@ def enqueue_discovery_candidates(cur, admin_id, query, candidates, *,
                'created': False}
 
     batch_id, created = persistence.get_or_create_discovery_batch(
-        cur, admin_id, source_provider='openalex', source_query=query.canonical(),
+        cur, admin_id, source_provider=query.source_provider_label,
+        source_query=query.canonical(),
         source_oak_field_id=query.oak_field_id, source_result_count=total_count,
         excluded_no_doi_count=excluded_no_doi_count, source_request_id=request_id)
 
