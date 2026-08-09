@@ -22,6 +22,20 @@
   <p class="ai-help">OAK yo'nalishi (qidiruv niyati): {{ field_label }}</p>
   {% endif %}
 
+  {% if summary.provider_status %}
+  <div class="ai-provider-list" role="status" aria-label="Manba holati">
+    {% for provider, info in summary.provider_status.items() %}
+    <span class="ol-badge {{ 'ol-badge--success' if info.status == 'ok' else 'ol-badge--error' }}">
+      {{ provider_labels.get(provider, provider) if provider_labels else provider }}:
+      {% if info.status == 'ok' %}{{ info.count }} natija{% else %}muvaffaqiyatsiz ({{ info.status }}){% endif %}
+    </span>
+    {% endfor %}
+  </div>
+  {% if summary.provider_status.values() | selectattr('status', 'ne', 'ok') | list %}
+  <p class="ai-help">Ba'zi manbalar javob bermadi — ko'rsatilgan natijalar muvaffaqiyatli manba(lar)dan olindi.</p>
+  {% endif %}
+  {% endif %}
+
   <div class="ai-summary-grid">
     <div class="ai-summary-item">
       <div class="ai-summary-item__value">{{ summary.total_count }}</div>
@@ -66,7 +80,8 @@
           <th scope="col">DOI</th>
           <th scope="col">Jurnal / manba</th>
           <th scope="col">Sana</th>
-          <th scope="col">OpenAlex ID</th>
+          <th scope="col">Manbalar</th>
+          <th scope="col">Provider ID</th>
           <th scope="col">Holat</th>
         </tr>
       </thead>
@@ -81,6 +96,11 @@
           <td>{{ c.doi }}</td>
           <td>{{ c.source_name or '—' }}</td>
           <td>{{ c.publication_date.isoformat() if c.publication_date else '—' }}</td>
+          <td>
+            {% for p in (c.providers or []) %}
+            <span class="ol-badge">{{ provider_labels.get(p, p) if provider_labels else p }}</span>
+            {% endfor %}
+          </td>
           <td>{{ c.external_source_id or '—' }}</td>
           <td>
             {% if c.classification == 'new' %}
