@@ -1740,16 +1740,23 @@ def admin_article_metadata_dashboard():
             rows, total = article_sync.list_dashboard(
                 cur, limit=METADATA_SYNC_PER_PAGE,
                 offset=(page - 1) * METADATA_SYNC_PER_PAGE, **filters)
+            # Phase 2C.3D — scheduler run holati (§ ixcham status bloki).
+            # O'QISH FAQAT: hech qanday provider so'rovi/mutatsiya, mavjud
+            # `list_recent_scheduler_runs()`dan tashqari yangi query yo'q.
+            recent_runs = article_sync.list_recent_scheduler_runs(cur, limit=1)
             conn.commit()
     finally:
         conn.close()
+    last_scheduler_run = recent_runs[0] if recent_runs else None
 
     return render_template(
         'admin/article_metadata_sync_dashboard.html', rows=rows, total=total,
         page=page, pages=max(1, math.ceil(total / METADATA_SYNC_PER_PAGE)),
         summary=summary, filters=filters, queue_status_choices=QUEUE_STATUS_CHOICES,
         sort_choices=SORT_CHOICES, publication_statuses=PUBLICATION_STATUSES,
-        queue_state_labels=article_sync.QUEUE_STATE_LABELS, qs=_query_string)
+        queue_state_labels=article_sync.QUEUE_STATE_LABELS, qs=_query_string,
+        last_scheduler_run=last_scheduler_run,
+        scheduler_status_labels=article_sync.SCHEDULER_RUN_STATUS_LABELS)
 
 
 @articles_bp.route('/admin/articles/metadata-sync/<int:sync_id>')

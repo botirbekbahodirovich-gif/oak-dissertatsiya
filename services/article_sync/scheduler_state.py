@@ -14,6 +14,17 @@ RUN_COMPLETED_WITH_ERRORS = 'completed_with_errors'
 RUN_FAILED = 'failed'
 RUN_STATUSES = (RUN_RUNNING, RUN_COMPLETED, RUN_COMPLETED_WITH_ERRORS, RUN_FAILED)
 
+# Dashboard "Avtomatik metadata tekshiruvi" bloki uchun (Phase 2C.3D) — status
+# matni FAQAT shu joyda, route/shablon o'zi matn yaratmaydi (§6dagi
+# `QUEUE_STATE_LABELS` naqshi bilan bir xil). Noma'lum status uchun
+# `.get(status, status)` xom qiymatni ko'rsatadi — xavfsiz fallback.
+SCHEDULER_RUN_STATUS_LABELS = {
+    RUN_RUNNING: 'Jarayonda',
+    RUN_COMPLETED: 'Yakunlandi',
+    RUN_COMPLETED_WITH_ERRORS: "Xatolar bilan yakunlandi",
+    RUN_FAILED: 'Muvaffaqiyatsiz',
+}
+
 # ── Trigger turi ─────────────────────────────────────────────────────────────
 TRIGGER_SCHEDULED = 'scheduled'
 TRIGGER_MANUAL_CLI = 'manual_cli'

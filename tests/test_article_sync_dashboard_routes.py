@@ -12,7 +12,8 @@ os.environ.setdefault('SESSION_SECRET', 'article-sync-dashboard-test-secret')
 
 from app import app  # noqa: E402
 from services.article_sync import service as sync_service  # noqa: E402
-from tests.fake_article_sync_pg import FakeSyncConnection, new_store  # noqa: E402
+from tests.fake_article_sync_pg import (FakeSyncConnection, add_scheduler_run,  # noqa: E402
+                                        new_store)
 from tests.test_article_sync_service import base_article_row, make_fetcher  # noqa: E402
 from tests.test_articles_admin import AdminTestCase  # noqa: E402
 
@@ -149,6 +150,162 @@ class DashboardNoSideEffectsTests(AdminTestCase):
         self.assertEqual(kwargs.get('queue_status'), 'critical')
         self.assertTrue(kwargs.get('has_retraction'))
         self.assertEqual(kwargs.get('sort'), 'newest')
+
+
+class SchedulerStatusSectionTests(AdminTestCase):
+    """Dashboard'dagi "Avtomatik metadata tekshiruvi" bloki (Phase 2C.3D) —
+    `list_recent_scheduler_runs()`dan o'qiydi, hech qanday yangi query/
+    mutatsiya yo'q."""
+
+    def setUp(self):
+        super().setUp()
+        self._orig_csrf = app.config.get('WTF_CSRF_ENABLED', True)
+        app.config['WTF_CSRF_ENABLED'] = False
+        self.login(is_admin=True)
+
+    def tearDown(self):
+        app.config['WTF_CSRF_ENABLED'] = self._orig_csrf
+        super().tearDown()
+
+    def _get_dashboard(self, store):
+        connection = FakeSyncConnection(store)
+        with fake_sync_db(connection), \
+                mock.patch('services.article_sync.list_dashboard',
+                          return_value=([], 0)), \
+                mock.patch('services.article_sync.get_dashboard_summary',
+                          return_value={}):
+            response = self.client.get(DASHBOARD_URL)
+        return response, connection
+
+    def test_no_scheduler_run_shows_never_started_message(self):
+        response, _conn = self._get_dashboard(new_store())
+        body = response.get_data(as_text=True)
+        self.assertIn('Avtomatik metadata tekshiruvi hali ishga tushirilmagan.',
+                      body)
+
+    def test_scheduler_run_present_shows_counts(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed', processed_count=50,
+                          success_count=47, partial_count=2, failed_count=1)
+        response, _conn = self._get_dashboard(store)
+        body = response.get_data(as_text=True)
+        self.assertIn('Tekshirildi: 50', body)
+        self.assertIn('Muvaffaqiyatli: 47', body)
+        self.assertIn('Qisman: 2', body)
+        self.assertIn('Xato: 1', body)
+
+    def test_completed_status_label(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed')
+        response, _conn = self._get_dashboard(store)
+        self.assertIn('Yakunlandi', response.get_data(as_text=True))
+
+    def test_completed_with_errors_status_label(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed_with_errors')
+        response, _conn = self._get_dashboard(store)
+        self.assertIn('Xatolar bilan yakunlandi', response.get_data(as_text=True))
+
+    def test_failed_status_label(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='failed')
+        response, _conn = self._get_dashboard(store)
+        self.assertIn('Muvaffaqiyatsiz', response.get_data(as_text=True))
+
+    def test_running_status_label(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='running')
+        response, _conn = self._get_dashboard(store)
+        self.assertIn('Jarayonda', response.get_data(as_text=True))
+
+    def test_unknown_status_falls_back_to_raw_value(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='mystery_status')
+        response, _conn = self._get_dashboard(store)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('mystery_status', response.get_data(as_text=True))
+
+    def test_most_recent_run_is_shown_when_several_exist(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='failed')
+        add_scheduler_run(store, 2, status='completed')
+        response, _conn = self._get_dashboard(store)
+        body = response.get_data(as_text=True)
+        self.assertIn('Yakunlandi', body)
+        self.assertNotIn('Muvaffaqiyatsiz', body)
+
+    def test_dashboard_get_does_not_call_provider_or_scheduler(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed')
+        connection = FakeSyncConnection(store)
+        with fake_sync_db(connection), \
+                mock.patch('services.article_sync.list_dashboard',
+                          return_value=([], 0)), \
+                mock.patch('services.article_sync.get_dashboard_summary',
+                          return_value={}), \
+                mock.patch('services.article_metadata.service.fetch_article_metadata'
+                          ) as fetch_mock, \
+                mock.patch('services.article_sync.run_scheduled_metadata_sync'
+                          ) as run_mock, \
+                mock.patch('services.article_sync.check_article_metadata'
+                          ) as check_mock:
+            response = self.client.get(DASHBOARD_URL)
+        self.assertEqual(response.status_code, 200)
+        fetch_mock.assert_not_called()
+        run_mock.assert_not_called()
+        check_mock.assert_not_called()
+
+    def test_dashboard_get_performs_no_write_statements(self):
+        """Route o'zi mutatsiya qilmasin — `article_metadata_syncs`/
+        `article_metadata_sync_runs`/`scientific_articles`ga yozuv yo'q.
+        (`page_visits` INSERT'i — app-darajasidagi analytics middleware,
+        bu route'dan mustaqil, shu testning ko'lamiga kirmaydi.)"""
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed')
+        response, connection = self._get_dashboard(store)
+        self.assertEqual(response.status_code, 200)
+        write_prefixes = ('INSERT', 'UPDATE', 'DELETE')
+        domain_tables = ('ARTICLE_METADATA_SYNCS', 'ARTICLE_METADATA_SYNC_RUNS',
+                         'SCIENTIFIC_ARTICLES', 'ARTICLE_AUTHORS')
+        for sql, _params in connection.store['sql']:
+            upper = sql.upper()
+            if upper.startswith(write_prefixes) and any(t in upper for t in domain_tables):
+                self.fail('dashboard GET domain yozuv bajardi: %s' % sql)
+
+    def test_dashboard_still_renders_exactly_one_h1(self):
+        store = new_store()
+        add_scheduler_run(store, 1, status='completed')
+        response, _conn = self._get_dashboard(store)
+        body = response.get_data(as_text=True)
+        self.assertEqual(body.count('<h1'), 1)
+
+
+class SchedulerStatusSectionDesignTests(unittest.TestCase):
+    """Statik shablon tekshiruvi — design system §18 (raw HEX/gradient/dark
+    theme taqiqlangan)."""
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            'templates', 'admin', 'article_metadata_sync_dashboard.html')
+        with open(path, encoding='utf-8') as fh:
+            cls.html = fh.read()
+
+    def test_no_raw_hex_colors(self):
+        import re
+        self.assertNotRegex(self.html, r'#[0-9a-fA-F]{3,8}\b')
+
+    def test_no_gradient(self):
+        self.assertNotIn('gradient', self.html.lower())
+
+    # Dark-theme/`prefers-color-scheme` taqiqi butun manba daraxti bo'ylab
+    # `tests/test_light_only_theme.py`da allaqachon qulflangan — bu yerda
+    # takrorlanmaydi (shu literal matnni qidiruv o'zi false-positive beradi).
+
+    def test_scheduler_section_uses_shared_components(self):
+        self.assertIn('ol-card', self.html)
+        self.assertIn('ol-badge', self.html)
+        self.assertNotIn('mq-scheduler-card', self.html)
 
 
 class DismissRecheckFlowTests(AdminTestCase):

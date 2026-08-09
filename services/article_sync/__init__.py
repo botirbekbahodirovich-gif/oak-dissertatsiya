@@ -35,6 +35,7 @@ from services.article_sync.scheduler_config import (SchedulerConfig,
 from services.article_sync.scheduler_state import (RUN_COMPLETED,
                                                     RUN_COMPLETED_WITH_ERRORS,
                                                     RUN_FAILED, RUN_RUNNING,
+                                                    SCHEDULER_RUN_STATUS_LABELS,
                                                     TRIGGER_MANUAL_CLI,
                                                     TRIGGER_SCHEDULED)
 from services.article_sync.service import (ArticleSyncError,
@@ -64,4 +65,5 @@ __all__ = [
     'select_due_articles', 'SchedulerConfig', 'SchedulerConfigError',
     'scheduler_config_from_env', 'RUN_COMPLETED', 'RUN_COMPLETED_WITH_ERRORS',
     'RUN_FAILED', 'RUN_RUNNING', 'TRIGGER_MANUAL_CLI', 'TRIGGER_SCHEDULED',
+    'SCHEDULER_RUN_STATUS_LABELS',
 ]

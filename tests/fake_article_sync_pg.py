@@ -20,6 +20,7 @@ soxta ishonch berardi. Shu sababli:
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta
 
 ARTICLE_COLUMNS = [
     'id', 'title', 'slug', 'abstract', 'language', 'publication_year',
@@ -42,6 +43,13 @@ SYNC_COLUMNS = ['id', 'article_id', 'status', 'checked_at', 'checked_by',
                 'has_retraction_change', 'has_citation_change',
                 'has_author_change', 'has_provider_issue', 'created_at']
 
+# `article_metadata_sync_runs` (migrations/013, Phase 2C.3C) — scheduler run
+# audit. Dashboard'ning "Avtomatik metadata tekshiruvi" bloki
+# `list_recent_scheduler_runs()` orqali shu jadvalni o'qiydi (Phase 2C.3D).
+RUN_COLUMNS = ['id', 'started_at', 'finished_at', 'status', 'trigger_type',
+              'total_selected', 'processed_count', 'success_count',
+              'partial_count', 'failed_count', 'skipped_count', 'created_at']
+
 
 def new_store(article=None):
     store = {
@@ -63,6 +71,24 @@ def add_article(store, article_id, **fields):
     row = base_article_row(**fields)
     row['id'] = article_id
     store['articles'][article_id] = row
+    return row
+
+
+def add_scheduler_run(store, run_id, **fields):
+    """Scheduler run audit qatorini qo'shadi (dashboard "Avtomatik metadata
+    tekshiruvi" bloki testlari uchun) — `services.article_sync.scheduler_
+    persistence.list_recent_runs()`ning haqiqiy ustunlar to'plami bilan bir
+    xil (`RUN_COLUMNS`). `started_at` — HAQIQIY `datetime` (shablon
+    `.strftime()` chaqiradi, ints emas) va `run_id`ga qarab ORTIB boradi —
+    "eng so'nggisi ko'rsatiladi" testlari qo'shimcha sozlamasiz ishlaydi."""
+    row = {c: None for c in RUN_COLUMNS}
+    row.update({'status': 'completed', 'trigger_type': 'scheduled',
+               'total_selected': 0, 'processed_count': 0, 'success_count': 0,
+               'partial_count': 0, 'failed_count': 0, 'skipped_count': 0,
+               'started_at': datetime(2026, 1, 1) + timedelta(seconds=run_id)})
+    row.update(fields)
+    row['id'] = run_id
+    store.setdefault('runs', {})[run_id] = row
     return row
 
 
@@ -197,6 +223,15 @@ class FakeSyncCursor:
                 row['dismissed_reason'] = reason
                 return [(sync_id,)], [('id',)]
             return [], [('id',)]
+
+        if sql.startswith('SELECT * FROM article_metadata_sync_runs'):
+            limit = p[0] if p else None
+            rows = list(self.store.get('runs', {}).values())
+            rows.sort(key=lambda r: r.get('started_at') or 0, reverse=True)
+            if limit is not None:
+                rows = rows[:limit]
+            return ([tuple(r.get(c) for c in RUN_COLUMNS) for r in rows],
+                   [(c,) for c in RUN_COLUMNS])
 
         return [], None
 
