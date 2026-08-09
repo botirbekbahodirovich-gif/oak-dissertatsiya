@@ -105,6 +105,45 @@ def ensure_schema(cur):
                 "ON article_import_items (created_article_id) WHERE created_article_id IS NOT NULL")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_article_import_items_batch_status "
                 "ON article_import_items (batch_id, status, row_number)")
+
+    # migrations/014 bilan AYNAN bir xil — Phase 2D.1 discovery provenance.
+    cur.execute("""
+        ALTER TABLE article_import_batches
+            ADD COLUMN IF NOT EXISTS source_provider      VARCHAR(24),
+            ADD COLUMN IF NOT EXISTS source_query         JSONB,
+            ADD COLUMN IF NOT EXISTS source_oak_field_id  INTEGER
+                REFERENCES scientific_fields(id) ON DELETE SET NULL,
+            ADD COLUMN IF NOT EXISTS source_result_count  INTEGER,
+            ADD COLUMN IF NOT EXISTS excluded_no_doi_count INTEGER
+    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_article_import_batches_source_oak_field "
+                "ON article_import_batches (source_oak_field_id) "
+                "WHERE source_oak_field_id IS NOT NULL")
+    cur.execute("ALTER TABLE article_import_items "
+                "ADD COLUMN IF NOT EXISTS external_source_id VARCHAR(64)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_article_import_items_external_source "
+                "ON article_import_items (external_source_id) "
+                "WHERE external_source_id IS NOT NULL")
+    # ACTIVE_DOI_ITEM_STATUSES — state.py yagona haqiqat manbai (parity test).
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_article_import_items_active_doi
+            ON article_import_items (normalized_doi)
+            WHERE normalized_doi IS NOT NULL AND status IN (
+                'pending', 'processing', 'ready_for_review', 'partial_metadata',
+                'retracted', 'provider_failed', 'failed', 'metadata_not_found'
+            )
+    """)
+
+    # migrations/015 bilan AYNAN bir xil — Phase 2D.1.1 discovery enqueue
+    # idempotency (bitta preview -> bitta batch, concurrent double-submit'da
+    # ham). `source_request_id` — raw preview token EMAS, uning hash'i.
+    cur.execute("ALTER TABLE article_import_batches "
+                "ADD COLUMN IF NOT EXISTS source_request_id VARCHAR(64)")
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_article_import_batches_discovery_request
+            ON article_import_batches (source_request_id)
+            WHERE source_type = 'discovery' AND source_request_id IS NOT NULL
+    """)
     _schema_ready = True
 
 
@@ -132,6 +171,81 @@ def create_batch(cur, created_by, source_type, original_filename=None):
            VALUES (%s, %s, %s, %s) RETURNING id""",
         (created_by, source_type, original_filename, BATCH_DRAFT))
     return cur.fetchone()[0]
+
+
+def get_or_create_discovery_batch(cur, created_by, *, source_provider, source_query,
+                                  source_oak_field_id, source_result_count,
+                                  excluded_no_doi_count, source_request_id=None):
+    """Phase 2D.1.1 — `source_type='discovery'` partiyasi, provenance bilan
+    (migrations/014) VA enqueue idempotency bilan (migrations/015).
+
+    `source_request_id` berilgan bo'lsa: `ON CONFLICT ... DO NOTHING` —
+    `uq_article_import_batches_discovery_request` bilan AYNAN bir xil
+    predicate. Ikki (ketma-ket YOKI PARALLEL) so'rov bir xil request_id bilan
+    kelsa, faqat BITTASI qator yozadi; ikkinchisi mavjud batch'ni o'qib
+    qaytaradi — hech qanday bo'sh "orphan" ikkinchi batch YO'Q, 500 YO'Q.
+
+    Qaytaradi: `(batch_id, created)` — `created=False` bo'lsa chaqiruvchi
+    itemlarni QAYTA yozmasligi kerak (ular allaqachon bor).
+    """
+    cur.execute(
+        """INSERT INTO article_import_batches
+              (created_by, source_type, status, source_provider, source_query,
+               source_oak_field_id, source_result_count, excluded_no_doi_count,
+               source_request_id)
+           VALUES (%s, 'discovery', %s, %s, %s, %s, %s, %s, %s)
+           ON CONFLICT (source_request_id) WHERE source_type = 'discovery'
+               AND source_request_id IS NOT NULL
+           DO NOTHING
+           RETURNING id""",
+        (created_by, BATCH_DRAFT, source_provider, _json(source_query),
+         source_oak_field_id, source_result_count, excluded_no_doi_count,
+         source_request_id))
+    row = cur.fetchone()
+    if row is not None:
+        return row[0], True
+
+    # DO NOTHING ishladi — request_id albatta berilgan va boshqa
+    # (parallel/oldingi) so'rov ULGURGAN edi. Endi o'sha batch'ni o'qiymiz.
+    existing_id = find_discovery_batch_by_request_id(cur, source_request_id)
+    return existing_id, False
+
+
+def find_discovery_batch_by_request_id(cur, source_request_id):
+    if not source_request_id:
+        return None
+    cur.execute(
+        """SELECT id FROM article_import_batches
+           WHERE source_type = 'discovery' AND source_request_id = %s""",
+        (source_request_id,))
+    row = cur.fetchone()
+    return row[0] if row else None
+
+
+def insert_discovery_item(cur, batch_id, row_number, normalized_doi,
+                          external_source_id):
+    """Bitta discovery nomzodini `pending` sifatida yozadi.
+
+    `ON CONFLICT ... DO NOTHING` — `uq_article_import_items_active_doi`
+    (migrations/014) bilan AYNAN bir xil predicate. Bu YAKUNIY himoya (§16):
+    ikki admin bir xil DOI'ni bir vaqtda navbatga qo'ysa, faqat BITTASI qator
+    yozadi — ikkinchisi `None` oladi (chaqiruvchi buni "allaqachon navbatda"
+    deb talqin qiladi, 500 EMAS).
+    """
+    cur.execute(
+        """INSERT INTO article_import_items
+              (batch_id, row_number, raw_input, normalized_doi, status,
+               external_source_id)
+           VALUES (%s, %s, %s, %s, 'pending', %s)
+           ON CONFLICT (normalized_doi) WHERE normalized_doi IS NOT NULL AND status IN (
+               'pending', 'processing', 'ready_for_review', 'partial_metadata',
+               'retracted', 'provider_failed', 'failed', 'metadata_not_found'
+           )
+           DO NOTHING
+           RETURNING id""",
+        (batch_id, row_number, normalized_doi, normalized_doi, external_source_id))
+    row = cur.fetchone()
+    return row[0] if row else None
 
 
 def get_batch(cur, batch_id):

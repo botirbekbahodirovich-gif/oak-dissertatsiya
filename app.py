@@ -808,6 +808,9 @@ from blueprints.articles import articles_bp
 # article_import_bp — DOI/CSV ommaviy import + ko'rib chiqish navbati (Phase
 # 2C.2). articles_bp'dan ATAYIN ajratilgan (u allaqachon 2000+ qator).
 from blueprints.article_import import article_import_bp
+# article_discovery_bp — Manual OpenAlex Article Discovery (Phase 2D.1).
+# Faqat article_import navbatiga yozadi, o'zi maqola yaratmaydi.
+from blueprints.article_discovery import article_discovery_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -844,6 +847,7 @@ app.register_blueprint(kafedra_bp)
 app.register_blueprint(data_quality_bp)
 app.register_blueprint(articles_bp)
 app.register_blueprint(article_import_bp)
+app.register_blueprint(article_discovery_bp)
 
 # ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])

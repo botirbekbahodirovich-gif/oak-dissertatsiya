@@ -10,7 +10,8 @@ from __future__ import annotations
 import logging
 
 from services.article_import import persistence
-from services.article_import.state import (FAILED, METADATA_NOT_FOUND,
+from services.article_import.state import (ALREADY_EXISTS, FAILED,
+                                            METADATA_NOT_FOUND,
                                             PARTIAL_METADATA, PROVIDER_FAILED,
                                             READY_FOR_REVIEW, RETRACTED)
 from services.article_metadata import MetadataLookupError, fetch_article_metadata
@@ -57,6 +58,18 @@ def process_item(cur, item, *, config=None, fetch=fetch_article_metadata,
     yiqitmaydi (§88) — istisno shu yerda ushlanadi va `failed` deb yoziladi.
     """
     doi = item['normalized_doi']
+
+    # Poyga himoyasi (§17, generic — faqat discovery uchun emas): preview va
+    # processing orasida BOSHQA yo'l (masalan boshqa admin approve'i yoki
+    # boshqa import) shu DOI bilan ARTICLE yaratgan bo'lishi mumkin. Metadata
+    # providerga bekorga so'rov yubormaslik uchun `scientific_articles`ni
+    # QAYTA tekshiramiz — item allaqachon batch yaratilganda `already_exists`
+    # bo'lmagan bo'lishi mumkin edi (o'sha payt hali mavjud emas edi).
+    existing = persistence.find_article_by_doi(cur, doi)
+    if existing:
+        persistence.set_item_already_exists(cur, item['id'], existing['id'])
+        return ALREADY_EXISTS
+
     try:
         result = fetch(doi, cache_get=cache_get, cache_set=cache_set)
     except MetadataLookupError as exc:
