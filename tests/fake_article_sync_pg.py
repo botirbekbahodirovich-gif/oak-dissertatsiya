@@ -1,10 +1,21 @@
 # -*- coding: utf-8 -*-
-"""Qalbaki psycopg2 kursuri — `services/article_sync` uchun (Phase 2C.3A).
+"""Qalbaki psycopg2 kursuri — `services/article_sync` uchun (Phase 2C.3A/2C.3B).
 
 `tests/fake_article_import_pg.py` bilan bir xil naqsh: haqiqatan
 FILTRLAYDIGAN, INSERT/UPDATE bajaradigan qalbaki DB — chunki bu modulning
-markaziy talablari (stale himoya, idempotency, transaction) soxta
-"hammasini qaytar" kursor bilan mazmunli test qilib bo'lmaydi.
+markaziy talablari (stale himoya, idempotency, transaction, dismiss, actor)
+soxta "hammasini qaytar" kursor bilan mazmunli test qilib bo'lmaydi.
+
+DASHBOARD CTE (`persistence._LATEST_SYNC_CTE` — `DISTINCT ON`, `FILTER
+(WHERE …)`) ATAYIN bu yerda simulyatsiya QILINMAYDI: bu Postgres-ga xos
+konstruksiyalarni Python bilan qayta yozish fake'ni asl SQL'dan chetlashtirib,
+soxta ishonch berardi. Shu sababli:
+  * `persistence._dashboard_where()` — sof funksiya, DB'siz to'g'ridan-to'g'ri
+    test qilinadi (tests/test_article_sync_dashboard_query.py);
+  * haqiqiy `DISTINCT ON`/filtr semantikasi — staging'da
+    (tests/test_article_sync_dashboard_dbgated.py, TEST_DATABASE_URL bilan);
+  * route/service darajasida dashboard natijasi `mock.patch` bilan (haqiqiy
+    DB'ga ehtiyoj yo'q — faqat marshrutlash/shablon tekshiriladi).
 """
 from __future__ import annotations
 
@@ -23,10 +34,13 @@ AUTHOR_COLUMNS = ['author_name', 'author_order', 'orcid', 'affiliation',
                   'openalex_author_id']
 
 SYNC_COLUMNS = ['id', 'article_id', 'status', 'checked_at', 'checked_by',
-                'provider_summary', 'diff_summary', 'change_count',
+                'actor_type', 'provider_summary', 'diff_summary', 'change_count',
                 'safe_change_count', 'review_change_count',
                 'critical_change_count', 'article_updated_at_snapshot',
-                'applied_at', 'applied_by', 'applied_fields', 'created_at']
+                'applied_at', 'applied_by', 'applied_fields',
+                'dismissed_at', 'dismissed_by', 'dismissed_reason',
+                'has_retraction_change', 'has_citation_change',
+                'has_author_change', 'has_provider_issue', 'created_at']
 
 
 def new_store(article=None):
@@ -40,6 +54,16 @@ def new_store(article=None):
         'sql': [],
     }
     return store
+
+
+def add_article(store, article_id, **fields):
+    """Bir nechta maqolali stsenariylar uchun (dashboard bilan bog'liq
+    bo'lmagan servis testlari) qo'shimcha maqola qo'shadi."""
+    from tests.test_article_sync_service import base_article_row
+    row = base_article_row(**fields)
+    row['id'] = article_id
+    store['articles'][article_id] = row
+    return row
 
 
 def _norm(sql):
@@ -73,7 +97,8 @@ class FakeSyncCursor:
         return list(self._rows)
 
     def _dispatch(self, sql, p):
-        if sql.startswith(('CREATE TABLE', 'CREATE INDEX', 'CREATE UNIQUE INDEX')):
+        if sql.startswith(('CREATE TABLE', 'CREATE INDEX', 'CREATE UNIQUE INDEX',
+                           'ALTER TABLE')):
             return [], None
 
         if sql.startswith('SELECT id, title, slug, abstract, language'):
@@ -112,16 +137,22 @@ class FakeSyncCursor:
             sync_id = self.store['next_sync_id']
             self.store['next_sync_id'] += 1
             row = {c: None for c in SYNC_COLUMNS}
-            (article_id, checked_by, provider_summary, diff_summary,
-             change_count, safe, review, critical, snapshot) = p
+            (article_id, checked_by, actor_type, provider_summary, diff_summary,
+             change_count, safe, review, critical, snapshot, has_retraction,
+             has_citation, has_authors, has_provider_issue) = p
             row.update({'id': sync_id, 'article_id': article_id, 'status': 'checked',
-                       'checked_by': checked_by,
+                       'checked_by': checked_by, 'actor_type': actor_type,
                        'provider_summary': _loads(provider_summary),
                        'diff_summary': _loads(diff_summary),
                        'change_count': change_count, 'safe_change_count': safe,
                        'review_change_count': review,
                        'critical_change_count': critical,
-                       'article_updated_at_snapshot': snapshot})
+                       'article_updated_at_snapshot': snapshot,
+                       'has_retraction_change': has_retraction,
+                       'has_citation_change': has_citation,
+                       'has_author_change': has_authors,
+                       'has_provider_issue': has_provider_issue,
+                       'checked_at': 'CHECKED-%d' % sync_id})
             self.store['syncs'][sync_id] = row
             return [(sync_id,)], [('id',)]
 
@@ -131,11 +162,17 @@ class FakeSyncCursor:
                 return [], [(c,) for c in SYNC_COLUMNS]
             return [tuple(row[c] for c in SYNC_COLUMNS)], [(c,) for c in SYNC_COLUMNS]
 
+        if sql.startswith('SELECT COUNT(*) FROM article_metadata_syncs WHERE article_id'):
+            article_id = p[0]
+            count = sum(1 for r in self.store['syncs'].values()
+                       if r['article_id'] == article_id)
+            return [(count,)], [('count',)]
+
         if sql.startswith('SELECT * FROM article_metadata_syncs WHERE article_id'):
-            article_id, limit = p
+            article_id, limit, offset = p
             rows = [r for r in self.store['syncs'].values()
                    if r['article_id'] == article_id]
-            rows = sorted(rows, key=lambda r: -r['id'])[:limit]
+            rows = sorted(rows, key=lambda r: -r['id'])[offset:offset + limit]
             return ([tuple(r[c] for c in SYNC_COLUMNS) for r in rows],
                    [(c,) for c in SYNC_COLUMNS])
 
@@ -147,6 +184,17 @@ class FakeSyncCursor:
                 row['applied_at'] = 'APPLIED'
                 row['applied_by'] = applied_by
                 row['applied_fields'] = _loads(applied_fields)
+                return [(sync_id,)], [('id',)]
+            return [], [('id',)]
+
+        if sql.startswith("UPDATE article_metadata_syncs SET status = 'dismissed'"):
+            dismissed_by, reason, sync_id = p
+            row = self.store['syncs'].get(sync_id)
+            if row and row['status'] == 'checked':
+                row['status'] = 'dismissed'
+                row['dismissed_at'] = 'DISMISSED'
+                row['dismissed_by'] = dismissed_by
+                row['dismissed_reason'] = reason
                 return [(sync_id,)], [('id',)]
             return [], [('id',)]
 
