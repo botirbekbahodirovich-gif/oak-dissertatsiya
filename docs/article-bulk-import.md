@@ -10,6 +10,12 @@ Bog'liq hujjat: [`article-metadata-integration.md`](article-metadata-integration
 `fetch_article_metadata()` funksiyasidan foydalanadi — bulk importer
 Crossref/OpenAlex/Unpaywall mantig'ini qayta yozmaydi.
 
+Admin qo'lda DOI kiritish o'rniga OpenAlex'dan kalit so'z bo'yicha nomzod
+qidirishi mumkin — [`article-discovery.md`](article-discovery.md) (Phase 2D.1).
+Discovery faqat shu yerdagi navbatga "yangi" DOI qo'shadi; qolgan hammasi —
+metadata olish, ko'rib chiqish, tasdiqlash — o'zgarishsiz shu sahifadagi
+pipeline orqali ishlaydi.
+
 **Bir jumlada: import ≠ publish.** Tasdiqlangan (`approve`) yozuv har doim
 `verification_status='pending_review'`, `publication_status='draft'` bilan
 yaratiladi. Nashr qilish — mavjud, alohida admin moderatsiya oqimi
