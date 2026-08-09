@@ -133,6 +133,17 @@ def ensure_schema(cur):
                 'retracted', 'provider_failed', 'failed', 'metadata_not_found'
             )
     """)
+
+    # migrations/015 bilan AYNAN bir xil — Phase 2D.1.1 discovery enqueue
+    # idempotency (bitta preview -> bitta batch, concurrent double-submit'da
+    # ham). `source_request_id` — raw preview token EMAS, uning hash'i.
+    cur.execute("ALTER TABLE article_import_batches "
+                "ADD COLUMN IF NOT EXISTS source_request_id VARCHAR(64)")
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_article_import_batches_discovery_request
+            ON article_import_batches (source_request_id)
+            WHERE source_type = 'discovery' AND source_request_id IS NOT NULL
+    """)
     _schema_ready = True
 
 
@@ -162,20 +173,53 @@ def create_batch(cur, created_by, source_type, original_filename=None):
     return cur.fetchone()[0]
 
 
-def create_discovery_batch(cur, created_by, *, source_provider, source_query,
-                           source_oak_field_id, source_result_count,
-                           excluded_no_doi_count):
-    """Phase 2D.1 — `source_type='discovery'` partiyasi, provenance bilan
-    (migrations/014). CSV/DOI-list `create_batch()`dan ATAYIN alohida: bu
-    yerda hech qanday raw_input parsing yo'q, faqat provenance yozish."""
+def get_or_create_discovery_batch(cur, created_by, *, source_provider, source_query,
+                                  source_oak_field_id, source_result_count,
+                                  excluded_no_doi_count, source_request_id=None):
+    """Phase 2D.1.1 — `source_type='discovery'` partiyasi, provenance bilan
+    (migrations/014) VA enqueue idempotency bilan (migrations/015).
+
+    `source_request_id` berilgan bo'lsa: `ON CONFLICT ... DO NOTHING` —
+    `uq_article_import_batches_discovery_request` bilan AYNAN bir xil
+    predicate. Ikki (ketma-ket YOKI PARALLEL) so'rov bir xil request_id bilan
+    kelsa, faqat BITTASI qator yozadi; ikkinchisi mavjud batch'ni o'qib
+    qaytaradi — hech qanday bo'sh "orphan" ikkinchi batch YO'Q, 500 YO'Q.
+
+    Qaytaradi: `(batch_id, created)` — `created=False` bo'lsa chaqiruvchi
+    itemlarni QAYTA yozmasligi kerak (ular allaqachon bor).
+    """
     cur.execute(
         """INSERT INTO article_import_batches
               (created_by, source_type, status, source_provider, source_query,
-               source_oak_field_id, source_result_count, excluded_no_doi_count)
-           VALUES (%s, 'discovery', %s, %s, %s, %s, %s, %s) RETURNING id""",
+               source_oak_field_id, source_result_count, excluded_no_doi_count,
+               source_request_id)
+           VALUES (%s, 'discovery', %s, %s, %s, %s, %s, %s, %s)
+           ON CONFLICT (source_request_id) WHERE source_type = 'discovery'
+               AND source_request_id IS NOT NULL
+           DO NOTHING
+           RETURNING id""",
         (created_by, BATCH_DRAFT, source_provider, _json(source_query),
-         source_oak_field_id, source_result_count, excluded_no_doi_count))
-    return cur.fetchone()[0]
+         source_oak_field_id, source_result_count, excluded_no_doi_count,
+         source_request_id))
+    row = cur.fetchone()
+    if row is not None:
+        return row[0], True
+
+    # DO NOTHING ishladi — request_id albatta berilgan va boshqa
+    # (parallel/oldingi) so'rov ULGURGAN edi. Endi o'sha batch'ni o'qiymiz.
+    existing_id = find_discovery_batch_by_request_id(cur, source_request_id)
+    return existing_id, False
+
+
+def find_discovery_batch_by_request_id(cur, source_request_id):
+    if not source_request_id:
+        return None
+    cur.execute(
+        """SELECT id FROM article_import_batches
+           WHERE source_type = 'discovery' AND source_request_id = %s""",
+        (source_request_id,))
+    row = cur.fetchone()
+    return row[0] if row else None
 
 
 def insert_discovery_item(cur, batch_id, row_number, normalized_doi,

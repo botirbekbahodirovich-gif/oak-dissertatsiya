@@ -152,6 +152,16 @@ def discovery_search():
                            enqueuable=ENQUEUABLE_CLASSIFICATIONS)
 
 
+def _request_id_for_token(admin_id, token):
+    """Preview token'ning DB'da saqlanadigan idempotency identifikatori.
+
+    Raw token HECH QACHON DB'ga/log'ga yozilmaydi (§8, §20) — faqat shu
+    deterministic SHA-256 hash (admin bilan namespace qilingan, boshqa admin
+    xuddi shu token qiymatiga "duch kelib qolsa" ham boshqa hash beradi)."""
+    import hashlib
+    return hashlib.sha256(('%s:%s' % (admin_id, token)).encode('utf-8')).hexdigest()
+
+
 @article_discovery_bp.route('/admin/articles/discovery/enqueue', methods=['POST'])
 @login_required
 def discovery_enqueue():
@@ -159,11 +169,16 @@ def discovery_enqueue():
     config = config_from_env()
     cache = _cache()
     token = (request.form.get('preview_token') or '').strip()
+    if not token:
+        flash("Qidiruv natijasi muddati o'tgan yoki topilmadi. Qayta qidiring.")
+        return redirect('/admin/articles/discovery')
 
+    request_id = _request_id_for_token(current_user.id, token)
+
+    # Tezkor yo'l — best-effort, cache eviction/restart bo'lsa ham DB
+    # (source_request_id, migrations/015) YAKUNIY himoya bo'lib qoladi (§3).
     consumed = discovery_service.load_consumed(cache.get, token)
     if consumed and consumed.get('consumed'):
-        # Double-click idempotency (§24) — xuddi shu batch'ga qaytadi, yangi
-        # batch YARATILMAYDI.
         return redirect('/admin/articles/imports/%s' % consumed['batch_id'])
 
     entry = discovery_service.load_preview(cache.get, token, current_user.id)
@@ -188,7 +203,8 @@ def discovery_enqueue():
             result = bridge.enqueue_discovery_candidates(
                 cur, current_user.id, query, candidates,
                 total_count=entry.get('total_count', 0),
-                excluded_no_doi_count=entry.get('excluded_no_doi_count', 0))
+                excluded_no_doi_count=entry.get('excluded_no_doi_count', 0),
+                request_id=request_id)
             conn.commit()
     except Exception:
         conn.rollback()
@@ -198,9 +214,18 @@ def discovery_enqueue():
     finally:
         conn.close()
 
+    if result['batch_id'] is None:
+        # §9 — hech qanday yangi DOI yo'q edi va oldingi batch ham yo'q:
+        # bo'sh "orphan" batch YARATILMADI.
+        flash("Yangi maqolalar topilmadi yoki ularning barchasi allaqachon "
+             "navbatda.")
+        return redirect('/admin/articles/discovery')
+
     discovery_service.mark_preview_consumed(cache.set, token, result['batch_id'],
                                             config=config)
-    if result['conflicted']:
+    if not result['created']:
+        flash("Bu qidiruv natijasi allaqachon navbatga yuborilgan.")
+    elif result['conflicted']:
         flash("%d ta DOI navbatga qo'shildi. %d ta DOI parallel so'rov "
              "tomonidan allaqachon navbatga olingan edi."
              % (len(result['queued']), len(result['conflicted'])))
