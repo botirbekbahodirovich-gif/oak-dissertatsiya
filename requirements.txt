@@ -9,6 +9,10 @@ Flask-WTF==1.2.1
 psycopg2-binary==2.9.6
 groq
 gunicorn
+# `requests` ilgari faqat requests-oauthlib orqali tranzitiv kelardi. Endi u
+# to'g'ridan-to'g'ri ishlatiladi (services/article_metadata, scraper.py,
+# blueprints/payments.py), shuning uchun ochiq e'lon qilinadi.
+requests>=2.31.0
 requests-oauthlib==2.0.0
 bleach==6.4.0
 python-docx==1.2.0

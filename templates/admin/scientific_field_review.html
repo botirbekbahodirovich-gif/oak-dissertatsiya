@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Review navbati — fan yo'nalishlari (admin){% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {{ page_header("OAK ixtisosliklari — review navbati",
+                 "Manbada shubhali topilgan yozuvlar. Ular bazaga IMPORT QILINMAGAN.",
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'),
+                         ("Fan yo'nalishlari", '/admin/scientific-fields')],
+                 meta=['Kutilmoqda: %d' % pending|length,
+                       'Tasdiqlangan: %d' % approved|length]) }}
+
+  {% if error %}
+  <div class="mq-form__error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <div class="mq-notice mq-notice--info">
+    <h2 class="ol-h5 mq-flush-top">Tasdiqlash tartibi</h2>
+    <p class="ol-body mq-notice__text">
+      Bu sahifa faqat ko'rish uchun — bu yerda nom o'zgartirilmaydi. Sabab:
+      tasdiqlangan nom manba fayliga yozilishi va git tarixida qolishi kerak,
+      shunda keyingi re-parse uni yo'qotmaydi.
+    </p>
+    <ol class="ol-body mq-steps">
+      <li>Rasmiy OAK manbasidan to'liq nomni aniqlang (taxmin qilmang).</li>
+      <li>Quyidagi faylda tegishli yozuvni toping:
+        <code class="mq-wrap-any">{{ queue_path }}</code></li>
+      <li><code>approved_name_uz_cyrillic</code>, <code>reviewer</code> va
+        <code>reviewed_at</code> maydonlarini to'ldiring (uchalasi ham shart).</li>
+      <li><code>python scripts/parse_oak_specialties.py</code> — tasdiqlangan
+        yozuv approved datasetga o'tadi, lotin nomi avtomatik hosil bo'ladi.</li>
+      <li><code>python scripts/seed_scientific_fields.py --file
+        data/oak/normalized/oak_specialties_approved.json --apply</code></li>
+    </ol>
+  </div>
+
+  {% if metadata %}
+  <p class="ol-meta mq-gap-top">
+    Manba: {{ metadata.source_file }} &middot;
+    SHA-256: <code class="mq-wrap-any">{{ metadata.source_sha256 }}</code> &middot;
+    parse: {{ metadata.parsed_at }}
+  </p>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="rv-pending">
+    <h2 id="rv-pending" class="ol-h4">Tasdiqlanishi kerak ({{ pending|length }})</h2>
+
+    {% if pending %}
+    <div class="ol-table-wrap">
+      <table class="ol-table">
+        <caption class="mq-sr-only">Review kutayotgan yozuvlar</caption>
+        <thead>
+          <tr>
+            <th scope="col">Shifr</th>
+            <th scope="col">Manbadagi asl nom</th>
+            <th scope="col">Normalizatsiya nomzodi</th>
+            <th scope="col">Qator</th>
+            <th scope="col">Sabab</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in pending %}
+          <tr>
+            <th scope="row" class="mq-tree__code">{{ record.code }}</th>
+            <td class="mq-admin-name" lang="uz-Cyrl">{{ record.raw_name }}</td>
+            <td class="mq-admin-name">
+              <span lang="uz-Cyrl">{{ record.normalized_candidate }}</span>
+              {% if record.name_uz %}<span class="mq-admin-raw">{{ record.name_uz }}</span>{% endif %}
+            </td>
+            <td>{{ record.source_line }}</td>
+            <td>
+              <ul class="mq-review__reasons">
+                {% for reason in record.review_reasons %}
+                <li><span class="ol-badge ol-badge--notice">{{ reason }}</span></li>
+                {% endfor %}
+              </ul>
+              {% if record.curated_note %}
+              <span class="mq-admin-raw">{{ record.curated_note }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif not error %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Navbat bo'sh</h3>
+      <p class="ol-body">Barcha shubhali yozuvlar ko'rib chiqilgan.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if approved %}
+  <section class="ol-section" aria-labelledby="rv-approved">
+    <h2 id="rv-approved" class="ol-h4">Tasdiqlangan ({{ approved|length }})</h2>
+    <div class="ol-table-wrap">
+      <table class="ol-table">
+        <caption class="mq-sr-only">Tasdiqlangan yozuvlar</caption>
+        <thead>
+          <tr>
+            <th scope="col">Shifr</th>
+            <th scope="col">Tasdiqlangan nom</th>
+            <th scope="col">Tekshiruvchi</th>
+            <th scope="col">Sana</th>
+            <th scope="col">Izoh</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in approved %}
+          <tr>
+            <th scope="row" class="mq-tree__code">{{ record.code }}</th>
+            <td class="mq-admin-name" lang="uz-Cyrl">{{ record.approved_name_uz_cyrillic }}</td>
+            <td>{{ record.reviewer }}</td>
+            <td>{{ record.reviewed_at }}</td>
+            <td>{{ record.review_note or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

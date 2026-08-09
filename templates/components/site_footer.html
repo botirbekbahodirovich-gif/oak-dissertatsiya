@@ -1,0 +1,37 @@
+{# Olimlar.uz footer — ustunlar utils/navigation.py:FOOTER_COLUMNS dan.
+   Yangiliklar va Blog atayin shu yerda ("Axborot"), header'da emas. #}
+<footer class="ol-footer">
+  <div class="ol-container ol-container--wide">
+    <div class="ol-footer__grid">
+      <div>
+        {# Oq logo-mark.png bu yerda ham ko'rinmasdi — wordmark ishlatiladi. #}
+        <div class="ol-brand">
+          <span class="ol-footer__brand-name">Olimlar.uz</span>
+        </div>
+        <p class="ol-footer__mission">
+          O'zbekiston ilmiy hamjamiyati uchun yagona akademik platforma:
+          dissertatsiyalar, olimlar profillari, grantlar va tahlil vositalari.
+        </p>
+        <a class="ol-btn ol-btn--tertiary" href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer">
+          <i class="bi bi-telegram" aria-hidden="true"></i>@olimlar_uz
+        </a>
+      </div>
+
+      {% for column in footer_columns %}
+      <nav class="ol-footer__col" aria-labelledby="ol-foot-{{ loop.index }}">
+        <h2 id="ol-foot-{{ loop.index }}">{{ column.title }}</h2>
+        <ul>
+          {% for item in column.items %}
+          <li><a href="{{ item.href }}">{{ item.label }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+      {% endfor %}
+    </div>
+
+    <div class="ol-footer__bottom">
+      <span>&copy; <span id="oak-footer-year">2026</span> Olimlar.uz — Barcha huquqlar himoyalangan</span>
+      <a href="https://t.me/send_kod_bot" target="_blank" rel="noopener noreferrer">Admin bilan aloqa</a>
+    </div>
+  </div>
+</footer>

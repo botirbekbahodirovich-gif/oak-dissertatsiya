@@ -34,3 +34,7 @@ static/generated_docs/
 # Rescrape keshi — OAK sahifalarining xom HTML nusxasi (o'nlab MB, qayta
 # yuklanadi). Kesh o'zi resume mexanizmi, shuning uchun serverda saqlanadi.
 data/rescrape_cache/
+
+# Ilmiy maqolalar PDF fayllari — runtime yuklamalar, static/ tashqarisida
+# saqlanadi (nginx to'g'ridan-to'g'ri bermasin). Hech qachon commit qilinmaydi.
+storage/

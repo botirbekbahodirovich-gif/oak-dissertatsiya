@@ -4,67 +4,73 @@
 {% block extra_head %}
 <style>
 .content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.cg { background: #0f172a; color: #e2e8f0; min-height: 92vh; padding: 0 0 48px; }
-.cg-hero { background: linear-gradient(135deg, #1e3a8a 0%, #6366f1 100%); padding: 34px 0 30px; text-align: center; }
-.cg-hero h1 { font-size: 2rem; font-weight: 800; color: #fff; margin: 0 0 8px; }
-.cg-hero p { color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0; }
+.cg { background: var(--color-background); color: var(--color-text-primary); min-height: 92vh; padding: 0 0 48px; }
+/* Hero avval to'q gradient banner edi; endi och kulrang sarlavha bloki. */
+.cg-hero { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
+  padding: var(--space-40) var(--space-24); }
+.cg-hero-inner { max-width: 1320px; margin: 0 auto; }
+.cg-hero h1 { font-family: var(--font-serif); font-size: var(--text-h1); font-weight: 700;
+  color: var(--color-text-primary); margin: 0 0 var(--space-12); line-height: var(--leading-heading); }
+.cg-hero p { color: var(--color-text-muted); font-size: var(--text-body-lg); margin: 0; max-width: 70ch; }
+@media (max-width: 649px) { .cg-hero { padding: var(--space-32) var(--space-16); } .cg-hero h1 { font-size: 32px; } }
 .cg-wrap { max-width: 1320px; margin: 0 auto; padding: 20px 18px 0; }
 
 /* ── Toolbar ─────────────────────────────────────────────── */
 .cg-toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
-  background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
   padding: 12px 14px; margin-bottom: 14px;
 }
 .cg-search { position: relative; flex: 1 1 320px; min-width: 240px; }
 .cg-search input {
-  width: 100%; background: #0b1220; border: 1px solid #334155; color: #e2e8f0;
-  border-radius: 10px; padding: 10px 14px 10px 38px; font-size: 0.95rem;
+  width: 100%; background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-primary);
+  border-radius: var(--radius-default); padding: 10px 14px 10px 38px; font-size: 0.95rem;
 }
-.cg-search input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.cg-search input:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
 .cg-search::before {
-  content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-  font-size: 0.9rem; opacity: 0.7; pointer-events: none;
+  /* Bootstrap Icons glifi (emoji o'rniga) */
+  content: "\F52A"; font-family: "bootstrap-icons"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 0.95rem; color: var(--color-text-muted); pointer-events: none;
 }
 .cg-drop {
   position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
-  background: #0b1220; border: 1px solid #334155; border-radius: 10px;
+  background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-default);
   max-height: 320px; overflow-y: auto; display: none;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 12px rgba(12,15,18,0.08);
 }
 .cg-drop.open { display: block; }
 .cg-drop-item {
   padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between;
-  gap: 10px; border-bottom: 1px solid #1e293b; font-size: 0.9rem;
+  gap: 10px; border-bottom: 1px solid var(--color-border-subtle); font-size: 0.9rem;
 }
 .cg-drop-item:last-child { border-bottom: none; }
-.cg-drop-item:hover, .cg-drop-item.active { background: #1e293b; }
-.cg-drop-item .n { color: #e2e8f0; font-weight: 600; }
-.cg-drop-item .c { color: #64748b; font-size: 0.8rem; white-space: nowrap; }
-.cg-drop-empty { padding: 12px 14px; color: #64748b; font-size: 0.85rem; }
+.cg-drop-item:hover, .cg-drop-item.active { background: var(--color-blue-soft); }
+.cg-drop-item .n { color: var(--color-text-primary); font-weight: 600; }
+.cg-drop-item .c { color: var(--color-text-muted); font-size: 0.8rem; white-space: nowrap; }
+.cg-drop-empty { padding: 12px 14px; color: var(--color-text-muted); font-size: 0.85rem; }
 
 .cg-spec {
-  background: #0b1220; border: 1px solid #334155; color: #e2e8f0;
-  border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; width: 170px;
+  background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-primary);
+  border-radius: var(--radius-default); padding: 10px 12px; font-size: 0.9rem; width: 170px;
 }
-.cg-spec:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+.cg-spec:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
 
 .cg-checks { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 .cg-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; user-select: none; }
-.cg-check input { accent-color: #3b82f6; width: 15px; height: 15px; }
-.cg-check .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.cg-check input { accent-color: var(--color-action-blue); width: 15px; height: 15px; }
+.cg-check .dot { width: 11px; height: 11px; border-radius: var(--radius-full); display: inline-block; }
 
 .cg-legend { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; font-weight: 700; }
 .cg-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.cg-legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cg-legend .dot { width: 10px; height: 10px; border-radius: var(--radius-full); display: inline-block; }
 
 /* ── Year slider ─────────────────────────────────────────── */
 .cg-years {
   display: flex; align-items: center; gap: 10px;
-  background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
   padding: 10px 16px; margin-bottom: 14px;
 }
-.cg-years .lab { color: #93bbfc; font-weight: 700; font-size: 0.85rem; min-width: 44px; }
+.cg-years .lab { color: var(--color-action-blue); font-weight: 700; font-size: 0.85rem; min-width: 44px; }
 .cg-years .range { position: relative; flex: 1; height: 26px; }
 .cg-years .range input {
   position: absolute; width: 100%; top: 0; margin: 0; background: none;
@@ -72,67 +78,67 @@
 }
 .cg-years .range input::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none; pointer-events: auto;
-  width: 18px; height: 18px; border-radius: 50%; background: #3b82f6;
-  border: 2px solid #e2e8f0; cursor: pointer; margin-top: -8px;
+  width: 18px; height: 18px; border-radius: var(--radius-full); background: var(--color-action-blue);
+  border: 2px solid var(--color-text-primary); cursor: pointer; margin-top: -8px;
 }
 .cg-years .range input::-moz-range-thumb {
-  pointer-events: auto; width: 18px; height: 18px; border-radius: 50%;
-  background: #3b82f6; border: 2px solid #e2e8f0; cursor: pointer;
+  pointer-events: auto; width: 18px; height: 18px; border-radius: var(--radius-full);
+  background: var(--color-action-blue); border: 2px solid var(--color-text-primary); cursor: pointer;
 }
-.cg-years .track { position: absolute; top: 11px; left: 0; right: 0; height: 4px; border-radius: 4px; background: #334155; }
-.cg-years .fill { position: absolute; top: 11px; height: 4px; border-radius: 4px; background: #3b82f6; }
-.cg-years .out { color: #e2e8f0; font-weight: 800; font-size: 0.9rem; min-width: 108px; text-align: right; }
+.cg-years .track { position: absolute; top: 11px; left: 0; right: 0; height: 4px; border-radius: var(--radius-default); background: var(--color-border); }
+.cg-years .fill { position: absolute; top: 11px; height: 4px; border-radius: var(--radius-default); background: var(--color-action-blue); }
+.cg-years .out { color: var(--color-text-primary); font-weight: 800; font-size: 0.9rem; min-width: 108px; text-align: right; }
 
 /* ── Stage ───────────────────────────────────────────────── */
 .cg-stage {
-  position: relative; background: #0b1220; border: 1px solid #334155;
-  border-radius: 16px; height: 74vh; min-height: 520px; overflow: hidden;
+  position: relative; background: var(--color-background); border: 1px solid var(--color-border);
+  border-radius: var(--radius-default); height: 74vh; min-height: 520px; overflow: hidden;
 }
 .cg-svg { display: block; width: 100%; height: 100%; cursor: grab; }
 .cg-svg:active { cursor: grabbing; }
 .cg-stage.is-loading::after {
-  content: "🔗 Aloqalar qurilmoqda..."; position: absolute; inset: 0;
+  content: "Aloqalar qurilmoqda…"; position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  color: #94a3b8; font-size: 0.95rem; background: rgba(11,18,32,0.6); z-index: 5;
+  color: var(--color-text-muted); font-size: 0.95rem; background: rgba(255,255,255,0.8); z-index: 5;
 }
 .cg-empty {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center; padding: 24px;
-  color: #64748b; font-size: 0.95rem; gap: 8px;
+  color: var(--color-text-muted); font-size: 0.95rem; gap: 8px;
 }
-.cg-empty b { color: #93bbfc; }
+.cg-empty b { color: var(--color-action-blue); }
 
 .cg-tip {
   position: absolute; z-index: 30; pointer-events: none; opacity: 0;
-  background: #0b1220; border: 1px solid #3b82f6; border-radius: 10px;
-  padding: 9px 12px; font-size: 0.82rem; color: #e2e8f0; max-width: 260px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.55); transition: opacity 0.12s; line-height: 1.5;
+  background: var(--color-background); border: 1px solid var(--color-action-blue); border-radius: var(--radius-default);
+  padding: 9px 12px; font-size: 0.82rem; color: var(--color-text-primary); max-width: 260px;
+  box-shadow: 0 4px 12px rgba(12,15,18,0.08); transition: opacity 0.12s; line-height: 1.5;
 }
-.cg-tip b { color: #fff; }
-.cg-tip .muted { color: #94a3b8; }
+.cg-tip b { color: var(--color-text-primary); }
+.cg-tip .muted { color: var(--color-text-muted); }
 
 .cg-info {
   position: absolute; z-index: 20; top: 14px; right: 14px; width: 290px;
-  background: #111c30; border: 1px solid #334155; border-radius: 14px;
-  padding: 16px; transform: translateX(120%); transition: transform 0.25s;
-  box-shadow: 0 14px 34px rgba(0,0,0,0.5);
+  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
+  padding: var(--space-16); transform: translateX(120%); transition: transform 0.25s;
+  box-shadow: 0 4px 12px rgba(12,15,18,0.08);
 }
 .cg-info.open { transform: translateX(0); }
-.cg-info h3 { margin: 0 0 8px; font-size: 1.05rem; color: #fff; padding-right: 22px; }
-.cg-info .ip-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; }
-.cg-info .ip-deg { font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; margin-left: 6px; vertical-align: middle; font-weight: 700; }
-.cg-info .ip-deg.dsc { background: #7c2d12; color: #fdba74; }
-.cg-info .ip-deg.phd { background: #164e63; color: #67e8f9; }
-.cg-info .ip-meta { color: #94a3b8; font-size: 0.8rem; margin-bottom: 10px; line-height: 1.5; }
-.cg-info .ip-stats { color: #cbd5e1; font-size: 0.85rem; margin-bottom: 12px; }
-.cg-info .ip-stats b { color: #fff; }
+.cg-info h3 { margin: 0 0 var(--space-8); font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); padding-right: 22px; }
+.cg-info .ip-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--color-text-muted); font-size: 1.1rem; cursor: pointer; }
+.cg-info .ip-deg { font-size: 0.72rem; padding: 2px 7px; border-radius: var(--radius-default); margin-left: 6px; vertical-align: middle; font-weight: 700; }
+.cg-info .ip-deg.dsc { background: var(--color-orange-soft); color: var(--color-brand-orange); }
+.cg-info .ip-deg.phd { background: var(--color-success-soft); color: var(--color-success); }
+.cg-info .ip-meta { color: var(--color-text-muted); font-size: 0.8rem; margin-bottom: 10px; line-height: 1.5; }
+.cg-info .ip-stats { color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 12px; }
+.cg-info .ip-stats b { color: var(--color-text-primary); }
 .cg-info .ip-actions { display: flex; flex-direction: column; gap: 8px; }
-.cg-info .ip-btn { display: block; text-align: center; padding: 9px; border-radius: 9px; background: #3b82f6; color: #fff; font-weight: 700; font-size: 0.85rem; text-decoration: none; }
-.cg-info .ip-btn.ghost { background: transparent; border: 1px solid #334155; color: #93bbfc; }
-.cg-info .ip-btn:hover { filter: brightness(1.1); }
+.cg-info .ip-btn { display: block; text-align: center; padding: 9px; border-radius: var(--radius-default); background: var(--color-action-blue); color: #fff; font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+.cg-info .ip-btn.ghost { background: transparent; border: 1px solid var(--color-border); color: var(--color-action-blue); }
+.cg-info .ip-btn:hover { background: var(--color-action-blue-dark); }
 
-.cg-help { margin-top: 14px; color: #64748b; font-size: 0.82rem; line-height: 1.6; }
-.cg-help b { color: #93bbfc; }
+.cg-help { margin-top: 14px; color: var(--color-text-muted); font-size: 0.82rem; line-height: 1.6; }
+.cg-help b { color: var(--color-action-blue); }
 
 @media (max-width: 700px) {
   .cg-legend { margin-left: 0; width: 100%; }
@@ -145,8 +151,15 @@
 {% block content %}
 <div class="cg">
   <div class="cg-hero">
-    <h1>🔗 Ilmiy Hamkorlik Grafi</h1>
-    <p>Olimni qidiring va uning ustoz–shogird, opponent va muassasa tarmog'ini interaktiv grafda ko'ring</p>
+    <div class="cg-hero-inner">
+      <nav aria-label="Breadcrumb"><ol class="ol-breadcrumb">
+        <li><a href="/">Bosh sahifa</a></li>
+        <li><a href="/olimlar">Olimlar</a></li>
+        <li aria-current="page">Ilmiy hamkorlik</li>
+      </ol></nav>
+      <h1>Ilmiy hamkorlik</h1>
+      <p>Olimni qidiring va uning ustoz–shogird, opponent va muassasa tarmog'ini interaktiv grafda ko'ring</p>
+    </div>
   </div>
 
   <div class="cg-wrap">
@@ -159,20 +172,20 @@
       <input id="cg-spec" class="cg-spec" type="text" placeholder="Ixtisoslik (05.01.01)">
 
       <div class="cg-checks">
-        <label class="cg-check"><input type="checkbox" id="cg-t-advisor" checked><span class="dot" style="background:#22c55e"></span>ustoz–shogird</label>
-        <label class="cg-check"><input type="checkbox" id="cg-t-opponent" checked><span class="dot" style="background:#ef4444"></span>opponent</label>
-        <label class="cg-check"><input type="checkbox" id="cg-t-institution"><span class="dot" style="background:#3b82f6"></span>muassasa</label>
+        <label class="cg-check"><input type="checkbox" id="cg-t-advisor" checked><span class="dot" style="background:var(--color-success)"></span>ustoz–shogird</label>
+        <label class="cg-check"><input type="checkbox" id="cg-t-opponent" checked><span class="dot" style="background:var(--color-error)"></span>opponent</label>
+        <label class="cg-check"><input type="checkbox" id="cg-t-institution"><span class="dot" style="background:var(--color-action-blue)"></span>muassasa</label>
       </div>
 
       <div class="cg-legend">
-        <span><i class="dot" style="background:#22c55e"></i>ustoz–shogird</span>
-        <span><i class="dot" style="background:#ef4444"></i>opponent</span>
-        <span><i class="dot" style="background:#3b82f6"></i>muassasa</span>
+        <span><i class="dot" style="background:var(--color-success)"></i>ustoz–shogird</span>
+        <span><i class="dot" style="background:var(--color-error)"></i>opponent</span>
+        <span><i class="dot" style="background:var(--color-action-blue)"></i>muassasa</span>
       </div>
     </div>
 
     <div class="cg-years">
-      <span class="lab">📅 Yil</span>
+      <span class="lab">Yil</span>
       <div class="range" id="cg-range">
         <div class="track"></div>
         <div class="fill" id="cg-fill"></div>
@@ -187,15 +200,14 @@
       <div class="cg-tip" id="cg-tip"></div>
       <div class="cg-info" id="cg-info"></div>
       <div class="cg-empty" id="cg-empty" style="display:none;">
-        <div style="font-size:2rem;">🕸️</div>
+        <i class="bi bi-diagram-3" style="font-size:1.75rem;color:var(--color-text-muted);" aria-hidden="true"></i>
         <div>Olim topilmadi yoki tarmoq bo'sh.<br><b>Yuqoridan boshqa ism qidiring.</b></div>
       </div>
     </div>
 
-    <div class="cg-help">
-      🔍 <b>Qidiruv</b> orqali olimni tanlang · tugunni <b>bosib</b> markazni o'zgartiring ·
+    <div class="cg-help"><b>Qidiruv</b> orqali olimni tanlang · tugunni <b>bosib</b> markazni o'zgartiring ·
       ikki marta bosib <b>profilga</b> o'ting · <b>g'ildirak</b> bilan kattalashtiring, sudrab suring.
-      <br>🎨 Tugun kattaligi — shogirdlar soniga mutanosib.
+      <br>Tugun kattaligi — shogirdlar soniga mutanosib.
     </div>
   </div>
 </div>
@@ -203,7 +215,7 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="/static/js/collaboration.js"></script>
+<script src="/static/js/collaboration.js?v=20260806"></script>
 <script>
 (function () {
   if (!window.CollabGraph) return;

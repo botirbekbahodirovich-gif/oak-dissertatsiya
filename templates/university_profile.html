@@ -18,106 +18,116 @@
 {% block extra_head %}
 <style>
   .up-wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
-  .up-header { background: linear-gradient(135deg,#1e40af,#3b82f6); border-radius: 0 0 24px 24px; padding: 36px 28px; color: #fff; margin-bottom: 24px; }
-  .up-head-inner { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
-  .up-logo { width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; font-size: 3.4rem; flex-shrink: 0; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); }
-  .up-logo img { width: 100%; height: 100%; object-fit: cover; }
-  .up-htext h1 { font-size: 1.7rem; font-weight: 800; margin: 0 0 4px; line-height: 1.25; }
-  .up-subname { font-size: 0.92rem; opacity: 0.85; margin: 0 0 10px; }
-  .up-badges { display: flex; gap: 8px; flex-wrap: wrap; }
-  .up-badge { font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; }
-  .up-badge.davlat { background: #059669; }
-  .up-badge.xususiy { background: #3b82f6; }
-  .up-badge.xalqaro { background: #8b5cf6; }
-  .up-badge.universitet { background: rgba(255,255,255,0.22); }
-  .up-badge.akademiya { background: #8b5cf6; }
-  .up-badge.institut { background: #059669; }
-  .up-badge.markaz { background: #e36403; }
-  .up-badge.loc { background: rgba(255,255,255,0.2); }
-  .up-badge.hidx { background: linear-gradient(135deg,#f59e0b,#d97706); text-decoration: none; }
-  .up-badge.hidx:hover { filter: brightness(1.08); color: #fff; }
-  .up-stats-row { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
-  .up-stat b { font-size: 1.4rem; font-weight: 800; display: block; }
-  .up-stat span { font-size: 0.8rem; opacity: 0.9; }
-  /* Social icons — same clean style as the olim profile */
-  .up-socials { display: flex; gap: 8px; flex-wrap: wrap; }
-  .up-soc { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff;
-    display: grid; place-items: center; font-size: 1.1rem; text-decoration: none; transition: background 0.2s, transform 0.2s; }
-  .up-soc:hover { background: rgba(255,255,255,0.3); color: #fff; transform: translateY(-2px); }
+  /* Akademik/institutsional profil boshi — marketing banneri emas:
+     och kulrang fon, qora matn, pastda 1px chegara. */
+  .up-header { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
+    padding: var(--space-40) var(--space-24); color: var(--color-text-primary); margin-bottom: var(--space-32); }
+  .up-head-inner { display: flex; align-items: flex-start; gap: var(--space-24); flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
+  /* Logo yo'q bo'lsa — neytral bosh harfli fallback (emoji emas). */
+  .up-logo { width: 96px; height: 96px; border-radius: var(--radius-default); background: var(--color-white);
+    border: 1px solid var(--color-border); color: var(--color-action-blue);
+    display: grid; place-items: center; font-size: 2rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
+  .up-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .up-htext { flex: 1; min-width: 260px; }
+  .up-htext h1 { font-family: var(--font-serif); font-size: var(--text-h3); font-weight: 700; margin: 0 0 var(--space-4); line-height: var(--leading-heading); }
+  .up-subname { font-size: var(--text-small); color: var(--color-text-muted); margin: 0 0 var(--space-12); }
+  .up-badges { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+  /* Yagona badge tizimi: fon — soft, matn — to'yingan rang. */
+  .up-badge { font-size: var(--text-meta); font-weight: 600; padding: 2px var(--space-8);
+    border-radius: var(--radius-rounded); background: var(--color-background-soft);
+    border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+  .up-badge.davlat, .up-badge.institut { background: var(--color-success-soft); border-color: var(--color-success-soft); color: var(--color-success); }
+  .up-badge.xususiy, .up-badge.universitet { background: var(--color-blue-soft); border-color: var(--color-blue-soft); color: var(--color-action-blue); }
+  .up-badge.xalqaro, .up-badge.akademiya { background: var(--color-blue-soft); border-color: var(--color-blue-soft); color: var(--color-action-blue); }
+  .up-badge.markaz { background: var(--color-orange-soft); border-color: var(--color-orange-soft); color: var(--color-brand-orange); }
+  .up-badge.loc { background: var(--color-white); }
+  .up-badge.hidx { background: var(--color-notice-soft); border-color: var(--color-notice-soft); color: #8a5200; text-decoration: none; }
+  .up-badge.hidx:hover { text-decoration: underline; }
+  .up-stats-row { display: flex; gap: var(--space-32); flex-wrap: wrap; margin-top: var(--space-20); align-items: center; }
+  .up-stat b { font-size: var(--text-h4); font-weight: 600; display: block; font-variant-numeric: tabular-nums; }
+  .up-stat span { font-size: var(--text-meta); color: var(--color-text-muted); }
+  .up-socials { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+  .up-soc { width: 44px; height: 44px; border-radius: var(--radius-default); background: var(--color-white);
+    border: 1px solid var(--color-border); color: var(--color-text-secondary);
+    display: grid; place-items: center; font-size: 1.05rem; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
+  .up-soc:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
   /* Rector card */
-  .up-rector { display: flex; align-items: center; gap: 14px; background: #162032; border: 1px solid #334155;
-    border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
-  .up-rector .rav { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
-    background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.6rem; }
+  .up-rector { display: flex; align-items: center; gap: 14px; background: var(--color-background-soft); border: 1px solid var(--color-border);
+    border-radius: var(--radius-default); padding: 14px 16px; margin-bottom: 16px; }
+  .up-rector .rav { width: 60px; height: 60px; border-radius: var(--radius-full); overflow: hidden; flex-shrink: 0;
+    background: var(--color-blue-soft); color: var(--color-action-blue); display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; }
   .up-rector .rav img { width: 100%; height: 100%; object-fit: cover; }
-  .up-rector .rlbl { color: #94a3b8; font-size: 0.76rem; }
-  .up-rector .rnm { color: #f1f5f9; font-weight: 700; font-size: 1.02rem; }
-  .up-rector .rnm a { color: #60a5fa; }
+  .up-rector .rlbl { color: var(--color-text-muted); font-size: 0.76rem; }
+  .up-rector .rnm { color: var(--color-text-primary); font-weight: 700; font-size: 1.02rem; }
+  .up-rector .rnm a { color: var(--color-action-blue); }
   /* Gallery */
   .up-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
   .up-gallery figure { margin: 0; position: relative; }
-  .up-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; border: 1px solid #334155; }
-  .up-gallery figcaption { color: #94a3b8; font-size: 0.76rem; margin-top: 4px; }
-  .up-gallery .gdel { position: absolute; top: 6px; right: 6px; background: rgba(239,68,68,0.85); color: #fff;
-    border: none; border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 0.78rem; }
+  .up-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: var(--radius-default); border: 1px solid var(--color-border); }
+  .up-gallery figcaption { color: var(--color-text-muted); font-size: 0.76rem; margin-top: 4px; }
+  .up-gallery .gdel { position: absolute; top: 6px; right: 6px; background: var(--color-error); color: #fff;
+    border: none; border-radius: var(--radius-default); padding: var(--space-4) var(--space-8); cursor: pointer; font-size: var(--text-meta); }
 
-  .up-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 20px; }
-  .up-section h2 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 16px; }
+  .up-section { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); margin-bottom: var(--space-20); }
+  .up-section h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-16); }
   .up-info-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
-  .up-info-item { color: #cbd5e1; font-size: 0.9rem; }
-  .up-info-item b { color: #94a3b8; font-weight: 600; display: block; font-size: 0.78rem; margin-bottom: 2px; }
-  .up-info-item a { color: #60a5fa; }
-  .up-desc { color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
+  .up-info-item { color: var(--color-text-secondary); font-size: 0.9rem; }
+  .up-info-item b { color: var(--color-text-muted); font-weight: 600; display: block; font-size: 0.78rem; margin-bottom: 2px; }
+  .up-info-item a { color: var(--color-action-blue); }
+  .up-desc { color: var(--color-text-secondary); line-height: 1.7; white-space: pre-line; }
 
-  /* ── Tabs ── */
-  .up-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-  .up-tab { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 10px 18px;
-    border-radius: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 700; }
-  .up-tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  /* Tablar umumiy .ol-tabs/.ol-tab komponentidan keladi
+     (olimlar-design-system.css) — bu yerda faqat panel ko'rinishi.
+     Mobilda .ol-tabs gorizontal scroll beradi, matn kesilmaydi. */
+  .up-tabs { margin-bottom: var(--space-20); }
   .up-pane { display: none; }
   .up-pane.active { display: block; }
 
   .up-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 760px) { .up-charts { grid-template-columns: 1fr; } }
   .up-ix-bar { margin-bottom: 10px; }
-  .up-ix-bar .lbl { display: flex; justify-content: space-between; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 4px; }
-  .up-ix-track { height: 18px; background: #162032; border-radius: 9px; overflow: hidden; }
-  .up-ix-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#60a5fa); border-radius: 9px; }
+  .up-ix-bar .lbl { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--color-text-secondary); margin-bottom: 4px; }
+  .up-ix-track { height: 18px; background: var(--color-background-soft); border-radius: var(--radius-default); overflow: hidden; }
+  .up-ix-fill { height: 100%; background: var(--color-action-blue); border-radius: var(--radius-default); }
 
   .up-people { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
-  .up-person { display: flex; align-items: center; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 12px; text-decoration: none; transition: transform 0.15s, border-color 0.15s; }
-  .up-person:hover { transform: translateY(-2px); border-color: #3b82f6; }
-  .up-person .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.2rem; flex-shrink: 0; overflow: hidden; }
+  .up-person { display: flex; align-items: center; gap: 12px; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 12px; text-decoration: none; transition: border-color 0.15s; }
+  .up-person:hover { border-color: var(--color-action-blue); }
+  .up-person .av { width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--color-blue-soft); color: var(--color-action-blue); display: grid; place-items: center; font-size: 1rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
   .up-person .av img { width: 100%; height: 100%; object-fit: cover; }
-  .up-person .nm { color: #f1f5f9; font-weight: 600; font-size: 0.88rem; }
-  .up-person .meta { color: #94a3b8; font-size: 0.76rem; }
-  .deg-badge { font-size: 0.66rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; color: #fff; }
-  .deg-phd { background: #059669; } .deg-dsc { background: #e36403; }
+  .up-person .nm { color: var(--color-text-primary); font-weight: 600; font-size: 0.88rem; }
+  .up-person .meta { color: var(--color-text-muted); font-size: 0.76rem; }
+  .deg-badge { font-size: 0.66rem; font-weight: 700; padding: 1px 8px; border-radius: var(--radius-full); color: #fff; }
+  .deg-phd { background: var(--color-success); } .deg-dsc { background: var(--color-brand-orange); }
 
-  .up-recent .rc { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-  .up-recent .rc a { color: #60a5fa; font-weight: 600; }
-  .up-recent .rc .mv { color: #cbd5e1; font-size: 0.9rem; margin: 4px 0; }
-  .up-recent .rc .mt { color: #94a3b8; font-size: 0.78rem; }
-  .admin-upload-section { border: 1px dashed #475569; border-radius: 12px; padding: 18px; background: #162032; }
-  .admin-upload-section input[type=file] { color: #cbd5e1; }
-  .admin-upload-section button { background: #3b82f6; color: #fff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-left: 8px; }
-  .up-empty { color: #64748b; }
+  .up-recent .rc { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 14px 16px; margin-bottom: 10px; }
+  .up-recent .rc a { color: var(--color-action-blue); font-weight: 600; }
+  .up-recent .rc .mv { color: var(--color-text-secondary); font-size: 0.9rem; margin: 4px 0; }
+  .up-recent .rc .mt { color: var(--color-text-muted); font-size: 0.78rem; }
+  .admin-upload-section { border: 1px dashed var(--color-text-muted); border-radius: var(--radius-default); padding: 18px; background: var(--color-background-soft); }
+  .admin-upload-section input[type=file] { color: var(--color-text-secondary); }
+  .admin-upload-section button { background: var(--color-action-blue); color: #fff; border: none; padding: 8px 18px; border-radius: var(--radius-banner); font-weight: 600; cursor: pointer; margin-left: 8px; }
+  .up-empty { color: var(--color-text-muted); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="up-header">
   <div class="up-head-inner">
-    <div class="up-logo">{% if uni.logo_url %}<img src="{{ uni.logo_url }}" alt="logo">{% else %}🏛️{% endif %}</div>
+    {# Logo yo'q bo'lsa — nom bosh harflaridan neytral fallback. #}
+    <div class="up-logo" aria-hidden="true">
+      {%- if uni.logo_url -%}<img src="{{ uni.logo_url }}" alt="">
+      {%- else -%}{{ (uni.latin_name or uni.name or '?')[:2]|upper }}{%- endif -%}
+    </div>
     <div class="up-htext">
       <h1>{{ uni.latin_name or uni.name }}</h1>
       {% if uni.latin_name and uni.latin_name != uni.name %}<p class="up-subname">{{ uni.name }}</p>{% endif %}
       <div class="up-badges">
-        {% if official %}<span class="up-badge" style="background:rgba(5,150,105,0.2);color:#34d399;border:1px solid rgba(5,150,105,0.4);" title="Universitet rasmiy boshqaruvidagi profil">✓ Rasmiy profil</span>{% endif %}
+        {% if official %}<span class="up-badge" style="background:var(--color-success-soft);color:var(--color-success);border-color:var(--color-success-soft);" title="Universitet rasmiy boshqaruvidagi profil"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Rasmiy profil</span>{% endif %}
         {% if uni.im_category %}<span class="up-badge {{ uni.im_category }}">{{ {'universitet':'Universitet','akademiya':'Akademiya','institut':'Institut','markaz':'Markaz'}.get(uni.im_category, uni.im_category) }}</span>{% endif %}
         {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
-        {% if uni.city or uni.region %}<span class="up-badge loc">📍 {{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
-        {% if h_index and h_index.rank %}<a class="up-badge hidx" href="/reyting/tashkilotlar" title="H-index milliy reyting — uz.h-index.com">🏆 Milliy H-index: {{ h_index.rank }}-o'rin{% if h_index.category %} · {{ h_index.category }}{% endif %}</a>{% endif %}
+        {% if uni.city or uni.region %}<span class="up-badge loc">{{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}
+        {% if h_index and h_index.rank %}<a class="up-badge hidx" href="/reyting/tashkilotlar" title="H-index milliy reyting — uz.h-index.com">Milliy H-index: {{ h_index.rank }}-o'rin{% if h_index.category %} · {{ h_index.category }}{% endif %}</a>{% endif %}
       </div>
       <div class="up-stats-row">
         <div class="up-stat"><b>{{ stats.total }}</b><span>dissertatsiya</span></div>
@@ -146,22 +156,22 @@
 <div class="up-wrap">
   {% if can_edit_uni %}
   <!-- B2B litsenziya perki: universitet xodimi ommaviy profilni tahrirlaydi -->
-  <div class="up-section" id="uv-pp-edit" style="border:1px dashed rgba(74,158,255,0.35);">
+  <div class="up-section" id="uv-pp-edit" style="border:1px dashed var(--color-action-blue-light);">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      <h2 style="margin:0;">✏️ Profilni tahrirlash <small style="color:#64748b;font-size:0.7rem;">(universitet paneli)</small></h2>
-      <button id="uv-pp-toggle" style="background:rgba(74,158,255,0.12);color:#7cb8ff;border:none;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;">Ochish</button>
+      <h2 style="margin:0;">Profilni tahrirlash <small style="color:var(--color-text-muted);font-size:0.7rem;">(universitet paneli)</small></h2>
+      <button id="uv-pp-toggle" style="background:var(--color-blue-soft);color:var(--color-action-blue);border:none;border-radius: var(--radius-banner);padding:6px 14px;font-weight:700;cursor:pointer;">Ochish</button>
     </div>
     <div id="uv-pp-form" style="display:none;margin-top:12px;">
       <textarea id="uv-pp-desc" rows="4" placeholder="Universitet tavsifi…"
-        style="width:100%;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;font-size:0.86rem;">{{ uni.description or '' }}</textarea>
+        style="width:100%;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:10px 12px;font-size:0.86rem;">{{ uni.description or '' }}</textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
         <input id="uv-pp-web" value="{{ uni.website or '' }}" placeholder="Veb-sayt (https://…)"
-          style="flex:1;min-width:180px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
+          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
         <input id="uv-pp-logo" value="" placeholder="Logo URL (ixtiyoriy)"
-          style="flex:1;min-width:180px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
+          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
         <input id="uv-pp-email" value="{{ uni.email or '' }}" placeholder="Aloqa email"
-          style="flex:1;min-width:160px;background:rgba(15,23,42,0.6);color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 12px;font-size:0.84rem;">
-        <button id="uv-pp-save" style="background:#3b82f6;color:#fff;border:none;border-radius:10px;padding:8px 18px;font-weight:700;cursor:pointer;">Saqlash</button>
+          style="flex:1;min-width:160px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
+        <button id="uv-pp-save" style="background:var(--color-action-blue);color:#fff;border:none;border-radius: var(--radius-default);padding:8px 18px;font-weight:700;cursor:pointer;">Saqlash</button>
       </div>
       <p id="uv-pp-msg" style="display:none;margin:8px 0 0;font-size:0.8rem;"></p>
     </div>
@@ -187,8 +197,8 @@
       }).then(function (r) { return r.json(); }).then(function (d) {
         btn.disabled = false;
         var m = document.getElementById('uv-pp-msg'); m.style.display = 'block';
-        if (d.success) { m.style.color = '#34d399'; m.textContent = 'Saqlandi — sahifa yangilanmoqda…'; location.reload(); }
-        else { m.style.color = '#f87171'; m.textContent = d.error || 'Xatolik'; }
+        if (d.success) { m.style.color = '#0c8930'; m.textContent = 'Saqlandi — sahifa yangilanmoqda…'; location.reload(); }
+        else { m.style.color = '#af1d1d'; m.textContent = d.error || 'Xatolik'; }
       }).catch(function () { btn.disabled = false; });
     });
   </script>
@@ -198,7 +208,7 @@
     <h2>ℹ️ Umumiy ma'lumot</h2>
     {% if uni.rector %}
     <div class="up-rector">
-      <div class="rav">{% if uni.rector_photo_url %}<img src="{{ uni.rector_photo_url }}" alt="rektor">{% else %}👤{% endif %}</div>
+      <div class="rav">{% if uni.rector_photo_url %}<img src="{{ uni.rector_photo_url }}" alt="rektor">{% else %}<i class="bi bi-person"></i>{% endif %}</div>
       <div>
         <div class="rlbl">Rektor</div>
         <div class="rnm">{% if rector_olim %}<a href="/olim/{{ rector_olim|urlencode }}">{{ uni.rector }}</a>{% else %}{{ uni.rector }}{% endif %}</div>
@@ -220,7 +230,7 @@
   <!-- Galereya -->
   {% if gallery %}
   <div class="up-section">
-    <h2>🖼️ Galereya</h2>
+    <h2>Galereya</h2>
     <div class="up-gallery">
       {% for g in gallery %}
       <figure>
@@ -228,7 +238,7 @@
         {% if g.caption %}<figcaption>{{ g.caption }}</figcaption>{% endif %}
         {% if is_admin and uni.id %}
         <form method="POST" action="/admin/university/gallery/delete/{{ g.id }}" style="display:inline;">
-          <button class="gdel" type="submit" title="O'chirish">🗑️</button>
+          <button class="gdel" type="submit" title="O'chirish" aria-label="Rasmni o'chirish"><i class="bi bi-trash"></i></button>
         </form>
         {% endif %}
       </figure>
@@ -239,17 +249,17 @@
 
   <!-- ── Tabs: Dissertatsiyalar | Olimlar | Ixtisosliklar | Yillar ── -->
   {% if stats.total > 0 %}
-  <div class="up-tabs">
-    <button class="up-tab active" data-pane="diss" onclick="upTab('diss', this)">📄 Dissertatsiyalar</button>
-    <button class="up-tab" data-pane="olimlar" onclick="upTab('olimlar', this)">🎓 Olimlar</button>
-    <button class="up-tab" data-pane="ixtisos" onclick="upTab('ixtisos', this)">🔬 Ixtisosliklar</button>
-    <button class="up-tab" data-pane="yillar" onclick="upTab('yillar', this)">📊 Yillar bo'yicha</button>
+  <div class="up-tabs ol-tabs" role="tablist" aria-label="Universitet ma'lumotlari">
+    <button class="up-tab ol-tab" role="tab" id="uptab-diss" aria-controls="pane-diss" aria-selected="true" data-pane="diss" onclick="upTab('diss', this)">Dissertatsiyalar</button>
+    <button class="up-tab ol-tab" role="tab" id="uptab-olimlar" aria-controls="pane-olimlar" aria-selected="false" tabindex="-1" data-pane="olimlar" onclick="upTab('olimlar', this)">Olimlar</button>
+    <button class="up-tab ol-tab" role="tab" id="uptab-ixtisos" aria-controls="pane-ixtisos" aria-selected="false" tabindex="-1" data-pane="ixtisos" onclick="upTab('ixtisos', this)">Ixtisosliklar</button>
+    <button class="up-tab ol-tab" role="tab" id="uptab-yillar" aria-controls="pane-yillar" aria-selected="false" tabindex="-1" data-pane="yillar" onclick="upTab('yillar', this)">Yillar bo'yicha</button>
   </div>
 
   <!-- TAB 1 — Dissertatsiyalar -->
-  <div class="up-pane active" id="pane-diss">
+  <div class="up-pane active" id="pane-diss" role="tabpanel" aria-labelledby="uptab-diss" tabindex="0">
     <div class="up-section up-recent">
-      <h2>📄 So'nggi himoyalar</h2>
+      <h2>So'nggi himoyalar</h2>
       {% for d in recent %}
       <div class="rc">
         <a href="/dissertation/{{ d.id }}">{{ d.display or d.olim }}</a>
@@ -259,16 +269,16 @@
       </div>
       {% else %}<p class="up-empty">Dissertatsiyalar topilmadi.</p>{% endfor %}
       {% if stats.total > recent|length %}
-      <p style="color:#64748b;font-size:0.85rem;">Jami {{ stats.total }} tadan so'nggi {{ recent|length }} tasi ko'rsatildi.</p>
+      <p style="color:var(--color-text-muted);font-size:0.85rem;">Jami {{ stats.total }} tadan so'nggi {{ recent|length }} tasi ko'rsatildi.</p>
       {% endif %}
     </div>
   </div>
 
   <!-- TAB 2 — Olimlar -->
-  <div class="up-pane" id="pane-olimlar">
+  <div class="up-pane" id="pane-olimlar" role="tabpanel" aria-labelledby="uptab-olimlar" tabindex="0">
     {% if top_olimlar %}
     <div class="up-section">
-      <h2>🎓 Eng faol olimlar</h2>
+      <h2>Eng faol olimlar</h2>
       <div class="up-people">
         {% for o in top_olimlar %}
         <a class="up-person" href="/olim/{{ o.name|urlencode }}">
@@ -288,7 +298,7 @@
     {% endif %}
     {% if top_rahbarlar %}
     <div class="up-section">
-      <h2>👨‍🏫 Top ilmiy rahbarlar</h2>
+      <h2>Top ilmiy rahbarlar</h2>
       <div class="up-people">
         {% for o in top_rahbarlar %}
         <a class="up-person" href="/olim/{{ o.name|urlencode }}">
@@ -308,9 +318,9 @@
   </div>
 
   <!-- TAB 3 — Ixtisosliklar -->
-  <div class="up-pane" id="pane-ixtisos">
+  <div class="up-pane" id="pane-ixtisos" role="tabpanel" aria-labelledby="uptab-ixtisos" tabindex="0">
     <div class="up-section">
-      <h2>🔬 Ixtisosliklar ({{ stats.ixtisosliklar }})</h2>
+      <h2>Ixtisosliklar ({{ stats.ixtisosliklar }})</h2>
       {% if top_ixtisos %}
       {% set ixmax = top_ixtisos[0].count or 1 %}
       {% for ix in top_ixtisos %}
@@ -324,9 +334,9 @@
   </div>
 
   <!-- TAB 4 — Yillar bo'yicha -->
-  <div class="up-pane" id="pane-yillar">
+  <div class="up-pane" id="pane-yillar" role="tabpanel" aria-labelledby="uptab-yillar" tabindex="0">
     <div class="up-section">
-      <h2>📊 Himoyalar dinamikasi</h2>
+      <h2>Himoyalar dinamikasi</h2>
       <div class="up-charts">
         <div><canvas id="degChart" height="220"></canvas></div>
         <div><canvas id="yearChart" height="220"></canvas></div>
@@ -338,20 +348,20 @@
   <!-- Admin: logo / gallery upload -->
   {% if is_admin and uni.id %}
   <div class="up-section">
-    <h2>📷 Logo yuklash (admin)</h2>
+    <h2>Logo yuklash (admin)</h2>
     <form class="admin-upload-section" method="POST" action="/admin/university/logo/{{ uni.id }}" enctype="multipart/form-data">
       <input type="file" name="logo" accept="image/*">
       <button type="submit">Yuklash</button>
     </form>
   </div>
   <div class="up-section">
-    <h2>🖼️ Galereyaga rasm qo'shish (admin)</h2>
+    <h2>Galereyaga rasm qo'shish (admin)</h2>
     <form class="admin-upload-section" method="POST" action="/admin/university/gallery/{{ uni.id }}" enctype="multipart/form-data">
       <input type="file" name="images" accept="image/*" multiple>
-      <input type="text" name="caption" placeholder="Izoh (ixtiyoriy)" style="background:#0f172a;border:1px solid #334155;color:#cbd5e1;border-radius:8px;padding:8px 10px;margin-left:8px;">
+      <input type="text" name="caption" placeholder="Izoh (ixtiyoriy)" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius: var(--radius-banner);padding:8px 10px;margin-left:8px;">
       <button type="submit">Yuklash</button>
     </form>
-    <p style="color:#64748b;font-size:0.8rem;margin-top:8px;">Bir nechta rasmni birdaniga tanlash mumkin. Boshqa ma'lumotlar (rektor, ijtimoiy tarmoqlar) admin tahrirlash bo'limidan kiritiladi.</p>
+    <p style="color:var(--color-text-muted);font-size:0.8rem;margin-top:8px;">Bir nechta rasmni birdaniga tanlash mumkin. Boshqa ma'lumotlar (rektor, ijtimoiy tarmoqlar) admin tahrirlash bo'limidan kiritiladi.</p>
   </div>
   {% endif %}
 </div>
@@ -361,14 +371,39 @@
 <script>
 var _chartsInit = false;
 function upTab(name, btn) {
-  document.querySelectorAll('.up-tab').forEach(function (t) { t.classList.remove('active'); });
+  document.querySelectorAll('.up-tab').forEach(function (t) {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
   document.querySelectorAll('.up-pane').forEach(function (p) { p.classList.remove('active'); });
   btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
+  btn.setAttribute('tabindex', '0');
   var pane = document.getElementById('pane-' + name);
   if (pane) pane.classList.add('active');
   // Chart.js draws 0-sized in hidden containers — init lazily on first open.
   if (name === 'yillar' && !_chartsInit) { _chartsInit = true; initCharts(); }
 }
+
+/* Klaviatura: ←/→ tablar orasida, Home/End chetlarga (WAI-ARIA tabs naqshi). */
+(function () {
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.up-tab'));
+  if (!tabs.length) return;
+  tabs.forEach(function (tab, i) {
+    tab.addEventListener('keydown', function (e) {
+      var next = null;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (!next) return;
+      e.preventDefault();
+      next.focus();
+      upTab(next.getAttribute('data-pane'), next);
+    });
+  });
+})();
 function initCharts() {
   if (!window.Chart) return;
   var phd = {{ stats.phd|int }}, dsc = {{ stats.dsc|int }};
@@ -376,8 +411,8 @@ function initCharts() {
   if (degEl && (phd + dsc) > 0) {
     new Chart(degEl.getContext('2d'), {
       type: 'doughnut',
-      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['#059669', '#e36403'] }] },
-      options: { plugins: { legend: { labels: { color: '#cbd5e1' } } } }
+      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['#0c8930', '#ff4203'] }] },
+      options: { plugins: { legend: { labels: { color: '#333333' } } } }
     });
   }
   var years = {{ by_year|tojson }};
@@ -386,10 +421,10 @@ function initCharts() {
     new Chart(yEl.getContext('2d'), {
       type: 'bar',
       data: { labels: years.map(function (y) { return y.year; }),
-              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: '#3b82f6' }] },
+              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: '#0056d6' }] },
       options: { plugins: { legend: { display: false } },
-                 scales: { x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
-                           y: { ticks: { color: '#64748b' }, grid: { color: '#28344a' } } } }
+                 scales: { x: { ticks: { color: '#666666', font: { size: 9 } }, grid: { display: false } },
+                           y: { ticks: { color: '#666666' }, grid: { color: '#28344a' } } } }
     });
   }
 }

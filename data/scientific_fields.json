@@ -1,0 +1,141 @@
+{
+  "$schema_version": 1,
+  "source_name": "OAK ilmiy ixtisosliklar klassifikatori — fan tarmoqlari",
+  "source_url": "https://oak.uz/",
+  "source_updated_at": null,
+  "note": "Faqat 1-daraja (fan tarmoqlari). Bu ro'yxat repozitoriyda allaqachon tasdiqlangan holda mavjud edi: app.py:SPECIALTY_NAMES va seed_data.JOURNALS_BY_SPECIALTY (OAK jurnallari 22 ta tarmoq bo'yicha guruhlangan) — ikkalasi ham ayni shu shifr va nomlarni ishlatadi. 2-daraja (ixtisoslik guruhi) va 3-daraja (ixtisoslik) nomlari bu faylda ATAYIN YO'Q: ularning rasmiy to'liq ro'yxati repozitoriyda mavjud emas va sun'iy to'ldirilmaydi. Ularni kiritishning ikki qonuniy yo'li bor — (1) rasmiy OAK registri olingach shu faylga qo'shish, (2) scripts/seed_scientific_fields.py --from-dissertations — production dissertations jadvalidagi haqiqiy ixtisoslik/ixtisoslik_nomi juftliklaridan qurish (OAK importidan kelgan ma'lumot).",
+  "fields": [
+    {
+      "code": "01.00.00",
+      "name_uz": "Fizika-matematika fanlari",
+      "level": 1,
+      "sort_order": 10
+    },
+    {
+      "code": "02.00.00",
+      "name_uz": "Kimyo fanlari",
+      "level": 1,
+      "sort_order": 20
+    },
+    {
+      "code": "03.00.00",
+      "name_uz": "Biologiya fanlari",
+      "level": 1,
+      "sort_order": 30
+    },
+    {
+      "code": "04.00.00",
+      "name_uz": "Geologiya-mineralogiya fanlari",
+      "level": 1,
+      "sort_order": 40
+    },
+    {
+      "code": "05.00.00",
+      "name_uz": "Texnika fanlari",
+      "level": 1,
+      "sort_order": 50
+    },
+    {
+      "code": "06.00.00",
+      "name_uz": "Qishloq xo'jaligi fanlari",
+      "level": 1,
+      "sort_order": 60
+    },
+    {
+      "code": "07.00.00",
+      "name_uz": "Tarix fanlari",
+      "level": 1,
+      "sort_order": 70
+    },
+    {
+      "code": "08.00.00",
+      "name_uz": "Iqtisodiyot fanlari",
+      "level": 1,
+      "sort_order": 80
+    },
+    {
+      "code": "09.00.00",
+      "name_uz": "Falsafa fanlari",
+      "level": 1,
+      "sort_order": 90
+    },
+    {
+      "code": "10.00.00",
+      "name_uz": "Filologiya fanlari",
+      "level": 1,
+      "sort_order": 100
+    },
+    {
+      "code": "11.00.00",
+      "name_uz": "Geografiya fanlari",
+      "level": 1,
+      "sort_order": 110
+    },
+    {
+      "code": "12.00.00",
+      "name_uz": "Yuridik fanlar",
+      "level": 1,
+      "sort_order": 120
+    },
+    {
+      "code": "13.00.00",
+      "name_uz": "Pedagogika fanlari",
+      "level": 1,
+      "sort_order": 130
+    },
+    {
+      "code": "14.00.00",
+      "name_uz": "Tibbiyot fanlari",
+      "level": 1,
+      "sort_order": 140
+    },
+    {
+      "code": "15.00.00",
+      "name_uz": "Farmatsevtika fanlari",
+      "level": 1,
+      "sort_order": 150
+    },
+    {
+      "code": "16.00.00",
+      "name_uz": "Veterinariya fanlari",
+      "level": 1,
+      "sort_order": 160
+    },
+    {
+      "code": "17.00.00",
+      "name_uz": "San'atshunoslik fanlari",
+      "level": 1,
+      "sort_order": 170
+    },
+    {
+      "code": "18.00.00",
+      "name_uz": "Arxitektura fanlari",
+      "level": 1,
+      "sort_order": 180
+    },
+    {
+      "code": "19.00.00",
+      "name_uz": "Psixologiya fanlari",
+      "level": 1,
+      "sort_order": 190
+    },
+    {
+      "code": "22.00.00",
+      "name_uz": "Sotsiologiya fanlari",
+      "level": 1,
+      "sort_order": 200
+    },
+    {
+      "code": "23.00.00",
+      "name_uz": "Siyosiy fanlar",
+      "level": 1,
+      "sort_order": 210
+    },
+    {
+      "code": "24.00.00",
+      "name_uz": "Islomshunoslik fanlari",
+      "level": 1,
+      "sort_order": 220
+    }
+  ]
+}

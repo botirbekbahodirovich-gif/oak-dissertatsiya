@@ -6,47 +6,53 @@
 {% block extra_head %}
 <style>
 .content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.tr { background: #0f172a; color: #e2e8f0; min-height: 90vh; padding: 0 0 64px; }
-.tr-hero { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 44px 0 38px; text-align: center; }
-.tr-hero h1 { font-size: 2.1rem; font-weight: 800; color: #fff; margin: 0 0 8px; }
-.tr-hero p { color: rgba(255,255,255,0.9); font-size: 1.05rem; margin: 0; }
-.tr-wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-.tr-sec { margin-top: 34px; }
-.tr-sec h2 { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
-.tr-sec .sub { color: #94a3b8; font-size: 0.92rem; margin: 0 0 16px; }
-.tr-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; }
+.tr { background: var(--color-background); color: var(--color-text-primary); min-height: 90vh; padding: 0 0 64px; }
+/* Hero avval to'q ko'k gradient banner edi; endi och kulrang sarlavha bloki. */
+.tr-hero { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
+  padding: var(--space-48) var(--space-24); }
+.tr-hero-inner { max-width: 1180px; margin: 0 auto; }
+.tr-hero h1 { font-family: var(--font-serif); font-size: var(--text-h1); font-weight: 700;
+  color: var(--color-text-primary); margin: 0 0 var(--space-12); line-height: var(--leading-heading); }
+.tr-hero p { color: var(--color-text-muted); font-size: var(--text-body-lg); margin: 0; max-width: 70ch; }
+@media (max-width: 649px) { .tr-hero { padding: var(--space-32) var(--space-16); } .tr-hero h1 { font-size: 32px; } }
+.tr-wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--space-24); }
+.tr-sec { margin-top: var(--space-48); }
+.tr-sec h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-4); display: flex; align-items: center; gap: var(--space-8); }
+.tr-sec .sub { color: var(--color-text-muted); font-size: var(--text-small); margin: 0 0 var(--space-16); }
+.tr-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); }
 .tr-chart { position: relative; }
 .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
-.kpi { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 16px 18px; }
-.kpi .k-l { color: #94a3b8; font-size: 0.82rem; }
-.kpi .k-v { color: #f1f5f9; font-size: 1.4rem; font-weight: 800; margin-top: 4px; }
+.kpi { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 16px 18px; }
+.kpi .k-l { color: var(--color-text-muted); font-size: 0.82rem; }
+.kpi .k-v { color: var(--color-text-primary); font-size: 1.4rem; font-weight: 800; margin-top: 4px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
-.grow-card h3 { font-size: 1.02rem; font-weight: 800; margin: 0 0 14px; color: #f1f5f9; }
+.grow-card h3 { font-size: 1.02rem; font-weight: 800; margin: 0 0 14px; color: var(--color-text-primary); }
 .grow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.grow-rank { color: #64748b; font-weight: 800; width: 20px; flex-shrink: 0; }
-.grow-code { font-family: ui-monospace, monospace; color: #e2e8f0; width: 78px; flex-shrink: 0; font-size: 0.9rem; }
-.grow-bar { flex: 1; height: 8px; background: #0f172a; border-radius: 999px; overflow: hidden; }
-.grow-bar > div { height: 100%; border-radius: 999px; }
+.grow-rank { color: var(--color-text-muted); font-weight: 800; width: 20px; flex-shrink: 0; }
+.grow-code { font-family: ui-monospace, monospace; color: var(--color-text-primary); width: 78px; flex-shrink: 0; font-size: 0.9rem; }
+/* Track oq fonda ko'rinishi uchun soft-grey (avval to'q fon edi). */
+.grow-bar { flex: 1; height: 8px; background: var(--color-background-soft); border-radius: var(--radius-full); overflow: hidden; }
+.grow-bar > div { height: 100%; border-radius: var(--radius-full); }
 .grow-pct { width: 64px; text-align: right; font-weight: 800; font-size: 0.88rem; flex-shrink: 0; }
-.up { color: #34d399; } .up-bg { background: #059669; }
-.down { color: #f87171; } .down-bg { background: #ef4444; }
+.up { color: var(--color-success); } .up-bg { background: var(--color-success); }
+.down { color: var(--color-error); } .down-bg { background: var(--color-error); }
 /* uni heatmap */
 .heat-scroll { overflow-x: auto; }
 .heat-table { border-collapse: separate; border-spacing: 4px; font-size: 0.8rem; width: 100%; }
-.heat-table th { color: #94a3b8; font-weight: 600; font-size: 0.72rem; padding: 4px 6px; text-align: center; white-space: nowrap; }
-.heat-table td.uni { text-align: left; color: #cbd5e1; max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 6px 10px; }
-.heat-table td.cell { text-align: center; border-radius: 6px; font-weight: 700; padding: 7px 9px; min-width: 38px; color: #e2e8f0; }
+.heat-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.72rem; padding: 4px 6px; text-align: center; white-space: nowrap; }
+.heat-table td.uni { text-align: left; color: var(--color-text-secondary); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 6px 10px; }
+.heat-table td.cell { text-align: center; border-radius: var(--radius-default); font-weight: 700; padding: 7px 9px; min-width: 38px; color: var(--color-text-primary); }
 /* advisors */
-.adv-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid #1e293b; }
+.adv-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--color-border-subtle); }
 .adv-row:last-child { border-bottom: none; }
-.adv-rank { color: #64748b; font-weight: 800; width: 22px; flex-shrink: 0; }
+.adv-rank { color: var(--color-text-muted); font-weight: 800; width: 22px; flex-shrink: 0; }
 .adv-name { flex: 1; min-width: 0; }
-.adv-name a { color: #60a5fa; font-weight: 700; text-decoration: none; }
+.adv-name a { color: var(--color-action-blue); font-weight: 700; text-decoration: none; }
 .adv-name a:hover { text-decoration: underline; }
 .adv-spark { width: 120px; height: 32px; flex-shrink: 0; }
 .adv-total { width: 90px; text-align: right; flex-shrink: 0; }
-.adv-total b { color: #f1f5f9; } .adv-total span { color: #94a3b8; font-size: 0.8rem; }
-.tr-empty { text-align: center; color: #94a3b8; padding: 3rem; }
+.adv-total b { color: var(--color-text-primary); } .adv-total span { color: var(--color-text-muted); font-size: 0.8rem; }
+.tr-empty { text-align: center; color: var(--color-text-muted); padding: 3rem; }
 @media (max-width: 768px) { .kpi-row { grid-template-columns: 1fr; } .two-col { grid-template-columns: 1fr; } .adv-spark { width: 80px; } }
 </style>
 {% endblock %}
@@ -54,8 +60,17 @@
 {% block content %}
 <div class="tr">
   <div class="tr-hero">
-    <h1>📈 Trend Analytics</h1>
-    <p>O'zbekiston ilmiy-tadqiqot landshafti qanday o'zgarmoqda</p>
+    <div class="tr-hero-inner">
+      <nav aria-label="Breadcrumb">
+        <ol class="ol-breadcrumb">
+          <li><a href="/">Bosh sahifa</a></li>
+          <li><a href="/stats">Tahlil</a></li>
+          <li aria-current="page">Trendlar</li>
+        </ol>
+      </nav>
+      <h1>Trendlar</h1>
+      <p>O'zbekiston ilmiy-tadqiqot landshafti qanday o'zgarmoqda</p>
+    </div>
   </div>
   <div class="tr-wrap">
 
@@ -65,14 +80,14 @@
 
     <!-- SECTION 2: overall yearly -->
     <div class="tr-sec">
-      <h2>📅 Yillar bo'yicha himoya qilingan dissertatsiyalar</h2>
+      <h2>Yillar bo'yicha himoya qilingan dissertatsiyalar</h2>
       <p class="sub">PhD va DSc darajalari bo'yicha yillik dinamika</p>
       <div class="tr-card">
         <div class="tr-chart" style="height:400px;"><canvas id="c-yearly"></canvas></div>
         <div class="kpi-row">
-          <div class="kpi"><div class="k-l">📈 Eng ko'p</div><div class="k-v">{{ t.key_stats.peak_year }} — {{ t.key_stats.peak_cnt }} ta</div></div>
-          <div class="kpi"><div class="k-l">📉 Eng kam</div><div class="k-v">{{ t.key_stats.low_year }} — {{ t.key_stats.low_cnt }} ta</div></div>
-          <div class="kpi"><div class="k-l">📊 O'rtacha</div><div class="k-v">{{ t.key_stats.avg }} ta/yil</div></div>
+          <div class="kpi"><div class="k-l">Eng ko'p</div><div class="k-v">{{ t.key_stats.peak_year }} — {{ t.key_stats.peak_cnt }} ta</div></div>
+          <div class="kpi"><div class="k-l">Eng kam</div><div class="k-v">{{ t.key_stats.low_year }} — {{ t.key_stats.low_cnt }} ta</div></div>
+          <div class="kpi"><div class="k-l">O'rtacha</div><div class="k-v">{{ t.key_stats.avg }} ta/yil</div></div>
         </div>
       </div>
     </div>
@@ -81,14 +96,14 @@
 
     <!-- SECTION 3: specialties -->
     <div class="tr-sec">
-      <h2>🧩 Ixtisosliklar dinamikasi (so'nggi 5 yil)</h2>
+      <h2>Ixtisosliklar dinamikasi (so'nggi 5 yil)</h2>
       <p class="sub">Eng ko'p himoya qilingan top 15 ixtisoslik bo'yicha yillik o'zgarish</p>
       <div class="tr-card">
         <div class="tr-chart" style="height:380px;"><canvas id="c-spec"></canvas></div>
       </div>
       <div class="two-col">
         <div class="tr-card grow-card">
-          <h3>🚀 Eng tez o'sayotgan ixtisosliklar</h3>
+          <h3>Eng tez o'sayotgan ixtisosliklar</h3>
           {% for g in t.growing %}
           <div class="grow-row">
             <span class="grow-rank">{{ loop.index }}</span>
@@ -99,7 +114,7 @@
           {% else %}<div class="tr-empty">Ma'lumot yetarli emas.</div>{% endfor %}
         </div>
         <div class="tr-card grow-card">
-          <h3>📉 Kamayish trendidagi ixtisosliklar</h3>
+          <h3>Kamayish trendidagi ixtisosliklar</h3>
           {% for g in t.declining %}
           <div class="grow-row">
             <span class="grow-rank">{{ loop.index }}</span>
@@ -114,7 +129,7 @@
 
     <!-- SECTION 4: universities heatmap -->
     <div class="tr-sec">
-      <h2>🏛️ Top universitetlar — yillar bo'yicha</h2>
+      <h2>Top universitetlar — yillar bo'yicha</h2>
       <p class="sub">Rang qanchalik to'q bo'lsa — o'sha yili shuncha ko'p dissertatsiya</p>
       <div class="tr-card heat-scroll">
         {% set umax = namespace(v=1) %}
@@ -124,10 +139,10 @@
           <tbody>
             {% for u in t.uni_trend.unis %}
             <tr>
-              <td class="uni" title="{{ u }}"><a href="/university/{{ u|urlencode }}" style="color:#cbd5e1;">{{ u }}</a></td>
+              <td class="uni" title="{{ u }}"><a href="/university/{{ u|urlencode }}" style="color:var(--color-text-secondary);">{{ u }}</a></td>
               {% for c in t.uni_trend.data[u] %}
               {% set ratio = (c / umax.v) %}
-              <td class="cell" style="background: rgba(59,130,246,{{ 0.08 + ratio * 0.72 }}); color: {{ '#fff' if ratio > 0.5 else '#cbd5e1' }};" title="{{ u }} — {{ c }}">{{ c if c else '·' }}</td>
+              <td class="cell" style="background: rgba(59,130,246,{{ 0.08 + ratio * 0.72 }}); color: {{ '#fff' if ratio > 0.5 else 'var(--color-text-secondary)' }};" title="{{ u }} — {{ c }}">{{ c if c else '·' }}</td>
               {% endfor %}
             </tr>
             {% endfor %}
@@ -138,21 +153,21 @@
 
     <!-- SECTION 5: monthly -->
     <div class="tr-sec">
-      <h2>🗓️ Oylik dinamika (so'nggi 24 oy)</h2>
+      <h2>Oylik dinamika (so'nggi 24 oy)</h2>
       <p class="sub">Himoyalar oylar kesimida</p>
       <div class="tr-card"><div class="tr-chart" style="height:300px;"><canvas id="c-monthly"></canvas></div></div>
     </div>
 
     <!-- SECTION 6: gender -->
     <div class="tr-sec">
-      <h2>⚥ Jins bo'yicha yillik trend</h2>
+      <h2>Jins bo'yicha yillik trend</h2>
       <p class="sub">Erkak/ayol tadqiqotchilar nisbati va ayollar ulushining o'zgarishi</p>
       <div class="tr-card"><div class="tr-chart" style="height:340px;"><canvas id="c-gender"></canvas></div></div>
     </div>
 
     <!-- SECTION 7: advisors -->
     <div class="tr-sec">
-      <h2>👨‍🏫 Eng faol ilmiy rahbarlar — yillar bo'yicha</h2>
+      <h2>Eng faol ilmiy rahbarlar — yillar bo'yicha</h2>
       <p class="sub">So'nggi 5 yil ({{ t.advisors.years|join(', ') }}) faolligi</p>
       <div class="tr-card">
         {% for a in t.advisors.list %}
@@ -176,28 +191,31 @@
 var T = {{ t|tojson }};
 (function () {
   if (!T.yearly || !T.yearly.length) return;
-  Chart.defaults.color = '#94a3b8';
-  Chart.defaults.borderColor = '#334155';
-  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-  var TT = { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1, titleColor: '#e2e8f0', bodyColor: '#cbd5e1', padding: 10, cornerRadius: 8 };
-  var grid = { color: '#1e293b' };
+  // Ranglar markazlashtirilgan palitradan: static/js/olimlar-charts.js.
+  // DIQQAT: Chart.js canvasga chizadi va CSS var() ni o'qiy olmaydi —
+  // bu yerda faqat haqiqiy rang qiymatlari ishlatilishi kerak.
+  var C = window.OlimlarCharts;
+  var K = C.tokens;
+  var TT = { backgroundColor: K.textPrimary, titleColor: K.white, bodyColor: K.white,
+             borderWidth: 0, padding: 10, cornerRadius: 4 };
+  var grid = { color: K.borderSubtle, drawBorder: false };
 
   // 2) yearly line (PhD + DSc + total)
   var ys = T.yearly.map(function (r) { return r.year; });
   new Chart(document.getElementById('c-yearly'), {
     type: 'line',
     data: { labels: ys, datasets: [
-      { label: 'Jami', data: T.yearly.map(function (r) { return r.cnt; }), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
-      { label: 'PhD', data: T.yearly.map(function (r) { return r.phd; }), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.12)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
-      { label: 'DSc', data: T.yearly.map(function (r) { return r.dsc; }), borderColor: '#e36403', backgroundColor: 'rgba(227,100,3,0.12)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 }
+      { label: 'Jami', data: T.yearly.map(function (r) { return r.cnt; }), borderColor: K.actionBlue, backgroundColor: 'rgba(0,86,214,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
+      { label: 'PhD', data: T.yearly.map(function (r) { return r.phd; }), borderColor: K.success, backgroundColor: 'rgba(12,137,48,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
+      { label: 'DSc', data: T.yearly.map(function (r) { return r.dsc; }), borderColor: K.brandOrange, backgroundColor: 'rgba(255,66,3,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 }
     ] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 14, padding: 14 } }, tooltip: TT },
+      plugins: { legend: { labels: { color: K.textSecondary, boxWidth: 14, padding: 14 } }, tooltip: TT },
       scales: { x: { grid: grid }, y: { grid: grid, beginAtZero: true } } }
   });
 
   // 3) specialties grouped bar
-  var YEAR_COLORS = ['#3b82f6', '#8b5cf6', '#06b6d4', '#f59e0b', '#34d399'];
+  var YEAR_COLORS = C.palette(5);
   new Chart(document.getElementById('c-spec'), {
     type: 'bar',
     data: { labels: T.spec_trend.codes, datasets: T.spec_trend.years.map(function (yr, i) {
@@ -205,8 +223,8 @@ var T = {{ t|tojson }};
         backgroundColor: YEAR_COLORS[i % YEAR_COLORS.length], borderRadius: 3 };
     }) },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 13 } }, tooltip: TT },
-      scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
+      plugins: { legend: { labels: { color: '#333333', boxWidth: 13 } }, tooltip: TT },
+      scales: { x: { grid: { display: false }, ticks: { color: '#666666', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
   });
 
   // 5) monthly bar
@@ -217,7 +235,7 @@ var T = {{ t|tojson }};
     data: { labels: mlabels, datasets: [{ label: 'Himoyalar', data: T.monthly.map(function (m) { return m.cnt; }), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 3 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: TT },
-      scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
+      scales: { x: { grid: { display: false }, ticks: { color: '#666666', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
   });
 
   // 6) gender stacked bar + female % line
@@ -225,15 +243,15 @@ var T = {{ t|tojson }};
   var femPct = T.gender.map(function (r) { var tt = r.male + r.female; return tt ? Math.round(r.female / tt * 100) : 0; });
   new Chart(document.getElementById('c-gender'), {
     data: { labels: gy, datasets: [
-      { type: 'bar', label: 'Erkak', data: T.gender.map(function (r) { return r.male; }), backgroundColor: '#3b82f6cc', stack: 'g', borderRadius: 3, yAxisID: 'y' },
+      { type: 'bar', label: 'Erkak', data: T.gender.map(function (r) { return r.male; }), backgroundColor: 'rgba(0,86,214,0.8)', stack: 'g', borderRadius: 3, yAxisID: 'y' },
       { type: 'bar', label: 'Ayol', data: T.gender.map(function (r) { return r.female; }), backgroundColor: '#ec4899cc', stack: 'g', borderRadius: 3, yAxisID: 'y' },
-      { type: 'line', label: 'Ayollar %', data: femPct, borderColor: '#fbbf24', backgroundColor: '#fbbf24', borderWidth: 2, tension: 0.35, pointRadius: 3, yAxisID: 'y1' }
+      { type: 'line', label: 'Ayollar %', data: femPct, borderColor: '#ff9900', backgroundColor: '#ff9900', borderWidth: 2, tension: 0.35, pointRadius: 3, yAxisID: 'y1' }
     ] },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#cbd5e1', boxWidth: 13 } }, tooltip: TT },
+      plugins: { legend: { labels: { color: '#333333', boxWidth: 13 } }, tooltip: TT },
       scales: { x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, grid: grid, beginAtZero: true, title: { display: true, text: 'Soni', color: '#64748b' } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, title: { display: true, text: 'Ayollar %', color: '#fbbf24' } } } }
+        y: { stacked: true, grid: grid, beginAtZero: true, title: { display: true, text: 'Soni', color: '#666666' } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, title: { display: true, text: 'Ayollar %', color: '#ff9900' } } } }
   });
 
   // 7) advisor sparklines (inline SVG)
@@ -250,8 +268,8 @@ var T = {{ t|tojson }};
     });
     svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     svg.innerHTML =
-      '<polyline fill="none" stroke="#60a5fa" stroke-width="2" points="' + pts.join(' ') + '"/>' +
-      '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2.5" fill="#3b82f6"/>';
+      '<polyline fill="none" stroke="#0056d6" stroke-width="2" points="' + pts.join(' ') + '"/>' +
+      '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2.5" fill="#0056d6"/>';
   });
 })();
 </script>

@@ -1,0 +1,138 @@
+{# Katalog filtr paneli. Barcha filtrlar GET query parametrlari orqali ishlaydi
+   (§16): sahifa bookmark qilinadi, orqaga tugmasi ishlaydi, JS o'chirilgan
+   brauzerda ham to'liq ishlaydi. Mobil'da panel yig'iladi — ol-filters__toggle
+   dizayn tizimining mavjud mexanizmi. #}
+
+{% macro filter_panel(field_tree, facets, access_types, licenses, version_types,
+                      languages, hide_field=False) %}
+<form class="ol-filters" method="get" action="{{ request.path }}" role="search"
+      aria-label="Maqolalar bo'yicha qidiruv va filtr">
+  {# Filtr o'zgarganda doim 1-sahifadan boshlanadi: `page` ataylab tashlanadi. #}
+
+  <div class="mq-search">
+    <div class="ol-field-group">
+      <label class="ol-label" for="mq-q">Qidiruv</label>
+      <input class="ol-field" type="search" id="mq-q" name="q"
+             value="{{ request.args.get('q', '') }}"
+             placeholder="Maqola nomi, mavzu, muallif, jurnal yoki DOI">
+    </div>
+    <button type="submit" class="ol-btn ol-btn--primary">
+      <i class="bi bi-search" aria-hidden="true"></i>Qidirish</button>
+  </div>
+
+  <button type="button" class="ol-btn ol-btn--secondary ol-filters__toggle"
+          data-mq-filter-toggle aria-expanded="false" aria-controls="mq-filter-body">
+    <i class="bi bi-sliders" aria-hidden="true"></i>Filtrlar
+  </button>
+
+  <div class="ol-filters__body" id="mq-filter-body" data-open="false">
+    <div class="ol-filters__row">
+      {% if not hide_field %}
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-field">Fan yo'nalishi</label>
+        <select class="ol-field" id="mq-field" name="field">
+          <option value="">Barcha yo'nalishlar</option>
+          {{ field_options(field_tree, request.args.get('field', '')) }}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-year-from">Yil (dan)</label>
+        <input class="ol-field" type="number" id="mq-year-from" name="year_from"
+               inputmode="numeric" min="{{ facets.year_min }}" max="{{ facets.year_max }}"
+               value="{{ request.args.get('year_from', '') }}">
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-year-to">Yil (gacha)</label>
+        <input class="ol-field" type="number" id="mq-year-to" name="year_to"
+               inputmode="numeric" min="{{ facets.year_min }}" max="{{ facets.year_max }}"
+               value="{{ request.args.get('year_to', '') }}">
+      </div>
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-lang">Til</label>
+        <select class="ol-field" id="mq-lang" name="lang">
+          <option value="">Barchasi</option>
+          {% for key, label in languages.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('lang') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="ol-filters__row">
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-journal">Jurnal</label>
+        <input class="ol-field" type="text" id="mq-journal" name="journal" list="mq-journals"
+               value="{{ request.args.get('journal', '') }}" placeholder="Jurnal nomi">
+        <datalist id="mq-journals">
+          {% for journal in facets.journals %}<option value="{{ journal }}"></option>{% endfor %}
+        </datalist>
+      </div>
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-access">Kirish turi</label>
+        <select class="ol-field" id="mq-access" name="access">
+          <option value="">Barchasi</option>
+          {% for key, label in access_types.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('access') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-license">Litsenziya</label>
+        <select class="ol-field" id="mq-license" name="license">
+          <option value="">Barchasi</option>
+          {% for key, label in licenses.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('license') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="mq-version">Maqola versiyasi</label>
+        <select class="ol-field" id="mq-version" name="version">
+          <option value="">Barchasi</option>
+          {% for key, label in version_types.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('version') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <fieldset class="ol-filters__row" style="border:0;padding:0;margin:0;">
+      <legend class="ol-label">Qo'shimcha</legend>
+      {% for name, label in [('pdf', 'PDF mavjud'), ('scopus', 'Scopus'),
+                             ('wos', 'Web of Science'), ('doaj', 'DOAJ')] %}
+      <label class="ol-facets__opt" for="mq-{{ name }}" style="flex:0 0 auto;min-height:44px;">
+        <input type="checkbox" id="mq-{{ name }}" name="{{ name }}" value="1"
+               {{ 'checked' if request.args.get(name) == '1' }}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <div class="ol-filters__actions">
+      {# Ko'rinish va tartib tanlovi filtr yuborilganda yo'qolmasin. #}
+      <input type="hidden" name="view" value="{{ request.args.get('view', 'karta') }}">
+      <input type="hidden" name="sort" value="{{ request.args.get('sort', 'yangi') }}">
+      {% if request.args.get('faqat') %}
+      <input type="hidden" name="faqat" value="{{ request.args.get('faqat') }}">
+      {% endif %}
+      <a class="ol-btn ol-btn--tertiary" href="{{ request.path }}">Tozalash</a>
+      <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+    </div>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro field_options(nodes, selected, depth=0) %}
+{%- for node in nodes -%}
+<option value="{{ node.slug }}" {{ 'selected' if selected == node.slug }}>
+  {{- '— ' * depth }}{{ node.name_uz }}{% if node.code %} ({{ node.code }}){% endif -%}
+</option>
+{{ field_options(node.children, selected, depth + 1) }}
+{%- endfor -%}
+{% endmacro %}

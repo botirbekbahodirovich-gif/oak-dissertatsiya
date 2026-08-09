@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/field_tree.html" import tree %}
+{% from "components/article_bits.html" import pager %}
+
+{% block title %}Fan yo'nalishlari (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {{ page_header("Fan yo'nalishlari",
+                 "OAK klassifikatsiyasiga mos ierarxiya. Sun'iy kategoriya qo'shmang — faqat tasdiqlangan manbadan.",
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')],
+                 meta=['Jami: %d ta yo\'nalish' % field_total,
+                       'Guruh nomi yo\'q: %d ta' % missing_parent_total]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="mq-notice" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="mq-toolbar">
+    <a class="ol-btn ol-btn--primary" href="/admin/scientific-fields/new">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>Yangi yo'nalish</a>
+    <a class="ol-btn ol-btn--secondary" href="/admin/scientific-fields/review">
+      <i class="bi bi-clipboard-check" aria-hidden="true"></i>Review navbati</a>
+    <a class="ol-btn ol-btn--tertiary" href="{{ qs(view='daraxt' if view_mode == 'jadval' else 'jadval', page=None) }}">
+      {% if view_mode == 'jadval' %}Daraxt ko'rinishi{% else %}Jadval ko'rinishi{% endif %}</a>
+    <a class="ol-btn ol-btn--tertiary" href="/admin/articles">Maqolalar</a>
+  </div>
+
+  <form class="ol-filters" method="get" action="/admin/scientific-fields">
+    <input type="hidden" name="view" value="{{ view_mode }}">
+    <div class="ol-filters__row">
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-q">Nom bo'yicha qidiruv</label>
+        <input class="ol-field" type="search" id="sf-q" name="q" value="{{ request.args.get('q', '') }}"
+               placeholder="Lotin, kirill yoki asl nom">
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-code">Shifr (prefiks)</label>
+        <input class="ol-field" type="search" id="sf-code" name="code"
+               value="{{ request.args.get('code', '') }}" placeholder="05.01">
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-level">Daraja</label>
+        <select class="ol-field" id="sf-level" name="level">
+          <option value="">Barchasi</option>
+          {% for lv in [1, 2, 3, 4] %}
+          <option value="{{ lv }}" {{ 'selected' if request.args.get('level') == lv|string }}>{{ lv }}-daraja</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-review">Tasdiqlash holati</label>
+        <select class="ol-field" id="sf-review" name="review">
+          <option value="">Barchasi</option>
+          {% for value in review_values %}
+          <option value="{{ value }}" {{ 'selected' if request.args.get('review') == value }}>
+            {{ review_labels.get(value, value) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-source">Manba</label>
+        <select class="ol-field" id="sf-source" name="source">
+          <option value="">Barchasi</option>
+          {% for source in sources %}
+          <option value="{{ source }}" {{ 'selected' if request.args.get('source') == source }}>{{ source }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="sf-status">Faollik</label>
+        <select class="ol-field" id="sf-status" name="status">
+          <option value="">Barchasi</option>
+          <option value="faol" {{ 'selected' if request.args.get('status') == 'faol' }}>Faol</option>
+          <option value="nofaol" {{ 'selected' if request.args.get('status') == 'nofaol' }}>Nofaol</option>
+        </select>
+      </div>
+      <label class="ol-facets__opt mq-check" for="sf-orphan">
+        <input type="checkbox" id="sf-orphan" name="yetim" value="1"
+               {{ 'checked' if request.args.get('yetim') == '1' }}>
+        Guruh nomi yo'q
+      </label>
+      <div class="ol-filters__actions">
+        <a class="ol-btn ol-btn--tertiary" href="/admin/scientific-fields">Tozalash</a>
+        <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+      </div>
+    </div>
+  </form>
+
+  {% if view_mode == 'daraxt' %}
+  <section class="ol-section" aria-labelledby="sf-daraxt">
+    <h2 id="sf-daraxt" class="ol-h4">Daraxt</h2>
+    <p class="ol-meta">Filtrlar bu ko'rinishga qo'llanmaydi — daraxt to'liq
+      ierarxiyani ko'rsatadi. Filtrlash uchun jadval ko'rinishiga o'ting.</p>
+    {% if field_tree %}{{ tree(field_tree, id_prefix='admin') }}
+    {% else %}<div class="ol-empty"><p class="ol-body">Yo'nalishlar yo'q.</p></div>{% endif %}
+  </section>
+
+  {% elif rows %}
+  <p class="mq-resultbar__count" role="status"><strong>{{ total }}</strong> ta yo'nalish</p>
+  <div class="ol-table-wrap">
+    <table class="ol-table">
+      <caption class="mq-sr-only">Fan yo'nalishlari ro'yxati</caption>
+      <thead>
+        <tr>
+          <th scope="col">Shifr</th>
+          <th scope="col">Nomi</th>
+          <th scope="col">Ota konteksti</th>
+          <th scope="col">Daraja</th>
+          <th scope="col">Tasdiqlash</th>
+          <th scope="col">Manba</th>
+          <th scope="col">Qator</th>
+          <th scope="col">Maqola</th>
+          <th scope="col">Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr {% if not row.is_active %}class="mq-row--inactive"{% endif %}>
+          <th scope="row" class="mq-tree__code">{{ row.code or '—' }}</th>
+          <td class="mq-admin-name">
+            {{ row.name_uz }}
+            {# Holat rang/shaffoflik bilan EMAS, matn bilan ham beriladi. #}
+            {% if not row.is_active %}
+            <span class="ol-badge ol-badge--neutral">Nofaol</span>
+            {% endif %}
+            {% if row.name_uz_cyrillic and row.name_uz_cyrillic != row.name_uz %}
+            <span class="mq-admin-raw" lang="uz-Cyrl">{{ row.name_uz_cyrillic }}</span>
+            {% endif %}
+            {% if row.raw_name and row.raw_name != row.name_uz_cyrillic %}
+            <span class="mq-admin-raw">asl: {{ row.raw_name }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% for parent in row.ancestors %}{{ parent.name_uz }}
+              {%- if not loop.last %} → {% endif %}{% endfor %}
+            {% if row.missing_parent_code %}
+            <span class="ol-badge ol-badge--notice"
+                  title="Rasmiy guruh nomi hali kiritilmagan">{{ row.missing_parent_code }}</span>
+            {% endif %}
+            {% if not row.ancestors and not row.missing_parent_code %}—{% endif %}
+          </td>
+          <td>{{ row.level }}</td>
+          <td>{{ review_labels.get(row.review_status, row.review_status or '—') }}</td>
+          <td>{{ row.source_name or '—' }}</td>
+          <td>{{ row.source_line or '—' }}</td>
+          <td>{{ row.article_count }}</td>
+          <td class="mq-table__actions">
+            <a class="ol-btn ol-btn--tertiary" href="/admin/scientific-fields/{{ row.id }}/edit">Tahrirlash</a>
+            <a class="ol-btn ol-btn--tertiary" href="/maqolalar/yonalish/{{ row.slug }}">Ko'rish</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ pager(page, pages, qs) }}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Yo'nalish topilmadi</h2>
+    <p class="ol-body">
+      Filtrlarni tozalang yoki serverda import skriptini ishga tushiring:
+      <code>python scripts/seed_scientific_fields.py --file data/oak/normalized/oak_specialties_approved.json --apply</code>
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+{% endblock %}

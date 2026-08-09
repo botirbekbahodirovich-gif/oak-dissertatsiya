@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Maqolalar importi (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260808" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Ommaviy maqola importi', 'DOI ro\'yxati yoki CSV fayl yuboring — tizim metadata topadi, siz esa ko\'rib chiqib tasdiqlaysiz.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')],
+                 meta=['Maksimal: %d ta yozuv' % max_items]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if error %}
+  <div class="ol-badge ol-badge--error" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <div class="ai-actions-row">
+    <a class="ol-btn ol-btn--secondary" href="/admin/articles/imports">
+      <i class="bi bi-clock-history" aria-hidden="true"></i>Import tarixi</a>
+  </div>
+
+  <form method="POST" action="/admin/articles/import" enctype="multipart/form-data"
+        id="ai-import-form">
+    {{ csrf_token()|safe }}
+
+    <div role="tablist" aria-label="Import turi" class="ai-tabs-row">
+      <button type="button" role="tab" id="ai-tab-doi" aria-controls="ai-panel-doi"
+              aria-selected="{{ 'true' if source_type != 'csv' else 'false' }}"
+              class="ol-tab" data-ai-tab="doi_list">DOI ro'yxati</button>
+      <button type="button" role="tab" id="ai-tab-csv" aria-controls="ai-panel-csv"
+              aria-selected="{{ 'true' if source_type == 'csv' else 'false' }}"
+              class="ol-tab" data-ai-tab="csv">CSV fayl</button>
+    </div>
+    <input type="hidden" name="source_type" id="ai-source-type"
+           value="{{ source_type or 'doi_list' }}">
+
+    <div id="ai-panel-doi" role="tabpanel" aria-labelledby="ai-tab-doi"
+         class="ai-tab-panel" {{ 'hidden' if source_type == 'csv' }}>
+      <div class="ol-field-group">
+        <label class="ol-label" for="ai-doi-list">DOI ro'yxati (har qatorda bitta)</label>
+        <textarea class="ol-field" id="ai-doi-list" name="doi_list" rows="10"
+                  placeholder="10.1000/example1&#10;https://doi.org/10.1000/example2&#10;doi:10.1000/example3">{{ doi_list or '' }}</textarea>
+        <p class="ai-help">
+          Har qator — bitta DOI. "10.xxxx/...", "https://doi.org/10.xxxx/..." yoki
+          "doi:10.xxxx/..." formatlarining barchasi qo'llab-quvvatlanadi.
+        </p>
+      </div>
+    </div>
+
+    <div id="ai-panel-csv" role="tabpanel" aria-labelledby="ai-tab-csv"
+         class="ai-tab-panel" {{ 'hidden' if source_type != 'csv' }}>
+      <div class="ol-field-group">
+        <label class="ol-label" for="ai-csv-file">CSV fayl</label>
+        <input class="ol-field" type="file" id="ai-csv-file" name="csv_file" accept=".csv,text/csv">
+        <p class="ai-help">
+          UTF-8 kodировka, "doi" ustuni majburiy (katta-kichik harf farq
+          qilmaydi). Ajratuvchi — vergul yoki nuqta-vergul, avtomatik aniqlanadi.
+        </p>
+      </div>
+    </div>
+
+    <div class="ai-actions-row">
+      <button type="submit" class="ol-btn ol-btn--primary">
+        <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>Importni boshlash</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var tabs = document.querySelectorAll('[data-ai-tab]');
+  var typeInput = document.getElementById('ai-source-type');
+  var panels = { doi_list: document.getElementById('ai-panel-doi'),
+                csv: document.getElementById('ai-panel-csv') };
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var key = tab.getAttribute('data-ai-tab');
+      typeInput.value = key;
+      tabs.forEach(function (t) { t.setAttribute('aria-selected', t === tab ? 'true' : 'false'); });
+      Object.keys(panels).forEach(function (k) {
+        if (k === key) { panels[k].removeAttribute('hidden'); }
+        else { panels[k].setAttribute('hidden', ''); }
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

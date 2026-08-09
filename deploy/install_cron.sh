@@ -52,8 +52,21 @@ DATABASE_URL=${DB_URL}
 CRON
 chmod 644 "$PHOTO_DST"
 
-touch /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log
-chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log || true
+# Article metadata scheduled sync (Phase 2C.3C) — daily 02:15 (offset from
+# the photo-url reconcile). Check-only: never auto-applies field changes,
+# see docs/article-metadata-scheduler.md. Guarded by ARTICLE_METADATA_SYNC_ENABLED
+# in .env — the script itself no-ops (exit 0) when disabled.
+SYNC_DST="/etc/cron.d/article-metadata-sync"
+cat > "$SYNC_DST" <<CRON
+# Article metadata scheduled sync — daily 02:15 (managed by install_cron.sh).
+SHELL=/bin/bash
+DATABASE_URL=${DB_URL}
+15 2 * * * ${DEPLOY_USER} cd ${APP_DIR} && ${APP_DIR}/venv/bin/python scripts/sync_article_metadata.py >> /var/log/article-metadata-sync.log 2>&1
+CRON
+chmod 644 "$SYNC_DST"
+
+touch /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log /var/log/article-metadata-sync.log
+chown "$DEPLOY_USER":"$DEPLOY_USER" /var/log/oak-scraper.log /var/log/grant-scraper.log /var/log/photo-urls.log /var/log/article-metadata-sync.log || true
 
 # Reload cron so the new job is picked up immediately.
 service cron reload 2>/dev/null || systemctl reload cron 2>/dev/null || true
@@ -61,3 +74,4 @@ service cron reload 2>/dev/null || systemctl reload cron 2>/dev/null || true
 echo "Installed $CRON_DST (daily 00:00). Log: /var/log/oak-scraper.log"
 echo "Installed $GRANT_DST (daily 01:00). Log: /var/log/grant-scraper.log"
 echo "Installed $PHOTO_DST (daily 02:00). Log: /var/log/photo-urls.log"
+echo "Installed $SYNC_DST (daily 02:15). Log: /var/log/article-metadata-sync.log"

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/article_bits.html" import results_bar, results_block, pager, active_chips %}
+{% from "components/article_filters.html" import filter_panel %}
+{% from "components/field_tree.html" import tree %}
+
+{% block title %}{{ field.name_uz }} | Fan yo'nalishlari | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ field.description or (field.name_uz ~ " yo'nalishidagi ilmiy maqolalar — Olimlar.uz katalogi.") }}{% endblock %}
+
+{% block seo_extra %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{{ seo_meta(
+     field.name_uz,
+     field.description or (field.name_uz ~ " yo'nalishidagi ilmiy maqolalar."),
+     schema_type='CollectionPage',
+     canonical_path='/maqolalar/yonalish/' ~ field.slug) }}
+{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {% set crumb_list = [('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar'),
+                       ("Fan yo'nalishlari", '/maqolalar/yonalishlar')] %}
+  {% for node in crumbs %}
+    {% set _ = crumb_list.append((node.name_uz, '/maqolalar/yonalish/' ~ node.slug)) %}
+  {% endfor %}
+
+  {{ page_header(
+       field.name_uz,
+       field.description or '',
+       crumbs=crumb_list,
+       meta=([field.code] if field.code else []) + ['%d ta maqola' % total]) }}
+
+  {# Rasmiy kirill nomi — ikkilamchi metadata; lotin nomi sarlavhada (§17). #}
+  {% if field.name_uz_cyrillic and field.name_uz_cyrillic != field.name_uz %}
+  <p class="ol-body-lg ol-muted mq-flush-top" lang="uz-Cyrl">{{ field.name_uz_cyrillic }}</p>
+  {% endif %}
+
+  {% if field.missing_parent_code %}
+  {# Ota guruhning RASMIY NOMI yo'q. Sun'iy nom chiqarilmaydi — faqat shifr. #}
+  <div class="mq-notice">
+    <p class="ol-body mq-flush">
+      Bu ixtisoslik <strong>{{ field.missing_parent_code }}</strong> guruhiga tegishli.
+      Guruhning rasmiy nomi hali OAK manbasidan olinmagan, shuning uchun bu yerda
+      faqat shifr ko'rsatilmoqda.
+    </p>
+  </div>
+  {% endif %}
+
+  {% if field.source_name %}
+  <p class="ol-meta">Manba: {{ field.source_name }}{% if field.source_updated_at %},
+    tekshirilgan sana: {{ field.source_updated_at }}{% endif %}{% if field.source_line %},
+    manba qatori: {{ field.source_line }}{% endif %}</p>
+  {% endif %}
+
+  {% if children %}
+  <section class="ol-section" aria-labelledby="mq-ichki">
+    <h2 id="mq-ichki" class="ol-h4">Ichki yo'nalishlar</h2>
+    {{ tree(subtree.children if subtree else [], id_prefix='sub') }}
+  </section>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="mq-yonalish-maqolalar">
+    <h2 id="mq-yonalish-maqolalar" class="ol-h4">Yo'nalishdagi maqolalar</h2>
+
+    {# Qamrov ochiq ko'rsatiladi (§21): foydalanuvchi qaysi maqolalarni
+       ko'rayotganini bilishi va uni almashtira olishi shart. #}
+    <div class="mq-notice mq-notice--info mq-notice--spaced">
+      <p class="ol-body mq-notice__text">
+        {% if include_descendants %}
+        Ichki yo'nalishlardagi maqolalar ham ko'rsatilmoqda.
+        {% else %}
+        Faqat aynan shu yo'nalishga biriktirilgan maqolalar ko'rsatilmoqda
+        ({{ own_count }} ta).
+        {% endif %}
+      </p>
+      {% if children %}
+      <a class="ol-btn ol-btn--tertiary" href="{{ qs(faqat='1' if include_descendants else '0', page=None) }}">
+        {% if include_descendants %}Faqat shu yo'nalishni ko'rsatish
+        {% else %}Ichki yo'nalishlarni ham qo'shish{% endif %}
+      </a>
+      {% endif %}
+    </div>
+
+    {{ filter_panel([], facets, access_types, licenses, version_types, languages,
+                    hide_field=True) }}
+
+    {{ active_chips(active_filters, qs) }}
+    {{ results_bar(total, sort_key, sort_options, view_mode, qs) }}
+    {{ results_block(articles, view_mode,
+                     'Bu yo\'nalishda maqola yo\'q',
+                     'Yo\'nalish katalogda mavjud, lekin unga hali maqola biriktirilmagan.') }}
+    {{ pager(page, pages, qs) }}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+{% endblock %}

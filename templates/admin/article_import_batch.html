@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Import #{{ batch.id }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/article_import.css?v=20260808" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page" data-ai-batch-id="{{ batch.id }}" data-ai-status="{{ batch.status }}"
+     data-ai-cancel-requested="{{ 'true' if batch.cancel_requested else 'false' }}">
+  {{ page_header('Import #%d ko\'rib chiqish' % batch.id,
+                 ('CSV: %s' % batch.original_filename) if batch.original_filename else 'DOI ro\'yxati importi',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                         ('Import tarixi', '/admin/articles/imports')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="ai-summary-grid" id="ai-summary" aria-live="polite">
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.total_items }}</div>
+      <div class="ai-summary-item__label">Jami</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.review_count }}</div>
+      <div class="ai-summary-item__label">Tekshirish kerak</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.approved_count }}</div>
+      <div class="ai-summary-item__label">Tasdiqlangan</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.duplicate_count }}</div>
+      <div class="ai-summary-item__label">Mavjud/takror</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.failed_count }}</div>
+      <div class="ai-summary-item__label">Xato</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch.skipped_count + batch.rejected_count }}</div>
+      <div class="ai-summary-item__label">Rad/o'tkazilgan</div></div>
+    <div class="ai-summary-item"><div class="ai-summary-item__value">{{ batch_status_labels.get(batch.status, batch.status) }}</div>
+      <div class="ai-summary-item__label">Partiya holati</div></div>
+  </div>
+
+  <div id="ai-progress" class="ai-progress" role="status" aria-live="polite"
+       {{ 'hidden' if batch.status not in ('queued', 'processing') }}>
+    <span id="ai-progress-text">Ishlanmoqda: {{ batch.pending_count + batch.processing_count }} ta qoldi.</span>
+    <div class="ai-progress__bar"><div class="ai-progress__fill" id="ai-progress-fill"
+         style="width: {{ ((batch.total_items - batch.pending_count - batch.processing_count) / batch.total_items * 100) if batch.total_items else 0 }}%;"></div></div>
+  </div>
+
+  <div class="ai-actions-row">
+    {% if batch.status in ('queued', 'processing') %}
+    <button type="button" class="ol-btn ol-btn--primary" id="ai-process-btn">
+      <i class="bi bi-play-fill" aria-hidden="true"></i>Davom ettirish</button>
+    <form method="POST" action="/admin/articles/imports/{{ batch.id }}/cancel"
+          onsubmit="return confirm('Import bekor qilinsinmi? Joriy chunk tugagach to\'xtaydi.');">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--secondary">Bekor qilish</button>
+    </form>
+    {% endif %}
+    <a class="ol-btn ol-btn--tertiary" href="/admin/articles/imports">Import tarixi</a>
+  </div>
+
+  <form class="ol-filters" method="get" action="/admin/articles/imports/{{ batch.id }}">
+    <div class="ol-filters__row">
+      <div class="ol-field-group">
+        <label class="ol-label" for="ai-status-filter">Holat</label>
+        <select class="ol-field" id="ai-status-filter" name="status">
+          <option value="">Barchasi</option>
+          {% for key in item_statuses %}
+          <option value="{{ key }}" {{ 'selected' if status_filter == key }}>{{ item_status_labels.get(key, key) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-filters__actions">
+        <a class="ol-btn ol-btn--tertiary" href="/admin/articles/imports/{{ batch.id }}">Tozalash</a>
+        <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+      </div>
+    </div>
+  </form>
+
+  {% if items %}
+  <form method="POST" action="/admin/articles/imports/{{ batch.id }}/bulk-approve"
+        onsubmit="return confirm('Tanlangan elementlar tasdiqlansinmi? Har biri qoralama maqola sifatida yaratiladi.');">
+    {{ csrf_token()|safe }}
+    <div class="ol-table-wrap">
+      <table class="ol-table">
+        <caption class="ol-meta">Import elementlari</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span class="ol-body">Tanlash</span></th>
+            <th scope="col">DOI</th>
+            <th scope="col">Maqola</th>
+            <th scope="col">Muallif</th>
+            <th scope="col">Jurnal</th>
+            <th scope="col">Yil</th>
+            <th scope="col">Metadata holati</th>
+            <th scope="col">OA</th>
+            <th scope="col">Ogohlantirish</th>
+            <th scope="col">Mavjud</th>
+            <th scope="col">Amal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for it in items %}
+          {% set meta = it.metadata_candidate or {} %}
+          {% set authors = meta.get('authors') or [] %}
+          {% set safe_candidate = it.status == 'ready_for_review' and not it.is_retracted %}
+          <tr>
+            <td class="ai-checkbox-cell">
+              {% if safe_candidate %}
+              <input type="checkbox" name="item_id" value="{{ it.id }}" aria-label="Elementni tanlash: {{ it.normalized_doi }}">
+              {% endif %}
+            </td>
+            <td><span class="ol-meta">{{ it.normalized_doi or it.raw_input }}</span></td>
+            <td>{{ meta.get('title') or '—' }}</td>
+            <td>{{ authors[0].get('name') if authors else '—' }}{% if authors|length > 1 %} va boshq.{% endif %}</td>
+            <td>{{ meta.get('journal_name') or '—' }}</td>
+            <td>{{ meta.get('publication_year') or '—' }}</td>
+            <td>
+              <span class="ol-badge {{ 'ol-badge--error' if it.status in ('failed', 'provider_failed', 'invalid_doi') else ('ol-badge--success' if it.status == 'approved' else '') }}">
+                {{ item_status_labels.get(it.status, it.status) }}</span>
+              {% if it.is_retracted %}<span class="ol-badge ol-badge--error">Retracted</span>{% endif %}
+            </td>
+            <td>{{ it.oa_status or '—' }}</td>
+            <td>{{ ((it.warnings or [])|length) + ((it.conflicts or [])|length) }}</td>
+            <td>
+              {% if it.existing_article_id %}
+              <a href="/admin/articles/{{ it.existing_article_id }}/edit">Bazadagi maqola</a>
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              <a class="ol-btn ol-btn--tertiary" href="/admin/articles/imports/{{ batch.id }}/items/{{ it.id }}">Ko'rish</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="ai-actions-row" style="margin-top:var(--space-16);">
+      <button type="submit" class="ol-btn ol-btn--primary">
+        Tanlanganlarni tasdiqlash</button>
+      <span class="ai-help">Faqat "Tekshirishga tayyor" va chaqirib olinmagan elementlar tanlanadi.</span>
+    </div>
+  </form>
+
+  {% if pages > 1 %}
+  <nav class="ol-pager" aria-label="Sahifalash">
+    {% for p in range(1, pages + 1) %}
+    <a href="?page={{ p }}{{ '&status=' + status_filter if status_filter }}"
+       {{ 'aria-current=page'|safe if p == page }}>{{ p }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Tanlangan filtrlar bo'yicha natija topilmadi.</h2>
+    <p class="ol-body"><a href="/admin/articles/imports/{{ batch.id }}">Filtrlarni tozalash</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/article_import.js?v=20260808"></script>
+{% endblock %}

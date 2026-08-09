@@ -100,7 +100,7 @@
 (function () {
   var yc = {{ cluster.year_counts|tojson }};
   var years = Object.keys(yc).sort();
-  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.color = '#666666';  // light fon — --color-text-muted
   new Chart(document.getElementById('yearChart'), {
     type: 'bar',
     data: { labels: years, datasets: [{ label: 'Dissertatsiyalar', data: years.map(function (y) { return yc[y]; }), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 }] },

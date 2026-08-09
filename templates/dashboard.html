@@ -6,9 +6,9 @@
 <style>
   .entity-link { color: var(--oak-accent) !important; text-decoration: none; }
   .entity-link:hover { text-decoration: underline; }
-  .detail-row td { background: var(--oak-card, #1a1f2e); padding: 0.85rem 1.1rem; }
+  .detail-row td { background: var(--oak-card, var(--color-white)); padding: 0.85rem 1.1rem; }
   .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.4rem 1rem; }
-  .detail-item label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--oak-muted, #8892a4); display: block; margin-bottom: 2px; }
+  .detail-item label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--oak-muted, var(--color-text-muted)); display: block; margin-bottom: 2px; }
   .detail-item span { font-size: 0.85rem; }
   .detail-actions { margin-top: .6rem; display: flex; gap: .4rem; flex-wrap: wrap; }
   tr.expanded-row > td { border-bottom: none; }
@@ -17,11 +17,11 @@
   .data-table { table-layout: fixed; width: auto; min-width: 100%; font-size: 13px; }
   .data-table td, .data-table th { padding: 8px 10px; }
   .data-table tbody tr { min-height: 40px; }
-  .data-table td { color: #e2e8f0 !important; border-right: 1px solid rgba(255,255,255,0.05); white-space: normal; word-wrap: break-word; overflow: visible; vertical-align: top; }
-  .data-table th { color: #94a3b8; position: relative; overflow: visible; user-select: none; border-right: 1px solid rgba(255,255,255,0.05); }
+  .data-table td { color: var(--color-text-primary) !important; border-right: 1px solid var(--color-border-subtle); white-space: normal; word-wrap: break-word; overflow: visible; vertical-align: top; }
+  .data-table th { color: var(--color-text-muted); position: relative; overflow: visible; user-select: none; border-right: 1px solid var(--color-border-subtle); }
   .data-table td:last-child, .data-table th:last-child { border-right: none; }
   .data-table thead { position: sticky; top: 0; z-index: 10; }
-  .data-table thead th { background: var(--oak-surface, #1a1d23); box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
+  .data-table thead th { background: var(--oak-surface, var(--color-white)); box-shadow: none; }
 
   /* alignment */
   .data-table td[data-col-key="num"],
@@ -35,71 +35,71 @@
 
   /* toza qatorlar (Scopus/ProQuest uslubi): zebra yo'q, faqat hover */
   .data-table td, .data-table th { padding: 10px 12px; }
-  .data-table tbody tr.data-row:hover  { background: rgba(255,255,255,0.04); cursor: pointer; }
-  .cell-star { text-align: center; cursor: pointer; font-size: 1rem; color: #64748b; user-select: none; }
-  .cell-star.on { color: #fbbf24; }
-  .cell-star:hover { color: #fbbf24; }
+  .data-table tbody tr.data-row:hover  { background: var(--color-background-soft); cursor: pointer; }
+  .cell-star { text-align: center; cursor: pointer; font-size: 1rem; color: var(--color-text-muted); user-select: none; }
+  .cell-star.on { color: var(--color-notice); }
+  .cell-star:hover { color: var(--color-notice); }
 
   /* resize handle */
   .resize-handle {
     position: absolute; right: 0; top: 20%; height: 60%; width: 4px;
-    cursor: col-resize; background: rgba(255,255,255,0.12); border-radius: 2px;
+    cursor: col-resize; background: var(--color-border); border-radius: var(--radius-default);
     transition: background 0.2s, width 0.1s; z-index: 1;
   }
-  .resize-handle:hover, .resize-handle.dragging { background: #4a9eff; width: 4px; }
+  .resize-handle:hover, .resize-handle.dragging { background: var(--color-action-blue); width: 4px; }
 
   /* column visibility dropdown */
   .col-toggle-wrap { position: relative; display: inline-block; }
   #col-dropdown {
     display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
-    background: #1e2330; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
-    padding: 0.4rem 0; min-width: 170px; box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+    background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
+    padding: 0.4rem 0; min-width: 170px; box-shadow: 0 4px 12px rgba(12,15,18,0.08);
   }
   #col-dropdown.open { display: block; }
   .col-dropdown-item {
     display: flex; align-items: center; gap: 0.5rem;
     padding: 0.4rem 0.85rem; font-size: 0.84rem; cursor: pointer;
-    color: var(--oak-text, #cbd5e1); transition: background 0.12s;
+    color: var(--oak-text, var(--color-text-secondary)); transition: background 0.12s;
   }
-  .col-dropdown-item:hover { background: rgba(74,158,255,0.1); }
-  .col-dropdown-item input[type="checkbox"] { accent-color: #4a9eff; cursor: pointer; }
+  .col-dropdown-item:hover { background: var(--color-blue-soft); }
+  .col-dropdown-item input[type="checkbox"] { accent-color: var(--color-action-blue); cursor: pointer; }
 
   /* cell styles */
   .cell-mavzu { white-space: normal; word-break: break-word; min-width: 200px; }
   .cell-sana { white-space: nowrap; cursor: pointer; transition: color 0.2s; }
-  .cell-sana:hover { color: #4a9eff !important; text-decoration: underline; }
+  .cell-sana:hover { color: var(--color-action-blue) !important; text-decoration: underline; }
   .cell-olim { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-  .cell-olim a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
-  .cell-olim:hover a { color: #4a9eff !important; text-decoration: underline; }
+  .cell-olim a { color: var(--color-text-primary) !important; text-decoration: none; transition: color 0.2s; }
+  .cell-olim:hover a { color: var(--color-action-blue) !important; text-decoration: underline; }
   .cell-ixtisoslik { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-  .cell-ixtisoslik a { color: #e2e8f0 !important; text-decoration: none; font-family: monospace; font-size: 0.8rem; transition: color 0.2s; }
-  .cell-ixtisoslik:hover a { color: #4a9eff !important; text-decoration: underline; }
+  .cell-ixtisoslik a { color: var(--color-text-primary) !important; text-decoration: none; font-family: monospace; font-size: 0.8rem; transition: color 0.2s; }
+  .cell-ixtisoslik:hover a { color: var(--color-action-blue) !important; text-decoration: underline; }
   .cell-rahbar { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-  .cell-rahbar a { color: #e2e8f0 !important; text-decoration: none; transition: color 0.2s; }
-  .cell-rahbar:hover a { color: #4a9eff !important; text-decoration: underline; }
+  .cell-rahbar a { color: var(--color-text-primary) !important; text-decoration: none; transition: color 0.2s; }
+  .cell-rahbar:hover a { color: var(--color-action-blue) !important; text-decoration: underline; }
 
   /* daraja badges */
-  .badge-dsc.badge-role { background: #e36403 !important; color: #fff !important; cursor: default !important; }
-  .badge-phd.badge-role { background: #16a34a !important; color: #fff !important; cursor: default !important; }
+  .badge-dsc.badge-role { background: var(--color-brand-orange) !important; color: #fff !important; cursor: default !important; }
+  .badge-phd.badge-role { background: var(--color-success) !important; color: #fff !important; cursor: default !important; }
 
   /* pagination */
   .pagination-bar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:0.75rem 0 0.25rem; }
-  .pg-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:var(--oak-text,#cbd5e1); font-size:0.85rem; cursor:pointer; transition:background .15s,border-color .15s; }
-  .pg-btn:hover:not(:disabled):not(.active) { background:rgba(74,158,255,0.12); border-color:rgba(74,158,255,0.4); }
-  .pg-btn.active { background:#4a9eff; border-color:#4a9eff; color:#fff; font-weight:600; cursor:default; }
+  .pg-btn { display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 8px; border-radius: var(--radius-banner); border:1px solid var(--color-border); background:transparent; color:var(--oak-text,var(--color-text-secondary)); font-size:0.85rem; cursor:pointer; transition:background .15s,border-color .15s; }
+  .pg-btn:hover:not(:disabled):not(.active) { background:var(--color-blue-soft); border-color:var(--color-action-blue-light); }
+  .pg-btn.active { background:var(--color-action-blue); border-color:var(--color-action-blue); color:#fff; font-weight:600; cursor:default; }
   .pg-btn:disabled { opacity:0.35; cursor:default; }
-  .pg-info { font-size:0.82rem; color:var(--oak-muted,#8892a4); margin-left:4px; }
+  .pg-info { font-size:0.82rem; color:var(--oak-muted,var(--color-text-muted)); margin-left:4px; }
 
   /* search */
-  #search-clear-btn { border-left: none; background: transparent; color: var(--oak-muted, #8892a4); transition: color 0.15s; }
-  #search-clear-btn:hover { color: #e2e8f0; background: transparent; }
-  #search-spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(74,158,255,0.25); border-top-color: #4a9eff; border-radius: 50%; animation: spin-s 0.7s linear infinite; vertical-align: middle; }
+  #search-clear-btn { border-left: none; background: transparent; color: var(--oak-muted, var(--color-text-muted)); transition: color 0.15s; }
+  #search-clear-btn:hover { color: var(--color-text-primary); background: transparent; }
+  #search-spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--color-action-blue-light); border-top-color: var(--color-action-blue); border-radius: var(--radius-full); animation: spin-s 0.7s linear infinite; vertical-align: middle; }
   @keyframes spin-s { to { transform: rotate(360deg); } }
-  mark { background: rgba(74,158,255,0.3); color: #fff; border-radius: 3px; padding: 0 2px; }
-  #result-info .search-term { color: #4a9eff; font-weight: 600; }
+  mark { background: var(--color-notice-soft); color: var(--color-text-primary); border-radius: var(--radius-default); padding: 0 2px; }
+  #result-info .search-term { color: var(--color-action-blue); font-weight: 600; }
 
   /* search stats bar */
-  #search-stats { display:none; padding:6px 0; font-size:13px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.06); margin-top:8px; }
+  #search-stats { display:none; padding:6px 0; font-size:13px; color:var(--color-text-muted); border-top:1px solid var(--color-border-subtle); margin-top:8px; }
 
   /* filter row */
   .filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
@@ -107,67 +107,69 @@
   /* daraja toggle buttons */
   .daraja-buttons { display: flex; gap: 6px; flex-shrink: 0; }
   .daraja-btn {
-    padding: 6px 16px; border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: transparent; color: #94a3b8; font-size: 13px;
+    padding: 6px 16px; border-radius: var(--radius-rounded);
+    border: 1px solid var(--color-border);
+    background: transparent; color: var(--color-text-muted); font-size: 13px;
     cursor: pointer; transition: all 0.2s;
   }
-  .daraja-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
-  .daraja-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
-  .daraja-btn[data-value="PhD"].active { background: #16a34a; border-color: #16a34a; }
-  .daraja-btn[data-value="DSc"].active { background: #e36403; border-color: #e36403; }
-  .gender-btn[data-gender="male"].active { background: #3b82f6; border-color: #3b82f6; }
+  .daraja-btn:hover { border-color: var(--color-action-blue-light); color: var(--color-text-primary); }
+  .daraja-btn.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; font-weight: 600; }
+  .daraja-btn[data-value="PhD"].active { background: var(--color-success); border-color: var(--color-success); }
+  .daraja-btn[data-value="DSc"].active { background: var(--color-brand-orange); border-color: var(--color-brand-orange); }
+  .gender-btn[data-gender="male"].active { background: var(--color-action-blue); border-color: var(--color-action-blue); }
   .gender-btn[data-gender="female"].active { background: #ec4899; border-color: #ec4899; }
 
   /* view toggle (jadval / kartochka) */
   .view-toggle { display: flex; gap: 8px; flex-shrink: 0; }
-  .vt-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); background: #e2e8f0; color: #64748b; font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-  .vt-btn:hover { color: #1e293b; }
-  .vt-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
+  /* Eslatma: bu tugmalar avval dark fonda OCH fonli edi (#e2e8f0). Light fonda
+     ular oddiy secondary tugmaga aylanadi. */
+  .vt-btn { min-height: 36px; padding: var(--space-6) var(--space-12); border-radius: var(--radius-default); border: 1px solid var(--color-border); background: var(--color-white); color: var(--color-text-secondary); font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .vt-btn:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+  .vt-btn.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; font-weight: 600; }
 
   /* custom searchable select */
   .custom-select { position: relative; min-width: 120px; max-width: 220px; flex: 1 1 120px; }
   .select-trigger {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 10px; border-radius: 6px; cursor: pointer;
-    background: var(--oak-surface, #1a1d23); border: 1px solid rgba(255,255,255,0.1);
-    color: #e2e8f0; font-size: 13px; gap: 4px;
+    padding: 6px 10px; border-radius: var(--radius-default); cursor: pointer;
+    background: var(--oak-surface, var(--color-white)); border: 1px solid var(--color-border);
+    color: var(--color-text-primary); font-size: 13px; gap: 4px;
   }
-  .select-trigger:hover { border-color: rgba(74,158,255,0.4); }
-  .select-trigger.active { border-color: #4a9eff; }
+  .select-trigger:hover { border-color: var(--color-action-blue-light); }
+  .select-trigger.active { border-color: var(--color-action-blue); }
   .select-trigger .selected-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .select-trigger .arrow { color: #94a3b8; font-size: 10px; flex-shrink: 0; }
+  .select-trigger .arrow { color: var(--color-text-muted); font-size: 10px; flex-shrink: 0; }
   .clear-btn {
-    background: none; border: none; color: #94a3b8; cursor: pointer;
+    background: none; border: none; color: var(--color-text-muted); cursor: pointer;
     font-size: 12px; padding: 0 2px; display: none; line-height: 1;
   }
   .clear-btn.visible { display: inline; }
-  .clear-btn:hover { color: #e2e8f0; }
+  .clear-btn:hover { color: var(--color-text-primary); }
   .dropdown-panel {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1000;
-    background: #1a1d23; border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px; overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    background: var(--color-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-default); overflow: hidden;
+    box-shadow: 0 4px 12px rgba(12,15,18,0.08);
   }
   .dropdown-search {
-    width: 100%; padding: 7px 10px; border: none; border-bottom: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.05); color: #e2e8f0; font-size: 13px; outline: none; box-sizing: border-box;
+    width: 100%; padding: 7px 10px; border: none; border-bottom: 1px solid var(--color-border);
+    background: var(--color-border-subtle); color: var(--color-text-primary); font-size: 13px; outline: none; box-sizing: border-box;
   }
   .option-list { list-style: none; margin: 0; padding: 4px 0; max-height: 220px; overflow-y: auto; }
-  .option-list li { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .option-list li:hover { background: rgba(74,158,255,0.15); color: #fff; }
-  .option-list li.selected { background: rgba(74,158,255,0.2); color: #4a9eff; }
+  .option-list li { padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .option-list li:hover { background: var(--color-blue-soft); color: var(--color-action-blue); }
+  .option-list li.selected { background: var(--color-blue-soft); color: var(--color-action-blue); font-weight: 600; }
   .option-list li.no-match { color: var(--oak-muted); font-style: italic; cursor: default; padding: 8px 12px; }
 
   /* scope buttons */
   .scope-btn {
-    padding: 4px 14px; border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: transparent; color: #94a3b8;
+    padding: 4px 14px; border-radius: var(--radius-default);
+    border: 1px solid var(--color-border);
+    background: transparent; color: var(--color-text-muted);
     font-size: 12px; cursor: pointer; transition: all 0.2s;
   }
-  .scope-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
-  .scope-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
+  .scope-btn:hover { border-color: var(--color-action-blue-light); color: var(--color-text-primary); }
+  .scope-btn.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; font-weight: 600; }
 
   /* skeleton pulse */
   @keyframes pulse {
@@ -190,107 +192,106 @@
   .card-view-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px 0; }
   @media (max-width: 1024px) { .card-view-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px) { .card-view-grid { grid-template-columns: 1fr; } }
-  .diss-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; transition: transform 0.2s, box-shadow 0.2s; position: relative; user-select: none; }
-  .diss-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .diss-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); transition: border-color 0.15s; position: relative; user-select: none; }
+  .diss-card:hover { border-color: var(--color-action-blue-light); }
   .diss-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .diss-card-badge { color: white; padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; }
-  .diss-card-date { color: #64748b; font-size: 0.8rem; }
-  .diss-card-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 12px; }
-  .diss-card-name { margin: 0 0 8px; font-size: 1rem; font-weight: 700; }
-  .diss-card-name a { color: #60a5fa; text-decoration: none; }
-  .diss-card-name a:hover { color: #93bbfc; }
-  .diss-card-mavzu { color: #94a3b8; font-size: 0.85rem; line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .diss-card-meta { margin-bottom: 8px; }
-  .diss-card-ixt { background: #162032; color: #60a5fa; padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; border: 1px solid #334155; }
-  .diss-card-rahbar { color: #94a3b8; font-size: 0.8rem; margin-bottom: 12px; }
-  .diss-card-rahbar a { color: #60a5fa; text-decoration: none; }
-  .supervisor-badge { font-size: 0.7rem; background: #1e3a5f; color: #60a5fa; padding: 2px 8px; border-radius: 50px; margin-left: 4px; }
-  .diss-card-footer { padding-top: 12px; border-top: 1px solid #334155; }
-  .diss-card-link { color: #3b82f6; text-decoration: none; font-size: 0.8rem; font-weight: 600; }
-  .diss-card-link:hover { color: #60a5fa; }
-  .no-cards { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #64748b; font-size: 1.1rem; }
-  .card-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; padding: 20px 0; }
-  .card-page-btn { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; }
-  .card-page-btn:hover { background: #334155; }
-  .card-page-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+  .diss-card-badge { color: #fff; padding: 2px var(--space-8); border-radius: var(--radius-rounded); font-size: var(--text-meta); font-weight: 600; }
+  .diss-card-date { color: var(--color-text-muted); font-size: var(--text-meta); }
+  .diss-card-avatar { width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--color-blue-soft); color: var(--color-action-blue); display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 700; margin-bottom: var(--space-12); }
+  .diss-card-name { margin: 0 0 var(--space-8); font-size: var(--text-body); font-weight: 600; }
+  .diss-card-name a { color: var(--color-action-blue); text-decoration: none; }
+  .diss-card-name a:hover { text-decoration: underline; }
+  .diss-card-mavzu { color: var(--color-text-secondary); font-size: var(--text-small); line-height: var(--leading-body); margin-bottom: var(--space-12); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .diss-card-meta { margin-bottom: var(--space-8); }
+  .diss-card-ixt { background: var(--color-background-soft); color: var(--color-text-secondary); padding: 2px var(--space-8); border-radius: var(--radius-rounded); font-size: var(--text-meta); border: 1px solid var(--color-border); }
+  .diss-card-rahbar { color: var(--color-text-muted); font-size: var(--text-meta); margin-bottom: var(--space-12); }
+  .diss-card-rahbar a { color: var(--color-action-blue); text-decoration: none; }
+  .supervisor-badge { font-size: var(--text-meta); background: var(--color-blue-soft); color: var(--color-action-blue); padding: 2px var(--space-8); border-radius: var(--radius-rounded); margin-left: var(--space-4); }
+  .diss-card-footer { padding-top: var(--space-12); border-top: 1px solid var(--color-border-subtle); }
+  .diss-card-link { color: var(--color-action-blue); text-decoration: none; font-size: var(--text-small); font-weight: 600; }
+  .diss-card-link:hover { text-decoration: underline; }
+  .no-cards { grid-column: 1 / -1; text-align: center; padding: var(--space-48) var(--space-24); color: var(--color-text-muted); font-size: var(--text-body); }
+  .card-pagination { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: var(--space-8); padding: var(--space-20) 0; }
+  .card-page-btn { background: var(--color-white); border: 1px solid var(--color-border); color: var(--color-text-primary); min-height: 40px; padding: var(--space-8) var(--space-16); border-radius: var(--radius-default); cursor: pointer; font-size: var(--text-small); transition: all 0.15s; }
+  .card-page-btn:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+  .card-page-btn.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; font-weight: 600; }
 
   /* ── Facet sidebar (ProQuest "Narrow results") ── */
   .dash-wrap { display: flex; gap: 14px; align-items: flex-start; }
-  .facet-side { width: 260px; flex-shrink: 0; background: var(--oak-surface, #1a1d23);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px;
+  .facet-side { width: 260px; flex-shrink: 0; background: var(--oak-surface, var(--color-white));
+    border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 14px;
     position: sticky; top: 10px; max-height: calc(100vh - 20px); overflow-y: auto; }
-  .facet-group { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 10px 0; }
+  .facet-group { border-bottom: 1px solid var(--color-border-subtle); padding: 10px 0; }
   .facet-group:last-child { border-bottom: none; }
   .facet-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 8px; }
+    letter-spacing: 0.05em; color: var(--color-text-muted); margin-bottom: 8px; }
   .facet-opt { display: flex; align-items: center; gap: 7px; padding: 3px 0;
-    font-size: 0.83rem; color: #cbd5e1; cursor: pointer; }
-  .facet-opt input { accent-color: #4a9eff; cursor: pointer; flex-shrink: 0; }
+    font-size: 0.83rem; color: var(--color-text-secondary); cursor: pointer; }
+  .facet-opt input { accent-color: var(--color-action-blue); cursor: pointer; flex-shrink: 0; }
   .facet-opt .fo-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .facet-opt .fo-count { color: #64748b; font-size: 0.74rem; }
-  .facet-more { border: none; background: transparent; color: #4a9eff; font-size: 0.78rem;
+  .facet-opt .fo-count { color: var(--color-text-muted); font-size: 0.74rem; }
+  .facet-more { border: none; background: transparent; color: var(--color-action-blue); font-size: 0.78rem;
     cursor: pointer; padding: 4px 0; }
-  .facet-mini-input { width: 100%; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
-    padding: 5px 9px; background: rgba(255,255,255,0.04); color: #e2e8f0; font-size: 0.8rem;
+  .facet-mini-input { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-banner);
+    padding: 5px 9px; background: var(--color-background-soft); color: var(--color-text-primary); font-size: 0.8rem;
     margin-bottom: 6px; }
   .facet-year-row { display: flex; gap: 6px; align-items: center; }
-  .facet-year-row input { width: 70px; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
-    padding: 5px 8px; background: rgba(255,255,255,0.04); color: #e2e8f0; font-size: 0.8rem; }
-  .facet-chip { display: inline-flex; align-items: center; gap: 5px; background: rgba(74,158,255,0.14);
-    color: #7cb8ff; border: 1px solid rgba(74,158,255,0.35); border-radius: 50px;
+  .facet-year-row input { width: 70px; border: 1px solid var(--color-border); border-radius: var(--radius-banner);
+    padding: 5px 8px; background: var(--color-background-soft); color: var(--color-text-primary); font-size: 0.8rem; }
+  .facet-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--color-blue-soft);
+    color: var(--color-action-blue); border: 1px solid var(--color-action-blue-light); border-radius: var(--radius-rounded);
     padding: 3px 11px; font-size: 0.78rem; font-weight: 600; margin: 2px 4px 2px 0; }
   .facet-chip button { border: none; background: transparent; color: inherit; cursor: pointer;
     font-size: 0.85rem; padding: 0; line-height: 1; }
   #active-chips { display: flex; flex-wrap: wrap; align-items: center; padding: 6px 0 2px; }
-  .chips-clear { border: none; background: transparent; color: #f87171; font-size: 0.78rem;
+  .chips-clear { border: none; background: transparent; color: var(--color-error); font-size: 0.78rem;
     cursor: pointer; font-weight: 600; }
-  .hdr-btn { border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #94a3b8;
-    padding: 4px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .hdr-btn:hover { border-color: rgba(74,158,255,0.4); color: #e2e8f0; }
-  .hdr-btn.on { background: #4a9eff; border-color: #4a9eff; color: #fff; }
-  #sort-select { border: 1px solid rgba(255,255,255,0.15); background: var(--oak-surface,#1a1d23);
-    color: #e2e8f0; border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+  .hdr-btn { border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted);
+    padding: 4px 12px; border-radius: var(--radius-default); font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .hdr-btn:hover { border-color: var(--color-action-blue-light); color: var(--color-text-primary); }
+  .hdr-btn.on { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; }
+  #sort-select { border: 1px solid var(--color-border); background: var(--oak-surface,var(--color-white));
+    color: var(--color-text-primary); border-radius: var(--radius-banner); padding: 4px 8px; font-size: 12px; }
   /* histogram */
-  #year-histogram { background: var(--oak-surface, #1a1d23); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px; padding: 8px 12px 4px; margin-bottom: 10px; }
+  #year-histogram { background: var(--oak-surface, var(--color-white)); border: 1px solid var(--color-border);
+    border-radius: var(--radius-default); padding: 8px 12px 4px; margin-bottom: 10px; }
   #year-histogram svg { display: block; width: 100%; height: 64px; }
-  #year-histogram .yh-bar { fill: #4a9eff; opacity: 0.75; cursor: pointer; }
+  #year-histogram .yh-bar { fill: var(--color-action-blue); opacity: 0.75; cursor: pointer; }
   #year-histogram .yh-bar:hover { opacity: 1; }
   .yh-head { display: flex; justify-content: space-between; align-items: center;
-    font-size: 0.72rem; color: #94a3b8; }
-  #yh-tip { position: fixed; z-index: 500; background: #1e2330; border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px; padding: 4px 10px; font-size: 0.78rem; color: #e2e8f0; pointer-events: none; display: none; }
+    font-size: 0.72rem; color: var(--color-text-muted); }
+  #yh-tip { position: fixed; z-index: 500; background: var(--color-white); border: 1px solid var(--color-border);
+    border-radius: var(--radius-banner); padding: 4px 10px; font-size: 0.78rem; color: var(--color-text-primary); pointer-events: none; display: none; }
   /* mobile drawer */
   #facet-mobile-btn { display: none; }
   @media (max-width: 900px) {
     .facet-side { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto;
-      max-height: 78vh; z-index: 1300; border-radius: 16px 16px 0 0; transform: translateY(105%);
+      max-height: 78vh; z-index: 1300; border-radius: var(--radius-banner) var(--radius-banner) 0 0; transform: translateY(105%);
       transition: transform 0.25s; }
     .facet-side.open { transform: translateY(0); }
     #facet-mobile-btn { display: inline-flex; }
-    #facet-backdrop { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.6); z-index: 1290; }
+    #facet-backdrop { display: none; position: fixed; inset: 0; background: rgba(12,15,18,0.4); z-index: 1290; }
     #facet-backdrop.show { display: block; }
     #year-histogram { display: none; }
     #year-histogram.mobile-show { display: block; }
   }
   /* cite modal */
-  #cite-modal-bg { display: none; position: fixed; inset: 0; background: rgba(2,6,23,0.7);
+  #cite-modal-bg { display: none; position: fixed; inset: 0; background: rgba(12,15,18,0.4);
     z-index: 1400; align-items: center; justify-content: center; padding: 16px; }
   #cite-modal-bg.show { display: flex; }
-  .cite-modal { background: #1e2330; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px;
-    padding: 20px; width: 100%; max-width: 620px; color: #e2e8f0; }
-  .cite-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.5; margin: 6px 0 12px; }
-  .cite-label { font-size: 0.72rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }
+  .cite-modal { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
+    padding: 20px; width: 100%; max-width: 620px; color: var(--color-text-primary); }
+  .cite-box { background: var(--color-background-soft); border: 1px solid var(--color-border);
+    border-radius: var(--radius-default); padding: 10px 12px; font-size: 0.85rem; line-height: 1.5; margin: 6px 0 12px; }
+  .cite-label { font-size: 0.72rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; }
 </style>
 {% endblock %}
+{% from "components/page_header.html" import page_header %}
 {% block content %}
-  <div class="page-heading">
-    <div>
-      <h1>Dissertatsiyalar jadvali</h1>
-      <p>Mualliflar, muassasalar, ilmiy rahbarlar va ixtisoslik bo'yicha qidiruv.</p>
-    </div>
-  </div>
+  {{ page_header(
+       'Dissertatsiyalar',
+       "Mualliflar, muassasalar, ilmiy rahbarlar va ixtisoslik bo'yicha qidiruv.",
+       crumbs=[('Bosh sahifa', '/')]) }}
 
   {% from 'partials/cta_banner.html' import cta_banner %}
   {{ cta_banner(
@@ -300,23 +301,39 @@
       cta_text="Qidirib ko'rish →",
       cta_href='#search-input',
       show_only_anon=True,
-      icon='🔍'
+      icon='bi-search'
   ) }}
 
-  <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-3" id="stats-row">
-    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd" style="background:rgba(74,158,255,0.12);color:#4a9eff;"><i class="bi bi-collection-fill"></i></span></div><div class="h3 mb-1" id="stat-total">—</div><div class="text-muted">Jami dissertatsiyalar</div></div></div>
-    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-phd">PhD</span></div><div class="h3 mb-1" id="stat-phd">—</div><div class="text-muted">PhD dissertatsiyalar</div></div></div>
-    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-dsc">DSc</span></div><div class="h3 mb-1" id="stat-dsc">—</div><div class="text-muted">DSc dissertatsiyalar</div></div></div>
-    <div class="col"><div class="content-card stat-card"><div class="d-flex justify-content-between align-items-start mb-2"><span class="badge badge-action" style="background:rgba(251,191,36,0.14);color:#fbbf24;">Muassasa</span></div><div class="h3 mb-1" id="stat-muassasalar">—</div><div class="text-muted">Noyob muassasalar</div></div></div>
+  {# Stat kartalar — umumiy .ol-stat komponenti (olimlar-design-system.css). #}
+  <div class="ol-stat-grid" id="stats-row" style="margin-bottom:var(--space-24);">
+    <div class="ol-stat">
+      <span class="ol-badge ol-badge--info">Jami</span>
+      <div class="ol-stat__value" id="stat-total">—</div>
+      <div class="ol-stat__label">Jami dissertatsiyalar</div>
+    </div>
+    <div class="ol-stat">
+      <span class="ol-badge ol-badge--success">PhD</span>
+      <div class="ol-stat__value" id="stat-phd">—</div>
+      <div class="ol-stat__label">PhD dissertatsiyalar</div>
+    </div>
+    <div class="ol-stat">
+      <span class="ol-badge ol-badge--brand">DSc</span>
+      <div class="ol-stat__value" id="stat-dsc">—</div>
+      <div class="ol-stat__label">DSc dissertatsiyalar</div>
+    </div>
+    <div class="ol-stat">
+      <span class="ol-badge ol-badge--neutral">Muassasa</span>
+      <div class="ol-stat__value" id="stat-muassasalar">—</div>
+      <div class="ol-stat__label">Noyob muassasalar</div>
+    </div>
   </div>
 
-  {% set rw_dark = true %}
   {% include '_reminders_widget.html' %}
 
   <div class="content-card mb-3 filter-panel">
     <!-- Scope buttons -->
     <div class="search-scope" style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center;">
-      <span style="color:#94a3b8;font-size:12px;">Qidiruv:</span>
+      <span style="color:var(--color-text-muted);font-size:12px;">Qidiruv:</span>
       <button class="scope-btn active" data-scope="all">Hammasi</button>
       <button class="scope-btn" data-scope="olim">Olim</button>
       <button class="scope-btn" data-scope="rahbar">Ilmiy rahbar</button>
@@ -341,8 +358,8 @@
       </div>
       <!-- Gender toggle buttons -->
       <div class="daraja-buttons gender-buttons">
-        <button class="daraja-btn gender-btn" data-gender="male" id="btn-male">👨 Erkak</button>
-        <button class="daraja-btn gender-btn" data-gender="female" id="btn-female">👩 Ayol</button>
+        <button class="daraja-btn gender-btn" data-gender="male" id="btn-male">Erkak</button>
+        <button class="daraja-btn gender-btn" data-gender="female" id="btn-female">Ayol</button>
       </div>
       <!-- Ixtisoslik searchable select -->
       <div class="custom-select" id="cs-ixtisoslik">
@@ -358,17 +375,17 @@
     </div>
     <!-- Search stats bar -->
     <div id="search-stats">
-      Jami: <b style="color:#e2e8f0" id="ss-total">0</b> ta &nbsp;|&nbsp;
-      Olimlar: <b style="color:#4a9eff" id="ss-olim">0</b> ta &nbsp;|&nbsp;
-      Mavzular: <b style="color:#4a9eff" id="ss-mavzu">0</b> ta &nbsp;|&nbsp;
-      Ilmiy rahbarlar: <b style="color:#4a9eff" id="ss-rahbar">0</b> ta
+      Jami: <b style="color:var(--color-text-primary)" id="ss-total">0</b> ta &nbsp;|&nbsp;
+      Olimlar: <b style="color:var(--color-action-blue)" id="ss-olim">0</b> ta &nbsp;|&nbsp;
+      Mavzular: <b style="color:var(--color-action-blue)" id="ss-mavzu">0</b> ta &nbsp;|&nbsp;
+      Ilmiy rahbarlar: <b style="color:var(--color-action-blue)" id="ss-rahbar">0</b> ta
     </div>
     <!-- Search summary card -->
-    <div id="search-summary" style="display:none;margin-top:12px;padding:12px 16px;background:rgba(74,158,255,0.05);border:1px solid rgba(74,158,255,0.15);border-radius:8px;font-size:13px;"></div>
+    <div id="search-summary" style="display:none;margin-top:12px;padding:12px 16px;background:var(--color-blue-soft);border:1px solid var(--color-blue-soft);border-radius: var(--radius-banner);font-size:13px;"></div>
     <!-- Ixtisoslik obunasi taklifi (filtr faol bo'lganda) -->
-    <div id="ixt-sub-hint" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(74,158,255,0.06);border:1px solid rgba(74,158,255,0.18);border-radius:8px;font-size:13px;">
-      🔔 <b id="ixt-sub-label"></b> ixtisosligi bo'yicha yangi himoyalardan xabardor bo'ling —
-      <a href="#" id="ixt-sub-btn" style="color:#4a9eff;font-weight:600;">Obuna bo'lish</a>
+    <div id="ixt-sub-hint" style="display:none;margin-top:10px;padding:10px 14px;background:var(--color-blue-soft);border:1px solid rgba(74,158,255,0.18);border-radius: var(--radius-banner);font-size:13px;">
+      <i class="bi bi-bell" aria-hidden="true"></i> <b id="ixt-sub-label"></b> ixtisosligi bo'yicha yangi himoyalardan xabardor bo'ling —
+      <a href="#" id="ixt-sub-btn" style="color:var(--color-action-blue);font-weight:600;">Obuna bo'lish</a>
     </div>
   </div>
 
@@ -378,7 +395,7 @@
     <!-- ═══ FACET SIDEBAR (ProQuest "Narrow results") ═══ -->
     <aside class="facet-side" id="facet-side">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <b style="font-size:0.9rem;">🔍 Filtrlar</b>
+        <b style="font-size:0.9rem;"><i class="bi bi-funnel" aria-hidden="true"></i> Filtrlar</b>
         <button class="hdr-btn" id="facet-close" style="display:none;">✕</button>
       </div>
       <div class="facet-group" id="fg-daraja">
@@ -389,11 +406,11 @@
         <div class="facet-title">Yil</div>
         <div class="facet-year-row">
           <input type="number" id="yil-min" placeholder="dan" min="1990" max="2035">
-          <span style="color:#64748b;">—</span>
+          <span style="color:var(--color-text-muted);">—</span>
           <input type="number" id="yil-max" placeholder="gacha" min="1990" max="2035">
           <button class="hdr-btn" id="yil-apply">OK</button>
         </div>
-        <input type="range" id="yil-range" style="width:100%;margin-top:8px;accent-color:#4a9eff;" min="2000" max="2026" step="1" title="Yil bo'yicha siljitish">
+        <input type="range" id="yil-range" style="width:100%;margin-top:8px;accent-color:var(--color-action-blue);" min="2000" max="2026" step="1" title="Yil bo'yicha siljitish">
       </div>
       <div class="facet-group" id="fg-fan">
         <div class="facet-title">Fan tarmog'i</div>
@@ -422,7 +439,7 @@
     <!-- ═══ YIL HISTOGRAMMASI ═══ -->
     <div id="year-histogram" style="display:none;">
       <div class="yh-head">
-        <span>📊 Yillar bo'yicha taqsimot</span>
+        <span><i class="bi bi-bar-chart" aria-hidden="true"></i> Yillar bo'yicha taqsimot</span>
         <button class="hdr-btn" id="yh-toggle" style="border:none;">yashirish ▴</button>
       </div>
       <svg id="yh-svg" preserveAspectRatio="none"></svg>
@@ -430,27 +447,27 @@
     <div id="yh-tip"></div>
 
   <div class="table-panel" data-protected>
-    <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--oak-surface,#1a1d23);border-bottom:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);flex-wrap:wrap;">
+    <div id="results-info-bar" class="table-header-bar" style="position:sticky;top:0;z-index:20;background:var(--color-white);border-bottom:1px solid var(--color-border);flex-wrap:wrap;">
       <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
         <div id="result-info" class="result-count">Topildi: <strong>—</strong> ta natija</div>
         <div id="active-chips"></div>
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;flex-wrap:wrap;">
-        <button class="hdr-btn" id="facet-mobile-btn">🔍 Filtrlar <span id="facet-count-badge"></span></button>
+        <button class="hdr-btn" id="facet-mobile-btn"><i class="bi bi-funnel" aria-hidden="true"></i> Filtrlar <span id="facet-count-badge"></span></button>
         <select id="sort-select" title="Tartiblash">
           <option value="sana_desc">Sana: yangidan eskiga</option>
           <option value="sana_asc">Sana: eskidan yangiga</option>
           <option value="olim_az">Olim: A→Z</option>
         </select>
         {% if current_user.is_authenticated %}
-        <button class="hdr-btn" id="saved-toggle" title="Faqat saqlanganlar">⭐ Saqlanganlar</button>
+        <button class="hdr-btn" id="saved-toggle" title="Faqat saqlanganlar"><i class="bi bi-bookmark" aria-hidden="true"></i> Saqlanganlar</button>
         {% endif %}
-        <button class="hdr-btn" id="copy-link-btn" title="Joriy qidiruv havolasi">🔗 Havolani nusxalash</button>
+        <button class="hdr-btn" id="copy-link-btn" title="Joriy qidiruv havolasi"><i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash</button>
         <div class="view-toggle" id="view-toggle">
-          <button type="button" class="vt-btn active" id="vt-table">📋 Jadval</button>
-          <button type="button" class="vt-btn" id="vt-card">🃏 Kartochka</button>
+          <button type="button" class="vt-btn active" id="vt-table"><i class="bi bi-table" aria-hidden="true"></i> Jadval</button>
+          <button type="button" class="vt-btn" id="vt-card"><i class="bi bi-grid-3x3-gap" aria-hidden="true"></i> Kartochka</button>
         </div>
-        <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,#8892a4);font-size:0.82rem;"></span>
+        <span class="result-count" id="top-pagination-info" style="color:var(--oak-muted,var(--color-text-muted));font-size:0.82rem;"></span>
         <div class="col-toggle-wrap">
           <button id="btn-col-toggle" class="btn btn-secondary btn-sm" title="Ustunlarni boshqarish" style="padding:4px 8px;">
             <i class="bi bi-gear-fill"></i>
@@ -479,7 +496,7 @@
           <th data-col-key="ixti" class="col-ixtisoslik"><span class="col-label">Ixtisoslik</span><div class="resize-handle"></div></th>
           <th data-col-key="rahbar"><span class="col-label">Ilmiy rahbar</span><div class="resize-handle"></div></th>
           <th data-col-key="sana"><span class="col-label">Sana</span><div class="resize-handle"></div></th>
-          <th data-col-key="star" title="Saqlanganlar">⭐</th>
+          <th data-col-key="star" title="Saqlanganlar"><span class="visually-hidden">Saqlanganlar</span><i class="bi bi-bookmark" aria-hidden="true"></i></th>
         </tr></thead>
         <tbody id="table-body">
           <tr class="skeleton-row"><td colspan="8"><div class="skeleton-bar"></div></td></tr>
@@ -503,13 +520,13 @@
   <!-- ═══ IQTIBOS MODALI (GOST + APA) ═══ -->
   <div id="cite-modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
     <div class="cite-modal">
-      <h3 style="font-size:1rem;margin:0 0 12px;">📋 Iqtibos olish</h3>
+      <h3 style="font-size:1rem;margin:0 0 12px;"><i class="bi bi-quote" aria-hidden="true"></i> Iqtibos olish</h3>
       <div class="cite-label">GOST (O'zbekiston OAK uslubi)</div>
       <div class="cite-box" id="cite-gost"></div>
-      <button class="hdr-btn" onclick="copyCite('cite-gost', this)">📋 Nusxalash</button>
+      <button class="hdr-btn" onclick="copyCite('cite-gost', this)"><i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash</button>
       <div class="cite-label" style="margin-top:14px;">APA 7</div>
       <div class="cite-box" id="cite-apa"></div>
-      <button class="hdr-btn" onclick="copyCite('cite-apa', this)">📋 Nusxalash</button>
+      <button class="hdr-btn" onclick="copyCite('cite-apa', this)"><i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash</button>
       <div style="text-align:right;margin-top:10px;">
         <button class="hdr-btn" onclick="document.getElementById('cite-modal-bg').classList.remove('show')">Yopish</button>
       </div>
@@ -523,20 +540,22 @@
   /* ── Freemium guest gate (blur + overlay) ── */
   .guest-gate { position: relative; padding: 10px 0 4px; }
   .guest-gate-blur { display: grid; gap: 10px; filter: blur(4px); opacity: 0.30; pointer-events: none; user-select: none; }
-  .guest-gate-blur .gg-card { background: var(--oak-surface-2, #22262f); border: 1px solid var(--oak-border, rgba(255,255,255,0.07)); border-radius: 10px; padding: 14px 18px; }
-  .guest-gate-blur .gg-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #2a3140, #3a4356, #2a3140); margin: 9px 0; }
+  .guest-gate-blur .gg-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-16); }
+  .guest-gate-blur .gg-line { height: 12px; border-radius: var(--radius-default); background: var(--color-background-soft); margin: 9px 0; }
   .guest-gate-blur .gg-line.w70 { width: 70%; }
   .guest-gate-blur .gg-line.w55 { width: 55%; }
   .guest-gate-blur .gg-line.w40 { width: 40%; }
+  /* Light fon: oldingi to'q gradient o'rniga oq pardali qatlam — matn qora qoladi. */
   .guest-gate-overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center; padding: 18px; border-radius: 12px;
-    background: linear-gradient(180deg, rgba(15,23,42,0.30) 0%, rgba(15,23,42,0.93) 58%); }
-  .guest-gate-overlay .gg-emoji { font-size: 2rem; margin-bottom: 6px; }
-  .guest-gate-overlay .gg-title { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; }
-  .guest-gate-overlay .gg-sub { font-size: 0.9rem; color: #94a3b8; margin: 4px 0 14px; }
-  .guest-gate-overlay .gg-btn { background: #3b82f6; color: #fff; border-radius: 10px; padding: 11px 22px; font-weight: 700; text-decoration: none; }
-  .guest-gate-overlay .gg-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
-  .guest-gate-overlay .gg-small { margin-top: 8px; font-size: 12px; color: #64748b; }
+    align-items: center; justify-content: center; text-align: center; padding: var(--space-24);
+    border-radius: var(--radius-default);
+    background: rgba(255,255,255,0.88); border: 1px solid var(--color-border); }
+  .guest-gate-overlay .gg-emoji { display: none; }
+  .guest-gate-overlay .gg-title { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); }
+  .guest-gate-overlay .gg-sub { font-size: var(--text-small); color: var(--color-text-muted); margin: var(--space-4) 0 var(--space-16); }
+  .guest-gate-overlay .gg-btn { display: inline-flex; align-items: center; min-height: 44px; background: var(--color-action-blue); color: #fff; border-radius: var(--radius-default); padding: var(--space-12) var(--space-24); font-weight: 600; text-decoration: none; }
+  .guest-gate-overlay .gg-btn:hover { background: var(--color-action-blue-dark); color: #fff; text-decoration: none; }
+  .guest-gate-overlay .gg-small { margin-top: var(--space-8); font-size: var(--text-meta); color: var(--color-text-muted); }
 </style>
 <script>
   const PER_PAGE = 25;
@@ -602,8 +621,8 @@
       const hint = document.getElementById('ixt-sub-hint');
       hint.dataset.done = '1';
       hint.innerHTML = (d && (d.success || d.already))
-        ? "✅ Obuna qo'shildi — yangi himoyalar haqida xabar beramiz (Kabinet → Bildirishnomalar)."
-        : '⚠️ ' + ((d && d.error) || 'Xatolik — qayta urinib ko\'ring.');
+        ? "Obuna qo'shildi — yangi himoyalar haqida xabar beramiz (Kabinet → Bildirishnomalar)."
+        : '' + ((d && d.error) || 'Xatolik — qayta urinib ko\'ring.');
     }).catch(() => {});
   });
   function renderRows(records, startIndex) {
@@ -625,9 +644,9 @@
       const olimDisplay = escHtml(r.Olim_short || r.Olim || '—');
       const olimLink = r.Olim
         ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
-        : '<span style="color:#94a3b8;" title="Bu yozuvda muallif ko\'rsatilmagan">⚠️ Noma\'lum muallif</span>';
+        : '<span style="color:#666666;" title="Bu yozuvda muallif ko\'rsatilmagan">Noma\'lum muallif</span>';
       const qualityDot = r.DataQuality === 'incomplete'
-        ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#eab308;margin-left:5px;vertical-align:middle;"></span>'
+        ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius: var(--radius-full);background:#eab308;margin-left:5px;vertical-align:middle;"></span>'
         : '';
       const termLower = term.toLowerCase();
       const mavzuFull = r.Mavzu || '';
@@ -640,7 +659,7 @@
         ) &&
         !(r.Olim || '').toLowerCase().includes(termLower);
       const opponentBadge = showOpponentBadge
-        ? `<span style="display:inline-block;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.15);color:#94a3b8;font-size:10px;padding:1px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;">opponent</span>`
+        ? `<span class="ol-badge ol-badge--neutral" style="margin-left:6px;vertical-align:middle;">opponent</span>`
         : '';
       const supervisorCount = r.supervisor_count || 1;
       const shifr = ixtisoslikShifr(r.Ixtisoslik);
@@ -669,7 +688,7 @@
             </div>
             <div class="detail-actions">
               <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-file-text me-1"></i>Batafsil</a>
-              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openCite(${i})">📋 Iqtibos</button>
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openCite(${i})"><i class=\"bi bi-quote\"></i> Iqtibos</button>
               <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();toggleBookmark(${num}, this.closest('tr').previousElementSibling?.querySelector('.cell-star'))">${r.bookmarked ? '★ Saqlangan' : '☆ Saqlash'}</button>
               ${(r.Link || r.oak_id) ? `<a href="${escHtml(r.Link || 'https://oak.uz/pages/' + r.oak_id)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish →</a>` : ''}
             </div>
@@ -943,7 +962,7 @@
   });
 
   function showSkeleton() {
-    const cell = `<td><div style="height:14px;background:rgba(255,255,255,0.06);border-radius:4px;animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
+    const cell = `<td><div style="height:14px;background:#ecebe9;border-radius: var(--radius-default);animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
     tableBody.innerHTML = Array(8).fill(`<tr>${Array(8).fill(cell).join('')}</tr>`).join('');
   }
   function _searchSpinner(on) {
@@ -958,27 +977,27 @@
     const el = document.getElementById('search-summary');
     if (!el) return;
     if (!data || !Object.keys(data).length) { el.style.display = 'none'; return; }
-    let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;color:#94a3b8;">';
+    let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;color:#666666;">';
     if (data.olim_count > 0) {
       html += '<div>';
-      html += '<span style="color:#4a9eff;font-weight:600;">🎓 Olim sifatida:</span><br>';
+      html += '<span style="color:#0056d6;font-weight:600;"><i class="bi bi-mortarboard"></i> Olim sifatida:</span><br>';
       (data.phd_mavzu || []).forEach(m => {
-        html += `<span style="color:#16a34a;">PhD:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+        html += `<span style="color:#0c8930;">PhD:</span> <span style="color:#0c0f12;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       (data.dsc_mavzu || []).forEach(m => {
-        html += `<span style="color:#e36403;">DSc:</span> <span style="color:#e2e8f0;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
+        html += `<span style="color:#ff4203;">DSc:</span> <span style="color:#0c0f12;">${escHtml(m.substring(0,80))}${m.length>80?'…':''}</span><br>`;
       });
       html += '</div>';
     }
     if (data.rahbar_count > 0) {
-      html += `<div><span style="color:#4a9eff;font-weight:600;">👨‍🏫 Ilmiy rahbar:</span><br><span style="color:#e2e8f0;">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
+      html += `<div><span style="color:#0056d6;font-weight:600;"><i class="bi bi-person-badge"></i> Ilmiy rahbar:</span><br><span style="color:#0c0f12;">${data.rahbar_count.toLocaleString('uz')} ta shogird chiqargan</span></div>`;
     }
     if (data.opponent_count > 0) {
-      html += `<div><span style="color:#4a9eff;font-weight:600;">📋 Opponent:</span><br>` +
+      html += `<div><span style="color:#0056d6;font-weight:600;"><i class="bi bi-person-lines-fill"></i> Opponent:</span><br>` +
         `<a href="#table-panel" onclick="document.querySelector('.table-panel')?.scrollIntoView({behavior:'smooth'});return false;" ` +
-        `style="color:#4a9eff;font-size:13px;text-decoration:underline;cursor:pointer;">` +
+        `style="color:#0056d6;font-size:13px;text-decoration:underline;cursor:pointer;">` +
         `${data.opponent_count.toLocaleString('uz')} ta himoyada ishtirok etgan` +
-        `</a> <span style="color:#64748b;font-size:11px;">(↓ opponent belgisi bilan ko'rsatilgan)</span></div>`;
+        `</a> <span style="color:#666666;font-size:11px;">(↓ opponent belgisi bilan ko'rsatilgan)</span></div>`;
     }
     html += '</div>';
     el.innerHTML = html;
@@ -1048,7 +1067,7 @@
       '<div class="guest-gate">' +
         '<div class="guest-gate-blur" aria-hidden="true">' + card + card + card + '</div>' +
         '<div class="guest-gate-overlay">' +
-          '<div class="gg-emoji">📚</div>' +
+          '' +
           '<div class="gg-title">' + (total || 0).toLocaleString('uz') + ' ta dissertatsiya mavjud</div>' +
           '<div class="gg-sub">Barchasini ko\'rish uchun bepul ro\'yxatdan o\'ting</div>' +
           '<a href="/register" class="gg-btn" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">Ro\'yxatdan o\'tish →</a>' +
@@ -1310,7 +1329,7 @@
       return `<label class="facet-opt"><input type="checkbox" data-fv="${escHtml(it.value)}" ${checked ? 'checked' : ''}>` +
         `<span class="fo-label" title="${escHtml(label)}">${escHtml(label)}</span>` +
         `<span class="fo-count">${(it.count || 0).toLocaleString('uz')}</span></label>`;
-    }).join('') || '<div style="color:#64748b;font-size:0.78rem;">—</div>';
+    }).join('') || '<div style="color:#666666;font-size:0.78rem;">—</div>';
     host.querySelectorAll('input[data-fv]').forEach(cb => {
       cb.addEventListener('change', () => {
         const v = cb.dataset.fv;
@@ -1403,15 +1422,15 @@
     facetState.daraja.forEach(d => chip(d, () => facetToggle('daraja', d)));
     if (facetState.yilMin || facetState.yilMax) {
       const l = (facetState.yilMin || '…') + '–' + (facetState.yilMax || '…');
-      chip('📅 ' + l, () => { facetState.yilMin = facetState.yilMax = '';
+      chip('' + l, () => { facetState.yilMin = facetState.yilMax = '';
         document.getElementById('yil-min').value = ''; document.getElementById('yil-max').value = '';
         updateData(true); });
     }
     facetState.fan.forEach(f => chip(f.length > 28 ? f.slice(0, 28) + '…' : f, () => facetToggle('fan', f)));
-    facetState.muassasa.forEach(m => chip('🏛️ ' + (m.length > 28 ? m.slice(0, 28) + '…' : m), () => facetToggle('muassasa', m)));
-    facetState.ixt.forEach(c => chip('🔢 ' + c, () => {
+    facetState.muassasa.forEach(m => chip('' + (m.length > 28 ? m.slice(0, 28) + '…' : m), () => facetToggle('muassasa', m)));
+    facetState.ixt.forEach(c => chip('' + c, () => {
       facetState.ixt = facetState.ixt.filter(x => x !== c); renderIxtChips(); updateData(true); }));
-    if (facetState.saved) chip('⭐ Saqlanganlar', () => { facetState.saved = false;
+    if (facetState.saved) chip('<i class="bi bi-bookmark" aria-hidden="true"></i> Saqlanganlar', () => { facetState.saved = false;
       document.getElementById('saved-toggle')?.classList.remove('on'); updateData(true); });
     host.innerHTML = '';
     chips.forEach(c => {
@@ -1489,7 +1508,7 @@
   document.getElementById('copy-link-btn')?.addEventListener('click', function() {
     const url = window.location.href;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
-      .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => this.textContent = '🔗 Havolani nusxalash', 1600); })
+      .then(() => { this.textContent = '✓ Nusxalandi'; setTimeout(() => { this.innerHTML = '<i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash'; }, 1600); })
       .catch(() => prompt('Havolani nusxalang:', url));
   });
 
@@ -1569,7 +1588,7 @@
   window.copyCite = function(boxId, btn) {
     const text = document.getElementById(boxId).textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
-      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => btn.textContent = '📋 Nusxalash', 1500); })
+      .then(() => { btn.textContent = '✓ Nusxalandi'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash'; }, 1500); })
       .catch(() => prompt('Nusxalang:', text));
   };
 
@@ -1592,7 +1611,7 @@
 
     const daraja = (d.Daraja || '').toUpperCase();
     const isPhd = daraja === 'PHD' || daraja.includes('ФАН') || (d.Daraja || '').toLowerCase().includes('phd');
-    const degreeColor = isPhd ? '#059669' : '#e36403';
+    const degreeColor = isPhd ? '#0c8930' : '#ff4203';
     const degreeText = isPhd ? 'PhD' : 'DSc';
     const supervisorCount = d.supervisor_count || 0;
 
@@ -1623,7 +1642,7 @@
       html += '👨‍🏫 <a href="/olim/' + encodeURIComponent(rahbarName) + '">' + escHtml(rahbarDisp) + '</a>';
       if (supervisorCount > 0) html += '<span class="supervisor-badge">' + supervisorCount + ' 👨‍🎓</span>';
     } else {
-      html += '<span style="color:#64748b;">—</span>';
+      html += '<span style="color:#666666;">—</span>';
     }
     html += '</div>';
     if (oakUrl) {
@@ -1638,7 +1657,7 @@
     if (!grid) return;
     grid.innerHTML = '';
     if (!records || records.length === 0) {
-      grid.innerHTML = '<div class="no-cards"><p>😕 Natija topilmadi</p></div>';
+      grid.innerHTML = '<div class="no-cards"><p>Natija topilmadi</p></div>';
       renderCardPagination(currentPage, 0, 0);
       return;
     }
@@ -1651,7 +1670,7 @@
     const container = document.getElementById('cardPagination');
     if (!container) return;
     if (totalPages <= 1) { container.innerHTML = ''; return; }
-    let html = '<span style="color:#64748b;font-size:0.85rem;margin-right:12px;">Sahifa ' + page + ' / ' + totalPages + ' (' + (totalRecords || 0).toLocaleString('uz') + ' ta natija)</span>';
+    let html = '<span style="color:#666666;font-size:0.85rem;margin-right:12px;">Sahifa ' + page + ' / ' + totalPages + ' (' + (totalRecords || 0).toLocaleString('uz') + ' ta natija)</span>';
     if (page > 1) html += '<button class="card-page-btn" data-cpg="' + (page - 1) + '">← Oldingi</button>';
     let start = Math.max(1, page - 2);
     let end = Math.min(totalPages, start + 4);

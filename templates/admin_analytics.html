@@ -24,7 +24,7 @@
   }
   .admin-card .card-value { font-size: 2rem; font-weight: 800; color: var(--oak-text); line-height: 1.1; }
   .admin-card .card-sub { color: var(--oak-muted); font-size: 0.82rem; margin-top: 0.3rem; }
-  [data-bs-theme="light"] .admin-card .card-value { color: var(--oak-text-light); }
+  .admin-card .card-value { color: var(--oak-text-light); }
   .dot-online {
     width: 10px; height: 10px; border-radius: 50%;
     background: #34d399; display: inline-block;
@@ -58,7 +58,7 @@
   .empty-cell { color: var(--oak-muted); text-align: center; padding: 1.5rem; }
   .vc-cell { display: flex; align-items: center; gap: 10px; min-width: 160px; }
   .vc-num { font-weight: 800; font-size: 1rem; color: var(--oak-text); min-width: 42px; }
-  [data-bs-theme="light"] .vc-num { color: var(--oak-text-light); }
+  .vc-num { color: var(--oak-text-light); }
   .vc-bar-track { flex: 1; height: 8px; background: rgba(74,158,255,0.1); border-radius: 999px; overflow: hidden; }
   .vc-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #4a9eff, #7c5cfc); }
   .rank-cell { color: var(--oak-muted); font-weight: 700; }
@@ -112,6 +112,9 @@
     <p>Tashriflar va onlayn foydalanuvchilar statistikasi</p>
   </div>
 </div>
+
+{# Admin sahifalari o'rtasidagi yagona navigatsiya nuqtasi. #}
+{% include "components/admin_services_grid.html" %}
 
 <!-- Quick summary -->
 <div class="admin-summary-grid">

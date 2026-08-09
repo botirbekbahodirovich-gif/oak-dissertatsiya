@@ -5,82 +5,87 @@
 {% block extra_head %}
 <style>
 .mt { max-width: 980px; margin: 0 auto; }
-.mt h1 { font-size: 1.6rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; }
-.mt .sub { color: #94a3b8; margin: 0 0 22px; }
-.mt-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
-.mt-label { font-size: 0.82rem; font-weight: 600; color: #94a3b8; margin-bottom: 8px; display: block; }
-.mt-textarea { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 12px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; min-height: 96px; }
-.mt-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
-.mt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.mt-chip { display: inline-flex; align-items: center; gap: 6px; background: #162032; border: 1px solid #334155; color: #cbd5e1; border-radius: 999px; padding: 5px 12px; font-size: 0.84rem; cursor: pointer; }
-.mt-chip.primary { background: rgba(59,130,246,0.18); border-color: #3b82f6; color: #93bbfc; }
-.mt-chip .x { color: #f87171; font-weight: 700; cursor: pointer; }
-.mt-chip-add { background: transparent; border: 1px dashed #475569; color: #94a3b8; }
-.mt-select { background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 0.9rem; max-width: 320px; }
-.mt-btn { background: #3b82f6; color: #fff; font-weight: 700; font-size: 1rem; padding: 13px 28px; border: none; border-radius: 12px; cursor: pointer; }
-.mt-btn:hover { background: #2563eb; }
+.mt .sub { color: var(--color-text-muted); margin: 0 0 22px; }
+.mt-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); margin-bottom: var(--space-20); }
+.mt-label { font-size: var(--text-small); font-weight: 600; color: var(--color-text-secondary); margin-bottom: var(--space-8); display: block; }
+.mt-textarea { width: 100%; background: var(--color-white); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: var(--radius-default); padding: var(--space-12); font-size: var(--text-body); font-family: inherit; resize: vertical; min-height: 96px; }
+.mt-textarea:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
+.mt-chips { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-top: var(--space-12); }
+.mt-chip { display: inline-flex; align-items: center; gap: var(--space-6); min-height: 32px; background: var(--color-background-soft); border: 1px solid var(--color-border); color: var(--color-text-secondary); border-radius: var(--radius-rounded); padding: var(--space-4) var(--space-12); font-size: var(--text-small); cursor: pointer; }
+.mt-chip.primary { background: var(--color-blue-soft); border-color: var(--color-action-blue-light); color: var(--color-action-blue); }
+.mt-chip .x { color: var(--color-text-muted); font-weight: 700; cursor: pointer; }
+.mt-chip .x:hover { color: var(--color-error); }
+.mt-chip-add { background: var(--color-white); border: 1px dashed var(--color-border); color: var(--color-text-muted); }
+.mt-select { min-height: 44px; background: var(--color-white); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: var(--radius-default); padding: var(--space-12); font-size: var(--text-small); max-width: 320px; }
+.mt-btn { min-height: 44px; background: var(--color-action-blue); color: #fff; font-weight: 600; font-size: var(--text-body); padding: var(--space-12) var(--space-24); border: none; border-radius: var(--radius-default); cursor: pointer; }
+.mt-btn:hover { background: var(--color-action-blue-dark); }
 .mt-btn:disabled { opacity: 0.6; cursor: default; }
 .mt-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
 
 /* AI card */
-.ai-card { background: #1e293b; border: 1px solid #334155; border-left: 4px solid #3b82f6; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
-.ai-card h3 { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 12px; }
+.ai-card { background: var(--color-white); border: 1px solid var(--color-border); border-left: 4px solid var(--color-action-blue); border-radius: var(--radius-default); padding: 22px; margin-bottom: 18px; }
+.ai-card h3 { font-size: 1.1rem; font-weight: 800; color: var(--color-text-primary); margin: 0 0 12px; }
 .uniq { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .uniq-num { font-size: 2.6rem; font-weight: 800; line-height: 1; }
-.uniq-num.low { color: #ef4444; } .uniq-num.mid { color: #f59e0b; } .uniq-num.high { color: #34d399; }
-.uniq-lbl { color: #cbd5e1; font-size: 0.95rem; }
-.ai-text { color: #cbd5e1; line-height: 1.65; white-space: pre-wrap; }
+.uniq-num.low { color: var(--color-error); } .uniq-num.mid { color: var(--color-notice); } .uniq-num.high { color: var(--color-success); }
+.uniq-lbl { color: var(--color-text-secondary); font-size: 0.95rem; }
+.ai-text { color: var(--color-text-secondary); line-height: 1.65; white-space: pre-wrap; }
 .ai-sugg { list-style: none; padding: 0; margin: 14px 0 0; }
-.ai-sugg li { display: flex; gap: 8px; color: #cbd5e1; line-height: 1.5; margin-bottom: 8px; }
-.ai-sugg li .ic { color: #34d399; flex-shrink: 0; }
-.ai-loading { color: #94a3b8; display: flex; align-items: center; gap: 10px; }
-.spinner { width: 18px; height: 18px; border: 2px solid rgba(59,130,246,0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
+.ai-sugg li { display: flex; gap: 8px; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 8px; }
+.ai-sugg li .ic { color: var(--color-success); flex-shrink: 0; }
+.ai-loading { color: var(--color-text-muted); display: flex; align-items: center; gap: 10px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--color-action-blue-light); border-top-color: var(--color-action-blue); border-radius: var(--radius-full); animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* results */
-.res-head { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin: 0 0 14px; }
-.res-card { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 18px; margin-bottom: 12px; transition: transform 0.2s, box-shadow 0.2s; }
-.res-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
-.res-mavzu { font-weight: 700; color: #e2e8f0; line-height: 1.5; margin-bottom: 10px; }
-.res-mavzu mark { background: #fde68a; color: #1a1a1a; border-radius: 2px; padding: 0 2px; }
-.res-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 0.86rem; color: #94a3b8; }
-.res-meta a { color: #60a5fa; }
-.res-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #fff; }
-.b-phd { background: #059669; } .b-dsc { background: #e36403; } .b-other { background: #64748b; }
-.match-badge { background: rgba(59,130,246,0.16); color: #93bbfc; font-weight: 700; font-size: 0.76rem; padding: 3px 10px; border-radius: 999px; }
-.skel { background: linear-gradient(90deg,#1e293b 25%,#243044 50%,#1e293b 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 14px; height: 92px; margin-bottom: 12px; }
+.res-head { font-size: 1.1rem; font-weight: 800; color: var(--color-text-primary); margin: 0 0 14px; }
+.res-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-20); margin-bottom: var(--space-12); transition: border-color 0.15s; }
+.res-card:hover { border-color: var(--color-action-blue-light); }
+.res-mavzu { font-weight: 600; color: var(--color-text-primary); line-height: var(--leading-body); margin-bottom: var(--space-12); }
+.res-mavzu mark { background: var(--color-notice-soft); color: var(--color-text-primary); border-radius: 2px; padding: 0 2px; }
+.res-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 0.86rem; color: var(--color-text-muted); }
+.res-meta a { color: var(--color-action-blue); }
+.res-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: var(--radius-full); color: #fff; }
+.b-phd { background: var(--color-success); } .b-dsc { background: var(--color-brand-orange); } .b-other { background: var(--color-text-muted); }
+.match-badge { background: var(--color-blue-soft); color: var(--color-action-blue); font-weight: 600; font-size: var(--text-meta); padding: 2px var(--space-8); border-radius: var(--radius-rounded); }
+/* Skeleton — light fonda och kulrang pulsatsiya (avval to'q edi). */
+.skel { background: linear-gradient(90deg, var(--color-background-soft) 25%, #ededed 50%, var(--color-background-soft) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: var(--radius-default); height: 92px; margin-bottom: var(--space-12); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.load-more { display: block; margin: 8px auto 0; background: #162032; border: 1px solid #334155; color: #93bbfc; font-weight: 600; padding: 10px 22px; border-radius: 10px; cursor: pointer; }
-.load-more:hover { background: #334155; }
-.empty { color: #94a3b8; text-align: center; padding: 24px; }
+.load-more { display: block; margin: 8px auto 0; background: var(--color-background-soft); border: 1px solid var(--color-border); color: var(--color-action-blue); font-weight: 600; padding: 10px 22px; border-radius: var(--radius-default); cursor: pointer; }
+.load-more:hover { background: var(--color-border); }
+.empty { color: var(--color-text-muted); text-align: center; padding: 24px; }
 
 /* freemium blur wall */
-.freemium-bar { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.freemium-bar span { color: #60a5fa; font-size: 0.9rem; }
-.freemium-bar a { color: #3b82f6; font-weight: 600; font-size: 0.85rem; text-decoration: none; }
-.full-badge { background: rgba(5,150,105,0.16); color: #34d399; font-weight: 700; font-size: 0.78rem; padding: 3px 12px; border-radius: 999px; margin-left: 10px; }
-.blur-wall-container { position: relative; margin-top: 16px; min-height: 300px; }
-.blurred-results { filter: blur(8px); -webkit-filter: blur(8px); pointer-events: none; user-select: none; opacity: 0.6; }
-.lock-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: radial-gradient(ellipse at center, rgba(15,23,42,0.3) 0%, rgba(15,23,42,0.9) 70%); }
-.lock-card { background: #1e293b; border: 2px solid #3b82f6; border-radius: 20px; padding: 40px; text-align: center; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: fadeInUp 0.5s ease; }
-.lock-card h2 { color: #f1f5f9; font-size: 1.5rem; font-weight: 700; margin-bottom: 12px; }
-.lock-card .lc-sub { color: #94a3b8; font-size: 1rem; line-height: 1.6; margin-bottom: 24px; }
-.lock-card .lc-btn { background: #3b82f6; color: #fff; padding: 14px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 1rem; display: inline-block; width: 100%; max-width: 300px; }
-.lock-card .lc-btn:hover { background: #2563eb; }
-.lock-card .lc-reg { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
-.lock-card .lc-foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid #334155; color: #64748b; font-size: 0.8rem; }
+.freemium-bar { background: var(--color-blue-soft); border: 1px solid var(--color-action-blue-light); border-radius: var(--radius-default); padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.freemium-bar span { color: var(--color-action-blue); font-size: 0.9rem; }
+.freemium-bar a { color: var(--color-action-blue); font-weight: 600; font-size: 0.85rem; text-decoration: none; }
+.full-badge { background: var(--color-success-soft); color: var(--color-success); font-weight: 600; font-size: var(--text-meta); padding: 2px var(--space-12); border-radius: var(--radius-rounded); margin-left: var(--space-8); }
+.blur-wall-container { position: relative; margin-top: var(--space-16); min-height: 300px; }
+.blurred-results { filter: blur(6px); -webkit-filter: blur(6px); pointer-events: none; user-select: none; opacity: 0.4; }
+/* Light fon: to'q radial gradient o'rniga oq parda — karta matni qora qoladi. */
+.lock-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10; background: rgba(255,255,255,0.85); }
+.lock-card { background: var(--color-white); border: 1px solid var(--color-action-blue); border-radius: var(--radius-banner); padding: var(--space-32); text-align: center; max-width: 500px; box-shadow: 0 4px 12px rgba(12,15,18,0.08); }
+.lock-card h2 { color: var(--color-text-primary); font-size: var(--text-h4); font-weight: 600; margin-bottom: var(--space-12); }
+.lock-card .lc-sub { color: var(--color-text-muted); font-size: var(--text-body); line-height: var(--leading-body); margin-bottom: var(--space-24); }
+.lock-card .lc-btn { min-height: 44px; background: var(--color-action-blue); color: #fff; padding: var(--space-12) var(--space-32); border-radius: var(--radius-default); text-decoration: none; font-weight: 600; font-size: var(--text-body); display: inline-flex; align-items: center; justify-content: center; width: 100%; max-width: 300px; }
+.lock-card .lc-btn:hover { background: var(--color-action-blue-dark); }
+.lock-card .lc-reg { color: var(--color-action-blue); text-decoration: none; font-size: 0.9rem; }
+.lock-card .lc-foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 0.8rem; }
 .ai-blur { filter: blur(6px); -webkit-filter: blur(6px); pointer-events: none; user-select: none; margin-top: 8px; }
 .ai-unlock { text-align: center; margin-top: 16px; }
-.ai-unlock a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+.ai-unlock a { color: var(--color-action-blue); font-weight: 600; text-decoration: none; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 768px) { .lock-card { margin: 0 16px; padding: 24px; } }
 </style>
 {% endblock %}
 
+{% from "components/page_header.html" import page_header %}
 {% block content %}
 <div class="mt">
-  <h1>🔬 Mavzu tahlili</h1>
-  <p class="sub">O'xshash dissertatsiya mavzularini toping — mavzuingizni yozing, biz o'xshash tadqiqotlarni topamiz.</p>
+  {{ page_header(
+       'Mavzu tahlili',
+       "O'xshash dissertatsiya mavzularini toping — mavzuingizni yozing, biz o'xshash tadqiqotlarni topamiz.",
+       crumbs=[('Bosh sahifa', '/'), ('Tadqiqot', '/dissertatsiyalar')]) }}
 
   <div class="mt-card">
     <label class="mt-label">Dissertatsiya mavzuingizni to'liq yozing</label>
@@ -97,7 +102,7 @@
           {% for c in ixtisosliklar %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
         </select>
       </div>
-      <button class="mt-btn" id="analyze-btn" onclick="analyze()">🔍 O'xshash mavzularni topish</button>
+      <button class="mt-btn" id="analyze-btn" onclick="analyze()">O'xshash mavzularni topish</button>
     </div>
   </div>
 
@@ -106,22 +111,22 @@
   <!-- AI analysis -->
   <div id="ai-section" style="display:none;">
     <div class="ai-card" id="ai-card">
-      <h3>🤖 AI Tahlil</h3>
+      <h3>AI Tahlil</h3>
       <div id="ai-body"><div class="ai-loading"><span class="spinner"></span> AI tahlil qilmoqda...</div></div>
     </div>
   </div>
 
   <!-- similar results -->
   <div id="results-section" style="display:none;">
-    <h2 class="res-head" id="results-head">📋 O'xshash mavzular</h2>
+    <h2 class="res-head" id="results-head">O'xshash mavzular</h2>
     <div id="freemium-bar"></div>
     <div id="results"></div>
     <button class="load-more" id="load-more" style="display:none;" onclick="showMore()">Yana 10 ta ko'rsatish</button>
-    <div style="background:#162032;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:22px;text-align:center;">
+    <div style="background:var(--color-background-soft);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:20px;margin-top:22px;text-align:center;">
       <div style="font-size:1.5rem;">📚</div>
-      <h3 style="color:#f1f5f9;font-size:1.05rem;margin:6px 0;">Bu sohada maqola chop etish uchun mos jurnallar</h3>
-      <p style="color:#94a3b8;font-size:0.9rem;margin:0 0 12px;">OAK, Scopus va Web of Science indekslangan ilmiy jurnallar bazasidan o'zingizga mos jurnalni toping.</p>
-      <a href="/journals" style="display:inline-block;background:#3b82f6;color:#fff;font-weight:600;padding:9px 22px;border-radius:50px;text-decoration:none;">Jurnallarni ko'rish →</a>
+      <h3 style="color:var(--color-text-primary);font-size:1.05rem;margin:6px 0;">Bu sohada maqola chop etish uchun mos jurnallar</h3>
+      <p style="color:var(--color-text-muted);font-size:0.9rem;margin:0 0 12px;">OAK, Scopus va Web of Science indekslangan ilmiy jurnallar bazasidan o'zingizga mos jurnalni toping.</p>
+      <a href="/journals" style="display:inline-block;background:var(--color-action-blue);color:#fff;font-weight:600;padding:9px 22px;border-radius: var(--radius-rounded);text-decoration:none;">Jurnallarni ko'rish →</a>
     </div>
   </div>
 </div>
@@ -192,7 +197,7 @@ function analyze() {
     allResults = d.results || []; shownCount = 0;
     var head = "📋 O'xshash mavzular (" + allResults.length + ' ta topildi)';
     document.getElementById('results-head').innerHTML = escapeHtml(head) +
-      (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">✅ To\'liq natijalar</span>' : '');
+      (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">To\'liq natijalar</span>' : '');
     renderResults();
     runAI(mavzu, allResults.slice(0, 10).map(function (x) { return x.mavzu; }));
   }).catch(function () {
@@ -205,17 +210,17 @@ function cardHtml(x) {
   return '<div class="res-card"><div class="res-mavzu">' + highlight(x.mavzu) + '</div><div class="res-meta">' +
     '<span class="match-badge">' + x.match_score + " kalit so'z mos</span>" +
     badgeFor(x.daraja) +
-    (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">👤 ' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
-    (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
-    (ix ? '<span>📎 ' + escapeHtml(ix) + '</span>' : '') +
-    (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">👨‍🏫 ' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
+    (x.olim ? '<a href="/olim/' + encodeURIComponent(x.olim) + '">' + escapeHtml(x.olim_short || x.olim) + '</a>' : '') +
+    (x.sana ? '<span>' + escapeHtml(x.sana) + '</span>' : '') +
+    (ix ? '<span>' + escapeHtml(ix) + '</span>' : '') +
+    (x.ilmiy_rahbar ? '<a href="/olim/' + encodeURIComponent(x.ilmiy_rahbar) + '">' + escapeHtml(x.ilmiy_rahbar) + '</a>' : '') +
     '</div></div>';
 }
 function blurCardHtml(x) {
   return '<div class="res-card"><div class="res-mavzu">' + escapeHtml(x.mavzu) + '</div><div class="res-meta">' +
     badgeFor(x.daraja) +
-    (x.olim ? '<span>👤 ' + escapeHtml(x.olim_short || x.olim) + '</span>' : '') +
-    (x.sana ? '<span>📅 ' + escapeHtml(x.sana) + '</span>' : '') +
+    (x.olim ? '<span>' + escapeHtml(x.olim_short || x.olim) + '</span>' : '') +
+    (x.sana ? '<span>' + escapeHtml(x.sana) + '</span>' : '') +
     '</div></div>';
 }
 function renderResults() {
@@ -228,7 +233,7 @@ function renderResults() {
   // ── not logged in: show FREE_LIMIT, blur the rest ──
   document.getElementById('load-more').style.display = 'none';
   if (allResults.length > FREE_LIMIT) {
-    bar.innerHTML = '<div class="freemium-bar"><span>📊 ' + allResults.length +
+    bar.innerHTML = '<div class="freemium-bar"><span>' + allResults.length +
       " ta natijadan " + FREE_LIMIT + ' tasi ko\'rsatilmoqda</span>' +
       '<a href="/cabinet/login?next=/compare">Hammasini ko\'rish →</a></div>';
   }
@@ -246,7 +251,7 @@ function renderResults() {
           '<a class="lc-btn" href="/cabinet/login?next=/compare">Kabinetga kirish →</a>' +
           '<a class="lc-reg" href="/cabinet/register">Hisobingiz yo\'qmi? Ro\'yxatdan o\'ting</a>' +
         '</div>' +
-        '<div class="lc-foot">✨ Kabinet bepul. Barcha natijalar, AI tahlil va shaxsiy portfolio imkoniyatlari.</div>' +
+        '<div class="lc-foot">Kabinet bepul. Barcha natijalar, AI tahlil va shaxsiy portfolio imkoniyatlari.</div>' +
       '</div></div></div>';
     box.insertAdjacentHTML('beforeend', wall);
   }
@@ -281,7 +286,7 @@ function runAI(mavzu, similar) {
     var score = d.uniqueness_score || 0;
     var cls = score <= 3 ? 'low' : (score <= 6 ? 'mid' : 'high');
     var lbl = score <= 3 ? "Juda o'xshash mavzular ko'p" : (score <= 6 ? "O'rtacha" : "Noyob mavzu");
-    var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:#64748b;">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
+    var html = '<div class="uniq"><div class="uniq-num ' + cls + '">' + score + '<span style="font-size:1rem;color:#666666;">/10</span></div><div class="uniq-lbl">' + lbl + '</div></div>';
     var analysis = d.analysis || '';
     if (IS_LOGGED_IN) {
       if (analysis) html += '<div class="ai-text">' + escapeHtml(analysis) + '</div>';
@@ -295,7 +300,7 @@ function runAI(mavzu, similar) {
       if (analysis.length > 200) {
         html += '<div class="ai-text ai-blur">' + escapeHtml(analysis.slice(200, 500)) + '</div>';
       }
-      html += '<div class="ai-unlock"><a href="/cabinet/login?next=/compare">🔓 AI tahlilni to\'liq ko\'rish uchun kiring</a></div>';
+      html += '<div class="ai-unlock"><a href="/cabinet/login?next=/compare">AI tahlilni to\'liq ko\'rish uchun kiring</a></div>';
     }
     document.getElementById('ai-body').innerHTML = html;
   }).catch(function () {

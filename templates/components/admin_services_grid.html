@@ -1,0 +1,55 @@
+{# Admin xizmatlari — eski "Boshqa" menyusi o'rnini bosadi.
+   Ro'yxat utils/navigation.py:ADMIN_SERVICES dan keladi; bu yerda link
+   yozilmaydi. Avatar dropdown'ida faqat tez havolalar bor, to'liq ro'yxat
+   shu grid'da. #}
+{% if current_user.is_authenticated and current_user.is_admin %}
+<style>
+  .ol-admin-hub { margin-bottom: var(--space-32); }
+  .ol-admin-hub__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-12);
+  }
+  .ol-admin-hub__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-12);
+    min-height: 44px;
+    padding: var(--space-12) var(--space-16);
+    background: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-default);
+    color: var(--color-text-primary);
+    text-decoration: none;
+  }
+  .ol-admin-hub__item:hover {
+    border-color: var(--color-action-blue);
+    color: var(--color-action-blue);
+    text-decoration: none;
+  }
+  .ol-admin-hub__item[aria-current="page"] {
+    border-left: 2px solid var(--color-action-blue);
+    color: var(--color-action-blue);
+  }
+  .ol-admin-hub__item i { color: var(--color-text-muted); font-size: 16px; line-height: 1.4; }
+  .ol-admin-hub__item:hover i,
+  .ol-admin-hub__item[aria-current="page"] i { color: var(--color-action-blue); }
+  .ol-admin-hub__label { display: block; font-size: var(--text-small); font-weight: 600; }
+  .ol-admin-hub__desc { display: block; font-size: var(--text-meta); color: var(--color-text-muted); line-height: var(--leading-meta); }
+</style>
+<section class="ol-admin-hub" aria-labelledby="ol-admin-hub-title">
+  <h2 id="ol-admin-hub-title" class="ol-h5">Admin xizmatlari</h2>
+  <div class="ol-admin-hub__grid">
+    {% for item in admin_services %}
+    <a class="ol-admin-hub__item" href="{{ item.href }}"
+       {% if nav_item_active(item, request.path) %}aria-current="page"{% endif %}>
+      <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+      <span>
+        <span class="ol-admin-hub__label">{{ item.label }}</span>
+        {% if item.description %}<span class="ol-admin-hub__desc">{{ item.description }}</span>{% endif %}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

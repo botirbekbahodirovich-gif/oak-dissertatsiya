@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Moderatsiya — {{ article.title|truncate(60) }}{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Maqola moderatsiyasi', article.title,
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'),
+                         ('Maqolalar', '/admin/articles')]) }}
+
+  {% if error %}<div class="mq-form__error" role="alert">{{ error }}</div>{% endif %}
+
+  {# PDF ochiqligining SABABI ko'rsatiladi — admin nima yetishmayotganini
+     ko'rishi kerak. Foydalanuvchi hech qachon bu matnni ko'rmaydi. #}
+  <div class="{{ 'mq-notice mq-notice--info' if article.can_read_pdf else 'mq-notice' }}">
+    {% if article.can_read_pdf %}
+    <strong>PDF ommaga ochiq.</strong> Barcha shartlar bajarilgan.
+    {% else %}
+    <strong>PDF ommaga ochiq emas.</strong>
+    Sabab: {{ article.pdf_block_reason or "PDF yo'q" }}.
+    {% endif %}
+  </div>
+
+  <div class="ol-card" style="margin:var(--space-24) 0;">
+    <dl class="mq-deflist">
+      <dt>Kirish turi</dt><dd>{{ article.access_label }}</dd>
+      <dt>Litsenziya</dt><dd>{{ article.license_label }}</dd>
+      <dt>Manba</dt><dd>{{ article.source_name or '—' }}</dd>
+      <dt>Versiya</dt><dd>{{ article.version_label }}</dd>
+      <dt>PDF</dt><dd>{{ article.pdf_original_name or 'yo\'q' }}</dd>
+      <dt>Huquqiy tasdiq</dt>
+      <dd>{% if article.rights_confirmed_at %}{{ article.rights_confirmed_at }}
+          (admin #{{ article.rights_confirmed_by }}){% else %}tasdiqlanmagan{% endif %}</dd>
+      {% if article.permission_note %}<dt>Ruxsat izohi</dt><dd>{{ article.permission_note }}</dd>{% endif %}
+    </dl>
+  </div>
+
+  <form method="POST" action="/admin/articles/{{ article.id }}/review" class="mq-form">
+    {{ csrf_token()|safe }}
+    <div class="mq-form__grid">
+      <div class="ol-field-group">
+        <label class="ol-label" for="r-verification">Tekshiruv holati</label>
+        <select class="ol-field" id="r-verification" name="verification_status">
+          {% for key, label in verification_statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if article.verification_status == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="r-publication">Nashr holati</label>
+        <select class="ol-field" id="r-publication" name="publication_status">
+          {% for key, label in publication_statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if article.publication_status == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group mq-form__full">
+        <label class="ol-label" for="r-note">Moderatsiya izohi</label>
+        <textarea class="ol-field" id="r-note" name="permission_note" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="mq-detail__actions">
+      <button type="submit" class="ol-btn ol-btn--primary">Holatni saqlash</button>
+      <a class="ol-btn ol-btn--secondary" href="/admin/articles/{{ article.id }}/preview">Ko'rish</a>
+      <a class="ol-btn ol-btn--tertiary" href="/admin/articles">Orqaga</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

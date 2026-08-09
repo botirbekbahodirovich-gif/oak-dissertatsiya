@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/article_bits.html" import index_badges %}
+
+{% block title %}Maqolalar (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page">
+  {{ page_header('Ilmiy maqolalar', 'Katalogga qo\'lda joylashtirilgan maqolalar va ularning huquqiy holati.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin')],
+                 meta=['Jami: %d' % total,
+                       'Nashr etilgan: %d' % (stats.get('published', 0)),
+                       'Qoralama: %d' % (stats.get('draft', 0)),
+                       'Arxiv: %d' % (stats.get('archived', 0))]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="mq-notice" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="mq-detail__actions" style="margin-bottom:var(--space-24);">
+    <a class="ol-btn ol-btn--primary" href="/admin/articles/new">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>Yangi maqola</a>
+    <a class="ol-btn ol-btn--secondary" href="/admin/scientific-fields">
+      <i class="bi bi-list-nested" aria-hidden="true"></i>Fan yo'nalishlari</a>
+  </div>
+
+  <form class="ol-filters" method="get" action="/admin/articles">
+    <div class="ol-filters__row">
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-status">Nashr holati</label>
+        <select class="ol-field" id="af-status" name="status">
+          <option value="">Barchasi</option>
+          {% for key, label in publication_statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('status') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-verification">Tekshiruv</label>
+        <select class="ol-field" id="af-verification" name="verification">
+          <option value="">Barchasi</option>
+          {% for key, label in verification_statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('verification') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-access">Kirish turi</label>
+        <select class="ol-field" id="af-access" name="access">
+          <option value="">Barchasi</option>
+          {% for key, label in access_types.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('access') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-license">Litsenziya</label>
+        <select class="ol-field" id="af-license" name="license">
+          <option value="">Barchasi</option>
+          {% for key, label in licenses.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('license') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-year">Yil</label>
+        <input class="ol-field" type="number" id="af-year" name="year" inputmode="numeric"
+               value="{{ request.args.get('year', '') }}">
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-field">Yo'nalish</label>
+        <select class="ol-field" id="af-field" name="field">
+          <option value="">Barchasi</option>
+          {% for f in field_rows %}
+          <option value="{{ f.slug }}" {{ 'selected' if request.args.get('field') == f.slug }}>
+            {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="af-pdf">PDF</label>
+        <select class="ol-field" id="af-pdf" name="pdf">
+          <option value="">Barchasi</option>
+          <option value="1" {{ 'selected' if request.args.get('pdf') == '1' }}>Mavjud</option>
+          <option value="0" {{ 'selected' if request.args.get('pdf') == '0' }}>Yo'q</option>
+        </select>
+      </div>
+    </div>
+    <div class="ol-filters__row">
+      {% for name, label in [('scopus', 'Scopus'), ('wos', 'Web of Science'), ('doaj', 'DOAJ')] %}
+      <label class="ol-facets__opt" for="af-{{ name }}" style="flex:0 0 auto;min-height:44px;">
+        <input type="checkbox" id="af-{{ name }}" name="{{ name }}" value="1"
+               {{ 'checked' if request.args.get(name) == '1' }}> {{ label }}
+      </label>
+      {% endfor %}
+      <div class="ol-filters__actions">
+        <a class="ol-btn ol-btn--tertiary" href="/admin/articles">Tozalash</a>
+        <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+      </div>
+    </div>
+  </form>
+
+  {% if articles %}
+  <div class="ol-table-wrap">
+    <table class="ol-table">
+      <caption class="mq-sr-only">Admin maqolalar ro'yxati</caption>
+      <thead>
+        <tr>
+          <th scope="col">Sarlavha</th>
+          <th scope="col">Asosiy yo'nalish</th>
+          <th scope="col">Jurnal</th>
+          <th scope="col">Yil</th>
+          <th scope="col">Kirish</th>
+          <th scope="col">Litsenziya</th>
+          <th scope="col">Tekshiruv</th>
+          <th scope="col">Nashr</th>
+          <th scope="col">PDF</th>
+          <th scope="col">Yaratuvchi</th>
+          <th scope="col">Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in articles %}
+        <tr>
+          <th scope="row" class="mq-table__title">{{ a.title }}</th>
+          <td>{{ a.primary_field.name_uz if a.primary_field else '—' }}</td>
+          <td>{{ a.journal_name or '—' }}</td>
+          <td>{{ a.publication_year or '—' }}</td>
+          <td>{{ a.access_label }}</td>
+          <td>{{ a.license_label }}</td>
+          <td>{{ a.verification_label }}</td>
+          <td>{{ a.publication_label }}</td>
+          <td>
+            {% if a.can_read_pdf %}<span class="ol-badge ol-badge--success">Ochiq</span>
+            {% elif a.pdf_path %}<span class="ol-badge ol-badge--notice"
+                 title="{{ a.pdf_block_reason }}">Yopiq</span>
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td>{{ a.created_by or '—' }}</td>
+          <td class="mq-table__actions">
+            <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ a.id }}/edit">Tahrirlash</a>
+            <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ a.id }}/review">Moderatsiya</a>
+            <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ a.id }}/preview">Ko'rish</a>
+            <form method="POST" action="/admin/articles/{{ a.id }}/delete" style="display:inline;"
+                  onsubmit="return confirm('Maqola arxivlansinmi? Fayl o\'chirilmaydi.');">
+              {{ csrf_token()|safe }}
+              <button type="submit" class="ol-btn ol-btn--tertiary">Arxivlash</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="ol-pager" aria-label="Sahifalash">
+    {% for p in range(1, pages + 1) %}
+    <a href="{{ qs(page=p) }}" {{ 'aria-current=page'|safe if p == page }}>{{ p }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Maqola topilmadi</h2>
+    <p class="ol-body">Filtrlarni tozalang yoki yangi maqola qo'shing.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

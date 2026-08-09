@@ -319,6 +319,11 @@ def _gap(global_total, uz_total):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+# /maqolalar va /maqolalar/yonalishlar karkas route'lari bu yerdan OLIB TASHLANDI
+# (Phase 2B.1). Ular endi blueprints/articles.py da — DB'ga ulangan haqiqiy
+# katalog. Bu modul faqat OpenAlex nashr TAHLILI bilan shug'ullanadi.
+
+
 @maqolalar_bp.route('/maqolalar-tahlili')
 def maqolalar_page():
     """Qidiruv sahifasi — mehmonga ham ochiq (qidiruv login talab qiladi)."""

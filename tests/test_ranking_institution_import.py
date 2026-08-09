@@ -185,7 +185,8 @@ class NormalizedResearcherReadTest(unittest.TestCase):
             1, "Sample Researcher", "Sample University", 42,
             "0000-0001-2345-6789", None,
             "https://www.scopus.com/authid/detail.uri?authorId=123",
-            "123", "2026-07-31", "2026-Q2",
+            "123", "2026-07-31", "2026-Q2", "OLIM-ABC123",
+            "sample-researcher", 3, 99,
         )]
         with patch.object(ranking.cache, "get", return_value=None), patch.object(
             ranking.cache, "set"
@@ -198,6 +199,10 @@ class NormalizedResearcherReadTest(unittest.TestCase):
         self.assertEqual(result["items"][0]["h_scopus"], 42)
         self.assertIsNone(result["items"][0]["h_scholar"])
         self.assertEqual(result["items"][0]["source_author_id"], "123")
+        self.assertEqual(result["items"][0]["public_id"], "OLIM-ABC123")
+        self.assertEqual(result["items"][0]["profile_url"], "/sample-researcher")
+        self.assertEqual(result["items"][0]["organization_rank"], 3)
+        self.assertEqual(result["items"][0]["university_id"], 99)
 
     def test_researcher_api_rejects_unknown_source(self):
         with self.app.test_request_context("/api/v1/ranking/researchers?source=wos"):

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{# Ichki ilmiy maqola PDF o'quvchisi — Phase 2B.2.
+
+   Bu shablon HECH QANDAY kirish qoidasini hisoblamaydi: bu sahifaga yetib
+   kelgan foydalanuvchining huquqi `blueprints/articles.py:article_read` da
+   `can_read_pdf()` orqali allaqachon tekshirilgan. PDF baytlari ham shu
+   yerdan berilmaydi — ular alohida himoyalangan oqim route'idan keladi va u
+   qoidani QAYTA tekshiradi.
+
+   Vizual kontrakt: light-only, `.ol-*` komponentlari + `.mqv-*` prefiksi.
+   Viewer paneli ham OQ — to'q panel global dark theme bilan chalkashmasin. #}
+
+{% block title %}{{ article.title|truncate(70) }} — o'qish | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ (article.abstract or article.title)|striptags|truncate(200) }}{% endblock %}
+
+{# Kanonik ilmiy sahifa — maqola tafsiloti. O'quvchi uning ko'rish rejimi,
+   shuning uchun indekslanmaydi va nofollow (route ham X-Robots-Tag beradi). #}
+{% block robots %}noindex, nofollow{% endblock %}
+{% block canonical %}https://olimlar.uz/maqolalar/{{ article.slug }}{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v={{ asset_version }}" rel="stylesheet">
+<link href="/static/css/maqolalar_viewer.css?v={{ asset_version }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% set detail_url = '/maqolalar/' ~ article.slug %}
+<div class="ol-page mq-page">
+  {% set crumb_list = [('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar')] %}
+  {% for node in field_crumbs %}
+    {% set _ = crumb_list.append((node.name_uz, '/maqolalar/yonalish/' ~ node.slug)) %}
+  {% endfor %}
+  {{ page_header(article.title, "Hujjat saytdan chiqmasdan o'qiladi.",
+                 crumbs=crumb_list) }}
+
+  {# Barcha yo'llar bitta joyda: JS ichida hech qanday manzil qattiq yozilmagan.
+     Storage kaliti va fayl tizimidagi yo'l bu yerga UMUMAN chiqmaydi. #}
+  <div class="mqv" data-mqv="root"
+       data-pdf-url="{{ detail_url }}/pdf"
+       data-article-url="{{ detail_url }}"
+       data-version="{{ pdfjs_version }}"
+       data-lib="/static/vendor/pdfjs/pdf.min.js?v={{ pdfjs_version }}"
+       data-worker="/static/vendor/pdfjs/pdf.worker.min.js?v={{ pdfjs_version }}"
+       data-fonts="/static/vendor/pdfjs/standard_fonts/"
+       data-wasm="/static/vendor/pdfjs/wasm/">
+
+    {# ── Yuqori panel ────────────────────────────────────────────────────────
+       ARIA `role="toolbar"` ATAYIN ishlatilmagan: u chap/o'ng strelkalarni
+       fokus ko'chirish uchun band qiladi, bizda esa ular sahifa almashtiradi
+       (spetsifikatsiya §21). O'rniga nomlangan semantik guruhlar. #}
+    <div class="mqv-bar">
+      <div class="mqv-bar__row">
+        <a class="ol-btn ol-btn--tertiary" href="{{ detail_url }}">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>Maqolaga qaytish</a>
+        <p class="mqv-bar__title" title="{{ article.title }}">{{ article.title|truncate(70) }}</p>
+      </div>
+
+      <div class="mqv-bar__row">
+        <div class="mqv-bar__group" role="group" aria-label="Sahifa navigatsiyasi">
+          <button type="button" class="ol-icon-btn" data-mqv="side-toggle"
+                  aria-expanded="true" aria-controls="mqv-side"
+                  aria-label="Sahifalar panelini ochish yoki yopish">
+            <i class="bi bi-layout-sidebar" aria-hidden="true"></i></button>
+          <button type="button" class="ol-icon-btn" data-mqv="prev"
+                  aria-label="Oldingi sahifa">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+          <label class="mqv-sr" for="mq-viewer-page">Sahifa raqami</label>
+          <input class="ol-field mqv-bar__page" id="mq-viewer-page" type="number"
+                 inputmode="numeric" min="1" value="1" data-mqv="page-input">
+          <span class="mqv-bar__total" data-mqv="page-total">/ —</span>
+          <button type="button" class="ol-icon-btn" data-mqv="next"
+                  aria-label="Keyingi sahifa">
+            <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="mqv-bar__group" role="group" aria-label="Masshtab">
+          <button type="button" class="ol-icon-btn" data-mqv="zoom-out"
+                  aria-label="Kichraytirish">
+            <i class="bi bi-zoom-out" aria-hidden="true"></i></button>
+          <label class="mqv-sr" for="mq-viewer-zoom">Masshtab</label>
+          <select class="ol-field mqv-bar__zoom" id="mq-viewer-zoom" data-mqv="zoom">
+            <option value="fit">Kenglik bo‘yicha</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+            <option value="3">300%</option>
+          </select>
+          <button type="button" class="ol-icon-btn" data-mqv="zoom-in"
+                  aria-label="Kattalashtirish">
+            <i class="bi bi-zoom-in" aria-hidden="true"></i></button>
+          <button type="button" class="ol-icon-btn" data-mqv="fit"
+                  aria-label="Kenglik bo‘yicha moslashtirish">
+            <i class="bi bi-arrows-angle-expand" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="mqv-bar__spacer"></div>
+
+        <div class="mqv-bar__group mqv-bar__more" role="group"
+             aria-label="Qo‘shimcha amallar">
+          <button type="button" class="ol-icon-btn" data-mqv="find-toggle"
+                  aria-expanded="false" aria-controls="mqv-find"
+                  aria-label="Hujjat ichidan qidirish">
+            <i class="bi bi-search" aria-hidden="true"></i></button>
+          <button type="button" class="ol-icon-btn" data-mqv="menu-toggle"
+                  aria-expanded="false" aria-controls="mqv-menu"
+                  aria-label="Boshqa amallar">
+            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
+          <div class="ol-menu mqv-menu" id="mqv-menu" data-mqv="menu" hidden>
+            <button type="button" class="mqv-menu__item" data-mqv="rotate">
+              <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Sahifani burish</button>
+            <button type="button" class="mqv-menu__item" data-mqv="fullscreen">
+              <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>To‘liq ekran</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Hujjat ichidan qidirish ───────────────────────────────────────────── #}
+    <div class="mqv-find" id="mqv-find" data-mqv="find" hidden>
+      <label class="mqv-sr" for="mq-viewer-find">Hujjat ichidan qidirish</label>
+      <input class="ol-field mqv-find__input" id="mq-viewer-find" type="search"
+             placeholder="Hujjat ichidan qidirish" data-mqv="find-input">
+      <button type="button" class="ol-icon-btn" data-mqv="find-prev"
+              aria-label="Oldingi moslik">
+        <i class="bi bi-chevron-up" aria-hidden="true"></i></button>
+      <button type="button" class="ol-icon-btn" data-mqv="find-next"
+              aria-label="Keyingi moslik">
+        <i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+      <span class="mqv-find__status" role="status" data-mqv="find-status"></span>
+    </div>
+
+    <div class="mqv-body">
+      <aside class="mqv-side" id="mqv-side" data-mqv="side"
+             aria-label="Hujjat navigatsiyasi">
+        <div class="mqv-side__head">
+          <div class="ol-tabs mqv-side__tabs" role="tablist"
+               aria-label="Panel bo‘limlari">
+            <button type="button" class="ol-tab ol-focusable" role="tab" id="mqv-tab-thumbs"
+                    aria-selected="true" aria-controls="mqv-panel-thumbs">Sahifalar</button>
+            <button type="button" class="ol-tab ol-focusable" role="tab" id="mqv-tab-outline"
+                    data-mqv="tab-outline" aria-selected="false"
+                    aria-controls="mqv-panel-outline" hidden>Tuzilma</button>
+          </div>
+          <button type="button" class="ol-icon-btn mqv-side__close" data-mqv="side-close"
+                  aria-label="Panelni yopish">
+            <i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="mqv-side__panel" id="mqv-panel-thumbs" role="tabpanel"
+             tabindex="0" aria-labelledby="mqv-tab-thumbs" data-mqv="thumbs-panel">
+          <ul class="mqv-thumbs" data-mqv="thumbs"></ul>
+        </div>
+        <div class="mqv-side__panel" id="mqv-panel-outline" role="tabpanel"
+             tabindex="0" aria-labelledby="mqv-tab-outline" data-mqv="outline" hidden></div>
+      </aside>
+
+      <div class="mqv-backdrop" data-mqv="backdrop" hidden></div>
+
+      {# Sahifalar FAQAT kanvas orqali chiziladi. Brauzerning o'z PDF plagini
+         yoki freym ichiga joylash ATAYIN ishlatilmaydi: plagin PDF ichidagi
+         JavaScript'ni ijro etishi mumkin (spetsifikatsiya §16). #}
+      <div class="mqv-doc" data-mqv="doc" tabindex="0" role="region"
+           aria-label="{{ article.title|truncate(60) }} — PDF hujjat sahifalari">
+        <ol class="mqv-pages" data-mqv="pages"></ol>
+      </div>
+
+    {# ── Holatlar. Panel ustini yopmasin — faqat hujjat maydonini qoplaydi,
+       shunda "Maqolaga qaytish" xato holatida ham bosiladi. ──────────────── #}
+    <div class="mqv-state" data-mqv="loading" aria-live="polite">
+      <p class="mqv-state__title" data-mqv="loading-text">Hujjat yuklanmoqda…</p>
+      <div class="mqv-progress" aria-hidden="true">
+        <span class="mqv-progress__bar" data-mqv="progress-bar"></span>
+      </div>
+      <noscript>
+        <p class="mqv-state__text">Bu o‘quvchi JavaScript talab qiladi.
+          Maqola tafsilotlari sahifasida barcha bibliografik ma’lumot mavjud.</p>
+        <a class="ol-btn ol-btn--secondary" href="{{ detail_url }}">Maqola tafsilotlari</a>
+      </noscript>
+    </div>
+
+    <div class="mqv-state mqv-state--error" data-mqv="error" role="alert" hidden>
+      <p class="mqv-state__title" data-mqv="error-title">PDF hujjatini ochib bo‘lmadi.</p>
+      <p class="mqv-state__text" data-mqv="error-text"></p>
+      <div class="mqv-state__actions">
+        <button type="button" class="ol-btn ol-btn--secondary" data-mqv="retry" hidden>
+          <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>Qayta urinish</button>
+        <a class="ol-btn ol-btn--primary" href="{{ detail_url }}">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>Maqola tafsilotlari</a>
+      </div>
+    </div>
+    </div>
+
+    <p class="mqv-sr" role="status" aria-live="polite" data-mqv="announce"></p>
+  </div>
+
+  {# Hujjat manbasi va huquqiy holati o'quvchi ostida ham ko'rinib tursin —
+     foydalanuvchi nimani o'qiyotganini bilishi kerak. #}
+  <p class="ol-meta mq-gap-top">
+    Litsenziya: {{ article.license_label }}
+    {%- if article.source_name %} &middot; Manba: {{ article.source_name }}{% endif %}
+    {%- if article.pdf_size %} &middot; {{ (article.pdf_size / 1048576)|round(1) }} MB{% endif %}
+    &middot; Hujjatning skrinrider uchun qulayligi manba PDF fayliga bog‘liq.
+  </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/maqolalar_viewer.js?v={{ asset_version }}"></script>
+{% endblock %}

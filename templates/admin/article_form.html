@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}{{ 'Maqolani tahrirlash' if edit_mode else 'Yangi maqola' }} (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v={{ asset_version }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{# `values` — validatsiya yiqilganda formaga qaytarilgan xom qiymatlar;
+   `article` — tahrirlashda DB dan kelgan qator. Ustuvorlik `values` da,
+   shunda admin kiritgan matn xato xabaridan keyin ham yo'qolmaydi (§26). #}
+{% set d = values if values else (article if article else {}) %}
+{% set authors = (values.authors if values else (article.authors if article else None)) or [{}] %}
+{% set primary_id = (values.primary_field_id if values
+                     else (article.primary_field.id if article and article.primary_field else '')) %}
+{% set extra_ids = ((values.extra_field_ids if values
+                     else (article.fields|rejectattr('is_primary')|map(attribute='id')|list
+                           if article else [])) or [])|map('string')|list %}
+
+<div class="ol-page">
+  {{ page_header(
+       'Maqolani tahrirlash' if edit_mode else 'Yangi maqola',
+       'Faqat huquqi tekshirilgan, qonuniy ochiq maqolalar joylashtiriladi.',
+       crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')]) }}
+
+  {% if error %}
+  <div class="mq-form__error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form class="mq-form" method="POST" enctype="multipart/form-data"
+        action="{{ '/admin/articles/%d/edit' % article.id if edit_mode else '/admin/articles/new' }}">
+    {{ csrf_token()|safe }}
+
+    <!-- 1. Asosiy ma'lumotlar -->
+    <fieldset>
+      <legend>1. Asosiy ma'lumotlar</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-title">Maqola nomi <abbr title="majburiy">*</abbr></label>
+          <input class="ol-field" id="f-title" name="title" required maxlength="500"
+                 value="{{ d.title or '' }}">
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-abstract">Annotatsiya</label>
+          <textarea class="ol-field" id="f-abstract" name="abstract" rows="5">{{ d.abstract or '' }}</textarea>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-keywords">Kalit so'zlar (vergul bilan)</label>
+          <input class="ol-field" id="f-keywords" name="keywords" maxlength="500"
+                 value="{{ d.keywords or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-language">Til</label>
+          <select class="ol-field" id="f-language" name="language">
+            {% for key, label in languages.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.language or 'uz') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 2. Mualliflar -->
+    <fieldset>
+      <legend>2. Mualliflar</legend>
+      <p class="ol-meta">Tartib saqlanadi. Tashqi mualliflarni oddiy matn sifatida
+        kiritish mumkin — sayt profiliga majburiy bog'lash talab qilinmaydi.</p>
+      <div id="mq-authors">
+        {% for a in authors %}
+        <div class="mq-authorrow">
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-author-{{ loop.index0 }}">Muallif F.I.Sh.</label>
+            <input class="ol-field" id="f-author-{{ loop.index0 }}" name="author_name"
+                   maxlength="300" value="{{ a.author_name or '' }}">
+          </div>
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-orcid-{{ loop.index0 }}">ORCID</label>
+            <input class="ol-field" id="f-orcid-{{ loop.index0 }}" name="author_orcid"
+                   maxlength="64" value="{{ a.orcid or '' }}">
+          </div>
+          <div class="ol-field-group">
+            <label class="ol-label" for="f-aff-{{ loop.index0 }}">Tashkilot</label>
+            <input class="ol-field" id="f-aff-{{ loop.index0 }}" name="author_affiliation"
+                   maxlength="400" value="{{ a.affiliation or '' }}">
+          </div>
+          <label class="mq-form__check" for="f-corr-{{ loop.index0 }}">
+            <input type="checkbox" id="f-corr-{{ loop.index0 }}" name="author_corresponding"
+                   value="{{ loop.index0 }}" {{ 'checked' if a.is_corresponding }}>
+            Mas'ul
+          </label>
+          {# OpenAlex muallif ID'si — DOI autofill to'ldiradi. Ko'rinadigan
+             maydon emas: admin uni qo'lda yozmaydi, lekin forma xato bilan
+             qaytganda ham yo'qolmasligi kerak. #}
+          <input type="hidden" name="author_openalex_id"
+                 value="{{ a.openalex_author_id or '' }}">
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="ol-btn ol-btn--secondary" data-mq-add-author>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>Muallif qo'shish</button>
+    </fieldset>
+
+    <!-- 3. Nashr ma'lumotlari -->
+    <fieldset>
+      <legend>3. Nashr ma'lumotlari</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-journal">Jurnal nomi</label>
+          <input class="ol-field" id="f-journal" name="journal_name" maxlength="300"
+                 value="{{ d.journal_name or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-year">Nashr yili</label>
+          <input class="ol-field" type="number" id="f-year" name="publication_year"
+                 inputmode="numeric" value="{{ d.publication_year or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-date">Nashr sanasi</label>
+          <input class="ol-field" type="date" id="f-date" name="publication_date"
+                 value="{{ d.publication_date or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-volume">Jild</label>
+          <input class="ol-field" id="f-volume" name="volume" maxlength="50" value="{{ d.volume or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-issue">Son</label>
+          <input class="ol-field" id="f-issue" name="issue" maxlength="50" value="{{ d.issue or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-pages">Betlar</label>
+          <input class="ol-field" id="f-pages" name="pages" maxlength="50" value="{{ d.pages or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-doi">DOI</label>
+          {# Tugma DOI maydoni bilan bitta qatorda: u shu maydonga tegishli
+             amal. `--secondary`, chunki sahifadagi yagona asosiy amal —
+             "Saqlash" (dizayn tizimi §10.1). #}
+          <div class="mq-meta__doi">
+            <input class="ol-field" id="f-doi" name="doi" value="{{ d.doi or '' }}"
+                   placeholder="10.1234/abcd.2024.01"
+                   aria-describedby="f-doi-help">
+            <button type="button" class="ol-btn ol-btn--secondary mq-meta__fetch"
+                    data-mq-meta-fetch aria-controls="mq-meta-panel">
+              <i class="bi bi-cloud-download" aria-hidden="true"></i>Ma'lumotlarni olish</button>
+          </div>
+          <span class="ol-meta" id="f-doi-help">https://doi.org/ prefiksi avtomatik olib
+            tashlanadi. Tashqi manbalardan olingan ma'lumot faqat taklif bo'ladi —
+            u "Saqlash" bosilmaguncha bazaga yozilmaydi.</span>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-external">Tashqi havola (jurnal sahifasi)</label>
+          <input class="ol-field" type="url" id="f-external" name="external_url"
+                 maxlength="1000" value="{{ d.external_url or '' }}">
+        </div>
+      </div>
+
+      {# ── DOI autofill paneli ───────────────────────────────────────────────
+         Panel FAQAT taklif ko'rsatadi. Hech bir maydon avtomatik almashmaydi:
+         bo'sh maydonlar guruh tugmasi bilan to'ldiriladi, to'lgan maydon esa
+         yonma-yon solishtiriladi va alohida "Almashtirish" bilan yangilanadi
+         (spetsifikatsiya §11). Panel mazmunini JS quradi; matn qiymatlari
+         `textContent` orqali qo'yiladi, hech qachon HTML sifatida emas. #}
+      <section class="mq-meta" id="mq-meta-panel" data-mq-meta
+               data-endpoint="/admin/articles/metadata/lookup"
+               aria-labelledby="mq-meta-title" hidden>
+        <h3 class="ol-h5 mq-flush-top" id="mq-meta-title">Tashqi manbalardan topilgan ma'lumot</h3>
+
+        <p class="mq-meta__status" role="status" data-mq-meta-status></p>
+        <ul class="mq-meta__providers" data-mq-meta-providers></ul>
+        <div class="mq-meta__alerts" data-mq-meta-alerts></div>
+
+        <div class="mq-meta__actions">
+          <button type="button" class="ol-btn ol-btn--secondary" data-mq-meta-fill hidden>
+            <i class="bi bi-check2-square" aria-hidden="true"></i>Bo'sh maydonlarni to'ldirish</button>
+          <button type="button" class="ol-btn ol-btn--tertiary" data-mq-meta-toggle
+                  aria-expanded="false" aria-controls="mq-meta-details" hidden>
+            Topilgan ma'lumotlarni ko'rish</button>
+        </div>
+
+        <div class="mq-meta__details" id="mq-meta-details" data-mq-meta-details hidden>
+          <div class="ol-table-wrap">
+            <table class="ol-table mq-meta__table">
+              <caption class="mq-sr-only">Formadagi joriy qiymat va tashqi manba taklifi</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Maydon</th>
+                  <th scope="col">Formadagi qiymat</th>
+                  <th scope="col">Manba taklifi</th>
+                  <th scope="col">Amal</th>
+                </tr>
+              </thead>
+              <tbody data-mq-meta-rows></tbody>
+            </table>
+          </div>
+          <div data-mq-meta-extras></div>
+        </div>
+      </section>
+    </fieldset>
+
+    <!-- 4. Fan yo'nalishlari -->
+    <fieldset>
+      <legend>4. Fan yo'nalishlari</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-primary">Asosiy yo'nalish <abbr title="majburiy">*</abbr></label>
+          <select class="ol-field" id="f-primary" name="primary_field_id" required>
+            <option value="">— tanlang —</option>
+            {% for f in field_rows %}
+            <option value="{{ f.id }}" {{ 'selected' if primary_id and f.id|string == primary_id|string }}>
+              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-extra">Qo'shimcha yo'nalishlar (Ctrl bilan bir nechta)</label>
+          <select class="ol-field" id="f-extra" name="extra_field_ids" multiple size="8">
+            {% for f in field_rows %}
+            <option value="{{ f.id }}" {{ 'selected' if f.id|string in extra_ids }}>
+              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 5. Indekslash -->
+    <fieldset>
+      <legend>5. Indekslash</legend>
+      <div class="mq-form__grid">
+        <label class="mq-form__check" for="f-scopus">
+          <input type="checkbox" id="f-scopus" name="index_scopus" value="1"
+                 {{ 'checked' if d.index_scopus }}> Scopus</label>
+        <label class="mq-form__check" for="f-wos">
+          <input type="checkbox" id="f-wos" name="index_wos" value="1"
+                 {{ 'checked' if d.index_wos }}> Web of Science</label>
+        <label class="mq-form__check" for="f-doaj">
+          <input type="checkbox" id="f-doaj" name="index_doaj" value="1"
+                 {{ 'checked' if d.index_doaj }}> DOAJ</label>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-index-other">Boshqa indekslar</label>
+          <input class="ol-field" id="f-index-other" name="index_other" maxlength="300"
+                 value="{{ d.index_other or '' }}">
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 6. Ochiq kirish va huquq -->
+    <fieldset>
+      <legend>6. Ochiq kirish va huquq</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group">
+          <label class="ol-label" for="mq-access-type">Kirish turi</label>
+          <select class="ol-field" id="mq-access-type" name="access_type">
+            {% for key, label in access_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.access_type or 'metadata_only') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-version">Maqola versiyasi</label>
+          <select class="ol-field" id="f-version" name="version_type">
+            {% for key, label in version_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.version_type or 'other') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-license">Litsenziya</label>
+          <select class="ol-field" id="f-license" name="license_type">
+            {% for key, label in licenses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.license_type or 'unknown') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <span class="ol-meta">Unknown litsenziyada PDF ommaga chiqmaydi.</span>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-license-url">Litsenziya havolasi</label>
+          <input class="ol-field" type="url" id="f-license-url" name="license_url"
+                 maxlength="500" value="{{ d.license_url or '' }}">
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-source-type">Manba turi</label>
+          <select class="ol-field" id="f-source-type" name="source_type">
+            {% for key, label in source_types.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.source_type or 'other_verified_source') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-source-name">Manba nomi</label>
+          <input class="ol-field" id="f-source-name" name="source_name" maxlength="300"
+                 value="{{ d.source_name or '' }}"
+                 aria-describedby="f-source-help">
+          <span class="ol-meta" id="f-source-help">PDF ochiq bo'lishi uchun manba majburiy.</span>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-source-url">Manba havolasi</label>
+          <input class="ol-field" type="url" id="f-source-url" name="source_url"
+                 maxlength="1000" value="{{ d.source_url or '' }}">
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-copyright">Mualliflik huquqi izohi</label>
+          <textarea class="ol-field" id="f-copyright" name="copyright_note" rows="2">{{ d.copyright_note or '' }}</textarea>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-permission">Ruxsat izohi (kim, qachon, qanday ruxsat berdi)</label>
+          <textarea class="ol-field" id="f-permission" name="permission_note" rows="2">{{ d.permission_note or '' }}</textarea>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- 7. PDF -->
+    <fieldset id="mq-pdf-section" data-allowed="{{ pdf_allowed_access|join(',') }}">
+      <legend>7. PDF fayl</legend>
+      {% if article and article.pdf_path %}
+      <p class="ol-body">
+        Joriy fayl: <strong>{{ article.pdf_original_name or 'maqola.pdf' }}</strong>
+        {% if article.pdf_size %}({{ (article.pdf_size / 1048576)|round(2) }} MB){% endif %}
+        {% if article.can_read_pdf %}
+        <span class="ol-badge ol-badge--success">Ommaga ochiq</span>
+        {% else %}
+        <span class="ol-badge ol-badge--notice">Yopiq: {{ article.pdf_block_reason }}</span>
+        {% endif %}
+      </p>
+      <label class="mq-form__check" for="f-remove-pdf">
+        <input type="checkbox" id="f-remove-pdf" name="remove_pdf" value="1">
+        Joriy PDF faylni olib tashlash
+      </label>
+      {% endif %}
+
+      <div class="ol-field-group">
+        <label class="ol-label" for="f-pdf">PDF fayl (maksimal {{ max_pdf_mb }} MB)</label>
+        <input class="ol-field" type="file" id="f-pdf" name="pdf_file" accept="application/pdf,.pdf"
+               aria-describedby="f-pdf-help">
+        <span class="ol-meta" id="f-pdf-help">
+          Faqat ochiq kirish, muallif ruxsati, umumiy mulk va qayta tarqatishga
+          ruxsat etilgan repozitoriy nusxasi uchun. Yangi fayl yuklansa eskisi
+          faqat muvaffaqiyatli saqlangandan keyin o'chiriladi.
+        </span>
+      </div>
+
+      <!-- 8-bo'limga kirmaydigan, lekin PDF bilan bevosita bog'liq huquqiy tasdiq -->
+      <label class="mq-form__check mq-form__check--top" for="f-rights">
+        <input type="checkbox" id="f-rights" name="rights_confirmed" value="1"
+               {{ 'checked' if (article and article.rights_confirmed_at) or (values and values.rights_confirmed) }}>
+        <span>Ushbu faylni Olimlar.uz serverida saqlash va foydalanuvchilarga
+          ko'rsatish uchun yetarli huquq yoki ochiq litsenziya mavjudligini
+          tasdiqlayman.</span>
+      </label>
+      {% if article and article.rights_confirmed_at %}
+      <p class="ol-meta">Tasdiqlangan: {{ article.rights_confirmed_at }}
+        (admin #{{ article.rights_confirmed_by }})</p>
+      {% endif %}
+    </fieldset>
+
+    <!-- 8. Holat va moderatsiya -->
+    <fieldset>
+      <legend>8. Holat va moderatsiya</legend>
+      <div class="mq-form__grid">
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-verification">Tekshiruv holati</label>
+          <select class="ol-field" id="f-verification" name="verification_status">
+            {% for key, label in verification_statuses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.verification_status or 'draft') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="f-publication">Nashr holati</label>
+          <select class="ol-field" id="f-publication" name="publication_status">
+            {% for key, label in publication_statuses.items() %}
+            <option value="{{ key }}" {{ 'selected' if (d.publication_status or 'draft') == key }}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <label class="mq-form__check" for="f-featured">
+          <input type="checkbox" id="f-featured" name="is_featured" value="1"
+                 {{ 'checked' if d.is_featured }}> Tavsiya etilgan
+        </label>
+        {# Chaqirib olish (retraction) — OpenAlex signali jimgina yo'qolmasligi
+           kerak (§26). Bayroq ko'rinadigan va admin boshqaradigan maydon:
+           autofill uni faqat YOQADI, hech qachon o'chirmaydi. #}
+        <label class="mq-form__check" for="f-retracted">
+          <input type="checkbox" id="f-retracted" name="is_retracted" value="1"
+                 {{ 'checked' if d.is_retracted }}
+                 aria-describedby="f-retracted-help">
+          Chaqirib olingan (retracted)
+        </label>
+        <p class="ol-meta mq-form__full" id="f-retracted-help">
+          Chaqirib olingan maqola avtomatik nashr etilmaydi — nashr holatini
+          o'zingiz belgilaysiz.
+        </p>
+      </div>
+
+      {# ── Tashqi identifikatorlar ──────────────────────────────────────────
+         Bu qiymatlarni odam kiritmaydi: ularni DOI autofill paneli to'ldiradi
+         va admin "Saqlash" bosgandagina bazaga tushadi. Ko'rinadigan maydon
+         qilinmadi — tahrirlash imkoni foyda bermaydi, xato esa kiritadi. #}
+      <input type="hidden" name="openalex_id" value="{{ d.openalex_id or '' }}"
+             data-mq-meta-hidden="openalex_id">
+      <input type="hidden" name="crossref_member_id" value="{{ d.crossref_member_id or '' }}"
+             data-mq-meta-hidden="crossref_member_id">
+      <input type="hidden" name="primary_issn" value="{{ d.primary_issn or '' }}"
+             data-mq-meta-hidden="primary_issn">
+      <input type="hidden" name="citation_count" value="{{ d.citation_count if d.citation_count is not none else '' }}"
+             data-mq-meta-hidden="citation_count">
+      <input type="hidden" name="citation_count_source" value="{{ d.citation_count_source or '' }}"
+             data-mq-meta-hidden="citation_count_source">
+      <input type="hidden" name="citation_count_checked_at"
+             value="{{ d.citation_count_checked_at or '' }}"
+             data-mq-meta-hidden="citation_count_checked_at">
+      <input type="hidden" name="metadata_source_summary" value="{{ metadata_summary_json }}"
+             data-mq-meta-hidden="metadata_source_summary">
+
+      {% if article and (article.openalex_id or article.metadata_last_synced_at) %}
+      <dl class="mq-deflist mq-gap-top">
+        {% if article.openalex_id %}
+        <dt>OpenAlex</dt><dd class="mq-wrap-any">{{ article.openalex_id }}</dd>{% endif %}
+        {% if article.primary_issn %}<dt>Asosiy ISSN</dt><dd>{{ article.primary_issn }}</dd>{% endif %}
+        {% if article.citation_count is not none %}
+        <dt>Iqtiboslar</dt>
+        <dd>{{ article.citation_count }}
+          {%- if article.citation_count_source %} ({{ article.citation_count_source }}{% if article.citation_count_checked_at %}, {{ article.citation_count_checked_at }}{% endif %}){% endif %}</dd>
+        {% endif %}
+        {% if article.metadata_last_synced_at %}
+        <dt>Oxirgi sinxronizatsiya</dt><dd>{{ article.metadata_last_synced_at }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+
+      {# ── Metadata sinxronizatsiyasi (Phase 2C.3A) ────────────────────────
+         DOI'li MAVJUD maqolani qayta tekshirish: fetch -> diff -> admin
+         tanlaydi -> explicit apply. Hech qachon avtomatik overwrite emas
+         (§2, §14). Alohida `<form>` EMAS — asosiy formaning ICHIDA, lekin
+         faqat `type="button"` amallar bilan (nested form taqiqlangan),
+         xuddi DOI autofill paneli bilan bir xil naqsh. #}
+      {% if edit_mode and article and article.doi %}
+      <section class="mq-sync" id="mq-sync-panel" data-mq-sync
+               data-article-id="{{ article.id }}"
+               data-check-endpoint="/admin/articles/{{ article.id }}/metadata/check"
+               data-apply-endpoint="/admin/articles/{{ article.id }}/metadata/apply"
+               aria-labelledby="mq-sync-title">
+        <h3 class="ol-h5 mq-flush-top" id="mq-sync-title">Metadata sinxronizatsiyasi</h3>
+        <p class="ol-body">
+          Oxirgi tekshiruv:
+          {% if sync_history %}{{ sync_history[0].checked_at }}
+            ({{ sync_history[0].status }}){% else %}hali tekshirilmagan{% endif %}
+        </p>
+
+        <div class="mq-sync__actions">
+          <button type="button" class="ol-btn ol-btn--secondary" data-mq-sync-check>
+            <i class="bi bi-arrow-repeat" aria-hidden="true"></i>Metadata'ni tekshirish</button>
+          <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ article.id }}/metadata/history">
+            Metadata tarixi</a>
+        </div>
+
+        <p class="mq-sync__status" role="status" aria-live="polite" data-mq-sync-status hidden></p>
+
+        <div class="mq-sync__result" data-mq-sync-result hidden>
+          <p class="mq-sync__summary" data-mq-sync-summary></p>
+          <div class="mq-sync__warnings" data-mq-sync-warnings></div>
+
+          <div class="ol-table-wrap">
+            <table class="ol-table mq-sync__table">
+              <caption class="mq-sr-only">Metadata o'zgarishlari</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><span class="ol-body">Tanlash</span></th>
+                  <th scope="col">Maydon</th>
+                  <th scope="col">Eski qiymat</th>
+                  <th scope="col">Yangi qiymat</th>
+                  <th scope="col">Manba</th>
+                  <th scope="col">Holat</th>
+                </tr>
+              </thead>
+              <tbody data-mq-sync-rows></tbody>
+            </table>
+          </div>
+
+          <div class="mq-sync__confirm" data-mq-sync-confirm-retraction hidden>
+            <label class="ol-facets__opt" style="min-height:44px;">
+              <input type="checkbox" data-mq-sync-confirm-retraction-input>
+              Chaqirib olingan (retraction) o'zgarishini tushunaman va tasdiqlayman
+            </label>
+          </div>
+          <div class="mq-sync__confirm" data-mq-sync-confirm-doi hidden>
+            <label class="ol-facets__opt" style="min-height:44px;">
+              <input type="checkbox" data-mq-sync-confirm-doi-input>
+              DOI nomuvofiqligini tushunaman va baribir davom etaman
+            </label>
+          </div>
+
+          <div class="mq-sync__actions">
+            <button type="button" class="ol-btn ol-btn--primary" data-mq-sync-apply disabled>
+              Tanlangan o'zgarishlarni qo'llash</button>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+    </fieldset>
+
+    <div class="mq-detail__actions">
+      <button type="submit" class="ol-btn ol-btn--primary">
+        {{ 'Saqlash' if edit_mode else "Qo'shish" }}</button>
+      <a class="ol-btn ol-btn--secondary" href="/admin/articles">Bekor qilish</a>
+      {% if edit_mode %}
+      <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ article.id }}/preview">Ko'rish</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/maqolalar.js?v={{ asset_version }}" defer></script>
+{# DOI autofill faqat admin formasida kerak — katalog sahifalariga
+   yuborilmaydi. Provayder sozlanmagan bo'lsa panel buni ochiq aytadi. #}
+<script src="/static/js/maqolalar_metadata.js?v={{ asset_version }}"
+        defer
+        data-providers="{{ metadata_providers|tojson|forceescape }}"></script>
+{% if edit_mode and article and article.doi %}
+<script src="/static/js/article_metadata_sync.js?v={{ asset_version }}" defer></script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,199 @@
+{# Ilmiy maqolalar katalogining takrorlanuvchi bo'laklari.
+
+   MUHIM: bu yerda PDF ochiqligi HISOBLANMAYDI. Backend (utils/article_rules.py:
+   can_read_pdf) hisoblab, har bir maqolaga `can_read_pdf` maydonini qo'yadi —
+   shablon faqat shuni o'qiydi. Qoidani bu yerga ko'chirmang. #}
+
+{% macro index_badges(article) %}
+{# Indeks yorliqlari YAGONA soft tizimda; badge zichligi ataylab past (§18). #}
+{%- if article.index_scopus %}<span class="ol-badge ol-badge--info">Scopus</span>{% endif %}
+{%- if article.index_wos %}<span class="ol-badge ol-badge--info">WoS</span>{% endif %}
+{%- if article.index_doaj %}<span class="ol-badge ol-badge--info">DOAJ</span>{% endif %}
+{% endmacro %}
+
+{% macro access_badge(article) %}
+{%- if article.can_read_pdf %}
+<span class="ol-badge ol-badge--success">Ochiq PDF</span>
+{%- elif article.access_type == 'metadata_only' %}
+<span class="ol-badge ol-badge--neutral">Faqat metadata</span>
+{%- endif %}
+{% endmacro %}
+
+{% macro author_list(article, limit=4) %}
+{%- set authors = article.authors or [] -%}
+{%- if authors -%}
+  {%- for a in authors[:limit] -%}
+    {{ a.author_name }}{% if not loop.last %}, {% endif %}
+  {%- endfor -%}
+  {%- if authors|length > limit %} <span class="ol-muted">va yana {{ authors|length - limit }} muallif</span>{% endif -%}
+{%- else -%}
+  <span class="ol-muted">Muallif ko'rsatilmagan</span>
+{%- endif -%}
+{% endmacro %}
+
+{% macro article_card(article) %}
+<article class="mq-card">
+  <div class="mq-card__badges">
+    {{ access_badge(article) }}
+    {{ index_badges(article) }}
+    <span class="ol-badge ol-badge--neutral">{{ article.language_label }}</span>
+  </div>
+
+  <h3 class="mq-card__title">
+    <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
+  </h3>
+
+  <p class="mq-card__authors">{{ author_list(article) }}</p>
+  <p class="mq-card__meta">
+    {%- if article.journal_name %}{{ article.journal_name }}{% endif -%}
+    {%- if article.journal_name and article.publication_year %} &middot; {% endif -%}
+    {%- if article.publication_year %}{{ article.publication_year }}{% endif -%}
+  </p>
+
+  {% if article.primary_field %}
+  <p class="mq-card__field">
+    <a href="/maqolalar/yonalish/{{ article.primary_field.slug }}">
+      {{ article.primary_field.name_uz }}</a>
+    {% if article.primary_field.code %}<span class="ol-muted">{{ article.primary_field.code }}</span>{% endif %}
+  </p>
+  {% endif %}
+
+  {% if article.abstract %}
+  <p class="mq-card__abstract">{{ article.abstract|truncate(220) }}</p>
+  {% endif %}
+
+  <div class="mq-card__actions">
+    {% if article.can_read_pdf %}
+    <a class="ol-btn ol-btn--primary" href="/maqolalar/{{ article.slug }}/oqish">
+      <i class="bi bi-book" aria-hidden="true"></i>O'qish</a>
+    {% endif %}
+    <a class="ol-btn ol-btn--secondary" href="/maqolalar/{{ article.slug }}">Batafsil</a>
+  </div>
+</article>
+{% endmacro %}
+
+{% macro article_table(articles) %}
+{# Mobil'da jadval siqilmaydi — konteyner gorizontal skroll qiladi (§19). #}
+<div class="ol-table-wrap">
+  <table class="ol-table">
+    <caption class="mq-sr-only">Ilmiy maqolalar ro'yxati</caption>
+    <thead>
+      <tr>
+        <th scope="col">Maqola</th>
+        <th scope="col">Muallif</th>
+        <th scope="col">Yo'nalish</th>
+        <th scope="col">Jurnal</th>
+        <th scope="col">Yil</th>
+        <th scope="col">Kirish</th>
+        <th scope="col">Indeks</th>
+        <th scope="col">Amal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for article in articles %}
+      <tr>
+        <th scope="row" class="mq-table__title">
+          <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
+        </th>
+        <td>{{ author_list(article, limit=2) }}</td>
+        <td>
+          {% if article.primary_field %}
+          <a href="/maqolalar/yonalish/{{ article.primary_field.slug }}">{{ article.primary_field.name_uz }}</a>
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>{{ article.journal_name or '—' }}</td>
+        <td>{{ article.publication_year or '—' }}</td>
+        <td>{{ article.access_label }}</td>
+        <td>{{ index_badges(article) }}</td>
+        <td class="mq-table__actions">
+          {% if article.can_read_pdf %}
+          <a class="ol-btn ol-btn--tertiary" href="/maqolalar/{{ article.slug }}/oqish">O'qish</a>
+          {% endif %}
+          <a class="ol-btn ol-btn--tertiary" href="/maqolalar/{{ article.slug }}">Batafsil</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% macro pager(page, pages, qs) %}
+{% if pages > 1 %}
+<nav class="ol-pager" aria-label="Sahifalash">
+  {% if page > 1 %}
+  <a href="{{ qs(page=page - 1) }}" rel="prev" aria-label="Oldingi sahifa">
+    <i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+  {% endif %}
+  {% set window_start = [1, page - 2]|max %}
+  {% set window_end = [pages, window_start + 4]|min %}
+  {% if window_start > 1 %}<a href="{{ qs(page=1) }}">1</a><span class="ol-pager__info">…</span>{% endif %}
+  {% for p in range(window_start, window_end + 1) %}
+    {% if p == page %}
+    <a href="{{ qs(page=p) }}" aria-current="page">{{ p }}</a>
+    {% else %}
+    <a href="{{ qs(page=p) }}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if window_end < pages %}<span class="ol-pager__info">…</span><a href="{{ qs(page=pages) }}">{{ pages }}</a>{% endif %}
+  {% if page < pages %}
+  <a href="{{ qs(page=page + 1) }}" rel="next" aria-label="Keyingi sahifa">
+    <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+  {% endif %}
+  <span class="ol-pager__info">{{ page }} / {{ pages }}</span>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro results_bar(total, sort_key, sort_options, view_mode, qs) %}
+<div class="mq-resultbar">
+  <p class="mq-resultbar__count" role="status">
+    <strong>{{ total }}</strong> ta maqola topildi
+  </p>
+  <div class="mq-resultbar__controls">
+    <div class="ol-field-group">
+      <label class="ol-label" for="mq-sort">Tartiblash</label>
+      <select class="ol-field" id="mq-sort" data-mq-nav>
+        {% for key, option in sort_options.items() %}
+        <option value="{{ qs(sort=key, page=None) }}" {{ 'selected' if key == sort_key }}>{{ option[0] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mq-viewswitch" role="group" aria-label="Ko'rinish">
+      <a class="ol-btn {{ 'ol-btn--primary' if view_mode == 'karta' else 'ol-btn--secondary' }}"
+         href="{{ qs(view='karta') }}" {{ 'aria-current=page'|safe if view_mode == 'karta' }}>
+        <i class="bi bi-grid" aria-hidden="true"></i>Karta</a>
+      <a class="ol-btn {{ 'ol-btn--primary' if view_mode == 'jadval' else 'ol-btn--secondary' }}"
+         href="{{ qs(view='jadval') }}" {{ 'aria-current=page'|safe if view_mode == 'jadval' }}>
+        <i class="bi bi-list-ul" aria-hidden="true"></i>Jadval</a>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro active_chips(chips, qs) %}
+{% if chips %}
+<div class="ol-chips mq-chips">
+  <span class="ol-meta">Tanlangan:</span>
+  {% for chip in chips %}
+  <span class="ol-chip">{{ chip.label }}
+    <a href="{{ qs(**{chip.key: None, 'page': None}) }}" aria-label="{{ chip.label }} filtrini olib tashlash">&times;</a>
+  </span>
+  {% endfor %}
+  <a class="ol-btn ol-btn--tertiary" href="{{ request.path }}">Filtrlarni tozalash</a>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro results_block(articles, view_mode, empty_title, empty_text) %}
+{% if articles %}
+  {% if view_mode == 'jadval' %}{{ article_table(articles) }}
+  {% else %}<div class="mq-grid">{% for a in articles %}{{ article_card(a) }}{% endfor %}</div>
+  {% endif %}
+{% else %}
+<div class="ol-empty">
+  <h3 class="ol-h5">{{ empty_title }}</h3>
+  <p class="ol-body">{{ empty_text }}</p>
+</div>
+{% endif %}
+{% endmacro %}

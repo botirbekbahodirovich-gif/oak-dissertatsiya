@@ -1,0 +1,9 @@
+# Rejalashtirilgan maqola metadata sinxronizatsiyasi — daily 02:15 (server UTC).
+# Install into /etc/cron.d/article-metadata-sync (run: sudo bash deploy/install_cron.sh).
+# Fields: minute hour day month weekday  user  command
+#
+# Vaqt zonasi: server UTC ishlatadi (boshqa oak-scraper/grant-scraper/photo-urls
+# cron'lari bilan bir xil taxmin). 02:15 UTC = 07:15 Toshkent (UTC+5).
+SHELL=/bin/bash
+DATABASE_URL=""
+15 2 * * * botirbek cd /opt/olimlar-uz && /opt/olimlar-uz/venv/bin/python scripts/sync_article_metadata.py >> /var/log/article-metadata-sync.log 2>&1

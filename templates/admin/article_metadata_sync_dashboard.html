@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Maqolalar metadata nazorati (admin) — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260809" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {{ page_header('Maqolalar metadata nazorati',
+                 'Tashqi manbalarda (Crossref/OpenAlex/Unpaywall) topilgan o\'zgarishlarni bitta joyda ko\'rib chiqing.',
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  <div class="ol-stat-grid" style="margin-bottom:var(--space-24);">
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.total_checked or 0 }}</div>
+      <div class="ol-stat__label">Tekshirilgan</div>
+    </div>
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.with_changes or 0 }}</div>
+      <div class="ol-stat__label">O'zgarish topilgan</div>
+    </div>
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.needs_review or 0 }}</div>
+      <div class="ol-stat__label">Ko'rib chiqish kerak</div>
+    </div>
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.critical or 0 }}</div>
+      <div class="ol-stat__label">Muhim{% if summary.retraction %} (shundan retraction: {{ summary.retraction }}){% endif %}</div>
+    </div>
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.no_changes or 0 }}</div>
+      <div class="ol-stat__label">O'zgarishsiz</div>
+    </div>
+    <div class="ol-stat">
+      <div class="ol-stat__value">{{ summary.provider_issue or 0 }}</div>
+      <div class="ol-stat__label">Provider xatosi</div>
+    </div>
+  </div>
+
+  <section class="ol-card" style="margin-bottom:var(--space-24);" aria-labelledby="mq-scheduler-heading">
+    <h2 id="mq-scheduler-heading" class="ol-h5 ol-card__title">Avtomatik metadata tekshiruvi</h2>
+    {% if last_scheduler_run %}
+    {% set mq_badge = {'completed': 'ol-badge--success', 'completed_with_errors': 'ol-badge--notice',
+                       'failed': 'ol-badge--error', 'running': 'ol-badge--info'}
+                      .get(last_scheduler_run.status, 'ol-badge--neutral') %}
+    <p class="ol-body">
+      Oxirgi ishga tushish:
+      {{ last_scheduler_run.started_at.strftime('%Y-%m-%d %H:%M') if last_scheduler_run.started_at else '—' }}
+      &middot; Holat:
+      <span class="ol-badge {{ mq_badge }}">
+        {{ scheduler_status_labels.get(last_scheduler_run.status, last_scheduler_run.status) }}
+      </span>
+    </p>
+    <p class="ol-meta ol-card__meta">
+      Tekshirildi: {{ last_scheduler_run.processed_count or 0 }}
+      &middot; Muvaffaqiyatli: {{ last_scheduler_run.success_count or 0 }}
+      &middot; Qisman: {{ last_scheduler_run.partial_count or 0 }}
+      &middot; Xato: {{ last_scheduler_run.failed_count or 0 }}
+    </p>
+    {% else %}
+    <p class="ol-body ol-muted">Avtomatik metadata tekshiruvi hali ishga tushirilmagan.</p>
+    {% endif %}
+  </section>
+
+  <form class="ol-filters" method="get" action="/admin/articles/metadata-sync">
+    <div class="ol-filters__row">
+      <div class="ol-field-group">
+        <label class="ol-label" for="mf-status">Holat</label>
+        <select class="ol-field" id="mf-status" name="status">
+          {% for key in queue_status_choices %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('status', 'actionable') == key }}>
+            {{ {'actionable': 'Barchasi (faol)', 'needs_review': "Ko'rib chiqish kerak",
+                'critical': 'Muhim', 'no_changes': "O'zgarishsiz", 'stale': 'Eskirgan',
+                'applied': "Qo'llangan", 'dismissed': 'Yopilgan', 'all': "Butun tarix"}[key] }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="mf-publication">Nashr holati</label>
+        <select class="ol-field" id="mf-publication" name="publication_status">
+          <option value="">Barchasi</option>
+          {% for key, label in publication_statuses.items() %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('publication_status') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ol-field-group">
+        <label class="ol-label" for="mf-sort">Saralash</label>
+        <select class="ol-field" id="mf-sort" name="sort">
+          {% for key in sort_choices %}
+          <option value="{{ key }}" {{ 'selected' if request.args.get('sort', 'critical_first') == key }}>
+            {{ {'critical_first': 'Avval muhim', 'newest': 'Eng yangi', 'oldest': 'Eng eski',
+                'most_changes': "Ko'p o'zgarish"}[key] }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="ol-filters__row">
+      <label class="ol-facets__opt" for="mf-retraction" style="flex:0 0 auto;min-height:44px;">
+        <input type="checkbox" id="mf-retraction" name="retraction" value="1"
+               {{ 'checked' if request.args.get('retraction') == '1' }}> Retraction
+      </label>
+      <label class="ol-facets__opt" for="mf-citation" style="flex:0 0 auto;min-height:44px;">
+        <input type="checkbox" id="mf-citation" name="citation_only" value="1"
+               {{ 'checked' if request.args.get('citation_only') == '1' }}> Faqat citation
+      </label>
+      <label class="ol-facets__opt" for="mf-provider" style="flex:0 0 auto;min-height:44px;">
+        <input type="checkbox" id="mf-provider" name="provider_issue" value="1"
+               {{ 'checked' if request.args.get('provider_issue') == '1' }}> Provider xatosi
+      </label>
+      <div class="ol-filters__actions">
+        <a class="ol-btn ol-btn--tertiary" href="/admin/articles/metadata-sync">Tozalash</a>
+        <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+      </div>
+    </div>
+  </form>
+
+  {% if rows %}
+  <form method="POST" action="/admin/articles/metadata-sync/bulk-apply-safe"
+        onsubmit="return confirm('Tanlangan xavfsiz o\'zgarishlar qo\'llansinmi?');">
+    {{ csrf_token()|safe }}
+    <div class="ol-table-wrap">
+      <table class="ol-table mq-sync__table">
+        <caption class="ol-meta">Maqolalar metadata nazorati — so'nggi tekshiruv har maqola uchun</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span class="ol-body">Tanlash</span></th>
+            <th scope="col">Maqola</th>
+            <th scope="col">DOI</th>
+            <th scope="col">Oxirgi tekshiruv</th>
+            <th scope="col">O'zgarish</th>
+            <th scope="col">Safe</th>
+            <th scope="col">Review</th>
+            <th scope="col">Critical</th>
+            <th scope="col">Provider</th>
+            <th scope="col">Holat</th>
+            <th scope="col">Amal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr class="mq-sync__row--{{ 'critical' if row.queue_state == 'critical' else ('review' if row.queue_state == 'needs_review' else 'safe') }}">
+            <td class="mq-checkbox-cell">
+              {% if row.queue_state == 'needs_review' and row.safe_change_count and not row.has_retraction_change %}
+              <input type="checkbox" name="sync_id" value="{{ row.id }}"
+                     aria-label="Tanlash: {{ row.title }}">
+              {% endif %}
+            </td>
+            <td style="max-width:28ch;overflow-wrap:anywhere;">
+              <a href="/admin/articles/{{ row.article_id }}/edit">{{ row.title }}</a>
+            </td>
+            <td><span class="ol-meta">{{ row.doi or '—' }}</span></td>
+            <td>{{ row.checked_at.strftime('%Y-%m-%d %H:%M') if row.checked_at else '—' }}</td>
+            <td>{{ row.change_count }}</td>
+            <td>{{ row.safe_change_count }}</td>
+            <td>{{ row.review_change_count }}</td>
+            <td>{{ row.critical_change_count }}</td>
+            <td>{% if row.has_provider_issue %}<span class="ol-badge ol-badge--notice">Xato</span>{% else %}<span class="ol-badge ol-badge--success">OK</span>{% endif %}</td>
+            <td>{{ queue_state_labels.get(row.queue_state, row.queue_state) }}</td>
+            <td><a class="ol-btn ol-btn--tertiary" href="/admin/articles/metadata-sync/{{ row.id }}">Ko'rish</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mq-actions-row" style="margin-top:var(--space-16);">
+      <button type="submit" class="ol-btn ol-btn--primary">Tanlangan xavfsiz o'zgarishlarni qo'llash</button>
+      <span class="mq-help">Faqat xavfsiz, retraction/kritiksiz, eskirmagan elementlar tanlanadi.</span>
+    </div>
+  </form>
+
+  {% if pages > 1 %}
+  <nav class="ol-pager" aria-label="Sahifalash">
+    {% for p in range(1, pages + 1) %}
+    <a href="{{ qs(page=p) }}" {{ 'aria-current=page'|safe if p == page }}>{{ p }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Tanlangan filtrlar bo'yicha natija topilmadi.</h2>
+    <p class="ol-body"><a href="/admin/articles/metadata-sync">Filtrlarni tozalash</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

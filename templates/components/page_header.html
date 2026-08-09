@@ -1,0 +1,47 @@
+{# Barcha sahifalar uchun yagona sarlavha bloki.
+
+   Struktura: breadcrumb → H1 → izoh → metadata → amallar.
+   Sun'iy amal qo'shmang: `actions` bo'sh bo'lsa faqat sarlavha chiqadi.
+
+   Ishlatish:
+     {% from "components/page_header.html" import page_header %}
+     {{ page_header('Dissertatsiyalar', 'Izoh matni',
+                    crumbs=[('Bosh sahifa', '/')]) }}
+
+   `actions` va `meta` — caller() bloki orqali beriladi (page_header_full). #}
+
+{% macro breadcrumb(crumbs, current) %}
+{% if crumbs %}
+<nav aria-label="Breadcrumb">
+  <ol class="ol-breadcrumb">
+    {% for label, href in crumbs %}
+    <li><a href="{{ href }}">{{ label }}</a></li>
+    {% endfor %}
+    {% if current %}<li aria-current="page">{{ current }}</li>{% endif %}
+  </ol>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro page_header(title, lead='', crumbs=None, meta=None) %}
+<div class="ol-page-header">
+  {{ breadcrumb(crumbs, title) }}
+  <h1 class="ol-page-header__title">{{ title }}</h1>
+  {% if lead %}<p class="ol-page-header__lead">{{ lead }}</p>{% endif %}
+  {% if meta %}
+  <div class="ol-page-header__meta">
+    {% for item in meta %}<span>{{ item }}</span>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Amallar kerak bo'lsa: {% call page_header_with_actions(...) %}<a ...>{% endcall %} #}
+{% macro page_header_with_actions(title, lead='', crumbs=None) %}
+<div class="ol-page-header">
+  {{ breadcrumb(crumbs, title) }}
+  <h1 class="ol-page-header__title">{{ title }}</h1>
+  {% if lead %}<p class="ol-page-header__lead">{{ lead }}</p>{% endif %}
+  <div class="ol-page-header__actions">{{ caller() }}</div>
+</div>
+{% endmacro %}

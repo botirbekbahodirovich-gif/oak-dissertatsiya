@@ -1,0 +1,441 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Ilmiy maqola PDF o'quvchisi — Phase 2B.2
+   Faqat olimlar-design-system.css tokenlaridan foydalanadi (xom HEX/RGB yo'q).
+   Light-only: bu faylda dark selektor, prefers-color-scheme yoki theme
+   almashtirgich BO'LMAYDI (tests/test_light_only_theme.py).
+
+   Upstream `pdfjs-dist/web/pdf_viewer.css` ATAYIN olinmagan — unda beshta
+   to'q rejim media so'rovi bor (sabab va ro'yxat:
+   static/vendor/pdfjs/README.md). PDF.js `TextLayer` uchun zarur bo'lgan
+   uslublar shu faylda, `.mqv-*` prefiksi bilan qayta yozilgan.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Karkas ──────────────────────────────────────────────────────────────── */
+
+.mqv {
+  /* Yon panel kengligi `.ol-facets` (260px) bilan bir xil — o'quvchi paneli
+     saytdagi boshqa yon panellardan boshqacha ko'rinmasin. */
+  --mqv-side-width: 260px;
+  --mqv-thumb-width: 120px;
+  /* Ekran balandligidan sahifa sarlavhasi va footer bo'shlig'i ayriladi.
+     Qiymatlar bo'sh joy tokenlaridan yig'ilgan, xom piksel emas. */
+  --mqv-shell-height: calc(100vh - var(--space-160) - var(--space-80));
+
+  display: flex;
+  flex-direction: column;
+  height: var(--mqv-shell-height);
+  min-height: calc(var(--space-160) * 3);
+  max-height: calc(var(--space-160) * 7);
+  position: relative;
+  overflow: hidden;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+
+/* ── Yuqori panel ────────────────────────────────────────────────────────── */
+
+.mqv-bar {
+  flex-shrink: 0;
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+}
+.mqv-bar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  flex-wrap: wrap;
+}
+.mqv-bar__row + .mqv-bar__row { border-top: 1px solid var(--color-border-subtle); }
+
+.mqv-bar__title {
+  flex: 1 1 200px;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mqv-bar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.mqv-bar__group + .mqv-bar__group {
+  padding-left: var(--space-8);
+  border-left: 1px solid var(--color-border-subtle);
+}
+.mqv-bar__spacer { flex: 1 1 var(--space-8); }
+
+/* Sahifa raqami maydoni — raqamlar bir xil kenglikda turadi, aks holda
+   sahifa almashganda butun panel siljiydi. */
+.mqv-bar__page {
+  width: calc(var(--space-64) - var(--space-8));
+  min-height: 44px;
+  padding: var(--space-4) var(--space-8);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.mqv-bar__total {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mqv-bar__zoom {
+  min-height: 44px;
+  width: auto;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--text-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.mqv-bar__more { position: relative; }
+.mqv-menu {
+  right: 0;
+  left: auto;
+  width: auto;
+  min-width: calc(var(--space-160) + var(--space-20));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.mqv-menu[hidden] { display: none; }
+.mqv-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 44px;
+  padding: var(--space-8) var(--space-12);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-default);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.mqv-menu__item:hover { background: var(--color-blue-soft); color: var(--color-action-blue); }
+
+/* ── Hujjat ichidan qidirish ─────────────────────────────────────────────── */
+
+.mqv-find {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+}
+.mqv-find[hidden] { display: none; }
+.mqv-find__input { flex: 1 1 200px; min-width: 0; }
+.mqv-find__status {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ── Asosiy maydon ───────────────────────────────────────────────────────── */
+
+/* Yuklanish/xato holatlari shu maydonni qoplaydi, yuqori panelni emas —
+   xato chiqqanda ham "Maqolaga qaytish" bosilishi kerak. */
+.mqv-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.mqv-side {
+  flex: 0 0 var(--mqv-side-width);
+  width: var(--mqv-side-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-white);
+  border-right: 1px solid var(--color-border);
+}
+/* Panel holati: `data-side` bo'lmasa — desktopda ochiq, mobilda yopiq.
+   Shu sababli server hech qanday boshlang'ich holat yozmaydi va JS yuklanmagan
+   bo'lsa ham tartib to'g'ri chiqadi. */
+.mqv[data-side="closed"] .mqv-side { display: none; }
+.mqv-side__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+  padding: 0 var(--space-4) 0 var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+.mqv-side__tabs { flex: 1; min-width: 0; border-bottom: 0; }
+.mqv-side__panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-12);
+}
+.mqv-side__panel[hidden] { display: none; }
+.mqv-side__close { display: none; }
+
+/* Sahifa eskizlari */
+.mqv-thumbs { display: flex; flex-direction: column; gap: var(--space-12); margin: 0; padding: 0; list-style: none; }
+.mqv-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-8);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.mqv-thumb:hover { border-color: var(--color-action-blue-light); }
+/* Joriy sahifa rang bilan EMAS: qalin ramka + qalin raqam + aria-current. */
+.mqv-thumb[aria-current="true"] {
+  border-color: var(--color-action-blue);
+  color: var(--color-action-blue);
+  font-weight: 600;
+}
+.mqv-thumb__frame {
+  width: var(--mqv-thumb-width);
+  background: var(--color-white);
+  border: 1px solid var(--color-border-subtle);
+}
+.mqv-thumb__frame canvas { display: block; width: 100%; height: auto; }
+
+/* Hujjat tuzilmasi (outline) */
+.mqv-outline, .mqv-outline ul { list-style: none; margin: 0; padding: 0; }
+.mqv-outline ul { margin-left: var(--space-12); border-left: 1px solid var(--color-border-subtle); padding-left: var(--space-8); }
+.mqv-outline__link {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-8);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-default);
+  font-family: var(--font-sans);
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  text-align: left;
+  cursor: pointer;
+}
+.mqv-outline__link:hover { background: var(--color-blue-soft); color: var(--color-action-blue); }
+
+/* ── Hujjat oynasi ───────────────────────────────────────────────────────── */
+
+.mqv-doc {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--space-16);
+  /* Mobil pinch-zoom brauzerga qoladi; JS uni bloklamaydi. */
+  scroll-behavior: smooth;
+}
+.mqv-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-16);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.mqv-page {
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  position: relative;
+  max-width: 100%;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+}
+.mqv-page__canvas { display: block; width: 100%; height: 100%; }
+/* Sahifa hali chizilmagan bo'lsa ham joyi bo'sh oq varaq bo'lib turadi —
+   hujjat balandligi sakramaydi va scroll pozitsiyasi buzilmaydi. */
+.mqv-page__number {
+  position: absolute;
+  left: var(--space-8);
+  bottom: var(--space-8);
+  padding: 0 var(--space-4);
+  background: var(--color-background-soft);
+  border-radius: var(--radius-default);
+  font-size: var(--text-meta);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* ── Matn qatlami (PDF.js TextLayer kontrakti) ───────────────────────────────
+   Quyidagi qoidalar upstream `pdf_viewer.css` dagi `.textLayer` blokining
+   funksional minimumi. Nomlar `.mqv-text` ga ko'chirilgan: global sinf
+   yaratilmaydi va dark-mode bloklari kelmaydi. `--total-scale-factor` ni
+   maqolalar_viewer.js sahifa elementiga qo'yadi. */
+
+.mqv-text {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.mqv-text span,
+.mqv-text br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.mqv-text > :not(.markedContent),
+.mqv-text .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.mqv-text .markedContent { display: contents; }
+.mqv-text span[role="img"] { user-select: none; cursor: default; }
+/* Belgilangan matn ko'rinishi: kanvasdagi harflar ustidan yarim shaffof
+   ko'k. `color-mix` qo'llab-quvvatlanmasa oldingi to'liq rang qoladi. */
+.mqv-text ::selection { background: var(--color-action-blue-light); }
+.mqv-text ::selection { background: color-mix(in srgb, var(--color-action-blue-light) 45%, transparent); }
+
+/* ── Havolalar qatlami ───────────────────────────────────────────────────────
+   PDF.js AnnotationLayer'i ATAYIN ishlatilmaydi (u upstream viewer CSS'ini
+   talab qiladi). Faqat oddiy havola annotatsiyalari o'z ustimizdagi yupqa
+   qatlam bilan chiziladi, protokol tekshiruvidan o'tgan holda. */
+
+.mqv-links { position: absolute; inset: 0; z-index: 2; }
+.mqv-links a,
+.mqv-links button {
+  position: absolute;
+  display: block;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-default);
+  cursor: pointer;
+}
+.mqv-links a:hover,
+.mqv-links button:hover { border-color: var(--color-action-blue); background: var(--color-blue-soft); }
+
+/* ── Holatlar: yuklanmoqda / xato ────────────────────────────────────────── */
+
+.mqv-state {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  padding: var(--space-24);
+  text-align: center;
+  background: var(--color-background-soft);
+}
+.mqv-state[hidden] { display: none; }
+.mqv-state__title { margin: 0; font-family: var(--font-sans); font-size: var(--text-h5); color: var(--color-text-primary); }
+.mqv-state__text { margin: 0; max-width: calc(var(--space-160) * 3); font-size: var(--text-body); color: var(--color-text-secondary); }
+.mqv-state__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); justify-content: center; }
+.mqv-state--error { background: var(--color-error-soft); }
+.mqv-state--error .mqv-state__title { color: var(--color-error); }
+
+/* Progress — hujjat sahifalari soni ma'lum bo'lgach ko'rsatiladi. */
+.mqv-progress {
+  width: calc(var(--space-160) + var(--space-80));
+  max-width: 100%;
+  height: var(--space-4);
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-rounded);
+  overflow: hidden;
+}
+.mqv-progress__bar { height: 100%; width: 0; background: var(--color-action-blue); }
+
+/* ── Faqat skrinrider uchun matn ─────────────────────────────────────────── */
+
+.mqv-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── Moslashuvchanlik ────────────────────────────────────────────────────── */
+
+@media (max-width: 1023px) {
+  .mqv { --mqv-shell-height: calc(100vh - var(--space-128) - var(--space-48)); }
+}
+
+/* Uch ustunli tartib mobilda siqilmaydi: yon panel off-canvas tortmaga
+   aylanadi, markazdagi hujjat butun kenglikni oladi. */
+@media (max-width: 767px) {
+  .mqv {
+    --mqv-shell-height: calc(100vh - var(--space-112) - var(--space-32));
+    min-height: calc(var(--space-160) * 2.5);
+  }
+  .mqv-side { display: none; }
+  .mqv[data-side="open"] .mqv-side {
+    display: flex;
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 4;
+    width: min(var(--mqv-side-width), 80vw);
+    flex-basis: auto;
+    box-shadow: var(--shadow-dropdown);
+  }
+  .mqv-side__close { display: flex; }
+  .mqv-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: var(--color-background-soft);
+    opacity: 0.7;
+  }
+  .mqv-backdrop[hidden] { display: none; }
+  .mqv-doc { padding: var(--space-8); }
+  .mqv-bar__row { padding: var(--space-4); }
+  .mqv-bar__group + .mqv-bar__group { padding-left: var(--space-4); }
+}
+
+@media (min-width: 768px) {
+  .mqv-backdrop { display: none; }
+}
+
+/* To'liq ekran: o'quvchi butun ekranni egallaydi, sayt sarlavhasi qolmaydi. */
+.mqv:fullscreen {
+  height: 100%;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+
+/* 390/360px: panel ikki qatorga tushadi, lekin tugmalar bir-birini bosmaydi. */
+@media (max-width: 479px) {
+  .mqv-bar__title { flex-basis: 100%; }
+  .mqv-bar__group + .mqv-bar__group { border-left: 0; padding-left: 0; }
+  .mqv-bar__page { width: calc(var(--space-48) + var(--space-4)); }
+}

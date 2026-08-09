@@ -126,8 +126,10 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  Chart.defaults.color = '#6b7a99';
-  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+  // Light fon uchun: oldingi qiymatlar dark fonga mo'ljallangan edi va
+  // oq fonda gridline'lar umuman ko'rinmay qolgan.
+  Chart.defaults.color = '#666666';            // --color-text-muted
+  Chart.defaults.borderColor = '#e6e6e6';      // --color-border
   Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
   Chart.defaults.font.size = 12;
 

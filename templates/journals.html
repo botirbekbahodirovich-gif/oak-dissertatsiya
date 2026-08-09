@@ -6,58 +6,69 @@
 <style>
   .jr-wrap { max-width: 1150px; margin: 0 auto; padding: 8px 16px 48px; }
   .jr-head { text-align: center; margin-bottom: 1.4rem; }
-  .jr-head h1 { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; }
-  .jr-head p { color: #94a3b8; margin: 0; }
+  .jr-head h1 { font-size: 1.7rem; font-weight: 800; color: var(--color-text-primary); margin: 0 0 6px; }
+  .jr-head p { color: var(--color-text-muted); margin: 0; }
 
-  .jr-search-card { background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 28px; margin-bottom: 26px; }
+  .jr-search-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 28px; margin-bottom: 26px; }
   .jr-sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 700px) { .jr-sgrid { grid-template-columns: 1fr; } }
-  .jr-field label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; font-weight: 600; }
-  .jr-field select, .jr-field input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 14px; font-size: 0.9rem; }
+  .jr-field label { display: block; font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 6px; font-weight: 600; }
+  .jr-field select, .jr-field input { width: 100%; background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-primary); border-radius: var(--radius-default); padding: 11px 14px; font-size: 0.9rem; }
   .jr-idx-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-  .jr-pill { background: #0f172a; border: 1px solid #334155; color: #cbd5e1; padding: 8px 16px; border-radius: 999px; cursor: pointer; font-size: 0.84rem; font-weight: 600; }
-  .jr-pill.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .jr-pill { background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-secondary); padding: 8px 16px; border-radius: var(--radius-full); cursor: pointer; font-size: 0.84rem; font-weight: 600; }
+  .jr-pill.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; }
 
   .jr-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
   @media (max-width: 980px) { .jr-grid { grid-template-columns: repeat(2,1fr); } }
   @media (max-width: 640px) { .jr-grid { grid-template-columns: 1fr; } }
-  .jr-card { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.15s, border-color 0.15s; }
-  .jr-card:hover { transform: translateY(-3px); border-color: #3b82f6; }
-  .jr-card.predatory { border-color: #ef4444; background: rgba(239,68,68,0.08); }
+  .jr-card { position: relative; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 20px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.15s, border-color 0.15s; }
+  .jr-card:hover { transform: translateY(-3px); border-color: var(--color-action-blue); }
+  .jr-card.predatory { border-color: var(--color-error); background: rgba(239,68,68,0.08); }
   .jr-ctop { display: flex; align-items: flex-start; gap: 12px; }
-  .jr-logo { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#1e40af,#3b82f6); display: grid; place-items: center; font-size: 1.5rem; flex-shrink: 0; overflow: hidden; }
+  /* Logo yo'q bo'lsa — neytral bosh harfli fallback (emoji emas). */
+  .jr-logo { width: 56px; height: 56px; border-radius: var(--radius-default); background: var(--color-blue-soft);
+    color: var(--color-action-blue); border: 1px solid var(--color-border);
+    display: grid; place-items: center; font-size: 1.15rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
   .jr-logo img { width: 100%; height: 100%; object-fit: cover; }
   .jr-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
-  .jr-badge { font-size: 0.66rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
-  .jr-badge.oak { background: #059669; }
-  /* International index colour codes (like the PhD/DSc degree badges) */
-  .jr-badge.scopus  { background: #ff8608; }
-  .jr-badge.wos     { background: #fbbc05; color: #1f2937; }
-  .jr-badge.scholar { background: #4285f4; }
-  .jr-name { color: #f1f5f9; font-weight: 700; font-size: 0.98rem; line-height: 1.3; text-decoration: none; }
-  .jr-name:hover { color: #60a5fa; }
+  /* Yagona status badge tizimi: soft fon + to'yingan matn.
+     Indekslar rangi bilan emas, avvalo YOZUVI bilan farqlanadi. */
+  .jr-badge { font-size: var(--text-meta); font-weight: 600; padding: 2px var(--space-8);
+    border-radius: var(--radius-rounded); white-space: nowrap;
+    background: var(--color-background-soft); color: var(--color-text-secondary);
+    border: 1px solid var(--color-border); }
+  .jr-badge.oak     { background: var(--color-success-soft); border-color: var(--color-success-soft); color: var(--color-success); }
+  .jr-badge.scopus  { background: var(--color-orange-soft); border-color: var(--color-orange-soft); color: var(--color-brand-orange); }
+  .jr-badge.wos     { background: var(--color-notice-soft); border-color: var(--color-notice-soft); color: #8a5200; }
+  .jr-badge.scholar { background: var(--color-blue-soft); border-color: var(--color-blue-soft); color: var(--color-action-blue); }
+  .jr-name { color: var(--color-text-primary); font-weight: 700; font-size: 0.98rem; line-height: 1.3; text-decoration: none; }
+  .jr-name:hover { color: var(--color-action-blue); }
   .jr-codes { display: flex; gap: 5px; flex-wrap: wrap; }
-  .jr-code { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: rgba(59,130,246,0.15); color: #93bbfc; }
-  .jr-meta { color: #94a3b8; font-size: 0.8rem; }
-  .jr-stats2 { display: flex; gap: 12px; flex-wrap: wrap; color: #cbd5e1; font-size: 0.78rem; }
+  .jr-code { font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-default); background: var(--color-blue-soft); color: var(--color-action-blue); }
+  .jr-meta { color: var(--color-text-muted); font-size: 0.8rem; }
+  .jr-stats2 { display: flex; gap: 12px; flex-wrap: wrap; color: var(--color-text-secondary); font-size: 0.78rem; }
   .jr-foot { margin-top: auto; padding-top: 6px; }
-  .jr-foot a { color: #60a5fa; font-weight: 600; font-size: 0.84rem; text-decoration: none; }
-  .jr-warn { background: rgba(239,68,68,0.16); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: 8px; padding: 6px 10px; font-size: 0.74rem; font-weight: 600; }
+  .jr-foot a { color: var(--color-action-blue); font-weight: 600; font-size: 0.84rem; text-decoration: none; }
+  .jr-warn { background: rgba(239,68,68,0.16); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; border-radius: var(--radius-banner); padding: 6px 10px; font-size: 0.74rem; font-weight: 600; }
 
   .jr-statbar { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin: 28px 0 18px; }
-  .jr-statcard { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 22px; text-align: center; }
-  .jr-statcard b { font-size: 1.5rem; color: #f1f5f9; display: block; } .jr-statcard span { font-size: 0.78rem; color: #64748b; }
-  .jr-empty { text-align: center; color: #64748b; padding: 3rem; }
+  .jr-statcard { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 14px 22px; text-align: center; }
+  .jr-statcard b { font-size: 1.5rem; color: var(--color-text-primary); display: block; } .jr-statcard span { font-size: 0.78rem; color: var(--color-text-muted); }
+  .jr-empty { text-align: center; color: var(--color-text-muted); padding: 3rem; }
 </style>
 {% endblock %}
 
+{% from "components/page_header.html" import page_header_with_actions %}
 {% block content %}
 <div class="jr-wrap">
-  <div class="jr-head">
-    <h1>📚 Ilmiy jurnallar bazasi</h1>
-    <p>OAK tasdiqlangan jurnallardan o'zingizga mosini toping</p>
-    <a href="/jurnal-tekshirish" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.45);color:#93bbfc;padding:8px 18px;border-radius:999px;font-size:0.86rem;font-weight:600;text-decoration:none;">🔍 Jurnal tekshiruvi — OAK/Scopus ro'yxatida bormi?</a>
-  </div>
+  {% call page_header_with_actions(
+       'Ilmiy jurnallar',
+       "OAK tasdiqlangan jurnallardan o'zingizga mosini toping",
+       crumbs=[('Bosh sahifa', '/'), ('Ilmiy resurslar', '/maqolalar')]) %}
+    <a class="ol-btn ol-btn--secondary" href="/jurnal-tekshirish">
+      <i class="bi bi-shield-check" aria-hidden="true"></i>Jurnal tekshiruvi
+    </a>
+  {% endcall %}
 
   <!-- Search -->
   <div class="jr-search-card">
@@ -96,7 +107,10 @@
          data-wos="{{ '1' if j.wos_indexed else '0' }}"
          data-scholar="{{ '1' if j.scholar_indexed else '0' }}">
       <div class="jr-ctop">
-        <div class="jr-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}📚{% endif %}</div>
+        <div class="jr-logo" aria-hidden="true">
+          {%- if j.logo_url -%}<img src="{{ j.logo_url }}" alt="">
+          {%- else -%}{{ (j.name or '?')[:2]|upper }}{%- endif -%}
+        </div>
         <div class="jr-badges">
           {% if j.oak_approved %}<span class="jr-badge oak">OAK ✓</span>{% endif %}
           {% if j.scopus_indexed %}<span class="jr-badge scopus">Scopus</span>{% endif %}
@@ -104,15 +118,15 @@
           {% if j.scholar_indexed %}<span class="jr-badge scholar">Google Scholar</span>{% endif %}
         </div>
       </div>
-      {% if j.is_predatory %}<div class="jr-warn">⚠️ Shubhali jurnal</div>{% endif %}
+      {% if j.is_predatory %}<div class="jr-warn">Shubhali jurnal</div>{% endif %}
       <a class="jr-name" href="/journals/{{ j.id }}">{{ j.name }}</a>
       {% if j.codes %}<div class="jr-codes">{% for c in j.codes %}<span class="jr-code">{{ c }}</span>{% endfor %}</div>{% endif %}
-      <div class="jr-meta">🌍 {{ j.country or '—' }}{% if j.languages %} · {{ j.languages }}{% endif %}</div>
+      <div class="jr-meta">{{ j.country or '—' }}{% if j.languages %} · {{ j.languages }}{% endif %}</div>
       <div class="jr-stats2">
-        {% if j.impact_factor %}<span>📊 IF: {{ j.impact_factor }}</span>{% endif %}
-        {% if j.publish_fee %}<span>💰 {{ j.publish_fee }}</span>{% endif %}
+        {% if j.impact_factor %}<span>IF: {{ j.impact_factor }}</span>{% endif %}
+        {% if j.publish_fee %}<span>{{ j.publish_fee }}</span>{% endif %}
         {% if j.review_period %}<span>⏱ {{ j.review_period }}</span>{% endif %}
-        {% if j.frequency %}<span>📅 {{ j.frequency }}</span>{% endif %}
+        {% if j.frequency %}<span>{{ j.frequency }}</span>{% endif %}
       </div>
       <div class="jr-foot"><a href="/journals/{{ j.id }}">Batafsil →</a></div>
     </div>
@@ -128,8 +142,8 @@
     <div class="jr-statcard"><b>{{ oak_count }}</b><span>OAK tasdiqlangan</span></div>
     <div class="jr-statcard"><b>{{ scopus_count }}</b><span>Scopus</span></div>
   </div>
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:22px;">
-    <h2 style="font-size:1.05rem;color:#f1f5f9;margin:0 0 14px;">📊 Ixtisosliklar bo'yicha jurnallar</h2>
+  <div style="background:var(--color-white);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:22px;">
+    <h2 style="font-size:1.05rem;color:var(--color-text-primary);margin:0 0 14px;">Ixtisosliklar bo'yicha jurnallar</h2>
     <canvas id="specChart" height="220"></canvas>
   </div>
 </div>
@@ -169,10 +183,10 @@ function applyFilters() {
   if (el && labels.length) {
     new Chart(el.getContext('2d'), {
       type: 'bar',
-      data: { labels: labels, datasets: [{ label: 'Jurnallar soni', data: data, backgroundColor: '#3b82f6' }] },
+      data: { labels: labels, datasets: [{ label: 'Jurnallar soni', data: data, backgroundColor: '#0056d6' }] },
       options: { indexAxis: 'y', plugins: { legend: { display: false } },
-        scales: { x: { ticks: { color: '#64748b' }, grid: { color: '#28344a' } },
-                  y: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { display: false } } } }
+        scales: { x: { ticks: { color: '#666666' }, grid: { color: 'var(--color-border-subtle)' } },
+                  y: { ticks: { color: '#666666', font: { size: 9 } }, grid: { display: false } } } }
     });
   }
 })();

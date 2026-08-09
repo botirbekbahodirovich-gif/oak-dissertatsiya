@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Sinxronizatsiya #{{ sync.id }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260809" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+{% set is_reviewable = sync.status == 'checked' and not sync.is_stale %}
+{% set has_critical_conflict = sync.diffs | selectattr('field', 'equalto', 'doi') | list %}
+<div class="ol-page mq-page">
+  {{ page_header('Sinxronizatsiya #%d: %s' % (sync.id, article.title),
+                 'Holat: %s' % queue_state_labels.get(sync.queue_state, sync.queue_state),
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                         ('Metadata nazorati', '/admin/articles/metadata-sync')]) }}
+
+  {% with msgs = get_flashed_messages() %}
+    {% for m in msgs %}<div class="alert-inline success" role="status">{{ m }}</div>{% endfor %}
+  {% endwith %}
+
+  {% if sync.is_stale %}
+  <div class="ol-badge ol-badge--notice" role="alert" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Maqola ushbu tekshiruvdan keyin o'zgartirilgan. Metadata'ni qayta tekshiring.
+  </div>
+  {% endif %}
+  {% if sync.status == 'applied' %}
+  <div class="ol-badge ol-badge--success" role="status" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Bu tekshiruv allaqachon qo'llangan: {{ sync.applied_at }}
+    {% if sync.applied_fields %} — maydonlar: {{ sync.applied_fields | join(', ') }}{% endif %}
+  </div>
+  {% endif %}
+  {% if sync.status == 'dismissed' %}
+  <div class="ol-badge" role="status" style="display:block;padding:var(--space-16);margin-bottom:var(--space-16);">
+    Ko'rib chiqilgan va yopilgan: {{ sync.dismissed_at }}
+    {% if sync.dismissed_reason %} — sabab: {{ sync.dismissed_reason }}{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="mq-detail-grid">
+    <div><div class="mq-detail-item__label">Maqola</div>
+      <div class="mq-detail-item__value"><a href="/admin/articles/{{ article.id }}/edit">{{ article.title }}</a></div></div>
+    <div><div class="mq-detail-item__label">DOI</div>
+      <div class="mq-detail-item__value">{{ article.doi or '—' }}</div></div>
+    <div><div class="mq-detail-item__label">Tekshirilgan</div>
+      <div class="mq-detail-item__value">{{ sync.checked_at }}</div></div>
+    <div><div class="mq-detail-item__label">Tekshiruvchi</div>
+      <div class="mq-detail-item__value">{{ sync.actor_type }}{% if sync.checked_by %} (#{{ sync.checked_by }}){% endif %}</div></div>
+  </div>
+
+  <section class="ol-section" aria-labelledby="msd-providers">
+    <h2 id="msd-providers" class="ol-h4">Manba holati</h2>
+    <div class="mq-actions-row">
+      {% for name, p in (sync.provider_summary or {}).items() %}
+      <span class="ol-badge">{{ p.get('label', name) }}: {{ p.get('status_label', p.get('status')) }}</span>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if sync.diffs %}
+  <section class="ol-section" aria-labelledby="msd-diffs">
+    <h2 id="msd-diffs" class="ol-h4">O'zgarishlar</h2>
+
+    <form method="POST" id="msd-apply-form"
+          data-apply-endpoint="/admin/articles/{{ article.id }}/metadata/apply"
+          data-sync-id="{{ sync.id }}">
+      {{ csrf_token()|safe }}
+      <div class="ol-table-wrap">
+        <table class="ol-table mq-sync__table">
+          <caption class="ol-meta">Metadata o'zgarishlari</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="ol-body">Tanlash</span></th>
+              <th scope="col">Maydon</th>
+              <th scope="col">Eski qiymat</th>
+              <th scope="col">Yangi qiymat</th>
+              <th scope="col">Manba</th>
+              <th scope="col">Holat</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for diff in sync.diffs %}
+            <tr class="mq-sync__row--{{ diff.severity }}">
+              <td class="mq-checkbox-cell">
+                {% if diff.applicable and is_reviewable %}
+                <input type="checkbox" name="fields" value="{{ diff.field }}"
+                       {{ 'checked' if diff.default_selected }}
+                       aria-label="Tanlash: {{ diff.label }}">
+                {% endif %}
+              </td>
+              <td>{{ diff.label }}</td>
+              <td>{{ diff.old_value if diff.old_value is not none and diff.old_value != '' else '—' }}</td>
+              <td>
+                {{ diff.new_value if diff.new_value is not none and diff.new_value != '' else '—' }}
+                {% if diff.note %}<span class="mq-help">{{ diff.note }}</span>{% endif %}
+              </td>
+              <td>{{ diff.source or '—' }}</td>
+              <td>{{ diff.severity_label }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if is_reviewable %}
+      {% if sync.has_retraction_change %}
+      <div style="margin-top:var(--space-12);">
+        <label class="ol-facets__opt" style="min-height:44px;">
+          <input type="checkbox" id="msd-confirm-retraction">
+          Chaqirib olingan (retraction) o'zgarishini tushunaman va tasdiqlayman
+        </label>
+      </div>
+      {% endif %}
+      {% if has_critical_conflict %}
+      <div style="margin-top:var(--space-12);">
+        <label class="ol-facets__opt" style="min-height:44px;">
+          <input type="checkbox" id="msd-confirm-doi">
+          DOI nomuvofiqligini tushunaman va baribir davom etaman
+        </label>
+      </div>
+      {% endif %}
+
+      <p class="mq-sync__status" role="status" aria-live="polite" id="msd-status" hidden></p>
+
+      <div class="mq-actions-row" style="margin-top:var(--space-16);">
+        <button type="button" class="ol-btn ol-btn--primary" id="msd-apply-btn">
+          Tanlangan o'zgarishlarni qo'llash</button>
+      </div>
+      {% endif %}
+    </form>
+  </section>
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Metadata yangilangan. Muhim o'zgarish topilmadi.</h2>
+  </div>
+  {% endif %}
+
+  <div class="mq-actions-row" style="margin-top:var(--space-24);">
+    {% if is_reviewable %}
+    <form method="POST" action="/admin/articles/metadata-sync/{{ sync.id }}/dismiss">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--secondary">Ko'rib chiqildi, yopish</button>
+    </form>
+    {% endif %}
+    <form method="POST" action="/admin/articles/{{ article.id }}/metadata/recheck">
+      {{ csrf_token()|safe }}
+      <button type="submit" class="ol-btn ol-btn--secondary">Qayta tekshirish</button>
+    </form>
+    <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ article.id }}/metadata/history">Metadata tarixi</a>
+    <a class="ol-btn ol-btn--tertiary" href="/admin/articles/metadata-sync">&larr; Nazorat panel</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/article_metadata_sync_detail.js?v=20260809" defer></script>
+{% endblock %}

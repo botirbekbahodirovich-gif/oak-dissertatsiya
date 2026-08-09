@@ -1,0 +1,375 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Ilmiy maqolalar katalogi — Phase 2B.1
+   Faqat olimlar-design-system.css tokenlaridan foydalanadi (yangi rang yo'q).
+   Light-only: bu faylda dark selektor, prefers-color-scheme yoki theme
+   almashtirgich BO'LMAYDI (tests/test_light_only_theme.py).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mq-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── Katalog karkasi ──────────────────────────────────────────────────────── */
+
+.mq-layout { display: flex; gap: var(--space-24); align-items: flex-start; }
+.mq-layout__main { flex: 1; min-width: 0; }
+
+/* ── Qidiruv paneli ───────────────────────────────────────────────────────── */
+
+.mq-search { display: flex; gap: var(--space-12); align-items: flex-end; flex-wrap: wrap; }
+.mq-search .ol-field-group { flex: 1 1 320px; min-width: 0; }
+
+/* ── Natijalar paneli ─────────────────────────────────────────────────────── */
+
+.mq-resultbar {
+  display: flex; flex-wrap: wrap; gap: var(--space-16);
+  align-items: flex-end; justify-content: space-between;
+  margin-bottom: var(--space-16);
+}
+.mq-resultbar__count { margin: 0; font-size: var(--text-body); color: var(--color-text-secondary); }
+.mq-resultbar__controls { display: flex; gap: var(--space-12); align-items: flex-end; flex-wrap: wrap; }
+.mq-resultbar__controls .ol-field-group { min-width: 190px; }
+.mq-viewswitch { display: flex; gap: var(--space-4); }
+.mq-chips { margin-bottom: var(--space-16); }
+.mq-chips .ol-chip a { text-decoration: none; font-size: 16px; line-height: 1; padding: 0 var(--space-4); }
+
+/* ── Maqola kartasi ───────────────────────────────────────────────────────── */
+
+.mq-grid { display: grid; gap: var(--space-16); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+
+.mq-card {
+  display: flex; flex-direction: column; gap: var(--space-8);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  padding: var(--space-20);
+}
+.mq-card__badges { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.mq-card__title { margin: 0; font-family: var(--font-sans); font-size: var(--text-h5); line-height: 1.35; }
+/* Juda uzun sarlavha va DOI konteynerni yormasin (vizual QA: 360px). */
+.mq-card__title a { color: var(--color-text-primary); text-decoration: none; overflow-wrap: anywhere; }
+.mq-card__title a:hover { color: var(--color-action-blue); text-decoration: underline; }
+.mq-card__authors { margin: 0; font-size: var(--text-small); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.mq-card__meta { margin: 0; font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-card__field { margin: 0; font-size: var(--text-small); display: flex; gap: var(--space-8); flex-wrap: wrap; }
+.mq-card__abstract { margin: 0; font-size: var(--text-small); color: var(--color-text-secondary); line-height: var(--leading-body); }
+.mq-card__actions { display: flex; gap: var(--space-8); flex-wrap: wrap; margin-top: auto; padding-top: var(--space-8); }
+.mq-card__actions .ol-btn { min-height: 44px; }
+
+.mq-table__title { max-width: 380px; overflow-wrap: anywhere; font-weight: 600; }
+.mq-table__actions { white-space: nowrap; }
+.mq-table__actions .ol-btn { min-height: 44px; }
+
+/* ── Yo'nalishlar daraxti ─────────────────────────────────────────────────── */
+
+.mq-tree { list-style: none; margin: 0; padding: 0; }
+.mq-tree .mq-tree { margin-left: var(--space-20); border-left: 1px solid var(--color-border-subtle); padding-left: var(--space-12); }
+.mq-tree__item { border-bottom: 1px solid var(--color-border-subtle); }
+.mq-tree .mq-tree .mq-tree__item:last-child { border-bottom: 0; }
+
+.mq-tree__row { display: flex; align-items: center; gap: var(--space-12); padding: var(--space-8) 0; flex-wrap: wrap; }
+.mq-tree__toggle {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 44px; height: 44px; padding: 0;
+  background: none; border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  color: var(--color-text-secondary); cursor: pointer;
+}
+.mq-tree__toggle:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+.mq-tree__toggle i { transition: transform 0.15s ease; }
+.mq-tree__toggle[aria-expanded="true"] i { transform: rotate(90deg); }
+.mq-tree__spacer { width: 44px; flex-shrink: 0; }
+.mq-tree__name { flex: 1; min-width: 200px; font-weight: 600; color: var(--color-text-primary); text-decoration: none; }
+.mq-tree__name:hover { color: var(--color-action-blue); text-decoration: underline; }
+.mq-tree__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-tree__counts { display: flex; gap: var(--space-12); font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-tree__panel[hidden] { display: none; }
+
+/* ── Maqola tafsiloti ─────────────────────────────────────────────────────── */
+
+.mq-detail { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.mq-detail__aside { display: flex; flex-direction: column; gap: var(--space-16); position: sticky;
+  top: calc(var(--header-height) + var(--space-16)); }
+.mq-detail__badges { display: flex; flex-wrap: wrap; gap: var(--space-6); margin-bottom: var(--space-12); }
+.mq-detail__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.mq-detail__actions .ol-btn { min-height: 44px; }
+.mq-doi { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+
+.mq-deflist { margin: 0; display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: var(--space-8) var(--space-16); }
+.mq-deflist dt { font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-deflist dd { margin: 0; font-size: var(--text-small); color: var(--color-text-primary); overflow-wrap: anywhere; }
+
+.mq-authors { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-12); }
+.mq-authors li { display: flex; flex-direction: column; gap: 2px; }
+.mq-authors__name { font-weight: 600; }
+.mq-authors__meta { font-size: var(--text-small); color: var(--color-text-muted); }
+
+.mq-notice {
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-notice);
+  background: var(--color-notice-soft);
+  border-radius: var(--radius-default);
+  padding: var(--space-16);
+}
+.mq-notice--info { border-left-color: var(--color-action-blue); background: var(--color-blue-soft); }
+
+/* ── Admin forma bo'limlari ───────────────────────────────────────────────── */
+
+.mq-form section { margin-bottom: var(--space-32); }
+.mq-form legend { font-family: var(--font-sans); font-size: var(--text-h5); font-weight: 600;
+  color: var(--color-text-primary); padding: 0; margin-bottom: var(--space-12); }
+.mq-form fieldset { border: 1px solid var(--color-border); border-radius: var(--radius-default);
+  padding: var(--space-20); margin: 0 0 var(--space-24); }
+.mq-form__grid { display: grid; gap: var(--space-16); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.mq-form__full { grid-column: 1 / -1; }
+.mq-form__check { display: flex; align-items: center; gap: var(--space-8); min-height: 44px; }
+/* Ko'p qatorli tushuntirishli checkbox — belgi matnning birinchi qatoriga
+   to'g'rilanadi (ilgari inline style edi). */
+.mq-form__check--top { align-items: flex-start; }
+.mq-form__error { border: 1px solid var(--color-error); background: var(--color-error-soft);
+  color: var(--color-error); border-radius: var(--radius-default); padding: var(--space-12) var(--space-16);
+  margin-bottom: var(--space-20); }
+.mq-authorrow { display: grid; gap: var(--space-8); grid-template-columns: 2fr 1fr 2fr auto;
+  align-items: end; margin-bottom: var(--space-12); }
+
+/* ── DOI metadata autofill paneli (Phase 2C.1) ────────────────────────────── */
+
+.mq-meta__doi { display: flex; gap: var(--space-8); align-items: flex-start; flex-wrap: wrap; }
+.mq-meta__doi .ol-field { flex: 1 1 220px; min-width: 0; }
+.mq-meta__fetch { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+
+.mq-meta {
+  grid-column: 1 / -1;
+  margin-top: var(--space-20);
+  padding: var(--space-16);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+.mq-meta[hidden] { display: none; }
+.mq-meta__status { margin: 0 0 var(--space-12); font-size: var(--text-small);
+  color: var(--color-text-secondary); }
+
+/* Provayder holati — rang YAKKA belgi emas: har bir chip ichida nom va
+   holat matni bor (dizayn tizimi §5.2). */
+.mq-meta__providers { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin: 0 0 var(--space-12); padding: 0; list-style: none; }
+.mq-meta__provider {
+  display: inline-flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-rounded);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+.mq-meta__provider--ok { border-color: var(--color-success); color: var(--color-success); }
+.mq-meta__provider--warn { border-color: var(--color-notice); color: var(--color-text-secondary); }
+.mq-meta__provider--off { background: var(--color-background-soft); color: var(--color-text-muted); }
+
+.mq-meta__alerts { display: flex; flex-direction: column; gap: var(--space-8); }
+.mq-meta__alerts:not(:empty) { margin-bottom: var(--space-12); }
+.mq-meta__alert {
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-action-blue);
+  border-radius: var(--radius-default);
+  background: var(--color-blue-soft);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+.mq-meta__alert--notice { border-left-color: var(--color-notice);
+  background: var(--color-notice-soft); }
+.mq-meta__alert--error { border-left-color: var(--color-error);
+  background: var(--color-error-soft); color: var(--color-error); }
+
+.mq-meta__actions { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+.mq-meta__actions .ol-btn { min-height: 44px; }
+.mq-meta__details { margin-top: var(--space-16); }
+.mq-meta__details[hidden] { display: none; }
+
+.mq-meta__table td { vertical-align: top; overflow-wrap: anywhere; }
+.mq-meta__value { display: block; max-width: 34ch; }
+.mq-meta__value--empty { color: var(--color-text-muted); }
+.mq-meta__row--differs td { background: var(--color-notice-soft); }
+.mq-meta__apply { min-height: 44px; white-space: nowrap; }
+.mq-meta__source { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); }
+
+.mq-meta__group { margin-top: var(--space-20); }
+.mq-meta__group h4 { margin: 0 0 var(--space-8); font-size: var(--text-body);
+  font-weight: 600; color: var(--color-text-primary); }
+.mq-meta__list { margin: 0; padding-left: var(--space-20);
+  font-size: var(--text-small); color: var(--color-text-secondary); }
+.mq-meta__list li + li { margin-top: var(--space-4); }
+.mq-meta__note { margin: var(--space-8) 0 0; font-size: var(--text-meta);
+  color: var(--color-text-muted); }
+
+/* ── Metadata sinxronizatsiyasi (Phase 2C.3A) — .mq-meta bilan bir xil
+   qatlam qoidalari, alohida namespace ── */
+.mq-sync {
+  grid-column: 1 / -1;
+  margin-top: var(--space-20);
+  padding: var(--space-16);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+}
+.mq-sync__actions { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin-top: var(--space-8); }
+.mq-sync__actions .ol-btn { min-height: 44px; }
+.mq-sync__status { margin: var(--space-8) 0 0; font-size: var(--text-small);
+  color: var(--color-text-secondary); }
+.mq-sync__result[hidden] { display: none; }
+.mq-sync__result { margin-top: var(--space-16); }
+.mq-sync__summary { margin: 0 0 var(--space-12); font-size: var(--text-small);
+  color: var(--color-text-secondary); font-weight: 600; }
+
+.mq-sync__warnings { display: flex; flex-direction: column; gap: var(--space-8); }
+.mq-sync__warnings:not(:empty) { margin-bottom: var(--space-12); }
+.mq-sync__warning {
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-notice);
+  border-radius: var(--radius-default);
+  background: var(--color-notice-soft);
+  font-size: var(--text-small); color: var(--color-text-secondary);
+}
+
+.mq-sync__table td { vertical-align: top; overflow-wrap: anywhere; }
+.mq-sync__row--critical td { background: var(--color-error-soft); }
+.mq-sync__row--review td { background: var(--color-notice-soft); }
+.mq-sync__row--safe td { background: var(--color-success-soft); }
+.mq-sync__note { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); margin-top: var(--space-4); }
+
+.mq-sync__confirm[hidden] { display: none; }
+.mq-sync__confirm { margin-top: var(--space-12); }
+
+/* ── Moslashuvchanlik ─────────────────────────────────────────────────────── */
+
+@media (max-width: 1023px) {
+  .mq-detail { grid-template-columns: 1fr; }
+  .mq-detail__aside { position: static; }
+}
+@media (max-width: 767px) {
+  .mq-layout { flex-direction: column; }
+  .mq-grid { grid-template-columns: 1fr; }
+  .mq-resultbar { flex-direction: column; align-items: stretch; }
+  .mq-resultbar__controls { justify-content: space-between; }
+  .mq-authorrow { grid-template-columns: 1fr; }
+  .mq-deflist { grid-template-columns: 1fr; gap: var(--space-4) 0; }
+  .mq-deflist dd { margin-bottom: var(--space-8); }
+}
+@media (max-width: 480px) {
+  .mq-card { padding: var(--space-16); }
+  .mq-tree .mq-tree { margin-left: var(--space-8); padding-left: var(--space-8); }
+  .mq-tree__name { min-width: 100%; }
+}
+
+/* ── Yo'nalish qidiruv natijalari (katta taksonomiya) ─────────────────────── */
+
+.mq-tree__labels { flex: 1; min-width: 200px; display: flex; flex-wrap: wrap;
+  align-items: baseline; gap: var(--space-8); }
+.mq-tree__labels .mq-tree__name { flex: 0 1 auto; min-width: 0; }
+.mq-tree__cyrillic { flex-basis: 100%; font-size: var(--text-small);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+
+.mq-results { list-style: none; margin: 0; padding: 0; }
+.mq-results__item { padding: var(--space-16) 0;
+  border-bottom: 1px solid var(--color-border-subtle); }
+.mq-results__item:last-child { border-bottom: 0; }
+.mq-results__head { display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--space-8); }
+.mq-results__head .mq-tree__name { min-height: 44px; display: inline-flex;
+  align-items: center; }
+.mq-results__cyrillic { margin: var(--space-4) 0 0; font-size: var(--text-small);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+.mq-results__context { margin: var(--space-8) 0 0; display: flex; flex-wrap: wrap;
+  gap: var(--space-8); align-items: center;
+  font-size: var(--text-small); color: var(--color-text-muted); }
+.mq-results__count { margin-left: auto; white-space: nowrap; }
+
+/* ── Admin taksonomiya jadvali ────────────────────────────────────────────── */
+
+.mq-admin-name { max-width: 420px; overflow-wrap: anywhere; }
+.mq-admin-raw { display: block; font-size: var(--text-meta);
+  color: var(--color-text-muted); overflow-wrap: anywhere; }
+.mq-review__reasons { display: flex; flex-wrap: wrap; gap: var(--space-6);
+  margin: var(--space-8) 0 0; padding: 0; list-style: none; }
+
+@media (max-width: 767px) {
+  .mq-results__count { margin-left: 0; }
+  .mq-results__context { font-size: var(--text-meta); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Modul utility klasslari — inline `style="..."` o'rniga.
+   Dizayn tizimi qoidasi: sahifa ichida xom qiymat yozilmaydi, hamma narsa
+   nomlangan, prefiksli klass va token orqali beriladi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mq-flush { margin: 0; }
+.mq-flush-top { margin-top: 0; }
+.mq-gap-top { margin-top: var(--space-16); }
+.mq-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-8);
+  margin-bottom: var(--space-24); }
+.mq-toolbar .ol-btn { min-height: 44px; }
+.mq-wrap-any { overflow-wrap: anywhere; }
+/* Annotatsiya matnidagi abzas ajratgichlari saqlansin (DB'da xom matn). */
+.mq-pre-line { white-space: pre-line; }
+.mq-steps { margin: 0; padding-left: var(--space-20); }
+.mq-steps li + li { margin-top: var(--space-8); }
+
+/* Filtr paneli maydonlari — flex-basis qiymatlari bitta joyda. */
+.mq-field--grow { flex: 1 1 300px; }
+.mq-field--fixed { flex: 0 1 auto; min-width: 220px; }
+.mq-check { flex: 0 0 auto; }
+
+/* Nofaol jadval qatori. Shaffoflik YAGONA belgi emas — qator ichida
+   "Nofaol" yorlig'i ham bor (holat rang bilan berilmaydi). */
+.mq-row--inactive { opacity: 0.55; }
+
+/* ── 44px interaktiv o'lcham — modul ichida scoped ───────────────────────────
+   Dizayn tizimida `.ol-pager` 40px, `.ol-chip` va `.ol-facets__opt` 32px
+   bo'lib qolgan (legacy istisno). Ularni global o'zgartirish 50+ eski
+   sahifaning tartibiga ta'sir qiladi, shuning uchun accessibility tuzatishi
+   FAQAT maqolalar moduli sahifalari ichida qo'llanadi (`.mq-page`).
+   Global migratsiya alohida vazifa. */
+.mq-page .ol-pager a,
+.mq-page .ol-pager button { min-width: 44px; min-height: 44px; }
+.mq-page .ol-chip { min-height: 44px; }
+.mq-page .ol-facets__opt { min-height: 44px; }
+.mq-notice--spaced { margin-bottom: var(--space-16); }
+.mq-notice__text { margin: 0 0 var(--space-12); }
+
+/* ── Dashboard (Phase 2C.3B) — kichik yordamchi klasslar ─────────────────── */
+.mq-help {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  margin-top: var(--space-8);
+}
+.mq-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: center;
+}
+.mq-checkbox-cell {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mq-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-16);
+  margin: var(--space-16) 0;
+}
+.mq-detail-item__label {
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.mq-detail-item__value { color: var(--color-text-primary); }

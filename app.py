@@ -300,6 +300,14 @@ def inject_env_flags():
 
 
 @app.context_processor
+def inject_navigation():
+    """Yagona navigatsiya konfiguratsiyasi — header, mobil drawer va footer
+    aynan shu manbadan o'qiydi (utils/navigation.py)."""
+    from utils.navigation import navigation_context
+    return navigation_context()
+
+
+@app.context_processor
 def inject_broadcasts():
     """Expose active admin broadcasts to every template, filtered by audience."""
     from flask import session
@@ -794,6 +802,15 @@ from blueprints.maqolalar import maqolalar_bp
 from blueprints.share import share_bp
 from blueprints.kafedra import kafedra_bp
 from blueprints.data_quality import data_quality_bp
+# articles_bp — saytning O'Z maqolalar katalogi (/maqolalar). maqolalar_bp bilan
+# adashtirmang: u OpenAlex nashr tahlili (/maqolalar-tahlili), boshqa modul.
+from blueprints.articles import articles_bp
+# article_import_bp — DOI/CSV ommaviy import + ko'rib chiqish navbati (Phase
+# 2C.2). articles_bp'dan ATAYIN ajratilgan (u allaqachon 2000+ qator).
+from blueprints.article_import import article_import_bp
+# article_discovery_bp — Manual OpenAlex Article Discovery (Phase 2D.1).
+# Faqat article_import navbatiga yozadi, o'zi maqola yaratmaydi.
+from blueprints.article_discovery import article_discovery_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(data_bp)
@@ -828,6 +845,9 @@ app.register_blueprint(maqolalar_bp)
 app.register_blueprint(share_bp)
 app.register_blueprint(kafedra_bp)
 app.register_blueprint(data_quality_bp)
+app.register_blueprint(articles_bp)
+app.register_blueprint(article_import_bp)
+app.register_blueprint(article_discovery_bp)
 
 # ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])
@@ -2289,16 +2309,23 @@ def api_collaboration_search():
 
 
 # ── Topic clustering (keyword-based grouping of dissertation topics) ────────
-_IXT_GROUPS = {  # ixtisoslik prefix -> (group key, color)
-    "13": ("education", "#059669"), "05": ("technical", "#3b82f6"),
-    "14": ("medical", "#ef4444"), "08": ("economics", "#f59e0b"),
-    "12": ("law", "#8b5cf6"),
+# ixtisoslik prefiksi -> (guruh kaliti, rang).
+# Ranglar static/js/olimlar-charts.js dagi kategoriya palitrasiga mos:
+# oq fonda bir-biridan ajraladi, neon emas. Rang guruhga biriktirilgan
+# (tasodifiy emas), shuning uchun klaster kartasi va bubble chart bir xil
+# ma'noni ko'rsatadi.
+_IXT_GROUPS = {
+    "13": ("education", "#0c8930"),   # pedagogika — yashil
+    "05": ("technical", "#0056d6"),   # texnika — ko'k
+    "14": ("medical", "#af1d1d"),     # tibbiyot — qizil
+    "08": ("economics", "#8a5200"),   # iqtisodiyot — to'q sariq
+    "12": ("law", "#7a3ea3"),         # huquq — binafsha
 }
 
 
 def _ixt_group(code):
     pre = (code or "")[:2]
-    return _IXT_GROUPS.get(pre, ("other", "#64748b"))
+    return _IXT_GROUPS.get(pre, ("other", "#666666"))
 
 
 def _cluster_trend(year_counts):

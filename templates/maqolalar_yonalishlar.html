@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+{% from "components/field_tree.html" import tree, field_results %}
+{% from "components/article_bits.html" import pager %}
+
+{% block title %}Fan yo'nalishlari | Olimlar.uz{% endblock %}
+{% block meta_description %}Ilmiy maqolalar uchun fan yo'nalishlari katalogi — OAK klassifikatsiyasiga mos ierarxiya: fan tarmog'i, ixtisoslik guruhi va ixtisoslik.{% endblock %}
+
+{% block seo_extra %}
+{% from 'partials/seo_meta.html' import seo_meta %}
+{{ seo_meta(
+     "Fan yo'nalishlari",
+     "OAK klassifikatsiyasiga mos fan tarmoqlari va ixtisosliklar ierarxiyasi.",
+     schema_type='CollectionPage',
+     canonical_path='/maqolalar/yonalishlar') }}
+{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {{ page_header(
+       "Fan yo'nalishlari",
+       "Maqolalar katalogi OAK klassifikatsiyasiga mos ierarxiya bo'yicha tartiblangan: fan tarmog'i, ixtisoslik guruhi va ixtisoslik.",
+       crumbs=[('Bosh sahifa', '/'), ('Ilmiy maqolalar', '/maqolalar')],
+       meta=['%d ta yo\'nalish' % field_total, '%d ta maqola' % article_total]) }}
+
+  <section class="ol-section" aria-labelledby="mq-yonalish-qidiruv">
+    <h2 id="mq-yonalish-qidiruv" class="mq-sr-only">Yo'nalishlar bo'yicha qidiruv</h2>
+    <form class="ol-filters" method="get" action="/maqolalar/yonalishlar" role="search">
+      <div class="ol-filters__row">
+        <div class="ol-field-group mq-field--grow">
+          <label class="ol-label" for="mq-field-q">Yo'nalish nomi yoki shifri</label>
+          <input class="ol-field" type="search" id="mq-field-q" name="q" value="{{ query }}"
+                 placeholder="Masalan: kiberxavfsizlik yoki 05.01"
+                 aria-describedby="mq-field-q-help">
+          <span class="ol-meta" id="mq-field-q-help">
+            Shifr bo'yicha prefiks ham ishlaydi: <code>05.01</code>
+          </span>
+        </div>
+        <div class="ol-field-group mq-field--fixed">
+          <label class="ol-label" for="mq-branch">Fan tarmog'i</label>
+          <select class="ol-field" id="mq-branch" name="tarmoq">
+            <option value="">Barcha tarmoqlar</option>
+            {% for branch in branches %}
+            <option value="{{ branch.slug }}" {{ 'selected' if branch_slug == branch.slug }}>
+              {{ branch.name_uz }}{% if branch.code %} ({{ branch.code }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <label class="ol-facets__opt mq-check" for="mq-only-with">
+          <input type="checkbox" id="mq-only-with" name="bor" value="1"
+                 {{ 'checked' if only_with_articles }}>
+          Faqat maqolasi mavjud yo'nalishlar
+        </label>
+        <div class="ol-filters__actions">
+          <a class="ol-btn ol-btn--tertiary" href="/maqolalar/yonalishlar">Tozalash</a>
+          <button type="submit" class="ol-btn ol-btn--primary">Qidirish</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  {% if flat_results is not none %}
+  {# ── Qidiruv/filtr rejimi: tekis, sahifalangan ro'yxat ── #}
+  <section class="ol-section" aria-labelledby="mq-yonalish-natija">
+    <h2 id="mq-yonalish-natija" class="ol-h4">Natijalar</h2>
+    <p class="mq-resultbar__count" role="status">
+      <strong>{{ total_matches }}</strong> ta yo'nalish topildi
+    </p>
+
+    {% if flat_results %}
+      {{ field_results(flat_results) }}
+      {{ pager(page, pages, qs) }}
+    {% else %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Yo'nalish topilmadi</h3>
+      <p class="ol-body">Boshqa nom yoki shifr bilan qidirib ko'ring.</p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">Barcha yo'nalishlar</a>
+    </div>
+    {% endif %}
+  </section>
+
+  {% else %}
+  {# ── Ko'rib chiqish rejimi: daraxt, hammasi yopiq ── #}
+  <section class="ol-section" aria-labelledby="mq-yonalish-royxat">
+    <h2 id="mq-yonalish-royxat" class="ol-h4">Yo'nalishlar katalogi</h2>
+
+    {% if field_tree %}
+      <p class="ol-meta">
+        Fan tarmog'ini ochish uchun yonidagi tugmani bosing.
+        Ixtisosliklar shifr bo'yicha tartiblangan.
+      </p>
+      {{ tree(field_tree) }}
+    {% elif only_with_articles %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Maqolasi mavjud yo'nalish yo'q</h3>
+      <p class="ol-body">Maqolalar joylashtirilgach bu ro'yxat to'ladi.</p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">Barcha yo'nalishlar</a>
+    </div>
+    {% else %}
+    <div class="ol-empty">
+      <h3 class="ol-h5">Yo'nalishlar katalogi hali to'ldirilmagan</h3>
+      <p class="ol-body">
+        Fan yo'nalishlari OAK klassifikatsiyasidan olinadi va tasdiqlangan
+        manbadan kiritiladi — sun'iy kategoriyalar yaratilmaydi.
+      </p>
+      <a class="ol-btn ol-btn--secondary" href="/maqolalar">Maqolalar katalogiga qaytish</a>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="ol-section" aria-labelledby="mq-yonalish-manba">
+    <h2 id="mq-yonalish-manba" class="ol-h4">Ma'lumot manbasi</h2>
+    <div class="ol-card">
+      <p class="ol-body mq-flush">
+        Ierarxiya OAK klassifikatsiyasiga asoslanadi: fan tarmog'i,
+        ixtisosliklar guruhi va ixtisoslik. Tarmoq va guruh nomlari
+        &laquo;Oliy malakali ilmiy va ilmiy-pedagog kadrlar ixtisosliklari
+        ro'yxati&raquo; (OAK, 2021) hujjatidan olingan. Har bir yozuvning
+        rasmiy kirill nomi saqlanadi; lotin varianti deterministik
+        transliteratsiya orqali hosil qilingan va rasmiy tarjima emas.
+      </p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+{% endblock %}

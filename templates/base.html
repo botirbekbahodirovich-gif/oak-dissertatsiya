@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz" data-bs-theme="dark">
+<html lang="uz" data-bs-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="csrf-token" content="{{ csrf_token_value() }}" />
@@ -21,9 +21,13 @@
 
   <!-- PWA -->
   <link rel="manifest" href="/static/manifest.json">
-  <meta name="theme-color" content="#1e40af">
+  {# Light-only: bitta theme-color, tizim rejimiga qarab almashmaydi. #}
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {# `black-translucent` kontentni status bar ostiga chiqarardi va oq
+     header ustida oq matn berardi — light UI uchun `default`. #}
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Olimlar.uz">
   <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 
@@ -31,8 +35,12 @@
   <meta name="description" content="{% block meta_description %}Olimlar.uz — O'zbekistondagi eng katta ilmiy-tadqiqot ma'lumotlar bazasi. 29,000+ dissertatsiya, tadqiqotchi profillari, AI mavzu tahlili.{% endblock %}">
   <meta name="keywords" content="{% block meta_keywords %}dissertatsiya, olimlar, PhD, DSc, OAK, ilmiy tadqiqot, O'zbekiston, ilmiy rahbar, avtoreferat, himoya{% endblock %}">
   <meta name="author" content="Olimlar.uz">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="{{ request.url }}">
+  {# Sukut bo'yicha indekslanadi. Kanonik bo'lmagan ko'rish rejimlari (masalan
+     maqola PDF o'quvchisi) shu ikki blokni qayta ta'riflaydi — ikkinchi
+     <meta robots> qo'shish o'rniga, aks holda sahifada ikkita qarama-qarshi
+     direktiva qoladi. #}
+  <meta name="robots" content="{% block robots %}index, follow{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ request.url }}{% endblock %}">
 
   <!-- Open Graph -->
   <meta property="og:type" content="{% block og_type %}website{% endblock %}">
@@ -101,314 +109,126 @@
   </style>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" crossorigin="anonymous" />
+  {# Olimlar.uz dizayn tizimi — rang/tipografiya/spacing tokenlari va umumiy
+     komponentlar. Bootstrap'dan KEYIN, sahifa stillaridan OLDIN. #}
+  <link href="/static/css/olimlar-design-system.css?v=20260806" rel="stylesheet" />
   {% if request.path != '/' %}{# bosh sahifa grafiksiz — LCP uchun Chart.js keraksiz #}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  {# Yagona light-theme chart sozlamalari + kategoriya palitrasi.
+     Chart.js dan KEYIN yuklanadi, sahifa skriptlaridan OLDIN. #}
+  <script src="/static/js/olimlar-charts.js?v=20260806"></script>
   {% endif %}
   <style>
+    /* Eski --oak-* o'zgaruvchilari saqlanadi (50+ shablon ularga tayangan),
+       lekin endi ular olimlar-design-system.css tokenlariga bog'langan.
+       Yangi kodda to'g'ridan-to'g'ri --color-* tokenlaridan foydalaning. */
     :root {
-      --oak-accent: #4a9eff;
-      --oak-accent-soft: rgba(74,158,255,0.12);
-      --oak-surface: #1a1d23;
-      --oak-surface-2: #22262f;
-      --oak-border: rgba(255,255,255,0.07);
-      --oak-text: #cbd5e1;
-      --oak-muted: #8899b4;
-      --oak-bg: #0f1114;
-      --oak-surface-light: #ffffff;
-      --oak-surface-2-light: #f8fafc;
-      --oak-border-light: rgba(15,23,42,0.12);
-      --oak-text-light: #0f172a;
-      --oak-muted-light: #475569;
-      --oak-bg-light: #f8fafc;
+      --oak-accent: var(--color-action-blue);
+      --oak-accent-soft: var(--color-blue-soft);
+      --oak-surface: var(--color-white);
+      --oak-surface-2: var(--color-background-soft);
+      --oak-border: var(--color-border);
+      --oak-text: var(--color-text-primary);
+      --oak-muted: var(--color-text-muted);
+      --oak-bg: var(--color-background);
+      --oak-surface-light: var(--color-white);
+      --oak-surface-2-light: var(--color-background-soft);
+      --oak-border-light: var(--color-border);
+      --oak-text-light: var(--color-text-primary);
+      --oak-muted-light: var(--color-text-muted);
+      --oak-bg-light: var(--color-background);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
       min-height: 100vh;
-      background: var(--oak-bg);
-      color: var(--oak-text);
-      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-background);
+      color: var(--color-text-primary);
+      font-family: var(--font-sans);
+      font-size: var(--text-body);
+      line-height: var(--leading-body);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-    [data-bs-theme="light"] body {
-      background: var(--oak-bg-light);
-      color: var(--oak-text-light);
-    }
-    [data-bs-theme="light"] .content-card,
-    [data-bs-theme="light"] .chart-card,
-    [data-bs-theme="light"] .table-panel,
-    [data-bs-theme="light"] .btn-theme-toggle,
-    [data-bs-theme="light"] .nav-toggle {
-      background: var(--oak-surface-light);
-      border-color: var(--oak-border-light);
-      color: var(--oak-text-light);
-    }
-    [data-bs-theme="light"] .form-control,
-    [data-bs-theme="light"] .form-select,
-    [data-bs-theme="light"] .input-group-text {
-      background: var(--oak-surface-light);
-      color: var(--oak-text-light);
-      border-color: rgba(15,23,42,0.12);
-    }
-    [data-bs-theme="light"] .site-header { background: #ffffff; border-color: rgba(15,23,42,0.12); }
-    [data-bs-theme="light"] .site-nav { background: #ffffff; }
-    [data-bs-theme="light"] .nav-link,
-    [data-bs-theme="light"] .btn-logout,
-    [data-bs-theme="light"] .username { color: var(--oak-text-light); }
-    [data-bs-theme="light"] .nav-link:hover,
-    [data-bs-theme="light"] .nav-link.active { background: rgba(74,158,255,0.12); }
-    [data-bs-theme="light"] .content-card,
-    [data-bs-theme="light"] .chart-card,
-    [data-bs-theme="light"] .table-panel { box-shadow: 0 10px 30px rgba(15,23,42,0.05); }
-    [data-bs-theme="light"] .site-footer { color: var(--oak-muted-light); }
-    [data-bs-theme="light"] .btn-action { background: rgba(74,158,255,0.1); }
     a {
       color: inherit;
       text-decoration: none;
-      transition: color 0.15s ease, text-decoration 0.15s ease;
+      transition: color 0.15s ease;
     }
-    a:hover, .nav-link:hover, .btn-logout:hover, .btn:hover {
-      color: #4a9eff;
-      text-decoration: underline;
-    }
-    button, .btn, .nav-link, .btn-logout, input, select {
-      transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .profile a:hover, .profile button:hover, .profile .nav-link:hover {
-      color: #4a9eff;
-      text-decoration: underline;
+    a:hover, .btn:hover { color: var(--color-action-blue); text-decoration: underline; }
+    button, .btn, input, select {
+      transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
     }
     table a { color: inherit; text-decoration: none; }
-    table a:hover { text-decoration: underline; color: #4a9eff; cursor: pointer; }
-    .table tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.02); }
-    .table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.04); }
-    .table tbody tr:hover td { background: rgba(74,158,255,0.08); }
+    table a:hover { text-decoration: underline; color: var(--color-action-blue); cursor: pointer; }
+    .table tbody tr:hover td { background: var(--color-blue-soft); }
 
-    .site-header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(26,29,35,0.92);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--oak-border);
-    }
-    .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1rem;
-      min-height: 64px;
-      padding: 0.45rem 0;
-    }
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-    }
-    .brand-icon {
-      width: 36px;
-      height: 36px;
-      display: grid;
-      place-items: center;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #4a9eff, #7c5cfc);
-      color: #fff;
-      font-size: 1rem;
-    }
-    .brand-title { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
-    .brand-subtitle { display: none; margin: 0; color: var(--oak-muted); font-size: 0.75rem; }
-
-    .site-nav { background: var(--oak-surface); border-bottom: 1px solid var(--oak-border); }
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.65rem 0;
-      flex-wrap: wrap;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 0.15rem;
-      flex: 1 1 auto;
-      min-width: 0;
-      margin-left: 0.5rem;
-    }
-    .nav-link {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.62rem 0.85rem;
-      border-radius: 10px;
-      color: var(--oak-muted);
-      font-size: 0.9rem;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: color 0.17s;
-    }
-    /* underline slide */
-    .nav-link::after {
-      content: "";
-      position: absolute;
-      left: 0.85rem; right: 0.85rem; bottom: 4px;
-      height: 2px; border-radius: 2px;
-      background: var(--oak-accent);
-      transform: scaleX(0);
-      transform-origin: left center;
-      transition: transform 0.22s ease;
-    }
-    .nav-link.active,
-    .nav-link:hover { color: var(--oak-accent); text-decoration: none; }
-    .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
-    .nav-pill-new {
-      margin-left: 6px;
-      font-size: 0.62rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
-      padding: 2px 7px; border-radius: 999px;
-      background: rgba(52,211,153,0.16); color: #34d399;
-    }
-    /* "Boshqa" dropdown */
-    .nav-dd { position: relative; }
-    .nav-dd-btn { background: none; border: none; cursor: pointer; font-family: inherit; }
-    .nav-dd-btn::after { display: none; }
-    .nav-dd-menu {
-      position: absolute; top: calc(100% + 6px); left: 0; z-index: 300;
-      min-width: 210px; padding: 8px;
-      background: var(--oak-surface-2); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 14px; box-shadow: 0 18px 44px rgba(0,0,0,0.45);
-      display: none; flex-direction: column;
-    }
-    .nav-dd.open .nav-dd-menu { display: flex; }
-    .nav-dd-menu a {
-      display: block; padding: 8px 12px; border-radius: 8px;
-      color: var(--oak-muted); font-size: 0.88rem;
-    }
-    .nav-dd-menu a:hover { color: var(--oak-accent); background: rgba(74,158,255,0.08); text-decoration: none; }
-    .nav-dd-sep { height: 1px; margin: 6px 4px; background: rgba(255,255,255,0.08); }
-    [data-bs-theme="light"] .nav-dd-menu { background: #ffffff; border-color: rgba(15,23,42,0.12); }
-    .nav-icon-btn {
-      display: inline-grid; place-items: center;
-      width: 38px; height: 38px; border-radius: 10px;
-      color: var(--oak-muted); font-size: 1.02rem;
-      transition: color 0.17s, background 0.17s;
-    }
-    .nav-icon-btn:hover { color: var(--oak-accent); background: rgba(74,158,255,0.08); text-decoration: none; }
-    .nav-actions {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      flex-wrap: nowrap;
-      flex-shrink: 0;
-    }
-    .username {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.55rem 0.9rem;
-      border-radius: 9px;
-      background: rgba(255,255,255,0.03);
-      color: var(--oak-muted);
-      font-size: 0.86rem;
-    }
-    .btn-logout {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.55rem 0.9rem;
-      border-radius: 9px;
-      border: 1px solid rgba(248,113,113,0.25);
-      background: rgba(248,113,113,0.08);
-      color: #f87171;
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-    .btn-logout:hover { background: rgba(248,113,113,0.16); }
-    .nav-toggle {
-      display: none;
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: var(--oak-surface-2);
-      color: var(--oak-muted);
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    .content-main { padding: 1.5rem 0 3rem; }
+    .content-main { padding: var(--space-32) 0 var(--space-64); }
     .content-card {
-      border-radius: 16px;
-      border: 1px solid var(--oak-border);
-      background: var(--oak-surface);
-      padding: 1.5rem;
+      border-radius: var(--radius-default);
+      border: 1px solid var(--color-border);
+      background: var(--color-white);
+      padding: var(--space-24);
     }
-    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .page-heading h1 { margin: 0; font-size: 1.25rem; font-weight: 700; }
-    .page-heading p { margin: 0; color: var(--oak-muted); }
+    .page-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-16); flex-wrap: wrap; margin-bottom: var(--space-24); }
+    .page-heading h1 { margin: 0; font-family: var(--font-serif); font-size: var(--text-h3); line-height: var(--leading-heading); font-weight: 700; color: var(--color-text-primary); }
+    .page-heading p { margin: 0; color: var(--color-text-muted); }
 
-    .form-label { font-size: 0.78rem; font-weight: 600; color: var(--oak-muted); }
+    .form-label { font-size: var(--text-small); font-weight: 600; color: var(--color-text-secondary); }
     .form-control, .form-select, .input-group-text {
-      background: var(--oak-surface-2);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: var(--oak-text);
-      border-radius: 10px;
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+      border-radius: var(--radius-default);
+      min-height: 44px;
     }
-    .form-control:focus, .form-select:focus { border-color: var(--oak-accent); box-shadow: 0 0 0 3px rgba(74,158,255,0.14); }
-    .form-control::placeholder { color: #4a556a; }
-    .form-text { color: #6b7a99; }
-    .input-error { color: #f87171; font-size: 0.78rem; margin-top: 0.35rem; }
+    .form-control:focus, .form-select:focus { border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
+    .form-control::placeholder { color: var(--color-text-muted); }
+    .form-text { color: var(--color-text-muted); }
+    .input-error { color: var(--color-error); font-size: var(--text-small); margin-top: var(--space-4); }
 
     .btn-primary, .btn-action {
-      border-radius: 11px;
+      border-radius: var(--radius-default);
+      min-height: 44px;
       font-weight: 600;
-      transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     }
-    .btn-primary { background: var(--oak-accent); color: #fff; border: 1px solid transparent; }
-    .btn-primary:hover { opacity: 0.92; }
-    .btn-action { background: rgba(74,158,255,0.1); color: var(--oak-accent); border: 1px solid rgba(74,158,255,0.22); }
-    .btn-action:hover { background: rgba(74,158,255,0.16); }
+    .btn-primary { background: var(--color-action-blue); color: var(--color-white); border: 1px solid transparent; }
+    .btn-primary:hover { background: var(--color-action-blue-dark); color: var(--color-white); }
+    .btn-action { background: var(--color-white); color: var(--color-text-primary); border: 1px solid var(--color-border); }
+    .btn-action:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
     #btn-reset {
-      padding: 0.45rem 0.9rem;
-      font-size: 0.9rem;
-      border-radius: 10px;
-      background: rgba(148,163,184,0.14);
-      border-color: rgba(148,163,184,0.22);
-      color: #94a3b8;
+      min-height: 44px;
+      padding: var(--space-8) var(--space-16);
+      font-size: var(--text-small);
+      border-radius: var(--radius-default);
+      background: var(--color-white);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
     }
-    #btn-reset:hover { background: rgba(148,163,184,0.2); color: #4a9eff; }
-    .stat-card {
-      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 35px rgba(0,0,0,0.17);
-      border-color: rgba(255,255,255,0.12);
-    }
-    .alert-inline { border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.92rem; }
-    .alert-inline.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
-    .alert-inline.success { background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); color: #34d399; }
+    #btn-reset:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+    .stat-card { transition: border-color 0.15s ease, background-color 0.15s ease; }
+    .stat-card:hover { border-color: var(--color-action-blue-light); }
+    .alert-inline { border-radius: var(--radius-default); padding: var(--space-12) var(--space-16); margin-bottom: var(--space-16); font-size: var(--text-small); }
+    .alert-inline.error { background: var(--color-error-soft); border: 1px solid var(--color-error); color: var(--color-error); }
+    .alert-inline.success { background: var(--color-success-soft); border: 1px solid var(--color-success); color: var(--color-success); }
 
-    .table-panel { border-radius: 16px; overflow: hidden; border: 1px solid var(--oak-border); background: var(--oak-surface); }
-    .table-header-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--oak-border); }
-    .result-count { color: var(--oak-muted); font-size: 0.88rem; }
+    .table-panel { border-radius: var(--radius-default); overflow: hidden; border: 1px solid var(--color-border); background: var(--color-white); }
+    .table-header-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding: var(--space-16); border-bottom: 1px solid var(--color-border); }
+    .result-count { color: var(--color-text-muted); font-size: var(--text-small); }
     .table-scroll { overflow-x: auto; }
-    .table thead th { background: var(--oak-surface-2); color: var(--oak-muted); font-size: 0.72rem; letter-spacing: 0.5px; border-color: var(--oak-border); }
+    .table thead th { background: var(--color-background-soft); color: var(--color-text-secondary); font-size: var(--text-small); font-weight: 500; border-color: var(--color-border); }
     .table tbody tr { transition: background 0.15s ease; }
-    .table tbody tr:hover td { background: rgba(74,158,255,0.05) !important; }
-    .table tbody tr td { min-height: 48px; }
-    .search-highlight { background: #fff3a7; color: #1a1a1a; padding: 0 3px; border-radius: 2px; }
+    .table tbody tr:hover td { background: var(--color-blue-soft) !important; }
+    .table tbody tr td { min-height: 48px; border-color: var(--color-border-subtle); }
+    .search-highlight { background: var(--color-notice-soft); color: var(--color-text-primary); padding: 0 3px; border-radius: 2px; }
     /* Sticky table headers */
     .table-sticky thead th {
       position: sticky;
       top: 0;
       z-index: 10;
-      background: var(--oak-surface-2, #22262f);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      background: var(--color-background-soft);
+      border-bottom: 1px solid var(--color-border);
       white-space: nowrap;
     }
     /* Scrollable table wrapper */
@@ -416,7 +236,7 @@
       overflow-x: auto;
       overflow-y: auto;
       max-height: 70vh;
-      border-radius: 8px;
+      border-radius: var(--radius-default);
     }
     .table-wrapper .table-sticky thead th { top: 0; position: sticky; }
     /* Skeleton rows */
@@ -427,153 +247,116 @@
       .table tbody tr td { min-height: 48px; padding: 0.65rem 0.5rem; }
       .col-ixtisoslik, .col-sana { display: none; }
     }
-    .badge-phd { background: rgba(52,211,153,0.16); color: #34d399; }
-    .badge-dsc { background: rgba(227,100,3,0.16); color: #e36403; }
-    .supervisor-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.75rem; font-weight: 700; background: #eef2ff; color: #3b82f6; border-radius: 999px; padding: 2px 8px; margin-left: 4px; text-decoration: none; white-space: nowrap; }
-    .supervisor-badge:hover { background: #e0e7ff; color: #2563eb; text-decoration: none; }
+    .badge-phd { background: var(--color-success-soft); color: var(--color-success); }
+    .badge-dsc { background: var(--color-orange-soft); color: var(--color-brand-orange); }
+    .supervisor-badge { display: inline-flex; align-items: center; gap: 3px; font-size: var(--text-meta); font-weight: 600; background: var(--color-blue-soft); color: var(--color-action-blue); border-radius: var(--radius-rounded); padding: 2px var(--space-8); margin-left: var(--space-4); text-decoration: none; white-space: nowrap; }
+    .supervisor-badge:hover { background: var(--color-blue-soft); color: var(--color-action-blue-dark); text-decoration: none; }
 
-    .chart-card { border-radius: 16px; border: 1px solid var(--oak-border); background: var(--oak-surface); padding: 1.35rem; }
-    .chart-title { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; color: var(--oak-muted); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; }
-    .chart-title i { color: var(--oak-accent); }
+    .chart-card { border-radius: var(--radius-default); border: 1px solid var(--color-border); background: var(--color-white); padding: var(--space-24); }
+    .chart-title { display: flex; align-items: center; gap: var(--space-8); margin-bottom: var(--space-16); color: var(--color-text-secondary); font-size: var(--text-small); font-weight: 600; }
+    .chart-title i { color: var(--color-action-blue); }
     .chart-container { min-height: 240px; position: relative; }
     .heatmap-wrapper { overflow-x: auto; }
-    .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 0.78rem; }
-    .heatmap-table th { color: var(--oak-muted); font-weight: 600; text-transform: uppercase; padding: 6px 10px; }
-    .heatmap-table td { padding: 8px 10px; border-radius: 8px; text-align: center; font-weight: 700; }
-    .heatmap-table td.row-label { text-align: left; background: var(--oak-surface-2); color: var(--oak-muted); font-weight: 500; }
+    .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: var(--text-small); }
+    .heatmap-table th { color: var(--color-text-secondary); font-weight: 600; padding: var(--space-6) var(--space-12); }
+    .heatmap-table td { padding: var(--space-8) var(--space-12); border-radius: var(--radius-default); text-align: center; font-weight: 600; }
+    .heatmap-table td.row-label { text-align: left; background: var(--color-background-soft); color: var(--color-text-secondary); font-weight: 500; }
 
-    .loading-state, .empty-state { padding: 3rem 1rem; text-align: center; color: #6b7a99; }
-    .skeleton-bar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #22262f 25%, #2c3340 50%, #22262f 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+    .loading-state, .empty-state { padding: var(--space-48) var(--space-16); text-align: center; color: var(--color-text-muted); }
+    .skeleton-bar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--color-background-soft) 25%, #ededed 50%, var(--color-background-soft) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    .site-footer { padding: 1.5rem 0 2rem; text-align: center; color: var(--oak-muted); font-size: 0.82rem; }
+    .site-footer { padding: var(--space-24) 0 var(--space-32); text-align: center; color: var(--color-text-muted); font-size: var(--text-small); }
 
-    /* ── site-wide footer (edubaza style) ── */
-    .oak-footer { background: #0f172a; color: #fff; padding: 56px 0 32px; margin-top: 3rem; }
-    .oak-footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr 1fr; gap: 32px; }
-    .oak-foot-logo { font-size: 1.25rem; font-weight: 800; color: #fff; margin-bottom: 12px; }
-    .oak-foot-mission { font-size: 0.88rem; color: rgba(255,255,255,0.6); line-height: 1.6; max-width: 320px; margin: 0 0 14px; }
-    .oak-foot-tg { display: inline-flex; align-items: center; gap: 6px; color: #60a5fa; font-size: 0.9rem; font-weight: 600; }
-    .oak-foot-tg:hover { color: #93c5fd; text-decoration: none; }
-    .oak-foot-col h4 { font-size: 0.95rem; font-weight: 700; color: #fff; margin: 0 0 16px; }
-    .oak-foot-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-    .oak-foot-col ul a { color: rgba(255,255,255,0.7); font-size: 0.9rem; text-decoration: none; transition: color 0.2s ease; }
-    .oak-foot-col ul a:hover { color: #fff; text-decoration: none; }
-    .oak-foot-sep { border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 36px 0 20px; }
-    .oak-foot-bottom { text-align: center; color: rgba(255,255,255,0.55); font-size: 0.85rem; }
-    [data-bs-theme="light"] .oak-footer { background: #0f172a; color: #fff; }
-    @media (max-width: 1023px) { .oak-footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
-    @media (max-width: 575px) { .oak-footer-grid { grid-template-columns: 1fr; gap: 24px; } .oak-footer { padding: 40px 0 28px; } }
-    .btn-theme-toggle { position: fixed; top: 1rem; right: 1rem; z-index: 1100; width: 42px; height: 42px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: var(--oak-muted); display: grid; place-items: center; cursor: pointer; transition: all 0.18s; }
-    .btn-theme-toggle:hover { color: var(--oak-accent); border-color: rgba(74,158,255,0.3); }
     .scroll-top {
       position: fixed;
-      right: 1rem;
-      bottom: 1rem;
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(74,158,255,0.95);
-      color: #fff;
+      right: var(--space-16);
+      bottom: var(--space-16);
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--color-border);
+      background: var(--color-action-blue);
+      color: var(--color-white);
       display: grid;
       place-items: center;
-      box-shadow: 0 16px 30px rgba(0,0,0,0.22);
       cursor: pointer;
       opacity: 0;
       visibility: hidden;
-      transform: translateY(10px);
-      transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
-      z-index: 1200;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      z-index: 900;
     }
-    .scroll-top.visible { opacity: 1; visibility: visible; transform: translateY(0); }
+    .scroll-top.visible { opacity: 1; visibility: visible; }
 
     @media (max-width: 992px) { .page-heading { flex-direction: column; align-items: flex-start; } }
     @media (max-width: 1080px) {
-      /* mobil/planshet: brand + actions + hamburger; menyu — o'ngdan chiquvchi drawer */
-      .nav-toggle { display: inline-flex; flex-shrink: 0; }
-      .brand-logo { flex: 1 1 auto; min-width: 0; }
-      .nav-actions { gap: 0.3rem; }
-      .username { font-size: 0.78rem; padding: 0.4rem 0.6rem; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .btn-logout { font-size: 0.76rem; padding: 0.4rem 0.6rem; }
-      #nav-search-btn { display: none; }
-      .nav-links {
-        position: fixed; top: 0; right: 0; bottom: 0; z-index: 1300;
-        width: min(300px, 84vw); margin: 0;
-        flex-direction: column; align-items: stretch; gap: 0.15rem;
-        padding: 72px 14px 24px;
-        background: var(--oak-surface);
-        border-left: 1px solid rgba(255,255,255,0.1);
-        box-shadow: -24px 0 60px rgba(0,0,0,0.45);
-        overflow-y: auto;
-        transform: translateX(100%);
-        visibility: hidden;
-        transition: transform 0.28s ease, visibility 0.28s;
-      }
-      .nav-links.open { transform: translateX(0); visibility: visible; }
-      .nav-link { padding: 0.7rem 0.85rem; font-size: 0.92rem; min-height: 44px; }
-      .nav-link::after { display: none; }
-      .nav-link.active { background: rgba(74,158,255,0.1); }
-      /* drawer ichida "Boshqa" ro'yxati doim ochiq */
-      .nav-dd-btn { display: none; }
-      .nav-dd-menu {
-        display: flex; position: static; min-width: 0; padding: 0;
-        background: transparent; border: none; box-shadow: none;
-        border-top: 1px solid rgba(255,255,255,0.08); margin-top: 6px; padding-top: 6px;
-      }
-      .nav-dd-menu a { padding: 0.65rem 0.85rem; min-height: 44px; display: flex; align-items: center; }
-      .table thead th, .table tbody td { padding: 0.55rem 0.6rem; font-size: 0.82rem; }
+      .table thead th, .table tbody td { padding: var(--space-8); font-size: var(--text-small); }
     }
-    @media (max-width: 576px) {
-      .content-main { padding: 0.75rem 0 2rem; }
-      .content-card { padding: 0.9rem; }
+    @media (max-width: 649px) {
+      .content-main { padding: var(--space-20) 0 var(--space-40); }
+      .content-card { padding: var(--space-16); }
       .chart-container { min-height: 220px; }
-      .btn-theme-toggle { top: 0.6rem; right: 0.6rem; width: 36px; height: 36px; }
-      .brand-subtitle { display: none; }
     }
 
-    /* ════════════ GLOBAL DARK THEME (force dark across the whole site) ════════════ */
-    html, body { background-color: #0f172a !important; color: #e2e8f0 !important; }
-    /* page wrappers used by the custom (formerly light) pages */
-    .hp, .lite, .op, .op-body, .ph-page { background: #0f172a !important; color: #e2e8f0 !important; }
-    /* section backgrounds */
-    .help-sec, .faq-sec, .final-sec, .top-sec, .hp .top-sec { background: #0f172a !important; }
-    .cap-sec, .recent-sec, .news-carousel-sec { background: #162032 !important; }
-    .hero-text-sec { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important; }
-    /* cards & panels */
+    /* ═══════ LEGACY BRIDGE — eski dark qatlamdan light dizayn tizimiga ═══════
+       Bu blok ilgari butun saytni majburan dark qilardi. Endi u aksincha:
+       o'sha sahifa-klasslarini yangi light tokenlarga bog'laydi.
+
+       QOIDALAR (buzilmasin):
+       1. Faqat ESKI sahifa klasslari (.hp-*, .op-*, .nc-*, ...). Yangi `.ol-*`
+          komponentlari bu yerda hech qachon paydo bo'lmasin.
+       2. Umumiy `.card`, `.table`, `.panel`, `.text-white`, `canvas`, Bootstrap
+          klasslari va modal/dropdown selektorlari qo'shilmasin — ular butun
+          saytni buzadi.
+       3. `!important` faqat sahifa ichidagi dark qiymatni yengish uchun zarur
+          bo'lganda. Yangi qoida qo'shishdan oldin `!important`siz sinab ko'ring.
+       4. Blok o'smasin — Phase 2 da har bir shablon ko'chirilgach qisqarsin. */
+    /* body: !important shart emas — hech bir jonli shablon body fonini
+       qayta belgilamaydi (faqat print stillari, ular kaskadda keyin keladi). */
+    html, body { background-color: var(--color-background); color: var(--color-text-primary); }
+    /* sahifa wrapperlari */
+    .hp, .lite, .op, .op-body, .ph-page { background: var(--color-background) !important; color: var(--color-text-primary) !important; }
+    /* section fonlari — oq va och kulrang navbatlashadi */
+    .help-sec, .faq-sec, .final-sec, .top-sec, .hp .top-sec { background: var(--color-background) !important; }
+    .cap-sec, .recent-sec, .news-carousel-sec { background: var(--color-background-soft) !important; }
+    .hero-text-sec { background: var(--color-background-soft) !important; }
+    /* kartalar va panellar — tekis, border bilan, soyasiz */
     .news-card, .help-card, .cap-card, .top-card, .rd-card, .faq-item,
     .ng-card, .team-card, .contact-card, .about-card, .as-item, .detail-card,
     .tl-row, .op-card, .op-list-card, .op-empty, .role-item, .lite .detail-card,
     .admin-card, .admin-table-panel {
-      background: #1e293b !important; border-color: #334155 !important;
+      background: var(--color-white) !important;
+      border-color: var(--color-border) !important;
+      border-radius: var(--radius-default) !important;
+      box-shadow: none !important;
     }
-    .pager a, .pager span { background: #1e293b !important; border-color: #334155 !important; color: #93bbfc !important; }
-    .pager .cur { background: #3b82f6 !important; color: #fff !important; }
-    /* headings → near-white */
+    .pager a, .pager span { background: var(--color-white) !important; border-color: var(--color-border) !important; color: var(--color-action-blue) !important; }
+    .pager .cur { background: var(--color-action-blue) !important; color: var(--color-white) !important; }
+    /* sarlavhalar */
+    /* .nc-title atayin bu ro'yxatda yo'q — u havola, quyida blue bo'ladi. */
     .hp-h2, .hero-h1, .lite h1, .ph-page h1, .detail-card h1, .final-sec h2,
     .about-mission, .op-sec-title, .help-card h3, .cap-card h3, .op-card h3,
-    .team-name, .nc-title, .ng-title, .faq-q, .lc-title { color: #f1f5f9 !important; }
-    /* body/muted text */
+    .team-name, .ng-title, .faq-q, .lc-title { color: var(--color-text-primary) !important; }
+    .hp-h2, .hero-h1, .lite h1, .ph-page h1, .final-sec h2 { font-family: var(--font-serif) !important; }
+    /* body va muted matn */
     .hp-sub, .hp-eyebrow, .hero-p, .help-card p, .cap-list li, .lite-sub,
     .ph-sub, .nc-summary, .nc-date, .rd-mavzu, .rd-date, .about-card p, .about-card,
     .op-card-meta, .op-empty, .tl-sub, .team-bio, .team-role, .faq-a-inner,
     .contact-lbl, .ng-summary, .ng-date, .detail-summary, .detail-content,
-    .op-stats, .trust-text, .lc-meta { color: #94a3b8 !important; }
-    .trust-text b, .final-text b { color: #e2e8f0 !important; }
-    /* links → light blue */
+    .op-stats, .trust-text, .lc-meta { color: var(--color-text-muted) !important; }
+    .trust-text b, .final-text b { color: var(--color-text-primary) !important; }
+    /* havolalar */
     .rd-name, .top-name, .tl-name, .ng-more, .nc-title, .cc-name, .rd-name:hover,
-    .contact-val, .contact-val a, .role-main .rm-title, .role-main .rm-title a { color: #60a5fa !important; }
-    /* hero "new" badge / eyebrow chips stay readable */
-    .hp-eyebrow { background: #1e293b !important; }
-    .hero-newbadge { color: #94a3b8 !important; }
-    /* dashed empty-state border */
-    .op-empty { border-color: #334155 !important; }
-    /* dark scrollbar */
-    * { scrollbar-color: #334155 #0f172a; }
+    .contact-val, .contact-val a, .role-main .rm-title, .role-main .rm-title a { color: var(--color-action-blue) !important; }
+    .hp-eyebrow { background: var(--color-blue-soft) !important; }
+    .hero-newbadge { color: var(--color-text-muted) !important; }
+    .op-empty { border-color: var(--color-border) !important; }
+    /* scrollbar — universal selektor emas, faqat ildiz element */
+    html { scrollbar-color: #c9c9c9 var(--color-background-soft); }
     ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 6px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    ::-webkit-scrollbar-track { background: var(--color-background-soft); }
+    ::-webkit-scrollbar-thumb { background: #c9c9c9; border-radius: var(--radius-default); }
+    ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
 
     /* ── Data protection — prevent easy copy ── */
     .table-container,
@@ -624,7 +407,7 @@
         transform: translate(-50%, -50%) rotate(-30deg);
         font-size: 5rem;
         font-weight: 800;
-        color: rgba(59, 130, 246, 0.03);
+        color: rgba(12, 15, 18, 0.03);
         pointer-events: none;
         z-index: 1;
         white-space: nowrap;
@@ -637,9 +420,9 @@
         padding: 0 16px;
     }
     .ad-placeholder {
-        background: linear-gradient(135deg, #162032 0%, #1e293b 100%);
-        border: 1px dashed #334155;
-        border-radius: 12px;
+        background: var(--color-background-soft);
+        border: 1px dashed var(--color-border);
+        border-radius: var(--radius-default);
         padding: 20px;
         text-align: center;
         position: relative;
@@ -650,23 +433,23 @@
         top: 8px;
         right: 12px;
         font-size: 0.65rem;
-        color: #475569;
+        color: var(--color-text-muted);
         text-transform: uppercase;
         letter-spacing: 1px;
     }
     .ad-slot { padding: 12px; }
     .ad-cta {
-        color: #64748b;
+        color: var(--color-text-muted);
         font-size: 0.85rem;
         margin-bottom: 8px;
     }
     .ad-contact {
-        color: #3b82f6;
+        color: var(--color-action-blue);
         font-size: 0.8rem;
         text-decoration: none;
         font-weight: 600;
     }
-    .ad-contact:hover { color: #60a5fa; }
+    .ad-contact:hover { color: var(--color-action-blue); }
     .ad-horizontal .ad-placeholder {
         min-height: 90px;
         display: flex;
@@ -701,37 +484,27 @@
 
     /* ── Kontekstual CTA banner (partials/cta_banner.html) ── */
     .olz-cta {
-      border: 1px solid var(--oak-border);
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--oak-surface) 0%, var(--oak-surface-2) 100%);
-      padding: 20px 24px;
-      margin: 20px 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-      transition: box-shadow 0.2s ease;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-banner);
+      background: var(--color-white);
+      padding: var(--space-20) var(--space-24);
+      margin: var(--space-20) 0;
+      transition: border-color 0.15s ease;
     }
-    [data-bs-theme="light"] .olz-cta {
-      background: linear-gradient(135deg, var(--oak-surface-light) 0%, var(--oak-surface-2-light) 100%);
-      box-shadow: 0 1px 3px rgba(15,23,42,0.05);
-    }
-    .olz-cta:hover { box-shadow: 0 4px 14px rgba(0,0,0,0.22); }
-    [data-bs-theme="light"] .olz-cta:hover { box-shadow: 0 4px 12px rgba(15,23,42,0.08); }
-    .olz-cta__inner { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .olz-cta__icon { font-size: 32px; flex-shrink: 0; }
+    .olz-cta:hover { border-color: var(--color-action-blue-light); }
+    .olz-cta__inner { display: flex; align-items: center; gap: var(--space-20); flex-wrap: wrap; }
+    .olz-cta__icon { font-size: 32px; flex-shrink: 0; color: var(--color-action-blue); }
     .olz-cta__content { flex: 1; min-width: 240px; }
-    .olz-cta__title { font-size: 1.05rem; font-weight: 700; color: var(--oak-text); margin: 0 0 6px; letter-spacing: -0.01em; }
-    [data-bs-theme="light"] .olz-cta__title { color: var(--oak-text-light); }
-    .olz-cta__body { font-size: 0.85rem; color: var(--oak-muted); margin: 0; line-height: 1.5; }
-    [data-bs-theme="light"] .olz-cta__body { color: var(--oak-muted-light); }
+    .olz-cta__title { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-6); }
+    .olz-cta__body { font-size: var(--text-small); color: var(--color-text-muted); margin: 0; line-height: var(--leading-body); }
     .olz-cta__btn {
-      display: inline-flex; align-items: center; padding: 10px 20px;
-      background: var(--oak-accent); color: #fff; border-radius: 8px;
-      text-decoration: none; font-weight: 600; font-size: 0.85rem; white-space: nowrap;
+      display: inline-flex; align-items: center; min-height: 44px; padding: var(--space-12) var(--space-20);
+      background: var(--color-action-blue); color: #fff; border-radius: var(--radius-default);
+      text-decoration: none; font-weight: 600; font-size: var(--text-small); white-space: nowrap;
     }
-    .olz-cta__btn:hover { background: #3b8ce8; color: #fff; text-decoration: none; }
-    .olz-cta--profile { background: linear-gradient(135deg, rgba(250,204,21,0.08) 0%, var(--oak-surface) 100%); }
-    [data-bs-theme="light"] .olz-cta--profile { background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%); }
-    .olz-cta--action { background: linear-gradient(135deg, var(--oak-accent-soft) 0%, var(--oak-surface) 100%); }
-    [data-bs-theme="light"] .olz-cta--action { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
+    .olz-cta__btn:hover { background: var(--color-action-blue-dark); color: #fff; text-decoration: none; }
+    .olz-cta--profile { background: var(--color-orange-soft); border-color: var(--color-border-subtle); }
+    .olz-cta--action { background: var(--color-blue-soft); border-color: var(--color-border-subtle); }
     @media (max-width: 640px) {
       .olz-cta__inner { flex-direction: column; align-items: flex-start; }
       .olz-cta__btn { width: 100%; justify-content: center; }
@@ -739,29 +512,24 @@
 
     /* ── Olim profili: dual-CTA (ro'yxatdan o'tish taklifi) ── */
     .olz-dual-cta {
-      border: 1px solid var(--oak-border);
-      border-radius: 12px;
-      padding: 32px;
-      margin: 40px 0 24px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-banner);
+      padding: var(--space-32);
+      margin: var(--space-40) 0 var(--space-24);
       text-align: center;
-      background: linear-gradient(180deg, rgba(250,204,21,0.06) 0%, var(--oak-surface) 60%);
+      background: var(--color-orange-soft);
     }
-    [data-bs-theme="light"] .olz-dual-cta { background: linear-gradient(180deg, #fefce8 0%, #ffffff 60%); }
-    .olz-dual-cta__title { font-size: 1.3rem; font-weight: 700; color: var(--oak-text); margin: 0 0 24px; }
-    [data-bs-theme="light"] .olz-dual-cta__title { color: var(--oak-text-light); }
-    .olz-dual-cta__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 640px; margin: 0 auto 24px; text-align: left; }
-    .olz-dual-cta__card { padding: 20px; background: var(--oak-surface-2); border-radius: 10px; border: 1px solid var(--oak-border); }
-    [data-bs-theme="light"] .olz-dual-cta__card { background: var(--oak-surface-2-light); border-color: var(--oak-border-light); }
-    .olz-dual-cta__icon { font-size: 28px; margin-bottom: 8px; }
-    .olz-dual-cta__card h4 { font-size: 0.95rem; font-weight: 700; margin: 0 0 6px; color: var(--oak-text); }
-    [data-bs-theme="light"] .olz-dual-cta__card h4 { color: var(--oak-text-light); }
-    .olz-dual-cta__card p { font-size: 0.82rem; color: var(--oak-muted); margin: 0; line-height: 1.5; }
-    [data-bs-theme="light"] .olz-dual-cta__card p { color: var(--oak-muted-light); }
+    .olz-dual-cta__title { font-size: var(--text-h4); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-24); }
+    .olz-dual-cta__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-20); max-width: 640px; margin: 0 auto var(--space-24); text-align: left; }
+    .olz-dual-cta__card { padding: var(--space-20); background: var(--color-white); border-radius: var(--radius-default); border: 1px solid var(--color-border); }
+    .olz-dual-cta__icon { font-size: 28px; margin-bottom: var(--space-8); color: var(--color-action-blue); }
+    .olz-dual-cta__card h4 { font-size: var(--text-body); font-weight: 600; margin: 0 0 var(--space-6); color: var(--color-text-primary); }
+    .olz-dual-cta__card p { font-size: var(--text-small); color: var(--color-text-muted); margin: 0; line-height: var(--leading-body); }
     .olz-dual-cta__btn {
-      display: inline-block; padding: 12px 28px; background: var(--oak-accent); color: #fff;
-      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem;
+      display: inline-block; min-height: 44px; padding: var(--space-12) var(--space-32); background: var(--color-action-blue); color: #fff;
+      border-radius: var(--radius-default); text-decoration: none; font-weight: 600; font-size: var(--text-small);
     }
-    .olz-dual-cta__btn:hover { background: #3b8ce8; color: #fff; text-decoration: none; }
+    .olz-dual-cta__btn:hover { background: var(--color-action-blue-dark); color: #fff; text-decoration: none; }
     @media (max-width: 640px) {
       .olz-dual-cta { padding: 20px; }
       .olz-dual-cta__grid { grid-template-columns: 1fr; }
@@ -769,14 +537,13 @@
 
     /* ── Login sahifasi: kontekstual xabar ── */
     .olz-context-msg {
-      background: var(--oak-accent-soft);
-      border-left: 3px solid var(--oak-accent);
-      padding: 12px 16px;
-      margin: 0 0 20px;
-      border-radius: 4px;
+      background: var(--color-blue-soft);
+      border-left: 3px solid var(--color-action-blue);
+      padding: var(--space-12) var(--space-16);
+      margin: 0 0 var(--space-20);
+      border-radius: var(--radius-default);
     }
-    .olz-context-msg p { margin: 0; color: var(--oak-text); font-size: 0.85rem; line-height: 1.5; }
-    [data-bs-theme="light"] .olz-context-msg p { color: var(--oak-text-light); }
+    .olz-context-msg p { margin: 0; color: var(--color-text-primary); font-size: var(--text-small); line-height: var(--leading-body); }
   </style>
   {% block extra_head %}{% endblock %}
   <style>
@@ -789,9 +556,9 @@
       visibility: visible; pointer-events: auto; }
     /* A lone banner needs no absolute stacking */
     .broadcast-rotator.single .broadcast-slide { position: relative; opacity: 1; visibility: visible; pointer-events: auto; }
-    .broadcast-info { background: rgba(59,130,246,0.15); color: #60a5fa; border-bottom: 1px solid rgba(59,130,246,0.3); }
-    .broadcast-warning { background: rgba(245,158,11,0.15); color: #fbbf24; border-bottom: 1px solid rgba(245,158,11,0.3); }
-    .broadcast-success { background: rgba(5,150,105,0.15); color: #34d399; border-bottom: 1px solid rgba(5,150,105,0.3); }
+    .broadcast-info { background: var(--color-blue-soft); color: var(--color-action-blue); border-bottom: 1px solid var(--color-action-blue-light); }
+    .broadcast-warning { background: var(--color-notice-soft); color: var(--color-notice); border-bottom: 1px solid var(--color-notice); }
+    .broadcast-success { background: var(--color-success-soft); color: var(--color-success); border-bottom: 1px solid var(--color-success); }
   </style>
 {% if request.path == '/register' %}
   <!-- Fix 5.2: freeze the viewport during unauthenticated init (anti-bypass). -->
@@ -838,23 +605,26 @@
 <script>if (typeof ym === 'function' && typeof YM_ID !== 'undefined') { ym(YM_ID, 'reachGoal', 'login'); }</script>
 {% endif %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   {% if request.path != '/' %}
   <!-- Preloader: pulsing brand logo shown until the page finishes loading.
        Bosh sahifada o'chirilgan — LCP/FCP ni sekinlashtirmasin (redizayn v2). -->
   <style>
     #oak-preloader { position: fixed; inset: 0; z-index: 9999; display: flex;
       align-items: center; justify-content: center;
-      background: var(--oak-bg, #0f172a); transition: opacity .4s ease; }
+      background: var(--oak-bg, var(--color-white)); transition: opacity .4s ease; }
     #oak-preloader.hide { opacity: 0; pointer-events: none; }
-    #oak-preloader img { width: 84px; height: auto; animation: oakPulse 1.2s ease-in-out infinite; }
+    /* icon-192 o'z foniga ega — oq preloader ustida ham ko'rinadi
+       (logo-mark.png oq bo'lgani uchun bu yerda ko'rinmay qolgan edi). */
+    #oak-preloader img { width: 72px; height: auto; border-radius: var(--radius-banner);
+      animation: oakPulse 1.2s ease-in-out infinite; }
     @keyframes oakPulse {
       0%, 100% { transform: scale(0.9); opacity: 0.55; }
       50%      { transform: scale(1.08); opacity: 1; }
     }
     @media (prefers-reduced-motion: reduce) { #oak-preloader img { animation: none; } }
   </style>
-  <div id="oak-preloader"><img src="/static/images/logo-mark.png" alt="Yuklanmoqda…"></div>
+  <div id="oak-preloader"><img src="/static/images/icon-192.png" alt="Yuklanmoqda…"></div>
   <script>
     (function () {
       function hide() {
@@ -870,91 +640,8 @@
     })();
   </script>
   {% endif %}
-  <button id="theme-toggle" class="btn-theme-toggle" title="Mavzuni o'zgartirish"><i class="bi bi-moon-fill"></i></button>
-  <header class="site-header">
-    <div class="container-xl header-inner">
-      <a class="brand-logo" href="/">
-        <span class="brand-icon"><img src="/static/images/logo-mark.png" alt="Olimlar.uz" style="height:30px;width:auto;display:block;"></span>
-        <span>
-          <span class="brand-title" style="background:linear-gradient(135deg,#4a9eff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Olimlar.uz</span>
-          <span class="brand-subtitle">Olimlar uchun barcha qulayliklar</span>
-        </span>
-      </a>
-      <button id="nav-toggle" class="nav-toggle" aria-label="Menyu" aria-expanded="false"><i class="bi bi-list"></i></button>
-      {# ── Slim navbar (redizayn v2): 6 ta asosiy band + "Boshqa" dropdown.
-           Hech bir route o'chirilmagan — qolganlari dropdown ichida. ── #}
-      <div class="nav-links" id="nav-links">
-        <a href="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" class="nav-link{% if request.path in ['/dashboard', '/data', '/dissertatsiyalar'] %} active{% endif %}">Dissertatsiyalar</a>
-        <a href="/olimlar" class="nav-link{% if request.path.startswith('/olimlar') or request.path.startswith('/top-olimlar') or request.path.startswith('/olim/') %} active{% endif %}">Olimlar</a>
-        <a href="/grants" class="nav-link{% if request.path.startswith('/grants') %} active{% endif %}">Grantlar</a>
-        <a href="/workspace" class="nav-link{% if request.path.startswith('/workspace') %} active{% endif %}">Konstruktor<span class="nav-pill-new">Yangi</span></a>
-        <a href="/stats" class="nav-link{% if request.path.startswith('/stats') or request.path.startswith('/trends') %} active{% endif %}">Analitika</a>
-        {% if univer_workspace %}
-        <a href="/univer" class="nav-link{% if request.path.startswith('/univer') %} active{% endif %}">🏛 Universitetim</a>
-        {% endif %}
-        <div class="nav-dd" id="nav-dd">
-          <button type="button" class="nav-link nav-dd-btn" id="nav-dd-btn" aria-haspopup="true" aria-expanded="false">Boshqa <i class="bi bi-chevron-down" style="font-size:0.7rem;"></i></button>
-          <div class="nav-dd-menu" id="nav-dd-menu">
-            <a href="/kafedra/">🎓 Kafedra hujjatlari</a>
-            <a href="/rahbar-topish">Rahbar topish</a>
-            <a href="/councils">Ilmiy kengashlar</a>
-            <a href="/konferensiyalar">Konferensiyalar</a>
-            <a href="/universities">Universitetlar</a>
-            <a href="/journals">Jurnallar</a>
-            <a href="/courses">Kurslar</a>
-            <a href="/yangiliklar">Yangiliklar</a>
-            <a href="/vacancies">Vakansiyalar</a>
-            <div class="nav-dd-sep"></div>
-            <a href="/trends">Trendlar</a>
-            <a href="/collaboration">Hamkorlik</a>
-            <a href="/clustering">Klasterlar</a>
-            <a href="/heatmap">Xarita</a>
-            <a href="/tadqiqot-xaritasi">Tadqiqot xaritasi</a>
-            <a href="/reyting"><i class="bi bi-award"></i> H-index reyting</a>
-            <a href="/reyting/ball">Ichki ball reyting</a>
-            <a href="/reminders">Muddatlar</a>
-            <a href="/compare">Mavzu tahlili</a>
-            <a href="/maqolalar-tahlili">📄 Maqolalar tahlili</a>
-            <a href="/blog">Blog</a>
-            {% if current_user.is_authenticated and current_user.is_admin %}
-            <div class="nav-dd-sep"></div>
-            <a href="/admin/analytics">Admin panel</a>
-            <a href="/admin/acquisition">Foydalanuvchi manbalari</a>
-            <a href="/admin/yangiliklar">Yangiliklar (admin)</a>
-            <a href="/admin/blog">Blog (admin)</a>
-            <a href="/admin/vacancies">Vakansiyalar (admin)</a>
-            <a href="/admin/survey">So'rovnoma (admin)</a>
-            <a href="/admin/universities">Universitetlar (admin)</a>
-            <a href="/admin/universities/licenses">Universitet litsenziyalari (B2B)</a>
-            <a href="/admin/institutions">Institutlar birlashtirish (admin)</a>
-            <a href="/admin/journals">Jurnallar (admin)</a>
-            <a href="/admin/grants">Grantlar (admin)</a>
-            <a href="/admin/courses">Kurslar talabi (admin)</a>
-            <a href="/admin/reminders">Smart Eslatmalar</a>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-      <div class="nav-actions">
-        <a href="{{ '/dashboard' if current_user.is_authenticated else '/dissertatsiyalar' }}" class="nav-icon-btn" id="nav-search-btn" title="Qidiruv" aria-label="Qidiruv"><i class="bi bi-search"></i></a>
-        {% if current_user.is_authenticated %}
-        <a href="/messages" class="nav-icon-btn position-relative" title="Xabarlar" aria-label="Xabarlar">
-          <i class="bi bi-chat-dots"></i>
-          <span id="msg-badge" style="display:none;position:absolute;top:2px;right:0;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
-        </a>
-        <a href="/notifications" class="nav-icon-btn position-relative" title="Bildirishnomalar" aria-label="Bildirishnomalar">
-          <i class="bi bi-bell"></i>
-          <span id="notif-badge" style="display:none;position:absolute;top:2px;right:0;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 3px;">0</span>
-        </a>
-        <a href="/cabinet" class="username" title="Kabinet"><i class="bi bi-person-circle"></i>{{ current_user.username }}</a>
-        {% if cabinet_slug %}<a href="/{{ cabinet_slug }}" class="username" title="Sizning sahifangiz" style="opacity:0.8;font-family:ui-monospace,monospace;">{{ cabinet_slug }}</a>{% endif %}
-        <a href="/logout" class="btn-logout"><i class="bi bi-box-arrow-right"></i>Chiqish</a>
-        {% else %}
-        <a href="/login" class="btn-logout" style="border-color:rgba(74,158,255,0.25);background:rgba(74,158,255,0.08);color:#4a9eff;"><i class="bi bi-box-arrow-in-right"></i>Kirish</a>
-        {% endif %}
-      </div>
-    </div>
-  </header>
+  <a class="ol-skip-link" href="#main-content">Asosiy kontentga o'tish</a>
+  {% include "components/site_header.html" %}
   {% if active_broadcasts %}
   <!-- Single rotating banner host: 2+ active messages share one slot and fade
        between each other every 25s instead of stacking. -->
@@ -972,76 +659,14 @@
     {% endfor %}
   </div>
   {% endif %}
-  <main class="container-xl content-main">{% block content %}{% endblock %}</main>
-  <footer class="oak-footer">
-    <div class="container-xl">
-      <div class="oak-footer-grid">
-        <div class="oak-foot-brand">
-          <div class="oak-foot-logo" style="display:flex;align-items:center;gap:8px;">
-            <img src="/static/images/logo-mark.png" alt="" aria-hidden="true" style="height:1.5rem;width:auto;opacity:.85;">
-            <span>Olimlar.uz</span>
-          </div>
-          <p class="oak-foot-mission">Olimlar og'irini yengil qilish uchun yaratilgan. Biz ilmiy-tadqiqot jarayonini soddalashtirish va har bir tadqiqotchiga qulay vositalar taqdim etishni maqsad qilganmiz.</p>
-          <a class="oak-foot-tg" href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer"><i class="bi bi-telegram"></i> @olimlar_uz</a>
-        </div>
-        <div class="oak-foot-col">
-          <h4>Platforma</h4>
-          <ul>
-            <li><a href="/dashboard">Dissertatsiyalar</a></li>
-            <li><a href="/top-olimlar">Olimlar</a></li>
-            <li><a href="/grants">Grantlar</a></li>
-            <li><a href="/workspace">Konstruktor</a></li>
-            <li><a href="/stats">Analitika</a></li>
-            <li><a href="/reyting">H-index reyting</a></li>
-            <li><a href="/compare">Mavzu tahlili</a></li>
-            <li><a href="/kafedra/">Kafedra hujjatlari</a></li>
-          </ul>
-        </div>
-        <div class="oak-foot-col">
-          <h4>Resurslar</h4>
-          <ul>
-            <li><a href="/yangiliklar">Yangiliklar</a></li>
-            <li><a href="/blog">Blog</a></li>
-            <li><a href="/courses">Kurslar</a></li>
-            <li><a href="/journals">Jurnallar</a></li>
-            <li><a href="/universities">Universitetlar</a></li>
-            <li><a href="/preparation">Himoyaga tayyorlanish</a></li>
-            <li><a href="/reminders">Muddatlar</a></li>
-          </ul>
-        </div>
-        <div class="oak-foot-col">
-          <h4>Aloqa</h4>
-          <ul>
-            <li><a href="/about">Biz haqimizda</a></li>
-            <li><a href="/team">Jamoa</a></li>
-            <li><a href="/vacancies">Vakansiyalar</a></li>
-            <li><a href="/contact">Aloqa</a></li>
-            <li><a href="/notifications">Bildirishnomalar</a></li>
-          </ul>
-        </div>
-        <div class="oak-foot-col">
-          <h4>Huquqiy hujjatlar</h4>
-          <ul>
-            <li><a href="/oferta">Ommaviy oferta</a></li>
-            <li><a href="/tolovni-qaytarish">To'lovni qaytarish</a></li>
-            <li><a href="/maxfiylik">Maxfiylik siyosati</a></li>
-          </ul>
-        </div>
-        <div class="oak-foot-col">
-          <h4>Ijtimoiy tarmoqlar</h4>
-          <ul>
-            <li><a href="https://t.me/olimlar_uz" target="_blank" rel="noopener noreferrer">Telegram kanali</a></li>
-            <li><a href="https://t.me/send_kod_bot" target="_blank" rel="noopener noreferrer">Admin bilan aloqa</a></li>
-          </ul>
-        </div>
-      </div>
-      <hr class="oak-foot-sep">
-      <div class="oak-foot-bottom">&copy; 2025 Olimlar.uz — Barcha huquqlar himoyalangan</div>
-    </div>
-  </footer>
+  <main id="main-content" class="ol-container ol-container--wide content-main">{% block content %}{% endblock %}</main>
+  {% include "components/site_footer.html" %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     window.oakCsrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var footerYear = document.getElementById('oak-footer-year');
+    if (footerYear) footerYear.textContent = String(new Date().getFullYear());
+
     window.oakCsrfHeaders = function (headers) {
       var out = Object.assign({}, headers || {});
       out['X-CSRFToken'] = window.oakCsrfToken;
@@ -1070,61 +695,8 @@
         return nativeFetch.call(this, input, options);
       };
     })(window.fetch);
-    (function() {
-      const root = document.documentElement;
-      const btn = document.getElementById('theme-toggle');
-      const stored = localStorage.getItem('oak-theme') || 'dark';
-      root.setAttribute('data-bs-theme', stored);
-      btn.innerHTML = stored === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-fill"></i>';
-      btn.addEventListener('click', function() {
-        const next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        root.setAttribute('data-bs-theme', next);
-        localStorage.setItem('oak-theme', next);
-        this.innerHTML = next === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-fill"></i>';
-      });
-      // Mobil drawer + "Boshqa" dropdown
-      var navToggle = document.getElementById('nav-toggle');
-      var navLinks = document.getElementById('nav-links');
-      navToggle?.addEventListener('click', function() {
-        var open = navLinks?.classList.toggle('open');
-        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        navToggle.innerHTML = open ? '<i class="bi bi-x-lg"></i>' : '<i class="bi bi-list"></i>';
-      });
-      var dd = document.getElementById('nav-dd');
-      var ddBtn = document.getElementById('nav-dd-btn');
-      ddBtn?.addEventListener('click', function(e) {
-        e.stopPropagation();
-        var open = dd.classList.toggle('open');
-        ddBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-      document.addEventListener('click', function(e) {
-        if (dd && !dd.contains(e.target)) { dd.classList.remove('open'); ddBtn?.setAttribute('aria-expanded', 'false'); }
-        if (navLinks?.classList.contains('open') && !navLinks.contains(e.target) && !navToggle.contains(e.target)) {
-          navLinks.classList.remove('open');
-          navToggle?.setAttribute('aria-expanded', 'false');
-          if (navToggle) navToggle.innerHTML = '<i class="bi bi-list"></i>';
-        }
-      });
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          dd?.classList.remove('open');
-          navLinks?.classList.remove('open');
-          if (navToggle) navToggle.innerHTML = '<i class="bi bi-list"></i>';
-        }
-      });
-      // Qidiruv ikonkasi: bosh sahifada hero qidiruviga fokus, boshqa sahifalarda /dashboard
-      document.getElementById('nav-search-btn')?.addEventListener('click', function(e) {
-        var hero = document.getElementById('hx-search-input');
-        if (hero) { e.preventDefault(); hero.scrollIntoView({ block: 'center' }); hero.focus({ preventScroll: true }); }
-      });
-      var badge = document.getElementById('nav-total-badge');
-      if (badge) {
-        fetch('/stats-json').then(function(r){ return r.json(); }).then(function(d){
-          if (d.total) { badge.textContent = d.total.toLocaleString('uz'); badge.style.display = 'inline'; }
-        }).catch(function(){});
-      }
-    })();
   </script>
+  <script src="/static/js/olimlar-nav.js?v=20260806" defer></script>
   <script>
   (function checkNotifs() {
     fetch('/api/notifications/count')
@@ -1154,25 +726,25 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #4a9eff;
+    background: var(--color-action-blue);
     border: none;
     color: #fff;
     font-size: 24px;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(74,158,255,0.4);
+    box-shadow: 0 2px 8px rgba(0,86,214,0.25);
     display: grid;
     place-items: center;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
-  #ai-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(74,158,255,0.55); }
+  #ai-btn:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,86,214,0.3); }
   #ai-panel {
     position: fixed;
     right: 0;
     top: 0;
     height: 100vh;
     width: 320px;
-    background: #1a1d23;
-    border-left: 1px solid rgba(255,255,255,0.1);
+    background: var(--color-white);
+    border-left: 1px solid var(--color-border);
     z-index: 9998;
     transform: translateX(100%);
     transition: transform 0.3s ease;
@@ -1190,20 +762,20 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--color-border);
     flex-shrink: 0;
   }
   #ai-close-btn {
     background: none;
     border: none;
-    color: #8899b4;
+    color: var(--color-text-muted);
     cursor: pointer;
     font-size: 18px;
     padding: 4px 8px;
     border-radius: 6px;
     transition: color 0.15s, background 0.15s;
   }
-  #ai-close-btn:hover { color: #fff; background: rgba(255,255,255,0.08); text-decoration: none; }
+  #ai-close-btn:hover { color: #fff; background: var(--color-border); text-decoration: none; }
   #ai-messages {
     flex: 1;
     overflow-y: auto;
@@ -1213,30 +785,30 @@
     gap: 8px;
   }
   .ai-welcome {
-    background: rgba(74,158,255,0.08);
-    border: 1px solid rgba(74,158,255,0.2);
+    background: var(--color-blue-soft);
+    border: 1px solid var(--color-action-blue-light);
     border-radius: 10px;
     padding: 12px;
-    color: #8899b4;
+    color: var(--color-text-muted);
     font-size: 13px;
     line-height: 1.5;
   }
   .ai-suggestions { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
   .ai-suggestion-btn {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-background-soft);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 8px 12px;
-    color: #cbd5e1;
+    color: var(--color-text-secondary);
     font-size: 12px;
     cursor: pointer;
     text-align: left;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-  .ai-suggestion-btn:hover { background: rgba(74,158,255,0.1); border-color: rgba(74,158,255,0.25); color: #4a9eff; text-decoration: none; }
+  .ai-suggestion-btn:hover { background: var(--color-blue-soft); border-color: var(--color-action-blue-light); color: var(--color-action-blue); text-decoration: none; }
   .ai-msg-user {
     align-self: flex-end;
-    background: #4a9eff;
+    background: var(--color-action-blue);
     color: #fff;
     border-radius: 12px 12px 4px 12px;
     padding: 8px 12px;
@@ -1246,39 +818,39 @@
   }
   .ai-msg-bot {
     align-self: flex-start;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--color-background-soft);
+    border: 1px solid var(--color-border);
     border-radius: 12px 12px 12px 4px;
     padding: 8px 12px;
     font-size: 13px;
-    color: #cbd5e1;
+    color: var(--color-text-secondary);
     max-width: 95%;
     line-height: 1.5;
     word-break: break-word;
   }
-  .ai-typing { color: #8899b4; font-size: 12px; padding: 4px 0; }
+  .ai-typing { color: var(--color-text-muted); font-size: 12px; padding: 4px 0; }
   #ai-input-area {
     padding: 12px 16px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid var(--color-border);
     display: flex;
     gap: 8px;
     flex-shrink: 0;
   }
   #ai-input {
     flex: 1;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--color-background-soft);
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 8px 12px;
-    color: #cbd5e1;
+    color: var(--color-text-secondary);
     font-size: 13px;
     outline: none;
     transition: border-color 0.15s;
   }
-  #ai-input:focus { border-color: #4a9eff; }
+  #ai-input:focus { border-color: var(--color-action-blue); }
   #ai-input::placeholder { color: #4a556a; }
   #ai-send-btn {
-    background: #4a9eff;
+    background: var(--color-action-blue);
     border: none;
     border-radius: 10px;
     padding: 8px 14px;
@@ -1290,12 +862,12 @@
   #ai-send-btn:hover { opacity: 0.88; text-decoration: none; }
 </style>
 
-<button id="ai-btn" title="AI Yordamchi">🤖</button>
+<button id="ai-btn" title="AI Yordamchi" aria-label="AI yordamchini ochish"><i class="bi bi-stars" aria-hidden="true"></i></button>
 
 <aside id="ai-panel">
   <div id="ai-panel-header">
-    <strong style="color:#4a9eff;font-size:14px;">🤖 Olimlar.uz AI Yordamchi</strong>
-    <button id="ai-close-btn" title="Yopish">✕</button>
+    <strong style="color:var(--color-action-blue);font-size:14px;"><i class="bi bi-stars" aria-hidden="true"></i> Olimlar.uz AI Yordamchi</strong>
+    <button id="ai-close-btn" title="Yopish" aria-label="AI yordamchini yopish"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
   </div>
   <div id="ai-messages">
     <div class="ai-welcome">
@@ -1429,8 +1001,8 @@
         if (!toast) {
             toast = document.createElement('div');
             toast.id = 'copyWarningToast';
-            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #ef4444;color:#f87171;padding:12px 24px;border-radius:12px;z-index:99999;font-size:0.9rem;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;text-align:center;';
-            toast.innerHTML = '🔒 Ma\'lumotlarni nusxalash taqiqlangan.<br><span style="font-size:0.8rem;color:#94a3b8;">Premium obuna bilan eksport qilish mumkin.</span>';
+            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--color-white);border:1px solid var(--color-error);color:var(--color-error);padding:12px 24px;border-radius:12px;z-index:99999;font-size:0.9rem;box-shadow:0 4px 12px rgba(12,15,18,0.08);display:none;text-align:center;';
+            toast.innerHTML = '🔒 Ma\'lumotlarni nusxalash taqiqlangan.<br><span style="font-size:0.8rem;color:var(--color-text-muted);">Premium obuna bilan eksport qilish mumkin.</span>';
             document.body.appendChild(toast);
         }
         toast.style.display = 'block';
@@ -1442,15 +1014,15 @@
 {% if not is_logged_in %}
 <!-- Mandatory registration popup (non-logged-in users, after 30s) -->
 <div id="authOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-  <div style="background:#1e293b;border:1px solid #334155;border-radius:20px;max-width:460px;width:90%;padding:40px;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:popupSlideIn 0.4s ease;">
+  <div style="background:var(--color-white);border:1px solid var(--color-border);border-radius:20px;max-width:460px;width:90%;padding:40px;text-align:center;box-shadow:0 4px 12px rgba(12,15,18,0.08);animation:popupSlideIn 0.4s ease;">
 
     <div style="font-size:3.5rem;margin-bottom:16px;">🎓</div>
 
-    <h2 style="color:#f1f5f9;font-size:1.5rem;font-weight:700;margin-bottom:8px;">
+    <h2 style="color:var(--color-text-primary);font-size:1.5rem;font-weight:700;margin-bottom:8px;">
       Davom etish uchun ro'yxatdan o'ting
     </h2>
 
-    <p style="color:#94a3b8;font-size:0.95rem;line-height:1.6;margin-bottom:28px;">
+    <p style="color:var(--color-text-muted);font-size:0.95rem;line-height:1.6;margin-bottom:28px;">
       29,000+ dissertatsiya, mavzu tahlili, ilmiy shajara va boshqa imkoniyatlardan foydalanish uchun tizimga kiring.
     </p>
 
@@ -1472,23 +1044,23 @@
     </a>
 
     <!-- Register link -->
-    <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">
-      Hisobingiz yo'qmi? <a href="/cabinet/register" style="color:#3b82f6;font-weight:600;text-decoration:none;">Ro'yxatdan o'ting</a>
+    <p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:20px;">
+      Hisobingiz yo'qmi? <a href="/cabinet/register" style="color:var(--color-action-blue);font-weight:600;text-decoration:none;">Ro'yxatdan o'ting</a>
     </p>
 
     <!-- Skip button (small, subtle) -->
-    <button id="authSkipBtn" onclick="dismissAuthPopup()" style="background:none;border:none;color:#475569;font-size:0.8rem;cursor:pointer;padding:8px;text-decoration:underline;">
+    <button id="authSkipBtn" onclick="dismissAuthPopup()" style="background:none;border:none;color:var(--color-text-muted);font-size:0.8rem;cursor:pointer;padding:8px;text-decoration:underline;">
       Keyinroq (hozircha davom etish)
     </button>
 
     <!-- Benefits -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #334155;text-align:left;">
-      <p style="color:#64748b;font-size:0.75rem;margin-bottom:8px;">✨ Ro'yxatdan o'tish bepul. Siz quyidagilardan foydalanasiz:</p>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border);text-align:left;">
+      <p style="color:var(--color-text-muted);font-size:0.75rem;margin-bottom:8px;">✨ Ro'yxatdan o'tish bepul. Siz quyidagilardan foydalanasiz:</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-        <span style="color:#94a3b8;font-size:0.75rem;">✅ Mavzu tahlili</span>
-        <span style="color:#94a3b8;font-size:0.75rem;">✅ AI yordamchi</span>
-        <span style="color:#94a3b8;font-size:0.75rem;">✅ Ilmiy shajara</span>
-        <span style="color:#94a3b8;font-size:0.75rem;">✅ Shaxsiy portfolio</span>
+        <span style="color:var(--color-text-muted);font-size:0.75rem;">✅ Mavzu tahlili</span>
+        <span style="color:var(--color-text-muted);font-size:0.75rem;">✅ AI yordamchi</span>
+        <span style="color:var(--color-text-muted);font-size:0.75rem;">✅ Ilmiy shajara</span>
+        <span style="color:var(--color-text-muted);font-size:0.75rem;">✅ Shaxsiy portfolio</span>
       </div>
     </div>
 
@@ -1587,33 +1159,33 @@ window.PopupManager = (function () {
 {% if current_user.is_authenticated and (visit_count or 0) >= 10 %}
 <style>
   #surveyOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:99990; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-  .survey-question { background:#162032; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:12px; }
-  .survey-question-text { color:#e2e8f0; font-size:0.95rem; font-weight:600; margin-bottom:12px; }
+  .survey-question { background:var(--color-background-soft); border:1px solid var(--color-border); border-radius:12px; padding:16px; margin-bottom:12px; }
+  .survey-question-text { color:var(--color-text-primary); font-size:0.95rem; font-weight:600; margin-bottom:12px; }
   .survey-options { display:flex; gap:8px; flex-wrap:wrap; }
-  .survey-opt-btn { padding:8px 20px; border-radius:50px; border:1px solid #334155; background:#1e293b; color:#94a3b8; cursor:pointer; font-size:0.85rem; transition:all 0.2s; }
-  .survey-opt-btn:hover { border-color:#3b82f6; color:#60a5fa; }
-  .survey-opt-btn.selected { background:#3b82f6; border-color:#3b82f6; color:white; }
-  .survey-opt-btn.selected-yes { background:#059669; border-color:#059669; color:white; }
-  .survey-opt-btn.selected-no { background:#dc2626; border-color:#dc2626; color:white; }
-  .survey-custom-input { width:100%; margin-top:8px; background:#0f172a; border:1px solid #334155; color:#e2e8f0; padding:8px 12px; border-radius:8px; font-size:0.85rem; display:none; }
-  .survey-custom-input:focus { border-color:#3b82f6; outline:none; }
+  .survey-opt-btn { padding:8px 20px; border-radius:50px; border:1px solid var(--color-border); background:var(--color-white); color:var(--color-text-muted); cursor:pointer; font-size:0.85rem; transition:all 0.2s; }
+  .survey-opt-btn:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
+  .survey-opt-btn.selected { background:var(--color-action-blue); border-color:var(--color-action-blue); color:white; }
+  .survey-opt-btn.selected-yes { background:var(--color-success); border-color:var(--color-success); color:white; }
+  .survey-opt-btn.selected-no { background:var(--color-error); border-color:var(--color-error); color:white; }
+  .survey-custom-input { width:100%; margin-top:8px; background:var(--color-white); border:1px solid var(--color-border); color:var(--color-text-primary); padding:8px 12px; border-radius:8px; font-size:0.85rem; display:none; }
+  .survey-custom-input:focus { border-color:var(--color-action-blue); outline:none; }
 </style>
 <div id="surveyOverlay">
-  <div id="surveyCard" style="background:#1e293b;border:1px solid #334155;border-radius:20px;max-width:500px;width:92%;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,0.5);animation:popupSlideIn 0.4s ease;max-height:90vh;overflow-y:auto;">
+  <div id="surveyCard" style="background:var(--color-white);border:1px solid var(--color-border);border-radius:20px;max-width:500px;width:92%;padding:32px;box-shadow:0 4px 12px rgba(12,15,18,0.08);animation:popupSlideIn 0.4s ease;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 style="color:#f1f5f9;font-size:1.2rem;margin:0;">📋 Sizning fikringiz muhim</h2>
-      <button onclick="closeSurvey()" style="background:none;border:none;color:#64748b;font-size:1.3rem;cursor:pointer;">✕</button>
+      <h2 style="color:var(--color-text-primary);font-size:1.2rem;margin:0;">📋 Sizning fikringiz muhim</h2>
+      <button onclick="closeSurvey()" style="background:none;border:none;color:var(--color-text-muted);font-size:1.3rem;cursor:pointer;">✕</button>
     </div>
-    <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px;">3 ta qisqa savolga javob bering — bu bizga platformani yaxshilashga yordam beradi.</p>
+    <p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:24px;">3 ta qisqa savolga javob bering — bu bizga platformani yaxshilashga yordam beradi.</p>
     <div id="surveyQuestions"></div>
     <div id="surveyActions" style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;">
-      <span id="surveyProgress" style="color:#64748b;font-size:0.8rem;"></span>
-      <button id="surveySubmitBtn" onclick="submitSurvey()" style="background:#3b82f6;color:white;border:none;padding:10px 24px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.9rem;">Yuborish →</button>
+      <span id="surveyProgress" style="color:var(--color-text-muted);font-size:0.8rem;"></span>
+      <button id="surveySubmitBtn" onclick="submitSurvey()" style="background:var(--color-action-blue);color:white;border:none;padding:10px 24px;border-radius:50px;font-weight:600;cursor:pointer;font-size:0.9rem;">Yuborish →</button>
     </div>
     <div id="surveyThanks" style="display:none;text-align:center;padding:20px 0;">
       <div style="font-size:3rem;margin-bottom:12px;">🙏</div>
-      <h3 style="color:#f1f5f9;margin-bottom:8px;">Rahmat!</h3>
-      <p style="color:#94a3b8;font-size:0.9rem;">Fikringiz biz uchun juda muhim. Keyingi safar yana savollar beramiz.</p>
+      <h3 style="color:var(--color-text-primary);margin-bottom:8px;">Rahmat!</h3>
+      <p style="color:var(--color-text-muted);font-size:0.9rem;">Fikringiz biz uchun juda muhim. Keyingi safar yana savollar beramiz.</p>
     </div>
   </div>
 </div>
@@ -1722,8 +1294,8 @@ function submitSurvey() {
       const questionDiv = document.querySelector('[data-question-id="' + q.id + '"]');
       const selectedBtn = questionDiv.querySelector('.survey-opt-btn[data-selected="true"]');
       if (!selectedBtn) {
-        questionDiv.style.borderColor = '#ef4444';
-        setTimeout(() => questionDiv.style.borderColor = '#334155', 2000);
+        questionDiv.style.borderColor = 'var(--color-error)';
+        setTimeout(() => questionDiv.style.borderColor = 'var(--color-border)', 2000);
       }
     });
     return;
@@ -1780,18 +1352,18 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- PWA custom install banner -->
-<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e293b;border-top:1px solid #334155;padding:16px 20px;z-index:9998;box-shadow:0 -4px 20px rgba(0,0,0,0.3);">
+<div id="pwaInstallBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--color-white);border-top:1px solid var(--color-border);padding:16px 20px;z-index:9998;box-shadow:0 -1px 0 var(--color-border);">
   <div style="max-width:600px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;">
     <div style="display:flex;align-items:center;gap:12px;">
       <span style="font-size:2rem;">📊</span>
       <div>
-        <p style="color:#f1f5f9;font-weight:600;font-size:0.9rem;margin:0;">Olimlar.uz ni o'rnating</p>
-        <p style="color:#94a3b8;font-size:0.75rem;margin:0;">Telefoningizda app sifatida ishlating</p>
+        <p style="color:var(--color-text-primary);font-weight:600;font-size:0.9rem;margin:0;">Olimlar.uz ni o'rnating</p>
+        <p style="color:var(--color-text-muted);font-size:0.75rem;margin:0;">Telefoningizda app sifatida ishlating</p>
       </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button id="pwaInstallBtn" style="background:#3b82f6;color:white;border:none;padding:8px 20px;border-radius:50px;font-weight:600;font-size:0.85rem;cursor:pointer;">O'rnatish</button>
-      <button id="pwaInstallDismiss" style="background:none;border:none;color:#64748b;font-size:1.2rem;cursor:pointer;padding:4px 8px;">✕</button>
+      <button id="pwaInstallBtn" style="background:var(--color-action-blue);color:white;border:none;padding:8px 20px;border-radius:50px;font-weight:600;font-size:0.85rem;cursor:pointer;">O'rnatish</button>
+      <button id="pwaInstallDismiss" style="background:none;border:none;color:var(--color-text-muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;">✕</button>
     </div>
   </div>
 </div>
@@ -1917,20 +1489,20 @@ document.addEventListener('DOMContentLoaded', function () {
     align-items: center; justify-content: center; background: rgba(2,6,23,0.75);
     backdrop-filter: blur(3px); padding: 16px; }
   #regionModal.show { display: flex; }
-  #regionModal .rm-card { background: #0f172a; border: 1px solid #334155;
+  #regionModal .rm-card { background: var(--color-white); border: 1px solid var(--color-border);
     border-radius: 18px; max-width: 460px; width: 100%; padding: 26px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5); color: #e2e8f0; }
-  #regionModal h3 { margin: 0 0 6px; font-size: 1.25rem; color: #f1f5f9; }
-  #regionModal p { margin: 0 0 16px; color: #94a3b8; font-size: 0.9rem; }
+    box-shadow: 0 4px 12px rgba(12,15,18,0.08); color: var(--color-text-primary); }
+  #regionModal h3 { margin: 0 0 6px; font-size: 1.25rem; color: var(--color-text-primary); }
+  #regionModal p { margin: 0 0 16px; color: var(--color-text-muted); font-size: 0.9rem; }
   #regionModal .rm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-  #regionModal .rm-opt { background: #162032; border: 1px solid #334155; color: #cbd5e1;
+  #regionModal .rm-opt { background: var(--color-background-soft); border: 1px solid var(--color-border); color: var(--color-text-secondary);
     border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; cursor: pointer; text-align: left; }
-  #regionModal .rm-opt:hover { border-color: #3b82f6; }
-  #regionModal .rm-opt.sel { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: 600; }
-  #regionModal .rm-save { width: 100%; background: #3b82f6; color: #fff; border: none;
+  #regionModal .rm-opt:hover { border-color: var(--color-action-blue); }
+  #regionModal .rm-opt.sel { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; font-weight: 600; }
+  #regionModal .rm-save { width: 100%; background: var(--color-action-blue); color: #fff; border: none;
     border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
   #regionModal .rm-save:disabled { opacity: 0.5; cursor: not-allowed; }
-  #regionModal .rm-err { color: #f87171; font-size: 0.82rem; margin-top: 10px; min-height: 1em; }
+  #regionModal .rm-err { color: var(--color-error); font-size: 0.82rem; margin-top: 10px; min-height: 1em; }
 </style>
 <div id="regionModal" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
   <div class="rm-card">
@@ -2013,18 +1585,18 @@ document.addEventListener('DOMContentLoaded', function () {
     align-items: center; justify-content: center; background: rgba(2,6,23,0.78);
     backdrop-filter: blur(3px); padding: 16px; }
   #notifModal.show { display: flex; }
-  #notifModal .nm-card { background: #0f172a; border: 1px solid #334155;
+  #notifModal .nm-card { background: var(--color-white); border: 1px solid var(--color-border);
     border-radius: 18px; max-width: 480px; width: 100%; padding: 26px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5); color: #e2e8f0; }
+    box-shadow: 0 4px 12px rgba(12,15,18,0.08); color: var(--color-text-primary); }
   #notifModal .nm-badge { display: inline-block; font-size: 0.72rem; font-weight: 700;
     letter-spacing: .04em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px;
-    margin-bottom: 12px; background: #1e293b; color: #93c5fd; }
-  #notifModal.lvl-warning .nm-badge { background: #422006; color: #fbbf24; }
-  #notifModal.lvl-danger  .nm-badge { background: #450a0a; color: #f87171; }
-  #notifModal.lvl-success .nm-badge { background: #052e16; color: #4ade80; }
-  #notifModal h3 { margin: 0 0 8px; font-size: 1.25rem; color: #f1f5f9; }
-  #notifModal p { margin: 0 0 20px; color: #cbd5e1; font-size: 0.94rem; line-height: 1.55; white-space: pre-wrap; }
-  #notifModal .nm-ok { width: 100%; background: #3b82f6; color: #fff; border: none;
+    margin-bottom: 12px; background: var(--color-blue-soft); color: var(--color-action-blue); }
+  #notifModal.lvl-warning .nm-badge { background: var(--color-notice-soft); color: #8a5200; }
+  #notifModal.lvl-danger  .nm-badge { background: var(--color-error-soft); color: var(--color-error); }
+  #notifModal.lvl-success .nm-badge { background: var(--color-success-soft); color: var(--color-success); }
+  #notifModal h3 { margin: 0 0 8px; font-size: 1.25rem; color: var(--color-text-primary); }
+  #notifModal p { margin: 0 0 20px; color: var(--color-text-secondary); font-size: 0.94rem; line-height: 1.55; white-space: pre-wrap; }
+  #notifModal .nm-ok { width: 100%; background: var(--color-action-blue); color: #fff; border: none;
     border-radius: 10px; padding: 12px; font-weight: 700; cursor: pointer; font-size: 0.95rem; }
   #notifModal .nm-ok:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
