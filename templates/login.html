@@ -99,6 +99,15 @@
     else { input.type = 'password'; icon.className = 'bi bi-eye'; }
   });
 
+  setTimeout(function() {
+    var container = document.getElementById('tg-container');
+    var status = document.getElementById('tg-status');
+    if (container && !container.querySelector('iframe')) {
+      status.textContent = 'Telegram orqali kirish yuklanmadi. Sahifani yangilang.';
+      status.style.display = 'block';
+    }
+  }, 5000);
+
   function onTelegramAuth(user) {
     if (window.releaseGuestFreeze) window.releaseGuestFreeze();
     document.getElementById('tg-container').innerHTML = '<p style="color:#4a9eff;font-size:14px">Tekshirilmoqda...</p>';

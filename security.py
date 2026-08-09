@@ -17,7 +17,7 @@ _CSP = "; ".join((
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://mc.yandex.ru",
+    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://mc.yandex.ru https://telegram.org https://oauth.telegram.org",
     "frame-src https://oauth.telegram.org https://telegram.org",
     "upgrade-insecure-requests",
 ))

@@ -24,6 +24,7 @@ import app as app_module
 import auth
 import cabinet
 import data as data_module
+import security as security_module
 
 
 class FakeTelegramCursor:
@@ -287,6 +288,18 @@ class SecurityPhase0Tests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 422)
 
+    def test_csp_allows_telegram_login_widget(self):
+        directives = dict(
+            part.strip().split(" ", 1)
+            for part in security_module._CSP.split("; ")
+            if " " in part
+        )
+        self.assertIn("https://telegram.org", directives["script-src"])
+        self.assertIn("https://oauth.telegram.org", directives["frame-src"])
+        self.assertIn("https://telegram.org", directives["frame-src"])
+        self.assertIn("https://telegram.org", directives["connect-src"])
+        self.assertIn("https://oauth.telegram.org", directives["connect-src"])
+
     def test_production_cookie_and_headers(self):
         script = r"""
 import json
@@ -329,6 +342,8 @@ print(json.dumps({
         self.assertIn("SameSite=Lax", details["cookie"])
         self.assertTrue(details["hsts"])
         self.assertTrue(details["csp"])
+        self.assertIn("https://telegram.org", details["csp"])
+        self.assertIn("https://oauth.telegram.org", details["csp"])
         self.assertEqual(details["nosniff"], "nosniff")
         self.assertEqual(details["http_status"], 400)
 
