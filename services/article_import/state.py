@@ -62,6 +62,22 @@ IN_FLIGHT_STATUSES = frozenset({PENDING, PROCESSING})
 # barchasi CHIQARIB tashlanadi; ular faqat bitta-bitta ko'rib chiqiladi.
 BULK_APPROVE_SAFE_STATUSES = frozenset({READY_FOR_REVIEW})
 
+# Bitta DOI hali "faol" hisoblanadigan holatlar — ya'ni ular hali BITTA yangi
+# maqola yaratishga OLIB KELISHI mumkin (Phase 2D.1 discovery cross-batch
+# idempotency, §14-§16). `duplicate_in_batch` / `already_exists` / `invalid_doi`
+# ATAYIN chiqarib tashlangan: ular hech qachon endi article yaratmaydi (yoki
+# normalized_doi umuman yo'q) — shuning uchun boshqa batch'dagi haqiqiy
+# ishlanayotgan nomzod bilan TO'QNASHMASLIGI kerak.
+#
+# Bu yagona haqiqat manbai: `migrations/014_article_discovery.sql`dagi partial
+# unique index predicate'i VA `services/article_import/persistence.py:ensure_schema`
+# shu YIG'INDIGA mos bo'lishi shart (parity test —
+# `tests/test_article_discovery_migration.py`). Bu yerda o'zgartirilsa, ikkalasi
+# ham qo'lda yangilanishi kerak.
+ACTIVE_DOI_ITEM_STATUSES = frozenset(
+    IN_FLIGHT_STATUSES | REVIEW_BUCKET_STATUSES | RETRYABLE_ITEM_STATUSES
+    | {METADATA_NOT_FOUND})
+
 # Har bir statusdan qaysi statusga o'tish mumkin. Approve/reject/skip —
 # bularni chaqiruvchi funksiya aniqlaydi (approve faqat REVIEW_BUCKET dan,
 # reject/skip har qanday terminal-bo'lmagan statusdan).

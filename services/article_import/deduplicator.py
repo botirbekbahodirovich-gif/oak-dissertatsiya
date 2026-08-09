@@ -42,3 +42,27 @@ def find_existing_db_duplicates(cur, normalized_dois):
     for row_id, title, slug, doi in cur.fetchall():
         out[doi] = {'id': row_id, 'title': title, 'slug': slug}
     return out
+
+
+def find_active_import_dois(cur, normalized_dois):
+    """Boshqa (yoki shu) batch'larda hali "faol" bo'lgan DOI'larni bitta
+    so'rovda topadi (Phase 2D.1 discovery, §14, §17 — N+1 emas).
+
+    "Faol" — `services.article_import.state.ACTIVE_DOI_ITEM_STATUSES` (yagona
+    haqiqat manbai). Qaytaradi: `{normalized_doi: {'item_id':…, 'batch_id':…}}`
+    — bir nechta mos elementdan ENG YANGISI (eng katta id) olinadi.
+    """
+    from services.article_import.state import ACTIVE_DOI_ITEM_STATUSES
+
+    unique = sorted({d for d in normalized_dois if d})
+    if not unique:
+        return {}
+    cur.execute(
+        """SELECT normalized_doi, id, batch_id FROM article_import_items
+           WHERE normalized_doi = ANY(%s) AND status = ANY(%s)
+           ORDER BY id""",
+        (unique, list(ACTIVE_DOI_ITEM_STATUSES)))
+    out = {}
+    for doi, item_id, batch_id in cur.fetchall():
+        out[doi] = {'item_id': item_id, 'batch_id': batch_id}
+    return out
