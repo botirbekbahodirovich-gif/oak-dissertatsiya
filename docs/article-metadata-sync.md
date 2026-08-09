@@ -10,6 +10,11 @@ Bog'liq hujjatlar: [`article-metadata-integration.md`](article-metadata-integrat
 (yangi maqola ommaviy importi), [`articles-module.md`](articles-module.md)
 (maqola ma'lumotlar modeli).
 
+Ko'p maqolada topilgan o'zgarishlarni bitta markaziy sahifada ko'rish/review
+qilish — [`article-metadata-sync-dashboard.md`](article-metadata-sync-dashboard.md)
+(Phase 2C.3B). U shu yerdagi `check_article_metadata()`/
+`apply_article_metadata_changes()`ni AYNAN o'zi qayta ishlatadi.
+
 **Bir jumlada:** metadata tekshirish — o'qish. Yozish faqat admin
 tanlaganini, faqat u "Qo'llash" bosgandan keyin, faqat o'sha element hali
 tahrirlanmagan bo'lsa.
