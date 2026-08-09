@@ -24,6 +24,19 @@ from services.article_sync.diff import compare_article_metadata
 from services.article_sync.models import (CRITICAL, REVIEW, SAFE, UNCHANGED,
                                           MetadataFieldDiff, MetadataSyncResult)
 from services.article_sync.policy import APPLICABLE_FIELDS, FIELD_LABELS
+from services.article_sync.scheduler import (SchedulerAlreadyRunningError,
+                                             SchedulerRunResult,
+                                             list_recent_runs as list_recent_scheduler_runs,
+                                             run_scheduled_metadata_sync,
+                                             select_due_articles)
+from services.article_sync.scheduler_config import (SchedulerConfig,
+                                                     SchedulerConfigError,
+                                                     scheduler_config_from_env)
+from services.article_sync.scheduler_state import (RUN_COMPLETED,
+                                                    RUN_COMPLETED_WITH_ERRORS,
+                                                    RUN_FAILED, RUN_RUNNING,
+                                                    TRIGGER_MANUAL_CLI,
+                                                    TRIGGER_SCHEDULED)
 from services.article_sync.service import (ArticleSyncError,
                                            apply_article_metadata_changes,
                                            bulk_apply_safe_changes,
@@ -45,4 +58,10 @@ __all__ = [
     'get_dashboard_summary', 'get_sync_result', 'get_sync_result_row',
     'list_dashboard', 'list_sync_history', 'ACTOR_ADMIN', 'ACTOR_AGENT', 'ACTOR_SYSTEM',
     'ACTOR_TYPES', 'QUEUE_STATE_LABELS', 'derive_queue_state',
+    # Phase 2C.3C — rejalashtirilgan sinxronizatsiya (scheduler).
+    'SchedulerAlreadyRunningError', 'SchedulerRunResult',
+    'list_recent_scheduler_runs', 'run_scheduled_metadata_sync',
+    'select_due_articles', 'SchedulerConfig', 'SchedulerConfigError',
+    'scheduler_config_from_env', 'RUN_COMPLETED', 'RUN_COMPLETED_WITH_ERRORS',
+    'RUN_FAILED', 'RUN_RUNNING', 'TRIGGER_MANUAL_CLI', 'TRIGGER_SCHEDULED',
 ]
