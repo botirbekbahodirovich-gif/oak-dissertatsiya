@@ -468,6 +468,25 @@ login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Iltimos, tizimga kiring."
 
+
+@login_manager.unauthorized_handler
+def _unauthorized():
+    # API/XHR endpoints must never 302 to /login: Flask-Login's default
+    # unauthorized() would land such background requests on
+    # /login?next=<api-path>, and _safe_next() would store that api-path as
+    # the *next real* login's destination — the browser then finishes login
+    # by navigating straight to a raw JSON response (prod incident:
+    # /api/notifications/count). All JSON/API routes in this app live under
+    # /api/, so gate on that prefix; X-Requested-With covers any XHR call
+    # that doesn't (defense in depth).
+    if (request.path.startswith('/api/')
+            or request.headers.get('X-Requested-With', '').lower() == 'xmlhttprequest'):
+        return jsonify({'error': 'Tizimga kirish talab qilinadi.'}), 401
+    from auth import _safe_next
+    next_val = request.full_path if request.query_string else request.path
+    safe = _safe_next(next_val)
+    return redirect(url_for('auth.login', next=safe) if safe else url_for('auth.login'))
+
 # ── Fix 5.2: durable session/token lifecycle ────────────────────────────────
 app.config.update(
     MAX_CONTENT_LENGTH=20 * 1024 * 1024,

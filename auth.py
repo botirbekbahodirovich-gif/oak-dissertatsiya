@@ -2,6 +2,7 @@ import os
 import hmac
 import hashlib
 import time
+from urllib.parse import urlsplit, unquote
 from flask import (Blueprint, current_app, render_template, request, redirect,
                    url_for, jsonify, session)
 from flask_login import current_user, login_user, logout_user, login_required
@@ -34,11 +35,37 @@ def get_connection():
     return _get_connection()
 
 
+# Post-login destination must be a normal navigational HTML page — never an
+# API/XHR-only endpoint, a static asset, or the auth flow's own routes.
+# Production incident: templates/base.html's checkNotifs() background
+# fetch('/api/notifications/count') 302-redirected an unauthenticated visitor
+# through /login?next=/api/notifications/count, which the old permissive
+# _safe_next() (only "starts with / and not //") happily accepted and stored
+# in session['login_next'] — poisoning the *next* real login's destination
+# with a JSON endpoint. See also _unauthorized() in app.py, which stops the
+# redirect chain at its source for API paths.
+_UNSAFE_NEXT_PREFIXES = ('/api/', '/static/', '/login/')
+_UNSAFE_NEXT_EXACT = ('/login', '/logout', '/register')
+
+
 def _safe_next(val):
-    """Faqat xavfsiz nisbiy yo'l (ochiq-redirectni oldini oladi)."""
-    if val and val.startswith('/') and not val.startswith('//'):
-        return val
-    return None
+    """Faqat xavfsiz, navigatsion (HTML) nisbiy yo'lni qaytaradi.
+
+    Ochiq-redirectni (//evil.com, https://... , orqa-slesh bilan yashiringan
+    manzillar) va API/static/auth-oqim manzillarini (post-login destination
+    bo'lishi mumkin emas) rad etadi.
+    """
+    if not val or not isinstance(val, str):
+        return None
+    val = val.strip()
+    if not val.startswith('/') or val.startswith('//'):
+        return None
+    if any(c in val for c in ('\\', '\x00', '\t', '\n', '\r')):
+        return None
+    path = unquote(urlsplit(val).path)
+    if path in _UNSAFE_NEXT_EXACT or any(path.startswith(p) for p in _UNSAFE_NEXT_PREFIXES):
+        return None
+    return val
 
 
 def _post_login_dest(default='/'):
@@ -157,7 +184,11 @@ def google_callback():
     session.permanent = True
     login_user(user, remember=True)
     session.modified = True
-    nxt = session.pop('main_google_next', '/') or '/'
+    # Re-validate even though main_google_next was already checked at
+    # google_login() time — keeps this callback safe on its own regardless
+    # of how the session value was populated (defense in depth, matches
+    # tg_oidc_next below).
+    nxt = _safe_next(session.pop('main_google_next', None)) or '/'
     session.pop('main_google_state', None)
     session['just_registered' if created else 'just_logged_in'] = True
     if created:
@@ -382,7 +413,10 @@ def telegram_login_callback():
     verifier = session.get('tg_oidc_verifier')
     nonce = session.get('tg_oidc_nonce')
     expires = session.get('tg_oidc_expires') or 0
-    nxt = session.get('tg_oidc_next') or '/'
+    # Re-validate (see _safe_next docstring) rather than trusting the stored
+    # value outright: an invalid/API destination here must fall back to '/',
+    # never surface raw JSON to the user after a successful login.
+    nxt = _safe_next(session.get('tg_oidc_next')) or '/'
     # Single-use regardless of outcome: a replayed callback URL must fail
     # closed (no verifier/state left to complete the exchange).
     _clear_telegram_oidc_session()
