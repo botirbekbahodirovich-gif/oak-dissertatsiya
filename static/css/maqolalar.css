@@ -340,3 +340,36 @@
 .mq-page .ol-facets__opt { min-height: 44px; }
 .mq-notice--spaced { margin-bottom: var(--space-16); }
 .mq-notice__text { margin: 0 0 var(--space-12); }
+
+/* ── Dashboard (Phase 2C.3B) — kichik yordamchi klasslar ─────────────────── */
+.mq-help {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  margin-top: var(--space-8);
+}
+.mq-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  align-items: center;
+}
+.mq-checkbox-cell {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mq-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-16);
+  margin: var(--space-16) 0;
+}
+.mq-detail-item__label {
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.mq-detail-item__value { color: var(--color-text-primary); }

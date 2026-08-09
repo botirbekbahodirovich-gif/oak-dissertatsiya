@@ -1472,7 +1472,8 @@ def _admin_form_context(cur, values=None, article=None, error=None):
     if article and article.get('doi'):
         # Faqat bitta so'rov, faqat GET (§20 — "Oxirgi tekshiruv"). Yozish
         # yo'q — sinxronizatsiya tarixi shu yerda faqat KO'RSATILADI.
-        sync_history = article_sync.list_sync_history(cur, article['id'], limit=5)
+        sync_history, _sync_total = article_sync.list_sync_history(
+            cur, article['id'], limit=5)
     return {
         'field_tree': tree, 'field_rows': rows,
         'access_types': ACCESS_TYPES, 'licenses': LICENSES,
@@ -1696,6 +1697,183 @@ def admin_article_metadata_apply(article_id):
     finally:
         conn.close()
     return jsonify(result)
+
+
+# ── Markaziy metadata sinxronizatsiya dashboard (Phase 2C.3B) ──────────────
+# Bu route'lar HAM biznes logikasiz — hammasi `services/article_sync/`da.
+# Apply — YANGI logika EMAS, xuddi shu `article_sync.apply_article_metadata_changes`
+# yuqoridagi `/metadata/apply` orqali (§11 — dashboard yangi apply yozmaydi).
+
+METADATA_SYNC_PER_PAGE = 25
+QUEUE_STATUS_CHOICES = ('actionable', 'needs_review', 'critical', 'no_changes',
+                        'stale', 'applied', 'dismissed', 'all')
+SORT_CHOICES = ('critical_first', 'newest', 'oldest', 'most_changes')
+
+
+def _dashboard_filters_from_request():
+    queue_status = _choice_arg('status', QUEUE_STATUS_CHOICES, 'actionable')
+    return {
+        'queue_status': None if queue_status == 'actionable' else queue_status,
+        'has_retraction': _flag_arg('retraction'),
+        'has_citation_only': _flag_arg('citation_only'),
+        'has_provider_issue': _flag_arg('provider_issue'),
+        'publication_status': (request.args.get('publication_status') or '').strip()
+                              or None,
+        'sort': _choice_arg('sort', SORT_CHOICES, 'critical_first'),
+    }
+
+
+@articles_bp.route('/admin/articles/metadata-sync')
+@login_required
+def admin_article_metadata_dashboard():
+    """Markaziy review dashboard — ko'p maqolada topilgan o'zgarishlarni
+    bitta joyda ko'rish/saralash (§4-§9). Faqat O'QISH — hech qanday tashqi
+    so'rov, hech qanday mutatsiya (§32)."""
+    _require_admin()
+    page = max(1, _int_arg('page', 1))
+    filters = _dashboard_filters_from_request()
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            summary = article_sync.get_dashboard_summary(cur)
+            rows, total = article_sync.list_dashboard(
+                cur, limit=METADATA_SYNC_PER_PAGE,
+                offset=(page - 1) * METADATA_SYNC_PER_PAGE, **filters)
+            conn.commit()
+    finally:
+        conn.close()
+
+    return render_template(
+        'admin/article_metadata_sync_dashboard.html', rows=rows, total=total,
+        page=page, pages=max(1, math.ceil(total / METADATA_SYNC_PER_PAGE)),
+        summary=summary, filters=filters, queue_status_choices=QUEUE_STATUS_CHOICES,
+        sort_choices=SORT_CHOICES, publication_statuses=PUBLICATION_STATUSES,
+        queue_state_labels=article_sync.QUEUE_STATE_LABELS, qs=_query_string)
+
+
+@articles_bp.route('/admin/articles/metadata-sync/<int:sync_id>')
+@login_required
+def admin_article_metadata_sync_detail(sync_id):
+    """Bitta sync natijasining to'liq tafsiloti — diff, provayder holati,
+    amallar (§10)."""
+    _require_admin()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            sync = article_sync.get_sync_result_row(cur, sync_id)
+            if sync is None:
+                abort(404)
+            article = _load_article(cur, article_id=sync['article_id'], public_only=False)
+            conn.commit()
+    finally:
+        conn.close()
+    if article is None:
+        abort(404)
+    return render_template('admin/article_metadata_sync_detail.html',
+                           sync=sync, article=article,
+                           queue_state_labels=article_sync.QUEUE_STATE_LABELS)
+
+
+@articles_bp.route('/admin/articles/metadata-sync/<int:sync_id>/dismiss',
+                   methods=['POST'])
+@login_required
+def admin_article_metadata_sync_dismiss(sync_id):
+    """Diff'ni "ko'rib chiqildi, o'zgartirishsiz yopish" (§12). Maqolani rad
+    etmaydi — faqat shu sync candidate yopiladi, tarix saqlanadi."""
+    _require_admin()
+    reason = (request.form.get('reason') or '').strip()[:500] or None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            try:
+                article_sync.dismiss_sync_result(cur, sync_id, current_user.id,
+                                                 reason=reason)
+                conn.commit()
+            except article_sync.ArticleSyncError as exc:
+                conn.rollback()
+                flash(exc.public_message)
+                return redirect(f'/admin/articles/metadata-sync/{sync_id}')
+    finally:
+        conn.close()
+    flash("Yopildi — ko'rib chiqilgan deb belgilandi.")
+    return redirect('/admin/articles/metadata-sync')
+
+
+@articles_bp.route('/admin/articles/metadata-sync/bulk-apply-safe', methods=['POST'])
+@login_required
+def admin_article_metadata_bulk_apply_safe():
+    """"Tanlangan xavfsiz o'zgarishlarni qo'llash" (§16). Faqat mavjud
+    `apply_article_metadata_changes()` chaqiradi — yangi apply logika yo'q."""
+    _require_admin()
+    sync_ids = [int(v) for v in request.form.getlist('sync_id') if v.isdigit()][:100]
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            summary = article_sync.bulk_apply_safe_changes(cur, sync_ids, current_user.id)
+            conn.commit()
+    finally:
+        conn.close()
+    flash("Qo'llandi: %d, o'tkazib yuborilgan: %d" %
+         (len(summary['applied']), len(summary['skipped'])))
+    return redirect(request.referrer or '/admin/articles/metadata-sync')
+
+
+@articles_bp.route('/admin/articles/<int:article_id>/metadata/recheck', methods=['POST'])
+@login_required
+def admin_article_metadata_recheck(article_id):
+    """Dashboard/detaildan "Qayta tekshirish" — YANGI sync yozuvi yaratadi,
+    eskisini o'chirmaydi/qayta yozmaydi (§20). `check_article_metadata()`
+    AYNAN o'zi — parallel implementatsiya yo'q."""
+    _require_admin()
+    if _metadata_rate_limited(getattr(current_user, 'id', 'anon')):
+        flash("Juda ko'p so'rov. Bir daqiqadan keyin urinib ko'ring.")
+        return redirect(request.referrer or '/admin/articles/metadata-sync')
+
+    cache_get, cache_set = _metadata_cache_adapters()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            try:
+                result = article_sync.check_article_metadata(
+                    cur, article_id, current_user.id, cache_get=cache_get,
+                    cache_set=cache_set)
+                conn.commit()
+            except article_sync.ArticleSyncError as exc:
+                conn.rollback()
+                flash(exc.public_message)
+                return redirect(request.referrer or '/admin/articles/metadata-sync')
+    finally:
+        conn.close()
+    return redirect(f'/admin/articles/metadata-sync/{result.sync_id}')
+
+
+ARTICLE_HISTORY_PER_PAGE = 20
+
+
+@articles_bp.route('/admin/articles/<int:article_id>/metadata/history')
+@login_required
+def admin_article_metadata_history(article_id):
+    """Bitta maqolaning TO'LIQ sinxronizatsiya tarixi, sahifalangan (§17)."""
+    _require_admin()
+    page = max(1, _int_arg('page', 1))
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            article = _load_article(cur, article_id=article_id, public_only=False)
+            if article is None:
+                abort(404)
+            rows, total = article_sync.list_sync_history(
+                cur, article_id, limit=ARTICLE_HISTORY_PER_PAGE,
+                offset=(page - 1) * ARTICLE_HISTORY_PER_PAGE)
+            conn.commit()
+    finally:
+        conn.close()
+    return render_template(
+        'admin/article_metadata_sync_history.html', article=article, rows=rows,
+        total=total, page=page,
+        pages=max(1, math.ceil(total / ARTICLE_HISTORY_PER_PAGE)),
+        queue_state_labels=article_sync.QUEUE_STATE_LABELS)
 
 
 @articles_bp.route('/admin/articles')

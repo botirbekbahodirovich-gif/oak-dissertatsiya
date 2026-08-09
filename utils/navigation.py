@@ -232,6 +232,9 @@ ADMIN_SERVICES: tuple[NavItem, ...] = (
             description="H-index snapshotlari"),
     NavItem("Maqolalar importi", "/admin/articles/import", icon="bi-cloud-arrow-down",
             description="DOI/CSV orqali ommaviy import va ko'rib chiqish"),
+    NavItem("Maqolalar metadata nazorati", "/admin/articles/metadata-sync",
+            icon="bi-arrow-repeat",
+            description="Tashqi manbalarda topilgan o'zgarishlarni ko'rib chiqish"),
 )
 
 # Avatar dropdown'idagi qisqa admin bloki. To'liq ro'yxat admin panelida.

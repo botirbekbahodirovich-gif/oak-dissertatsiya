@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
+
+{% block title %}Metadata tarixi: {{ article.title }} — Olimlar.uz{% endblock %}
+{% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+
+{% block extra_head %}
+<link href="/static/css/maqolalar.css?v=20260809" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="ol-page mq-page">
+  {{ page_header('Metadata tarixi', article.title,
+                 crumbs=[('Bosh sahifa', '/'), ('Admin', '/admin'), ('Maqolalar', '/admin/articles'),
+                         ('Metadata nazorati', '/admin/articles/metadata-sync'),
+                         ('Tahrirlash', '/admin/articles/%d/edit' % article.id)],
+                 meta=['Jami tekshiruv: %d' % total]) }}
+
+  {% if rows %}
+  <div class="ol-table-wrap">
+    <table class="ol-table mq-sync__table">
+      <caption class="ol-meta">Sinxronizatsiya tarixi</caption>
+      <thead>
+        <tr>
+          <th scope="col">Tekshirilgan</th>
+          <th scope="col">Tekshiruvchi</th>
+          <th scope="col">O'zgarish</th>
+          <th scope="col">Natija</th>
+          <th scope="col">Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.checked_at.strftime('%Y-%m-%d %H:%M') if row.checked_at else '—' }}</td>
+          <td>{{ row.actor_type }}{% if row.checked_by %} (#{{ row.checked_by }}){% endif %}</td>
+          <td>{{ row.change_count }} ({{ row.safe_change_count }} safe / {{ row.review_change_count }} review / {{ row.critical_change_count }} critical)</td>
+          <td>
+            {% if row.status == 'applied' %}Qo'llangan
+            {% elif row.status == 'dismissed' %}Yopilgan
+            {% elif row.change_count == 0 %}O'zgarishsiz
+            {% else %}Tekshirilgan{% endif %}
+          </td>
+          <td><a class="ol-btn ol-btn--tertiary" href="/admin/articles/metadata-sync/{{ row.id }}">Ko'rish</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="ol-pager" aria-label="Sahifalash">
+    {% for p in range(1, pages + 1) %}
+    <a href="?page={{ p }}" {{ 'aria-current=page'|safe if p == page }}>{{ p }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="ol-empty">
+    <h2 class="ol-h5">Bu maqola hali tekshirilmagan.</h2>
+  </div>
+  {% endif %}
+
+  <a class="ol-btn ol-btn--tertiary" href="/admin/articles/{{ article.id }}/edit">&larr; Maqolaga qaytish</a>
+</div>
+{% endblock %}
