@@ -1,8 +1,10 @@
-# Manual Article Discovery — OpenAlex + Crossref (Phase 2D.1/2D.2)
+# Manual + Scheduled Article Discovery — OpenAlex + Crossref (Phase 2D.1/2D.2/2D.3)
 
 Admin kalit so'z va sana oralig'i bo'yicha OpenAlex va/yoki Crossref'dan
 nomzod maqolalarni qidiradi (Phase 2D.2 — provayder tanlovi va saqlangan
-so'rovlar; Phase 2D.1'da faqat OpenAlex bor edi). Tizim hech narsani
+so'rovlar; Phase 2D.1'da faqat OpenAlex bor edi), va endi saqlangan
+so'rovlar ixtiyoriy ravishda kunlik/haftalik/oylik jadval bo'yicha
+AVTOMATIK ishga tushishi mumkin (Phase 2D.3 — §16-§21). Tizim hech narsani
 avtomatik yaratmaydi — faqat mavjud
 [`docs/article-bulk-import.md`](article-bulk-import.md) (Phase 2C.2) navbatiga
 "yangi" (bazada yo'q, hech qanday navbatda yo'q) DOI'larni qo'shadi. Bundan
@@ -424,16 +426,233 @@ Barchasi admin-only (`_require_admin`), yozuvchi POST'lar CSRF talab qiladi
 so'rov) — save/update/deactivate/list oddiy DB operatsiyasi, rate limit
 shart emas.
 
-## 18. Kelajak — Phase 2D.3/2D.4 (tayyorgarlik)
+## 18. Phase 2D.3 — Rejalashtirilgan (scheduled) discovery
 
-- **2D.3** — rejalashtirilgan (scheduled) discovery: saqlangan so'rovlarni
-  cron bo'yicha AVTOMATIK ishga tushirish. Bu Phase 2D.2'da ATAYIN
-  YO'Q (ehtiyotkorlik bilan qilinishi kerak: "AI agent" chegarasiga
-  yaqinlashadi, aniq skop/tezlik-cheklov/monitoring talab qiladi).
+### 18.1. Qo'lda vs rejalashtirilgan — bitta bajarilish xizmati
+
+Har bir saqlangan so'rov ixtiyoriy ravishda **kunlik/haftalik/oylik**
+jadval bilan ishlashi mumkin — ixtiyoriy cron ifodalari YO'Q (§2 ticket).
+Qo'lda "Run" tugmasi (§17.5) **ATAYIN O'ZGARTIRILMAGAN** — u hamon
+preview ko'rsatadi, admin aniq "navbatga yuborish" bosishi kerak (Phase
+2D.2 xavfsizlik gaeti buzilmadi). Rejalashtirilgan ijro esa —
+`services/article_discovery/service.py:run_saved_query()` — qidiradi,
+klassifikatsiya qiladi VA hech kim kutmasdan avtomatik enqueue qiladi,
+chunki scheduled ijroda admin preview ekrani BUTUNLAY YO'Q (§10 — bu
+FAQAT scheduled trigger uchun ATAYIN qilingan istisno).
+
+Ikkalasi (manual Run va scheduler) bir xil `run_multi_provider_search()`ni
+ishlatadi — dublikat qidiruv/klassifikatsiya mantig'i YO'Q. `run_saved_
+query()` esa faqat scheduler tomonidan chaqiriladi (§9 audit qarori
+quyida, 18.7'da).
+
+### 18.2. Sxema — schedule maydonlari + run tarixi (migrations/018)
+
+**Eng kichik toza dizayn** (ticket §2 audit talabi): rejalashtirish
+maydonlari YANGI jadval EMAS, to'g'ridan-to'g'ri
+`article_discovery_saved_queries`ga qo'shildi — chunki munosabat 1:1
+(har bir saqlangan so'rov ENG KO'PI BILAN bitta jadval konfiguratsiyasiga
+ega, hech qachon bir nechta). Mavjud scheduler konvensiyasi
+(`services/article_sync/`, Phase 2C.3C) buning aksini — global interval +
+dinamik due-hisoblash, per-item holat saqlanmaydi — ishlatadi, chunki u
+YERDA barcha maqolalar BIR XIL intervalga ega; bu yerda esa HAR saqlangan
+so'rov o'z chastotasiga ega bo'lishi kerak, shuning uchun haqiqiy
+`next_run_at` ustuni zarur edi.
+
+```sql
+-- article_discovery_saved_queries (ALTER, migrations/018)
+schedule_enabled        BOOLEAN   NOT NULL DEFAULT FALSE
+schedule_frequency      VARCHAR(16)          -- 'daily' | 'weekly' | 'monthly'
+next_run_at             TIMESTAMP            -- NULL = o'chirilgan
+last_scheduled_run_at   TIMESTAMP            -- FAQAT scheduled trigger yangilaydi
+last_run_status         VARCHAR(24)          -- manual VA scheduled ikkalasi ham
+last_run_error          TEXT                 -- qisqartirilgan, sirlarsiz
+scheduled_updated_at    TIMESTAMP            -- schedule KONFIGURATSIYASI o'zgargan payt
+                                              -- (mavjud `updated_at` — so'rov
+                                              -- PARAMETRLARI o'zgargan payt, boshqa narsa)
+
+-- article_discovery_runs (YANGI jadval)
+id, saved_query_id (FK CASCADE), trigger_type ('manual'|'scheduled'),
+status ('running'|'success'|'partial'|'failed'|'skipped'), started_at,
+finished_at, providers (JSONB), found_count, new_count, queued_count,
+duplicate_count, no_doi_count, error_summary, import_batch_id (FK SET NULL)
+```
+
+`created_by`ning FK konvensiyasi (§9 ticket audit) — Phase 2D.2 hujjatiga
+qarang (§17.3-17.4dagi bilan bir xil natija): bu pipeline oilasi hech
+qachon `users(id)`ga FK qo'shmaydi.
+
+### 18.3. Qo'llab-quvvatlanadigan chastotalar va `next_run_at` hisoblash
+
+Faqat **kunlik/haftalik/oylik** — soatlik/daqiqalik/erkin cron ATAYIN YO'Q
+(§2, §24). Barcha vaqt ichkarida timezone-aware UTC.
+
+- Kunlik: `+1 kun`. Haftalik: `+7 kun`.
+- Oylik: **kalendar oyi** bo'yicha (shunchaki `+30 kun` EMAS) — bir necha
+  oy davomida sana siljib ketishining oldini oladi; oy oxiri kunlarida
+  qisqaroq oyga moslashadi (31-yanvar -> 28/29-fevral).
+- **"Catch-up storm" oldini olish** (§8 ticket): agar scheduler kunlab
+  o'chiq bo'lsa, `next_run_at` HAR DOIM "hozir" (haqiqiy bajarilish
+  vaqti)dan hisoblanadi — eski, o'tkazib yuborilgan `next_run_at`dan EMAS.
+  Natija: bitta muddati o'tgan so'rov FAQAT BIR marta ishlaydi, keyin bitta
+  interval oldinga suriladi — hech qachon o'nlab o'tkazib yuborilgan
+  voqealar zanjiri bajarilmaydi.
+
+### 18.4. Band qilish / concurrency (§5, §21 ticket)
+
+**Ikki qatlamli himoya**, ikkalasi ham loyihaning MAVJUD
+konvensiyalaridan (yangi mexanizm o'ylab topilmagan):
+
+1. **Global `pg_try_advisory_lock(hashtext('article_discovery_scheduler'))`**
+   — bitta vaqtda faqat BITTA scheduler TSIKLI ishlaydi (`services/
+   article_sync/scheduler.py`dagi bilan AYNAN bir xil naqsh, boshqa lock
+   kaliti bilan — ikkita mustaqil scheduler bir-birini bloklamasin).
+2. **`FOR UPDATE SKIP LOCKED`** band qilish — `services/article_import/
+   persistence.py:fetch_pending_chunk` bilan bir xil naqsh. Band
+   qilingandan so'ng `next_run_at` DARHOL 1 soatga suriladi ("in-flight"
+   belgisi) — jarayon halokatga uchrasa ham, qator abadiy "doim due" bo'lib
+   qolmaydi, lekin darhol ham qayta olinmaydi.
+
+Ikkalasi birga: (1) ikkita worker bir vaqtda scheduler TSIKLINI umuman
+ishlata olmaydi; (2) hatto shu himoya chetlab o'tilsa ham (masalan lock
+kutilmagan holda bo'shab qolsa), bitta due-qator ikki marta band
+qilinolmaydi. Real Postgres semantikasi — `TEST_DATABASE_URL` bilan
+gated integratsiya testida ikkita HAQIQIY ulanish bilan isbotlangan
+(`tests/test_article_discovery_scheduler_dbgated.py`, §21 — "Do not fake
+this invariant with only mocks").
+
+### 18.5. Bounded tsikl (§6 ticket)
+
+- Bitta tsiklda maksimal due saqlangan so'rov: `ARTICLE_DISCOVERY_
+  SCHEDULER_MAX_QUERIES` (standart 10, xavfsizlik chegarasi 100).
+- Har bir provayder natija limiti — mavjud `<=100` (Phase 2D.1/2D.2
+  bilan bir xil, o'zgarmagan).
+- Bitta saqlangan so'rovni import navbatiga qo'shgandan keyin,
+  `process_import_batch()` chaqiruvlari — chegaralangan
+  (`_MAX_IMPORT_CHUNK_ITERATIONS=100`, cheksiz tsikl xavfidan himoya).
+
+### 18.6. Xato izolyatsiyasi (§7 ticket)
+
+Har bir due saqlangan so'rov ALOHIDA tranzaksiyada ishlanadi — bittasi
+xato bersa, navbatdagilar davom etadi (`tests/
+test_article_discovery_scheduler.py:FailureIsolationTests`).
+
+| Holat | `article_discovery_runs.status` |
+| --- | --- |
+| Barcha tanlangan provayderlar muvaffaqiyatli | `success` |
+| Bir qismi muvaffaqiyatli (masalan OpenAlex ishlamadi, Crossref ishladi) | `partial` |
+| Hammasi muvaffaqiyatsiz | `failed` |
+| Yangi DOI yo'q (qidiruv o'zi muvaffaqiyatli) | `success`, `queued_count=0` |
+| Band qilingandan keyin, ishga tushirilgunga qadar so'rov faolsizlantirilgan (poyga) | `skipped` |
+
+Provayder xatolari — sanitizatsiya qilingan (`services/article_metadata/
+http.py` status kodlari: `timeout`/`rate_limited`/`unavailable`/...), xom
+javob/stack trace HECH QACHON saqlanmaydi.
+
+### 18.7. Import/review ko'prigi — o'zgarishsiz
+
+Scheduled ijro AYNAN Phase 2D.1/2D.2 bilan bir xil yo'ldan o'tadi — YANGI
+ingestion yo'li YO'Q:
+
+```text
+saved query -> run_saved_query() -> run_multi_provider_search()
+  -> _classify_candidates() (mavjud dedup qoidalari)
+  -> FAQAT 'new' klassifikatsiyali nomzodlar
+  -> bridge.enqueue_discovery_candidates() (mavjud, o'zgarmagan)
+  -> article_import_batches / article_import_items (mavjud)
+  -> process_import_batch() ketma-ket chaqiriladi (§11 — admin
+     sahifani ochib process qilishni "drayver" qilmagani uchun, bu
+     rolni scheduler o'zi bajaradi)
+  -> fetch_article_metadata() (mavjud, o'zgarmagan)
+  -> ko'rib chiqish navbati (mavjud, o'zgarmagan)
+  -> admin explicit approve (HECH QACHON avtomatik EMAS)
+```
+
+**Xavfsizlik chegarasi** (§10 ticket, eng muhim qoida): scheduled ijro
+HECH QACHON approve/publish/PDF yuklab olish/OAK avtomatik biriktirish
+qilmaydi. Yagona "avtomatiklashtirilgan" qadam — ALLAQACHON deterministik
+DOI qoidalari bilan `new` deb klassifikatsiya qilingan nomzodlarni
+navbatga QO'YISH — bundan nariga hech narsa.
+
+### 18.8. Provenance
+
+`article_import_batches.source_query` (mavjud JSONB, Phase 2D.1) —
+`'scheduled'` kalit ostida kengaytirildi (§12 ticket, YANGI USTUN YO'Q):
+
+```json
+{"keyword": "...", "from_date": "...", "providers": ["openalex"],
+ "scheduled": {"trigger_type": "scheduled", "saved_query_id": 7,
+               "saved_query_name": "Onkologiya", "run_id": 42}}
+```
+
+Xom provayder javobi/sir HECH QACHON saqlanmaydi — na `article_discovery_
+runs`da, na provenance JSON'da.
+
+### 18.9. Scheduler qanday chaqiriladi (§14 ticket)
+
+Loyihaning MAVJUD konvensiyasi (`scripts/sync_article_metadata.py`, Phase
+2C.3C) — Gunicorn worker ICHIDA fon thread'i YO'Q (bu takrorlangan
+bajarilishga olib kelardi, har worker o'z threadini ishga tushirardi).
+O'rniga alohida CLI skript, OS cron/systemd timer yoki operator qo'lda
+chaqiradi:
+
+```bash
+python3.12 scripts/run_scheduled_article_discovery.py                # cron
+python3.12 scripts/run_scheduled_article_discovery.py --dry-run       # faqat ko'rish
+python3.12 scripts/run_scheduled_article_discovery.py --limit 3       # bir martalik cheklov
+```
+
+Chiqish kodi: `0` — muvaffaqiyatli/o'chirilgan/already_running/dry-run,
+`1` — tsikl yakunlandi, lekin ba'zi so'rovlarda xato bor edi, `2` —
+konfiguratsiya/argument xatosi (cron monitoring uchun).
+
+### 18.10. Konfiguratsiya (§13 ticket)
+
+```bash
+# .env.example
+ARTICLE_DISCOVERY_SCHEDULER_ENABLED=false               # MUHIM: sukut FALSE
+ARTICLE_DISCOVERY_SCHEDULER_INTERVAL_MINUTES=15          # operator cron/timer'ga o'rnatadi
+ARTICLE_DISCOVERY_SCHEDULER_MAX_QUERIES=10               # bitta tsikl chegarasi (<=100)
+```
+
+`ARTICLE_METADATA_SYNC_ENABLED` (Phase 2C.3C) sukut bo'yicha `true`, lekin
+BU YANGI bayroq ATAYIN `false` — discovery scheduler nafaqat tashqi
+API'ga so'rov yuboradi, balki (yangi DOI topilsa) AVTOMATIK import
+navbatiga yozadi, shuning uchun birinchi marta operator ANIQ tekshirmasdan
+yoqilmasligi kerak (§25 quyida).
+
+### 18.11. Run tarixi UI (§16 ticket)
+
+`/admin/articles/discovery` sahifasida ikkita YANGI, KOMPAKT bo'lim
+(dashboard emas — jadval): har bir saqlangan so'rov qatorida
+Rejalashtirish ustuni (checkbox + chastota + keyingi/oxirgi ishga tushirish
+holati) va sahifa pastida "So'nggi ishga tushirishlar" jadvali (Qidiruv /
+Turi / Boshlandi / Holat / Topildi / Yangi / Navbatga qo'shildi). Xato
+matnlari qisqartirilgan — xom stack trace HTML'ga HECH QACHON chiqmaydi.
+Saqlangan so'rov tahrirlash sahifasida — o'sha so'rovga xos run tarixi.
+
+### 18.12. Muhim ATAYIN QILINMAGAN dizayn qarori — qo'lda Run auto-enqueue qilmaydi
+
+Ticket §9 "Both may use the same underlying execution service" deb
+so'raydi — bu `run_multi_provider_search()` darajasida QONDIRILDI (ikkalasi
+ham chaqiradi). Lekin qo'lda "Run" tugmasi ATAYIN `run_saved_query()`
+(avtomatik enqueue) ga O'TKAZILMADI — mavjud Phase 2D.2 preview-keyin-
+tasdiqlash UX'i (xavfsizlik gate'i) saqlanib qolishi uchun. Faqat
+scheduler `run_saved_query()`ni chaqiradi, chunki FAQAT scheduled ijroda
+admin preview ekrani printsipial ravishda YO'Q (§10 — bu chegara ATAYIN
+FAQAT shu holat uchun).
+
+## 19. Kelajak — Phase 2D.4 (tayyorgarlik)
+
 - **2D.4** — semantik/rank qidiruv, OAK yo'nalishidan avtomatik query
-  generatsiya (hozircha ATAYIN yo'q, §21).
+  generatsiya (hozircha ATAYIN yo'q, §21). AI so'rov kengaytirish, AI
+  maqola tasdiqlash/OAK klassifikatsiya, avtomatik nashr, PDF avtomatik
+  yuklab olish, arbitrar cron muharriri, soat/daqiqalik jadval,
+  email/Telegram ogohlantirishlar — HAMMASI hozircha ATAYIN qilinmagan
+  (§24 ticket).
 
 Bog'liq hujjatlar: [`article-bulk-import.md`](article-bulk-import.md) (import
 navbati), [`article-metadata-integration.md`](article-metadata-integration.md)
-(metadata boyitish), [`articles-module.md`](articles-module.md) (umumiy
+(metadata boyitish), [`article-metadata-scheduler.md`](article-metadata-scheduler.md)
+(metadata sinxronizatsiya scheduleri — Phase 2D.3 shu konvensiyani
+qayta ishlatadi), [`articles-module.md`](articles-module.md) (umumiy
 maqolalar moduli).
