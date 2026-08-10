@@ -20,6 +20,7 @@ ishlatadi) TEGILMAYDI, faqat qo'shimcha kalitlar qo'shiladi.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from services.article_import.state import ACTIVE_DOI_ITEM_STATUSES
 from tests.fake_article_import_pg import (BATCH_COLUMNS, ITEM_COLUMNS,
@@ -34,7 +35,11 @@ DISCOVERY_ITEM_COLUMNS = ITEM_COLUMNS + ['external_source_id']
 
 SAVED_QUERY_COLUMNS = ['id', 'name', 'created_by', 'keyword', 'from_date', 'to_date',
                        'oak_field_id', 'providers', 'result_limit', 'is_active',
-                       'created_at', 'updated_at', 'last_used_at']
+                       'created_at', 'updated_at', 'last_used_at',
+                       # Phase 2D.3 — migrations/018.
+                       'schedule_enabled', 'schedule_frequency', 'next_run_at',
+                       'last_scheduled_run_at', 'last_run_status', 'last_run_error',
+                       'scheduled_updated_at']
 
 
 def new_store():
@@ -58,6 +63,16 @@ class FakeDiscoveryCursor(FakeImportCursor):
         if sql.startswith('SELECT id FROM article_import_batches WHERE '
                           "source_type = 'discovery' AND source_request_id"):
             return self._find_discovery_batch_by_request_id(p)
+        if 'article_discovery_runs' in sql:
+            # Phase 2D.3 — bu bazaviy fixture haqiqiy run-tarixni
+            # simulyatsiya QILMAYDI (buning uchun `tests/
+            # fake_discovery_scheduler_pg.py:DiscoverySchedulerCursor`),
+            # faqat HAR BIR discovery route endi `_recent_runs()` chaqirgani
+            # uchun eski (Phase 2D.1/2D.2) testlar yiqilmasligi kerak —
+            # doim "hech qanday run yo'q" qaytaradi. MUHIM: bu tekshiruv
+            # `article_discovery_saved_queries`dan OLDIN — run ro'yxati
+            # SQL'i (JOIN) ikkala jadval nomini ham o'z ichiga oladi.
+            return [], [('id',)]
         if 'article_discovery_saved_queries' in sql:
             return self._dispatch_saved_queries(sql, p)
         return super()._dispatch(sql, p)
@@ -77,7 +92,53 @@ class FakeDiscoveryCursor(FakeImportCursor):
             return self._set_saved_query_active(p)
         if sql.startswith('UPDATE article_discovery_saved_queries SET last_used_at'):
             return self._touch_saved_query(p)
+        # Phase 2D.3 — rejalashtirish maydonlari (scheduler_persistence.py:
+        # set_schedule/record_run_outcome). Bazaviy fixture'da: bu SQL
+        # naqshlari admin route testlarida (scheduler-xos claim/lock'siz)
+        # HAM ishlatiladi, shuning uchun shu yerda, `DiscoverySchedulerCursor`
+        # emas (u FAQAT claim/lock/runs-jadval kabi scheduler-ga xos
+        # narsalarni qo'shadi).
+        if 'schedule_enabled = TRUE' in sql:
+            return self._set_schedule_enabled(p)
+        if 'schedule_enabled = FALSE' in sql:
+            return self._set_schedule_disabled(p)
+        if 'last_scheduled_run_at = NOW()' in sql:
+            return self._record_scheduled_outcome(p)
+        if 'last_run_status' in sql and 'last_scheduled_run_at' not in sql:
+            return self._record_manual_outcome(p)
         return [], None       # CREATE TABLE/INDEX (ensure_schema) — no-op
+
+    def _set_schedule_enabled(self, p):
+        frequency, query_id = p
+        row = self._saved_query_by_id(query_id)
+        if row is None:
+            return [], [('id',)]
+        row.update(schedule_enabled=True, schedule_frequency=frequency,
+                  next_run_at=_now())
+        return [(query_id,)], [('id',)]
+
+    def _set_schedule_disabled(self, p):
+        (query_id,) = p
+        row = self._saved_query_by_id(query_id)
+        if row is None:
+            return [], [('id',)]
+        row.update(schedule_enabled=False, schedule_frequency=None, next_run_at=None)
+        return [(query_id,)], [('id',)]
+
+    def _record_scheduled_outcome(self, p):
+        status, error_summary, next_run_at, query_id = p
+        row = self._saved_query_by_id(query_id)
+        if row is not None:
+            row.update(last_run_status=status, last_run_error=error_summary,
+                      last_scheduled_run_at=_now(), next_run_at=next_run_at)
+        return [], None
+
+    def _record_manual_outcome(self, p):
+        status, error_summary, query_id = p
+        row = self._saved_query_by_id(query_id)
+        if row is not None:
+            row.update(last_run_status=status, last_run_error=error_summary)
+        return [], None
 
     def _saved_query_by_id(self, query_id):
         return next((r for r in self.store['saved_queries'] if r['id'] == query_id), None)
@@ -93,6 +154,10 @@ class FakeDiscoveryCursor(FakeImportCursor):
             'providers': _loads(providers), 'result_limit': result_limit,
             'is_active': True, 'created_at': None, 'updated_at': None,
             'last_used_at': None,
+            # Phase 2D.3 defaults — matches migrations/018 column DEFAULTs.
+            'schedule_enabled': False, 'schedule_frequency': None, 'next_run_at': None,
+            'last_scheduled_run_at': None, 'last_run_status': None,
+            'last_run_error': None, 'scheduled_updated_at': None,
         }
         self.store['saved_queries'].append(row)
         return [(row_id,)], [('id',)]
@@ -219,6 +284,10 @@ def _loads(value):
         return json.loads(value)
     except (TypeError, ValueError):
         return value
+
+
+def _now():
+    return datetime.now(timezone.utc)
 
 
 __all__ = ['FakeDiscoveryCursor', 'FakeDiscoveryConnection', 'new_store']
