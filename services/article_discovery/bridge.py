@@ -25,9 +25,17 @@ from services.article_import import persistence
 
 def enqueue_discovery_candidates(cur, admin_id, query, candidates, *,
                                  total_count, excluded_no_doi_count,
-                                 request_id=None):
+                                 request_id=None, extra_provenance=None):
     """Faqat `NEW` nomzodlarni navbatga qo'yadi, `request_id` bo'yicha
     idempotent (§5-§9).
+
+    `extra_provenance` (Phase 2D.3, §12) — ixtiyoriy kichik dict (masalan
+    `{'trigger_type': 'scheduled', 'saved_query_id': 7, 'saved_query_name':
+    'Onkologiya', 'run_id': 42}`), mavjud `source_query` JSONB ichiga
+    `'scheduled'` kalit ostida qo'shiladi. YANGI USTUN YO'Q —
+    `article_import_batches` sxemasi o'zgarmagan; xom provider javobi yoki
+    sir HECH QACHON bu yerga tushmaydi (chaqiruvchi mas'ul, faqat oddiy
+    skalyar qiymatlar).
 
     Qaytaradi: `{'batch_id':…, 'queued': [...], 'conflicted': [...],
     'created': bool}`.
@@ -51,9 +59,13 @@ def enqueue_discovery_candidates(cur, admin_id, query, candidates, *,
         return {'batch_id': existing_batch_id, 'queued': [], 'conflicted': [],
                'created': False}
 
+    source_query = query.canonical()
+    if extra_provenance:
+        source_query['scheduled'] = dict(extra_provenance)
+
     batch_id, created = persistence.get_or_create_discovery_batch(
         cur, admin_id, source_provider=query.source_provider_label,
-        source_query=query.canonical(),
+        source_query=source_query,
         source_oak_field_id=query.oak_field_id, source_result_count=total_count,
         excluded_no_doi_count=excluded_no_doi_count, source_request_id=request_id)
 

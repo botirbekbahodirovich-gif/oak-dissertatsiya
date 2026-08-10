@@ -34,7 +34,11 @@ _schema_ready = False
 
 
 def ensure_schema(cur):
-    """migrations/017 bilan AYNAN bir xil DDL, idempotent (parity test)."""
+    """migrations/017 + migrations/018 (rejalashtirish ustunlari) bilan
+    AYNAN bir xil DDL, idempotent (parity test). Bu jadvalning YAGONA
+    egasi — `scheduler_persistence.ensure_schema()` shu funksiyani birinchi
+    chaqiradi, keyin FAQAT o'zining yangi `article_discovery_runs`
+    jadvalini yaratadi (dublikat DDL yo'q, §18)."""
     global _schema_ready
     if _schema_ready:
         return
@@ -65,6 +69,22 @@ def ensure_schema(cur):
         "CREATE INDEX IF NOT EXISTS idx_article_discovery_saved_queries_oak_field "
         "ON article_discovery_saved_queries (oak_field_id) "
         "WHERE oak_field_id IS NOT NULL")
+
+    # migrations/018 (Phase 2D.3) — rejalashtirish maydonlari.
+    cur.execute("""
+        ALTER TABLE article_discovery_saved_queries
+            ADD COLUMN IF NOT EXISTS schedule_enabled        BOOLEAN   NOT NULL DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS schedule_frequency       VARCHAR(16),
+            ADD COLUMN IF NOT EXISTS next_run_at              TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS last_scheduled_run_at     TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS last_run_status           VARCHAR(24),
+            ADD COLUMN IF NOT EXISTS last_run_error            TEXT,
+            ADD COLUMN IF NOT EXISTS scheduled_updated_at      TIMESTAMP
+    """)
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_article_discovery_saved_queries_due "
+        "ON article_discovery_saved_queries (next_run_at) "
+        "WHERE schedule_enabled AND is_active")
     _schema_ready = True
 
 

@@ -25,9 +25,12 @@ class MigrationNumberingTests(unittest.TestCase):
     def test_017_file_exists(self):
         self.assertTrue(os.path.isfile(MIGRATION))
 
-    def test_017_is_the_next_free_number(self):
+    def test_017_is_present_and_immediately_follows_016(self):
         """Ticket: 'inspect migrations and use the next actual free number' —
-        016 dan keyin bo'shliqsiz keladigan yagona raqam."""
+        016 dan keyin bo'shliqsiz keladi. NOTE: bu 017'ning o'zi haqida —
+        keyingi raqamlar (018+, masalan Phase 2D.3) bemalol qo'shilishi
+        mumkin, shuning uchun "018 yo'q" degan tasdiq ATAYIN olib
+        tashlangan (u faqat 2D.2 vaqtida to'g'ri edi)."""
         numbers = [
             int(re.match(r'(\d+)_', name).group(1))
             for name in os.listdir(os.path.join(_REPO_ROOT, 'migrations'))
@@ -35,7 +38,6 @@ class MigrationNumberingTests(unittest.TestCase):
         ]
         self.assertIn(16, numbers)
         self.assertIn(17, numbers)
-        self.assertNotIn(18, numbers)
 
     def test_still_no_gaps_across_all_migrations(self):
         numbers = sorted(set(
