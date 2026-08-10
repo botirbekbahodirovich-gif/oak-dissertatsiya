@@ -21,8 +21,10 @@ Oqim (§1, §22-§24):
 """
 from __future__ import annotations
 
+import hashlib
 import secrets
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 
 from services.article_discovery import crossref, openalex
@@ -408,3 +410,139 @@ def check_rate_limit(cache_get, cache_set, admin_id, config=None):
         return False
     cache_set(key, current + 1, 70)
     return True
+
+
+# ── Saqlangan so'rovni ishga tushirish — manual VA scheduled (Phase 2D.3) ────
+# `blueprints/article_discovery.py`dagi "Run" tugmasi VA
+# `services/article_discovery/scheduler.py` AYNAN shu funksiyani chaqiradi
+# (§9, §11 — "Avoid duplicate implementations", "Prefer a shared service
+# method usable by both manual enqueue and scheduled enqueue").
+
+_MAX_IMPORT_CHUNK_ITERATIONS = 100
+
+
+@dataclass
+class SavedQueryRunResult:
+    status: str                        # 'success' | 'partial' | 'failed'
+    found_count: int = 0
+    new_count: int = 0
+    queued_count: int = 0
+    duplicate_count: int = 0
+    no_doi_count: int = 0
+    error_summary: str | None = None
+    import_batch_id: int | None = None
+
+
+def _saved_query_request_id(saved_query_id, run_id, trigger_type):
+    """Enqueue idempotency uchun deterministik `request_id` (§Phase 2D.1.1
+    bilan bir xil rol — bridge.py'ning `source_request_id`ga xesh sifatida
+    o'tadi). Xom qiymat emas — hech qanday sir/token bu yerga kirmaydi,
+    faqat ichki identifikatorlar."""
+    raw = 'discovery-saved-query:%s:%s:%s' % (saved_query_id, trigger_type, run_id)
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+
+def _run_status_from_provider_status(provider_status):
+    """(§7) 'Agar OpenAlex muvaffaqiyatsiz, Crossref muvaffaqiyatli bo'lsa:
+    partial.' Bitta-provayderli yo'l `provider_status`ni to'ldirmaydi
+    (`run_discovery_search()`ga delegatsiya) — bo'sh dict = "success" (u
+    yerga yetguncha `preview.status == OK` allaqachon tekshirilgan)."""
+    statuses = [(info or {}).get('status') for info in (provider_status or {}).values()]
+    if statuses and not all(s == OK for s in statuses):
+        return 'partial'
+    return 'success'
+
+
+def _drive_import_batch_to_completion(cur, batch_id, *, import_config=None,
+                                      fetch=None):
+    """Mavjud `process_import_batch()`ni oxirigacha ishlatadi (§11, §20.11).
+
+    Odatiy holatda admin review-navbat sahifasiga o'tganda JS buni qayta-
+    qayta chaqiradi (`blueprints/article_import.py:import_batch_process`,
+    §44 o'sha modulda) — scheduled run'da hech kim sahifani ochib
+    o'tirmaydi, shuning uchun BU FUNKSIYA o'sha "drayver" rolini o'ynaydi.
+    Chegaralangan iteratsiya soni (`_MAX_IMPORT_CHUNK_ITERATIONS`) —
+    cheksiz tsikl xavfidan himoya; har iteratsiya ALLAQACHON o'zi
+    chegaralangan (bitta chunk, `ARTICLE_IMPORT_CHUNK_SIZE`).
+
+    `fetch` — testlar uchun almashtiriladigan bog'liqlik (`process_import_
+    batch(..., fetch=...)` bilan bir xil naqsh) — berilmasa haqiqiy
+    `fetch_article_metadata` ishlatiladi.
+    """
+    from services.article_import import process_import_batch
+    kwargs = {'config': import_config}
+    if fetch is not None:
+        kwargs['fetch'] = fetch
+    for _ in range(_MAX_IMPORT_CHUNK_ITERATIONS):
+        result = process_import_batch(cur, batch_id, **kwargs)
+        if result['processed'] == 0:
+            break
+
+
+def run_saved_query(cur, saved_query_row, *, trigger_type, config=None,
+                    searchers=None, run_id=None, import_config=None, fetch=None):
+    """Bitta saqlangan so'rovni AYNAN saqlangan holicha qidiradi,
+    klassifikatsiya qiladi va FAQAT `NEW` nomzodlarni mavjud import
+    navbatiga qo'yadi — keyin mavjud `process_import_batch()`ni oxirigacha
+    ishlatadi (§4, §11, §20).
+
+    HECH QACHON: avtomatik approve, avtomatik publish, PDF yuklab olish,
+    OAK avtomatik biriktirish (§10) — bular BUTUNLAY tegilmagan, mavjud
+    review navbati siyosati o'zgarishsiz qoladi.
+
+    `import_config`/`fetch` — `_drive_import_batch_to_completion()`ga
+    o'tadi (testlar uchun; production'da ikkalasi ham default: haqiqiy
+    import config va `fetch_article_metadata`).
+    """
+    from services.article_discovery import bridge
+    from services.article_discovery import saved_queries as sq_module
+
+    config = config or config_from_env()
+    query = sq_module.to_query(saved_query_row)
+    preview = run_multi_provider_search(cur, query, config=config, searchers=searchers)
+
+    if preview.status != OK:
+        return SavedQueryRunResult(
+            status='failed',
+            error_summary=('Hech qanday manba sozlanmagan.'
+                           if preview.status == NOT_CONFIGURED
+                           else "Qidiruv muvaffaqiyatsiz: %s" % preview.status))
+
+    summary = preview.summary()
+    found_count = preview.inspected_count
+    new_count = summary['new_count']
+    duplicate_count = max(0, found_count - new_count)
+    no_doi_count = preview.excluded_no_doi_count
+    run_status = _run_status_from_provider_status(preview.provider_status)
+
+    queued_count = 0
+    import_batch_id = None
+    if new_count > 0:
+        request_id = _saved_query_request_id(saved_query_row['id'], run_id, trigger_type)
+        extra_provenance = {'trigger_type': trigger_type,
+                            'saved_query_id': saved_query_row['id'],
+                            'saved_query_name': saved_query_row['name']}
+        if run_id is not None:
+            extra_provenance['run_id'] = run_id
+        result = bridge.enqueue_discovery_candidates(
+            cur, admin_id=saved_query_row['created_by'], query=query,
+            candidates=preview.candidates, total_count=preview.total_count,
+            excluded_no_doi_count=preview.excluded_no_doi_count,
+            request_id=request_id, extra_provenance=extra_provenance)
+        queued_count = len(result['queued'])
+        import_batch_id = result['batch_id']
+        if import_batch_id is not None:
+            _drive_import_batch_to_completion(cur, import_batch_id,
+                                              import_config=import_config, fetch=fetch)
+
+    error_summary = None
+    if run_status == 'partial':
+        failed_providers = [p for p, info in (preview.provider_status or {}).items()
+                            if (info or {}).get('status') != OK]
+        error_summary = 'Manba(lar) javob bermadi: %s' % ', '.join(sorted(failed_providers))
+
+    return SavedQueryRunResult(
+        status=run_status, found_count=found_count, new_count=new_count,
+        queued_count=queued_count, duplicate_count=duplicate_count,
+        no_doi_count=no_doi_count, error_summary=error_summary,
+        import_batch_id=import_batch_id)
