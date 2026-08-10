@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Manual Article Discovery (OpenAlex + Crossref) — admin panel (Phase 2D.1/2D.2).
+"""Manual + Scheduled Article Discovery (OpenAlex + Crossref) — admin panel
+(Phase 2D.1/2D.2/2D.3).
 
 Bu blueprint faqat HTTP orkestratsiya: qidiruv/klassifikatsiya/preview token
 mantig'i — barchasi `services/article_discovery/`da (§77 naqsh —
@@ -27,16 +28,28 @@ Routes (admin, barchasi login + is_admin talab qiladi):
   POST /admin/articles/discovery/saved-queries              — joriy formani
                                                               nomlab saqlash
   POST /admin/articles/discovery/saved-queries/<id>/run     — ishga tushirish
-                                                              (tashqi xarajat!)
+                                                              (tashqi xarajat!,
+                                                              PREVIEW —
+                                                              o'zgarishsiz,
+                                                              §Phase 2D.3 §9)
   GET  /admin/articles/discovery/saved-queries/<id>/edit    — tahrirlash
                                                               formasi
   POST /admin/articles/discovery/saved-queries/<id>/update  — yangilash
   POST /admin/articles/discovery/saved-queries/<id>/deactivate — soft
                                                               faolsizlantirish
+  POST /admin/articles/discovery/saved-queries/<id>/schedule — rejalashtirishni
+                                                              yoqish/o'chirish
+                                                              (Phase 2D.3)
 
-Saqlangan so'rov FAQAT konfiguratsiyani eslab qoladi — hech qachon
-o'zi-o'zidan ishga tushmaydi (rejalashtirilgan discovery — Phase 2D.3, bu
-yerda YO'Q, §11).
+Saqlangan so'rov FAQAT konfiguratsiyani eslab qoladi. Rejalashtirish
+(Phase 2D.3) — bu YAGONA joy qayerda ular "o'zi-o'zidan" ishga tushishi
+mumkin, lekin BU HAM faqat `services/article_discovery/scheduler.py`
+orqali, mavjud review navbatiga (§10 — hech qanday avtomatik approve/
+publish YO'Q). Qo'lda "Run" tugmasi (yuqorida) ATAYIN o'zgarishsiz qoldi —
+u hamon preview ko'rsatadi, admin aniq "enqueue" bosishi kerak (Phase
+2D.2 xavfsizlik konventsiyasi buzilmagan); FAQAT scheduler mavjud
+`service.run_saved_query()` orqali admin kutmasdan avtomatik enqueue
+qiladi (§10 — bu istisno ATAYIN faqat scheduled trigger uchun).
 """
 from __future__ import annotations
 
@@ -47,11 +60,16 @@ from flask_login import current_user, login_required
 from data import get_connection
 from security import log_exception
 from services.article_discovery import bridge, saved_queries
+from services.article_discovery import scheduler as discovery_scheduler
+from services.article_discovery import scheduler_persistence
 from services.article_discovery.config import config_from_env
 from services.article_discovery.models import (PROVIDER_LABELS, SUPPORTED_PROVIDERS,
                                                 DiscoveryValidationError,
                                                 ENQUEUABLE_CLASSIFICATIONS)
 from services.article_discovery import service as discovery_service
+from services.article_discovery.scheduler_state import (FREQUENCIES,
+                                                         FREQUENCY_LABELS,
+                                                         RUN_STATUS_LABELS)
 from services.article_metadata.models import NOT_CONFIGURED, OK
 from utils.scientific_fields import build_tree
 
@@ -131,10 +149,23 @@ def discovery_search_form():
                            **_search_form_context(config, configured=config.is_configured))
 
 
+def _recent_runs(limit=10):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            runs = discovery_scheduler.list_recent_runs(cur, limit=limit)
+            conn.commit()
+    finally:
+        conn.close()
+    return runs
+
+
 def _search_form_context(config, **extra):
     ctx = {'config': config, 'field_tree': _field_tree(),
           'saved_queries': _saved_queries(), 'providers': SUPPORTED_PROVIDERS,
-          'provider_labels': PROVIDER_LABELS}
+          'provider_labels': PROVIDER_LABELS, 'frequencies': FREQUENCIES,
+          'frequency_labels': FREQUENCY_LABELS, 'run_status_labels': RUN_STATUS_LABELS,
+          'recent_runs': _recent_runs()}
     ctx.update(extra)
     return ctx
 
@@ -407,10 +438,26 @@ def saved_query_edit_form(query_id):
         conn.close()
     if row is None:
         abort(404)
+    recent_runs = _recent_runs_for(query_id)
     return render_template('admin/article_discovery_saved_query_edit.html',
                            config=config, field_tree=_field_tree(),
                            providers=SUPPORTED_PROVIDERS,
-                           provider_labels=PROVIDER_LABELS, saved_query=row)
+                           provider_labels=PROVIDER_LABELS, saved_query=row,
+                           frequencies=FREQUENCIES, frequency_labels=FREQUENCY_LABELS,
+                           run_status_labels=RUN_STATUS_LABELS,
+                           recent_runs=recent_runs)
+
+
+def _recent_runs_for(query_id, limit=10):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            runs = discovery_scheduler.list_recent_runs(
+                cur, saved_query_id=query_id, limit=limit)
+            conn.commit()
+    finally:
+        conn.close()
+    return runs
 
 
 @article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/update',
@@ -461,4 +508,48 @@ def saved_query_deactivate(query_id):
     finally:
         conn.close()
     flash('Qidiruv faolsizlantirildi.' if found else 'Saqlangan qidiruv topilmadi.')
+    return redirect('/admin/articles/discovery')
+
+
+# ── Rejalashtirish (Phase 2D.3, §2, §15, §17) ────────────────────────────────
+
+@article_discovery_bp.route('/admin/articles/discovery/saved-queries/<int:query_id>/schedule',
+                            methods=['POST'])
+@login_required
+def saved_query_schedule(query_id):
+    """Rejalashtirishni yoqadi/o'chiradi. Tashqi API'ga HECH QANDAY so'rov
+    yubormaydi (§14 — faqat DB yozuvi) — shuning uchun rate-limitga
+    tushmaydi, boshqa saqlangan so'rov CRUD amallari bilan bir xil."""
+    _require_admin()
+    enabled = request.form.get('schedule_enabled') == 'on'
+    frequency = (request.form.get('schedule_frequency') or '').strip() or None
+
+    if enabled and frequency not in FREQUENCIES:
+        flash("Chastota noto'g'ri tanlandi (kunlik/haftalik/oylik bo'lishi kerak).")
+        return redirect('/admin/articles/discovery')
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            row = saved_queries.get(cur, query_id)
+            if row is None:
+                conn.commit()
+                flash("Saqlangan qidiruv topilmadi.")
+                return redirect('/admin/articles/discovery')
+            if enabled and not row['is_active']:
+                conn.commit()
+                flash("Faolsizlantirilgan qidiruvni rejalashtirib bo'lmaydi.")
+                return redirect('/admin/articles/discovery')
+            scheduler_persistence.set_schedule(
+                cur, query_id, enabled=enabled, frequency=frequency if enabled else None)
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Rejalashtirishni o\'zgartirish muvaffaqiyatsiz')
+        flash('Kutilmagan ichki xato. Qayta urinib ko\'ring.')
+        return redirect('/admin/articles/discovery')
+    finally:
+        conn.close()
+
+    flash("Avtomatik qidiruv yoqildi." if enabled else "Avtomatik qidiruv o'chirildi.")
     return redirect('/admin/articles/discovery')

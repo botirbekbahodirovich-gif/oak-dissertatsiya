@@ -100,5 +100,80 @@
         <i class="bi bi-trash3" aria-hidden="true"></i>Faolsizlantirish</button>
     </form>
   </section>
+
+  <section class="ol-section" aria-labelledby="ad-edit-schedule-heading">
+    <h2 id="ad-edit-schedule-heading" class="ol-h4">Rejalashtirish</h2>
+    <form method="POST"
+          action="/admin/articles/discovery/saved-queries/{{ saved_query.id }}/schedule"
+          class="ol-filters">
+      {{ csrf_token()|safe }}
+      <div class="ol-filters__row">
+        <div class="ol-field-group">
+          <label>
+            <input type="checkbox" name="schedule_enabled"
+                   {{ 'checked' if saved_query.schedule_enabled }}>
+            Avtomatik qidiruv
+          </label>
+        </div>
+        <div class="ol-field-group">
+          <label class="ol-label" for="ad-edit-frequency">Chastota</label>
+          <select class="ol-field" id="ad-edit-frequency" name="schedule_frequency">
+            {% for f in frequencies %}
+            <option value="{{ f }}" {{ 'selected' if saved_query.schedule_frequency == f }}>{{ frequency_labels[f] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <p class="ai-help">
+        Keyingi ishga tushirish: {{ saved_query.next_run_at.strftime('%Y-%m-%d %H:%M') if saved_query.next_run_at else '—' }}<br>
+        Oxirgi rejalashtirilgan ishga tushirish: {{ saved_query.last_scheduled_run_at.strftime('%Y-%m-%d %H:%M') if saved_query.last_scheduled_run_at else "Hech qachon" }}
+        {% if saved_query.last_run_status %} — {{ run_status_labels.get(saved_query.last_run_status, saved_query.last_run_status) }}{% endif %}
+        {% if saved_query.last_run_error %}<br><span class="ol-badge ol-badge--error">{{ saved_query.last_run_error }}</span>{% endif %}
+      </p>
+      <div class="ol-filters__actions">
+        <button type="submit" class="ol-btn ol-btn--primary">Saqlash</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="ol-section" aria-labelledby="ad-edit-runs-heading">
+    <h2 id="ad-edit-runs-heading" class="ol-h4">So'nggi ishga tushirishlar</h2>
+    {% if recent_runs %}
+    <div class="ol-table-wrap">
+      <table class="ol-table">
+        <thead>
+          <tr>
+            <th scope="col">Turi</th>
+            <th scope="col">Boshlandi</th>
+            <th scope="col">Holat</th>
+            <th scope="col">Topildi</th>
+            <th scope="col">Yangi</th>
+            <th scope="col">Navbatga qo'shildi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in recent_runs %}
+          <tr>
+            <td>{{ 'Rejalashtirilgan' if run.trigger_type == 'scheduled' else "Qo'lda" }}</td>
+            <td>{{ run.started_at.strftime('%Y-%m-%d %H:%M') if run.started_at else '—' }}</td>
+            <td>
+              <span class="ol-badge {{ 'ol-badge--success' if run.status == 'success' else ('ol-badge--error' if run.status == 'failed' else '') }}">
+                {{ run_status_labels.get(run.status, run.status) }}
+              </span>
+            </td>
+            <td>{{ run.found_count }}</td>
+            <td>{{ run.new_count }}</td>
+            <td>{{ run.queued_count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="ol-empty">
+      <p>Hali hech qanday ishga tushirish qayd etilmagan.</p>
+    </div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
