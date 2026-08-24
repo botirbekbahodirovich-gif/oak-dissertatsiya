@@ -103,7 +103,8 @@ def admin_analytics():
                            MAX(country) AS country,
                            MAX(ip_address) AS ip
                     FROM page_visits
-                    WHERE username IS NOT NULL AND TRIM(username) <> ''
+                    WHERE visited_at >= NOW() - INTERVAL '90 days'
+                          AND username IS NOT NULL AND TRIM(username) <> ''
                           AND username NOT IN ('Mehmon', 'Anonim')
                     GROUP BY LOWER(TRIM(username))
                     ORDER BY visit_count DESC
@@ -130,8 +131,9 @@ def admin_analytics():
                            MAX(visited_at) AS last_visit,
                            MAX(country) AS country
                     FROM page_visits
-                    WHERE username IS NULL OR TRIM(username) = ''
-                          OR username IN ('Mehmon', 'Anonim')
+                    WHERE visited_at >= NOW() - INTERVAL '90 days'
+                          AND (username IS NULL OR TRIM(username) = ''
+                               OR username IN ('Mehmon', 'Anonim'))
                     GROUP BY ip_address
                     ORDER BY visit_count DESC
                     LIMIT 20

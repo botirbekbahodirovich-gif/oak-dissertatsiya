@@ -1075,6 +1075,13 @@ def _run_startup_migrations():
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS referrer VARCHAR(500)")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS session_id VARCHAR(100)")
             cur.execute("ALTER TABLE page_visits ADD COLUMN IF NOT EXISTS country VARCHAR(10)")
+            # Speeds up /admin/analytics' guest/registered visitor GROUP BY queries
+            # (admin.py), which used to seq-scan + sort the entire page_visits table.
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_visits_ip ON page_visits(ip_address)")
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_visits_username_lower
+                ON page_visits (LOWER(TRIM(username)))
+            """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS blocked_users (
                     id SERIAL PRIMARY KEY,
