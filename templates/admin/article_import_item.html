@@ -13,6 +13,13 @@
 {% set authors = meta.get('authors') or [] %}
 {% set is_reviewable = item.status in ('ready_for_review', 'partial_metadata', 'retracted') %}
 {% set has_critical = (item.conflicts or []) | selectattr('severity', 'equalto', 'critical') | list %}
+{% macro field_options(nodes, depth=0) %}
+  {% for node in nodes %}
+  <option value="{{ node.id }}">{{ '— ' * depth }}{{ node.name_uz }}{% if node.code %} ({{ node.code }}){% endif %}</option>
+  {{ field_options(node.children, depth + 1) }}
+  {% endfor %}
+{% endmacro %}
+
 <div class="ol-page">
   {{ page_header('Import elementi: %s' % (item.normalized_doi or item.raw_input),
                  'Holat: %s' % item_status_labels.get(item.status, item.status),
@@ -69,7 +76,13 @@
 
   <section class="ol-section" aria-labelledby="ai-sec-abstract">
     <h2 id="ai-sec-abstract" class="ol-h4">Annotatsiya</h2>
-    <p class="ol-body">{{ meta.get('abstract') or 'Annotatsiya topilmadi.' }}</p>
+    {% if is_reviewable %}
+    <label class="ol-label" for="ai-abstract">DOI orqali topilgan matnni saqlashingiz yoki qo'lda o'zgartirishingiz mumkin</label>
+    <textarea class="ol-field" id="ai-abstract" name="abstract" rows="8"
+              form="ai-approve-form"
+              placeholder="Annotatsiyani qo'lda kiriting...">{{ meta.get('abstract') or '' }}</textarea>
+    <p class="ai-help">Annotatsiya topilmagan bo'lsa maydonni bo'sh qoldirish ham mumkin — maqola qoralama sifatida yaratiladi.</p>
+    {% else %}<p class="ol-body">{{ meta.get('abstract') or 'Annotatsiya topilmadi.' }}</p>{% endif %}
   </section>
 
   <section class="ol-section" aria-labelledby="ai-sec-authors">
@@ -147,19 +160,19 @@
     <h2 id="ai-sec-actions" class="ol-h4">Amallar</h2>
 
     {% if is_reviewable %}
-    <form method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/approve"
+    <form id="ai-approve-form" method="POST" action="/admin/articles/imports/{{ batch.id }}/items/{{ item.id }}/approve"
           class="ol-field-group" style="margin-bottom:var(--space-16);">
       {{ csrf_token()|safe }}
-      <label class="ol-label" for="ai-primary-field">Asosiy fan yo'nalishi (ixtiyoriy)</label>
+      <label class="ol-label" for="ai-primary-field">Asosiy OAK fan yo'nalishi</label>
       <select class="ol-field" id="ai-primary-field" name="primary_field_id">
         <option value="">— Tanlanmagan (keyinroq belgilanadi) —</option>
-        {% for node in field_tree %}
-        <option value="{{ node.id }}">{{ node.name_uz }}</option>
-        {% for child in node.children %}
-        <option value="{{ child.id }}">— {{ child.name_uz }}</option>
-        {% endfor %}
-        {% endfor %}
+        {{ field_options(field_tree) }}
       </select>
+      {% if not field_tree %}
+      <p class="ai-help">Faol OAK fan yo'nalishlari topilmadi. Qoralamani yaratib, maqola tahrirlash sahifasida keyinroq belgilang.</p>
+      {% else %}
+      <p class="ai-help">Yo'nalish DOI mavzularidan avtomatik belgilanmaydi. Keraklisini administrator tanlaydi.</p>
+      {% endif %}
 
       {% if item.is_retracted %}
       <label class="ol-facets__opt" style="min-height:44px;">
@@ -176,7 +189,9 @@
 
       <div class="ai-actions-row">
         <button type="submit" class="ol-btn ol-btn--primary">
-          <i class="bi bi-check-lg" aria-hidden="true"></i>Tasdiqlash</button>
+          <i class="bi bi-check-lg" aria-hidden="true"></i>Qoralama yaratish va davom etish</button>
+        <p class="ai-help">Keyingi sahifada PDF fayl, foydalanish huquqi va nashr holatini to'ldirasiz.</p>
+
       </div>
     </form>
 

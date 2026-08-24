@@ -127,7 +127,10 @@
       <tbody>
         {% for a in articles %}
         <tr>
-          <th scope="row" class="mq-table__title">{{ a.title }}</th>
+          <th scope="row" class="mq-table__title">
+            {{ a.display_title }}
+            {% if a.has_translated_title %}<span class="mq-admin-raw">Asl nomi: {{ a.title }}</span>{% endif %}
+          </th>
           <td>{{ a.primary_field.name_uz if a.primary_field else '—' }}</td>
           <td>{{ a.journal_name or '—' }}</td>
           <td>{{ a.publication_year or '—' }}</td>
