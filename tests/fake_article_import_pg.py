@@ -276,7 +276,8 @@ class FakeImportCursor:
             article_id = self.store['next_article_id']
             self.store['next_article_id'] += 1
             self.store['articles'].append({
-                'id': article_id, 'title': p[0], 'slug': p[1], 'doi': doi})
+                'id': article_id, 'title': p[0], 'slug': p[1],
+                'abstract': p[2], 'doi': doi})
             return [(article_id,)], [('id',)]
 
         if sql.startswith('SELECT id, title, slug FROM scientific_articles WHERE id'):

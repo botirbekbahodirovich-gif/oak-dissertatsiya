@@ -41,8 +41,11 @@
     </div>
 
     <h3 class="mq-card__title">
-      <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
+      <a href="/maqolalar/{{ article.slug }}">{{ article.display_title }}</a>
     </h3>
+    {% if article.has_translated_title %}
+    <p class="mq-card__original-title" lang="{{ article.language or 'en' }}">{{ article.title }}</p>
+    {% endif %}
 
     <p class="mq-card__authors">{{ author_list(article) }}</p>
     <p class="mq-card__meta">
@@ -97,7 +100,7 @@
       {% for article in articles %}
       <tr>
         <th scope="row" class="mq-table__title">
-          <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
+          <a href="/maqolalar/{{ article.slug }}">{{ article.display_title }}</a>
         </th>
         <td>{{ author_list(article, limit=2) }}</td>
         <td>

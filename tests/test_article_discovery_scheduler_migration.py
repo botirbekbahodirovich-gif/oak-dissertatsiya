@@ -26,9 +26,9 @@ class MigrationNumberingTests(unittest.TestCase):
     def test_018_file_exists(self):
         self.assertTrue(os.path.isfile(MIGRATION))
 
-    def test_018_is_the_next_free_number(self):
-        """Ticket: 'Verify next migration number' — 017 dan keyin
-        bo'shliqsiz keladigan yagona raqam."""
+    def test_migrations_remain_sequential_through_019(self):
+        """018 discovery scheduler va 019 maqola tarjimasi ketma-ket,
+        navbatdagi 020 raqami esa hali bo'sh."""
         numbers = [
             int(re.match(r'(\d+)_', name).group(1))
             for name in os.listdir(os.path.join(_REPO_ROOT, 'migrations'))
@@ -36,7 +36,8 @@ class MigrationNumberingTests(unittest.TestCase):
         ]
         self.assertIn(17, numbers)
         self.assertIn(18, numbers)
-        self.assertNotIn(19, numbers)
+        self.assertIn(19, numbers)
+        self.assertNotIn(20, numbers)
 
     def test_still_no_gaps_across_all_migrations(self):
         numbers = sorted(set(
