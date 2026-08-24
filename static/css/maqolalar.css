@@ -373,3 +373,355 @@
   letter-spacing: 0.02em;
 }
 .mq-detail-item__value { color: var(--color-text-primary); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Ommaviy katalog: akademik qidiruv ro'yxati (2026-08)
+   ScienceDirect zichligi + OpenAlex yon fasetlari. Faqat /maqolalar katalogi
+   mq-catalog-page orqali scoped; yo'nalish, detail va admin sahifalari o'zgarmaydi.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.mq-result-item__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.mq-catalog-page .ol-page-header {
+  margin-bottom: var(--space-24);
+}
+
+.mq-catalog-search {
+  padding: var(--space-16);
+  margin-bottom: var(--space-32);
+  background: var(--color-background-soft);
+}
+
+.mq-catalog-search .mq-search {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.mq-catalog-search .ol-field {
+  min-height: 48px;
+  background: var(--color-white);
+}
+
+.mq-catalog-search .ol-btn {
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.mq-catalog-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: var(--space-32);
+  align-items: start;
+}
+
+.mq-catalog-sidebar {
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-16));
+}
+
+.mq-filter-sidebar {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mq-filter-sidebar__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mq-filter-sidebar__heading h2 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-body-lg);
+  color: var(--color-text-primary);
+}
+
+.mq-filter-sidebar__heading a,
+.mq-fields-link {
+  color: var(--color-action-blue);
+  font-size: var(--text-small);
+  text-decoration: none;
+}
+
+.mq-filter-sidebar__heading a:hover,
+.mq-fields-link:hover {
+  color: var(--color-action-blue-dark);
+  text-decoration: underline;
+}
+
+.mq-filter-sidebar .ol-filters__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.mq-filter-sidebar .ol-filters__row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-12);
+  padding: var(--space-20) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.mq-filter-sidebar .ol-filters__row > .ol-field-group {
+  flex: 0 1 auto;
+  width: 100%;
+}
+
+.mq-filter-sidebar .ol-facets__opt {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.mq-filter-sidebar .ol-filters__actions {
+  margin: 0;
+  padding-top: var(--space-20);
+}
+
+.mq-filter-sidebar .ol-filters__actions .ol-btn--primary {
+  flex: 1 1 100%;
+  white-space: nowrap;
+}
+
+.mq-filter-sidebar .ol-filters__actions .ol-btn--tertiary {
+  display: none;
+}
+
+.mq-fields-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 44px;
+  margin-top: var(--space-12);
+}
+
+.mq-catalog-results {
+  min-width: 0;
+}
+
+.mq-catalog-page .mq-results-section {
+  margin-top: 0;
+}
+
+.mq-catalog-page .mq-chips {
+  margin: 0 0 var(--space-16);
+}
+
+.mq-catalog-page .mq-resultbar {
+  align-items: center;
+  padding-bottom: var(--space-12);
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mq-catalog-page .mq-resultbar__controls {
+  align-items: center;
+}
+
+.mq-catalog-page .mq-resultbar__controls .ol-field-group {
+  min-width: 180px;
+}
+
+.mq-catalog-page .mq-grid {
+  display: block;
+}
+
+.mq-catalog-page .mq-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-24);
+  padding: var(--space-24) var(--space-8);
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 0;
+  background: transparent;
+}
+
+.mq-catalog-page .mq-card:hover {
+  border-color: var(--color-border);
+  background: var(--color-background-soft);
+}
+
+.mq-catalog-page .mq-card__title {
+  font-size: var(--text-h5);
+  line-height: 1.4;
+}
+
+.mq-catalog-page .mq-card__title a {
+  color: var(--color-action-blue);
+}
+
+.mq-catalog-page .mq-card__title a:hover {
+  color: var(--color-action-blue-dark);
+}
+
+.mq-catalog-page .mq-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-8);
+  color: var(--color-text-secondary);
+}
+
+.mq-catalog-page .mq-card__meta span + span::before {
+  content: "/";
+  margin-right: var(--space-8);
+  color: var(--color-border);
+}
+
+.mq-catalog-page .mq-card__doi {
+  overflow-wrap: anywhere;
+}
+
+.mq-catalog-page .mq-card__field a {
+  color: var(--color-action-blue-dark);
+  text-decoration: none;
+}
+
+.mq-catalog-page .mq-card__field a:hover {
+  text-decoration: underline;
+}
+
+.mq-catalog-page .mq-card__abstract {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 82ch;
+  font-size: var(--text-body);
+}
+
+.mq-catalog-page .mq-card__actions {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  min-width: 132px;
+  margin: 0;
+  padding: 0;
+}
+
+.mq-catalog-page .mq-card__actions .ol-btn {
+  white-space: nowrap;
+}
+
+.mq-analysis-note {
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--color-border);
+}
+
+.mq-analysis-note__body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-24);
+}
+
+.mq-analysis-note__body .ol-body {
+  max-width: 72ch;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .mq-catalog-layout {
+    grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
+    gap: var(--space-24);
+  }
+
+  .mq-catalog-page .mq-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+
+  .mq-catalog-page .mq-card__actions {
+    flex-direction: row;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 767px) {
+  .mq-catalog-search {
+    margin-bottom: var(--space-20);
+  }
+
+  .mq-catalog-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-24);
+  }
+
+  .mq-catalog-sidebar {
+    position: static;
+  }
+
+  .mq-filter-sidebar {
+    padding: var(--space-16);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-default);
+    background: var(--color-white);
+  }
+
+  .mq-filter-sidebar__heading {
+    display: none;
+  }
+
+  .mq-filter-sidebar .ol-filters__body {
+    display: none;
+  }
+
+  .mq-filter-sidebar .ol-filters__body[data-open="true"] {
+    display: flex;
+  }
+
+  .mq-filter-sidebar .ol-filters__actions .ol-btn--tertiary {
+    display: inline-flex;
+  }
+
+  .mq-catalog-page .mq-resultbar__controls {
+    width: 100%;
+  }
+
+  .mq-catalog-page .mq-resultbar__controls .ol-field-group {
+    flex: 1 1 180px;
+  }
+
+  .mq-catalog-page .mq-card {
+    padding-inline: 0;
+  }
+
+  .mq-analysis-note__body {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .mq-catalog-search .mq-search {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mq-catalog-search .ol-btn {
+    width: 100%;
+  }
+
+  .mq-catalog-page .mq-viewswitch {
+    width: 100%;
+  }
+
+  .mq-catalog-page .mq-viewswitch .ol-btn {
+    flex: 1;
+  }
+
+  .mq-catalog-page .mq-card__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
