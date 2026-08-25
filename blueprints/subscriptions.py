@@ -249,6 +249,20 @@ def notify_specialty_subscribers(new_records):
                 subs = cur.fetchall()
                 if not subs:
                     return 0
+                # Preload dedup log for these subscriptions × the incoming
+                # dissertation ids in one query instead of one SELECT per
+                # (subscription, record) pair (was N+1).
+                sub_ids = [row[0] for row in subs]
+                diss_ids = [r.get('id') for r in records if r.get('id')]
+                already_log = {}
+                if sub_ids and diss_ids:
+                    cur.execute("""
+                        SELECT subscription_id, dissertation_id, sent_via
+                        FROM specialty_notifications_log
+                        WHERE subscription_id = ANY(%s) AND dissertation_id = ANY(%s)
+                    """, (sub_ids, diss_ids))
+                    for s_id, d_id, via in cur.fetchall():
+                        already_log.setdefault((s_id, d_id), set()).add(via)
                 from blueprints.reminders import _send_telegram
                 for (sub_id, user_id, code, notify_site,
                      notify_telegram, chat_id, email) in subs:
@@ -259,13 +273,7 @@ def notify_specialty_subscribers(new_records):
                             if low in (r['ixtisoslik'] or '').lower()]
                     for rec in mine:
                         diss_id = rec.get('id')
-                        already = set()
-                        if diss_id:
-                            cur.execute("""
-                                SELECT sent_via FROM specialty_notifications_log
-                                WHERE subscription_id = %s AND dissertation_id = %s
-                            """, (sub_id, diss_id))
-                            already = {r[0] for r in cur.fetchall()}
+                        already = already_log.get((sub_id, diss_id), set()) if diss_id else set()
                         msg = (f"Siz obuna bo'lgan ixtisoslikda ({rec['ixtisoslik']}) "
                                f"yangi himoya: {rec.get('olim') or ''} — "
                                f"{rec.get('mavzu') or ''}")

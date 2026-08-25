@@ -743,6 +743,18 @@ def notify_himoya_matches(new_records):
                     cur.execute("SELECT LOWER(email), id FROM users "
                                 "WHERE LOWER(email) = ANY(%s)", (emails,))
                     site_uid = {r[0]: r[1] for r in cur.fetchall()}
+                # Today's himoya-alert count per user, batched in one query
+                # instead of one COUNT(*) per candidate (was N+1).
+                today_sent = {}
+                uids = list(set(site_uid.values()))
+                if uids:
+                    cur.execute("""
+                        SELECT user_id, COUNT(*) FROM user_alerts
+                        WHERE user_id = ANY(%s) AND created_at >= CURRENT_DATE
+                          AND title LIKE %s
+                        GROUP BY user_id
+                    """, (uids, _HIMOYA_TITLE + '%'))
+                    today_sent = {r[0]: r[1] for r in cur.fetchall()}
                 for u in users:
                     main_uid = site_uid.get(u['email'].lower()) if u['email'] else None
                     can_telegram = bool(u['telegram_id']
@@ -753,12 +765,7 @@ def notify_himoya_matches(new_records):
                     # (site alerts as the ledger; telegram follows the same budget).
                     budget = _HIMOYA_DAILY_CAP
                     if main_uid:
-                        cur.execute("""
-                            SELECT COUNT(*) FROM user_alerts
-                            WHERE user_id = %s AND created_at >= CURRENT_DATE
-                              AND title LIKE %s
-                        """, (main_uid, _HIMOYA_TITLE + '%'))
-                        budget -= (cur.fetchone()[0] or 0)
+                        budget -= today_sent.get(main_uid, 0)
                     if budget <= 0:
                         continue
                     mine = [r for r in records

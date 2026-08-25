@@ -1056,6 +1056,13 @@ def _run_startup_migrations():
                     is_read BOOLEAN DEFAULT FALSE
                 )
             """)
+            # /api/notifications/count polls this every 60s on every logged-in
+            # pageview; without these, is_read/created_at filters seq-scan the
+            # whole table as it grows.
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_notifications_is_read "
+                        "ON notifications(is_read)")
+            cur.execute("CREATE INDEX IF NOT EXISTS idx_notifications_created_at "
+                        "ON notifications(created_at)")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS page_visits (
                     id SERIAL PRIMARY KEY,
@@ -2723,20 +2730,26 @@ def api_mavzu_tahlili_ai():
                         "suggestions": [], "angles": []}), 502
 
 
+_NOTIF_COUNT_CACHE_KEY = 'notifications_unread_count'
+
+
 @app.route("/api/notifications/count")
 @login_required
 def notifications_count():
-    from data import get_connection
-    try:
-        conn = get_connection()
+    count = cache.get(_NOTIF_COUNT_CACHE_KEY)
+    if count is None:
+        from data import get_connection
         try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM notifications WHERE is_read = FALSE")
-                count = cur.fetchone()[0]
-        finally:
-            conn.close()
-    except Exception:
-        count = 0
+            conn = get_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM notifications WHERE is_read = FALSE")
+                    count = cur.fetchone()[0]
+            finally:
+                conn.close()
+        except Exception:
+            count = 0
+        cache.set(_NOTIF_COUNT_CACHE_KEY, count, timeout=15)
     return jsonify({'count': count})
 
 
@@ -2761,6 +2774,7 @@ def notifications_page():
             conn.commit()
         finally:
             conn.close()
+        cache.delete(_NOTIF_COUNT_CACHE_KEY)
     except Exception as e:
         _log_silent(e)
     return render_template("notifications.html", notifications=notifs)
