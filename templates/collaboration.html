@@ -23,7 +23,7 @@
 }
 .cg-search { position: relative; flex: 1 1 320px; min-width: 240px; }
 .cg-search input {
-  width: 100%; background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-primary);
+  width: 100%; background: var(--color-white); border: 1px solid var(--color-border); color: var(--color-text-primary);
   border-radius: var(--radius-default); padding: 10px 14px 10px 38px; font-size: 0.95rem;
 }
 .cg-search input:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
@@ -34,7 +34,7 @@
 }
 .cg-drop {
   position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
-  background: var(--color-background); border: 1px solid var(--color-border); border-radius: var(--radius-default);
+  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
   max-height: 320px; overflow-y: auto; display: none;
   box-shadow: 0 4px 12px rgba(12,15,18,0.08);
 }
@@ -50,7 +50,7 @@
 .cg-drop-empty { padding: 12px 14px; color: var(--color-text-muted); font-size: 0.85rem; }
 
 .cg-spec {
-  background: var(--color-background); border: 1px solid var(--color-border); color: var(--color-text-primary);
+  background: var(--color-white); border: 1px solid var(--color-border); color: var(--color-text-primary);
   border-radius: var(--radius-default); padding: 10px 12px; font-size: 0.9rem; width: 170px;
 }
 .cg-spec:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
@@ -91,7 +91,7 @@
 
 /* ── Stage ───────────────────────────────────────────────── */
 .cg-stage {
-  position: relative; background: var(--color-background); border: 1px solid var(--color-border);
+  position: relative; background: var(--color-white); border: 1px solid var(--color-border);
   border-radius: var(--radius-default); height: 74vh; min-height: 520px; overflow: hidden;
 }
 .cg-svg { display: block; width: 100%; height: 100%; cursor: grab; }
@@ -110,7 +110,7 @@
 
 .cg-tip {
   position: absolute; z-index: 30; pointer-events: none; opacity: 0;
-  background: var(--color-background); border: 1px solid var(--color-action-blue); border-radius: var(--radius-default);
+  background: var(--color-white); border: 1px solid var(--color-action-blue); border-radius: var(--radius-default);
   padding: 9px 12px; font-size: 0.82rem; color: var(--color-text-primary); max-width: 260px;
   box-shadow: 0 4px 12px rgba(12,15,18,0.08); transition: opacity 0.12s; line-height: 1.5;
 }

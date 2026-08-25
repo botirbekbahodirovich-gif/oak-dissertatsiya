@@ -54,7 +54,8 @@ sahifa CSS'ida **xom HEX yozilmaydi** — faqat `var(--color-…)`.
 | `--color-text-primary` | `#0c0f12` | Sarlavha, asosiy matn, jadval kataklari. |
 | `--color-text-secondary` | `#333333` | Label, nav link, ikkilamchi matn. |
 | `--color-text-muted` | `#666666` | Meta, izoh, sanoq, placeholder. |
-| `--color-white` / `--color-background` | `#ffffff` | Sahifa va karta yuzasi. |
+| `--color-white` | `#ffffff` | Karta, forma, modal, header yuzasi. |
+| `--color-background` | `#f4f7fb` | Sahifa (body) foni — kartadan ataylab ajratilgan. |
 | `--color-background-soft` | `#f6f6f6` | Jadval sarlavhasi, footer, bo'sh holat. |
 | `--color-border` | `#e6e6e6` | Karta, maydon, jadvalning tashqi chegarasi. |
 | `--color-border-subtle` | `#ecebe9` | Ichki qator ajratgichi, grafik grid. |

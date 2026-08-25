@@ -96,7 +96,8 @@ tokens, spelled exactly as below (`var(--color-…)`):
 | `--color-text-primary` | `#0c0f12` | Headings, body, table cells, tooltip surface. |
 | `--color-text-secondary` | `#333333` | Labels, nav links, secondary body. |
 | `--color-text-muted` | `#666666` | Meta, captions, counts, placeholders, axis ticks. |
-| `--color-white` / `--color-background` | `#ffffff` | Page and card surface. |
+| `--color-white` | `#ffffff` | Card, form, modal, header surface. |
+| `--color-background` | `#f4f7fb` | Page (body) background — deliberately split from card surface. |
 | `--color-background-soft` | `#f6f6f6` | Table head, footer, empty state, neutral badge. |
 | `--color-border` | `#e6e6e6` | Every card/field/table outer border. |
 | `--color-border-subtle` | `#ecebe9` | Inner row separators, chart grid lines. |

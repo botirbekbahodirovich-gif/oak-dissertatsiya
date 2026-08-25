@@ -22,8 +22,11 @@
   --color-text-secondary: #333333;
   --color-text-muted: #666666;
 
+  /* --color-white — karta, forma, modal, header yuzasi: doim oq.
+     --color-background — SAHIFA foni: --color-white'dan ataylab ajratilgan,
+     shuning uchun bittasi o'zgarsa ikkinchisi qimirlamaydi. */
   --color-white: #ffffff;
-  --color-background: #ffffff;
+  --color-background: #f4f7fb;
   --color-background-soft: #f6f6f6;
 
   --color-border: #e6e6e6;
