@@ -1929,6 +1929,24 @@ def import_oak():
     conn = get_connection()
     try:
         with conn.cursor() as cur:
+            # Bulk/legacy imports can leave the SERIAL sequence behind MAX(id).
+            # Existing OAK rows still UPDATE successfully, but the first genuinely
+            # new announcement then fails with a duplicate primary key. Lock writers
+            # for this short transaction and realign the sequence before UPSERTs.
+            cur.execute(
+                "LOCK TABLE dissertations IN SHARE ROW EXCLUSIVE MODE"
+            )
+            cur.execute(
+                """
+                SELECT setval(
+                    pg_get_serial_sequence('dissertations', 'id'),
+                    COALESCE(MAX(id), 1),
+                    MAX(id) IS NOT NULL
+                )
+                FROM dissertations
+                """
+            )
+
             for item in items:
                 oak_id     = str(item.get('ID', '') or '').strip()
                 title      = str(item.get('Sarlavha', '') or '').strip()

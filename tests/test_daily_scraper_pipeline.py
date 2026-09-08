@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import data
 import send_to_site
 
 
@@ -75,6 +76,15 @@ def test_auth_failure_fails_without_overwriting_retry_queue(monkeypatch, tmp_pat
 
     assert send_to_site.main() == 1
     assert json.loads(retry_file.read_text(encoding="utf-8")) == original_retry
+
+
+def test_oak_import_realigns_serial_sequence_before_upserts():
+    source = Path(data.__file__).read_text(encoding="utf-8")
+    lock_pos = source.index("LOCK TABLE dissertations IN SHARE ROW EXCLUSIVE MODE")
+    sequence_pos = source.index("pg_get_serial_sequence('dissertations', 'id')")
+    loop_pos = source.index("            for item in items:", sequence_pos)
+
+    assert lock_pos < sequence_pos < loop_pos
 
 
 def test_workflow_persists_runtime_state_without_git_push():
