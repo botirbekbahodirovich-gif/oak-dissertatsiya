@@ -3,6 +3,7 @@ from pathlib import Path
 
 import data
 import send_to_site
+from scripts import repair_dissertation_sequence
 
 
 class _Response:
@@ -87,6 +88,49 @@ def test_oak_import_realigns_serial_sequence_before_upserts():
     assert lock_pos < sequence_pos < loop_pos
 
 
+def test_sequence_repair_commits_lock_and_setval():
+    class Cursor:
+        def __init__(self):
+            self.queries = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, query):
+            self.queries.append(query)
+
+        def fetchone(self):
+            return (32087,)
+
+    class Connection:
+        def __init__(self):
+            self.cursor_instance = Cursor()
+            self.committed = False
+            self.rolled_back = False
+
+        def cursor(self):
+            return self.cursor_instance
+
+        def commit(self):
+            self.committed = True
+
+        def rollback(self):
+            self.rolled_back = True
+
+    conn = Connection()
+
+    assert repair_dissertation_sequence.repair_sequence(conn) == 32087
+    assert conn.cursor_instance.queries == [
+        repair_dissertation_sequence.LOCK_SQL,
+        repair_dissertation_sequence.SETVAL_SQL,
+    ]
+    assert conn.committed is True
+    assert conn.rolled_back is False
+
+
 def test_workflow_persists_runtime_state_without_git_push():
     workflow = (
         Path(__file__).resolve().parents[1] / ".github" / "workflows" / "daily.yml"
@@ -96,5 +140,7 @@ def test_workflow_persists_runtime_state_without_git_push():
     assert "actions/cache/save@v5" in workflow
     assert "last_state.json" in workflow
     assert "retry_items.json" in workflow
+    assert "secrets.DATABASE_URL" in workflow
+    assert "scripts/repair_dissertation_sequence.py" in workflow
     assert "permissions:\n  contents: read" in workflow
     assert "git push" not in workflow

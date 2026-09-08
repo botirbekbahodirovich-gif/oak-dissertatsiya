@@ -37,7 +37,15 @@ jobs:
             oak-scraper-state-${{ github.ref_name }}-
 
       - name: Kutubxonalar o'rnatish
-        run: pip install requests beautifulsoup4
+        run: pip install requests beautifulsoup4 psycopg2-binary
+
+      # Eski bulk importlar SERIAL sequence'ni MAX(id) dan ortda qoldirgan
+      # bo'lishi mumkin. Shunda mavjud yozuvlar update bo'ladi, ammo yangi OAK
+      # yozuvi duplicate primary key bilan yiqiladi.
+      - name: Dissertatsiya ID sequence'ni tekislash
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/repair_dissertation_sequence.py
 
       - name: Scraper ishga tushirish
         run: python scraper.py
