@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 last_state.json
+retry_items.json
 # Scraper run output (regenerated every run; not source of truth)
 new_items.json
 wsl_venv/

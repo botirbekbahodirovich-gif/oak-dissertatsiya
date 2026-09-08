@@ -5,19 +5,36 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: oak-daily-scraper
+  cancel-in-progress: false
 
 jobs:
   scrape_and_send:
     runs-on: ubuntu-latest
     steps:
       - name: Kodni yuklab olish
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Python o'rnatish
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+
+      # last_state.json runtime fayl bo'lgani uchun Git'da saqlanmaydi.
+      # Eng so'nggi muvaffaqiyatli watermark va qayta uriniladigan yozuvlarni
+      # branch bo'yicha Actions cache'dan tiklaymiz.
+      - name: Scraper holatini tiklash
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            last_state.json
+            retry_items.json
+          key: oak-scraper-state-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            oak-scraper-state-${{ github.ref_name }}-
 
       - name: Kutubxonalar o'rnatish
         run: pip install requests beautifulsoup4
@@ -31,6 +48,17 @@ jobs:
           SITE_API_KEY: ${{ secrets.SITE_API_KEY }}
         run: python send_to_site.py
 
+      # Faqat scraping va yuborish muvaffaqiyatli tugagach yangi snapshot
+      # yaratiladi. GitHub cache o'zgarmas bo'lgani uchun run_id noyob kalitdir;
+      # keyingi run restore-keys orqali eng yangi snapshotni oladi.
+      - name: Scraper holatini saqlash
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            last_state.json
+            retry_items.json
+          key: oak-scraper-state-${{ github.ref_name }}-${{ github.run_id }}
+
       # Chat retention — 3 kundan eski yozishmalarni global tozalash (idempotent).
       # Lazy tozalash send/GET da ham ishlaydi; bu esa jim suhbatlarni ham tozalaydi.
       - name: Eski yozishmalarni tozalash (3 kun)
@@ -40,19 +68,3 @@ jobs:
           curl --fail-with-body -sS -X POST \
             -H "X-API-Key: ${REMINDERS_API_KEY}" \
             https://www.olimlar.uz/api/v1/messages/cleanup || true
-
-      # Watermark (last_state.json) ni repo ga qaytaramiz — aks holda har run
-      # bir xil eski holatdan boshlanib, e'lonlarni qayta-qayta yuborardi.
-      # Faqat yuborish muvaffaqiyatli bo'lsa ishga tushadi (oldingi qadam xato
-      # bersa, holat saqlanmaydi va keyingi run qayta urinadi).
-      - name: Holatni saqlash (last_state.json)
-        run: |
-          if git diff --quiet -- last_state.json; then
-            echo "last_state.json o'zgarmadi — commit shart emas."
-          else
-            git config user.name  "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add last_state.json
-            git commit -m "chore: scraper watermark yangilandi [skip ci]"
-            git push
-          fi
