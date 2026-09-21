@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 {% macro avatar(photo_url, name, size=80) %}
-<div style="width:{{size}}px;height:{{size}}px;border-radius:50%;overflow:hidden;border:2px solid rgba(74,158,255,0.3);flex-shrink:0;">
-    <img src="{{ photo_url or (name | avatar_url) }}" alt="{{name}}" style="width:100%;height:100%;object-fit:cover;"
-         onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
+<div style="width:{{size}}px;height:{{size}}px;border-radius:50%;overflow:hidden;border:2px solid var(--color-border);flex-shrink:0;">
+    {% if photo_url %}<img src="{{ photo_url }}" alt="{{ name }}" style="width:100%;height:100%;object-fit:cover;" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span hidden class="ol-initials" aria-hidden="true">{{ name[:1] }}</span>{% else %}<span class="ol-initials" aria-hidden="true">{{ name[:1] }}</span>{% endif %}
 
 </div>
 {% endmacro %}
@@ -25,55 +24,55 @@
 {% endblock %}
 {% block extra_head %}
 <style>
-  .back-link { color: var(--oak-muted); font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.35rem; text-decoration: none; transition: color 0.15s; }
-  .back-link:hover { color: var(--oak-accent); }
+  .back-link { color:var(--oak-muted); font-size:0.88rem; display:inline-flex; align-items:center; gap:0.35rem; text-decoration:none; transition:color 0.15s; }
+  .back-link:hover { color:var(--oak-accent); }
 
   /* ── Section 1: mavzu card ── */
   .mavzu-card {
-    background: linear-gradient(135deg, rgba(74,158,255,0.07), rgba(124,92,252,0.07));
-    border: 1px solid rgba(74,158,255,0.2); border-radius: 16px;
-    padding: 1.75rem; margin-bottom: 1.5rem;
+    background:var(--color-surface);
+    border:1px solid var(--color-border); border-radius:var(--radius-card);
+    padding:1.75rem; margin-bottom:1.5rem;
   }
-  .mavzu-title { font-size: 1.2rem; font-weight: 700; color: #e8eef8; line-height: 1.55; margin-bottom: 1rem; }
-  .meta-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-  .badge-phd-lg { background: rgba(52,211,153,0.14); color: #34d399; padding: 4px 14px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; }
-  .badge-dsc-lg { background: rgba(227,100,3,0.14); color: #e36403; padding: 4px 14px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; }
-  .meta-chip { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; color: var(--oak-muted); background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 20px; }
-  .oak-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 6px 14px; border-radius: 10px; background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); color: #4a9eff; font-size: 0.84rem; font-weight: 600; text-decoration: none; transition: background 0.15s; }
-  .oak-btn:hover { background: rgba(74,158,255,0.2); color: #4a9eff; text-decoration: none; }
-  .oak-btn.js-save-btn { cursor: pointer; }
-  .oak-btn.js-save-btn:disabled { opacity: 0.6; cursor: default; }
-  .oak-btn .save-ico { display: inline-flex; align-items: center; }
-  .oak-btn.js-save-btn.saved { background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.4); color: #fbbf24; }
-  .oak-btn.js-save-btn.saved:hover { background: rgba(251,191,36,0.24); color: #fbbf24; }
+  .mavzu-title { font-size:1.2rem; font-weight:600; color:var(--color-text-primary); line-height:1.55; margin-bottom:1rem; }
+  .meta-row { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+  .badge-phd-lg { background:var(--color-background); color:var(--color-text-secondary); padding:4px 14px; border-radius:var(--radius-default); font-size:0.84rem; font-weight:600; }
+  .badge-dsc-lg { background:var(--color-background); color:var(--color-text-secondary); padding:4px 14px; border-radius:var(--radius-default); font-size:0.84rem; font-weight:600; }
+  .meta-chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.8rem; color:var(--oak-muted); background:var(--color-background); border:1px solid var(--color-border); padding:3px 10px; border-radius:var(--radius-default); }
+  .oak-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:6px 14px; border-radius:var(--radius-default); background:var(--color-background); border:1px solid var(--color-border); color:var(--color-action); font-size:0.84rem; font-weight:600; text-decoration:none; transition:background 0.15s; }
+  .oak-btn:hover { background:var(--color-background); color:var(--color-action); text-decoration:none; }
+  .oak-btn.js-save-btn { cursor:pointer; }
+  .oak-btn.js-save-btn:disabled { opacity:0.6; cursor:default; }
+  .oak-btn .save-ico { display:inline-flex; align-items:center; }
+  .oak-btn.js-save-btn.saved { background:var(--color-background); border-color:var(--color-border); color:var(--color-action); }
+  .oak-btn.js-save-btn.saved:hover { background:var(--color-background); color:var(--color-action); }
 
   /* ── Section cards ── */
-  .sec-card { background: var(--oak-surface, #1a1d23); border: 1px solid var(--oak-border, rgba(255,255,255,0.07)); border-radius: 14px; padding: 1.25rem; height: 100%; }
-  .sec-card-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--oak-muted); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--oak-border, rgba(255,255,255,0.07)); display: flex; align-items: center; gap: 0.4rem; }
-  .field { margin-bottom: 0.85rem; }
-  .field:last-child { margin-bottom: 0; }
-  .field-lbl { font-size: 0.72rem; font-weight: 600; color: var(--oak-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
-  .field-val { font-size: 0.92rem; color: #e2e8f0; line-height: 1.5; }
-  .field-val a { color: var(--oak-accent); text-decoration: none; }
-  .field-val a:hover { text-decoration: underline; }
+  .sec-card { background:var(--oak-surface, var(--color-surface)); border:1px solid var(--oak-border, var(--color-border)); border-radius:var(--radius-card); padding:1.25rem; height:100%; }
+  .sec-card-title { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.7px; color:var(--oak-muted); margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid var(--oak-border, var(--color-border)); display:flex; align-items:center; gap:0.4rem; }
+  .field { margin-bottom:0.85rem; }
+  .field:last-child { margin-bottom:0; }
+  .field-lbl { font-size:0.72rem; font-weight:600; color:var(--oak-muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:2px; }
+  .field-val { font-size:0.92rem; color:var(--color-text-primary); line-height:1.5; }
+  .field-val a { color:var(--oak-accent); text-decoration:none; }
+  .field-val a:hover { text-decoration:underline; }
 
   /* ── Saturation badge ── */
-  .sat-badge { display:inline-flex; align-items:center; gap:0.35rem; padding:3px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; }
-  .sat-low { background:rgba(52,211,153,0.16); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
-  .sat-medium { background:rgba(251,191,36,0.16); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); }
-  .sat-high { background:rgba(248,113,113,0.16); color:#f87171; border:1px solid rgba(248,113,113,0.3); }
+  .sat-badge { display:inline-flex; align-items:center; gap:0.35rem; padding:3px 12px; border-radius:var(--radius-default); font-size:0.8rem; font-weight:600; }
+  .sat-low { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .sat-medium { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .sat-high { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
   .sat-count { font-size:0.8rem; color:var(--oak-muted); margin-top:4px; }
 
   /* ── Opponents list ── */
-  .opp-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.25rem; }
-  .opp-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.6rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
-  .opp-num { font-size: 0.72rem; font-weight: 700; color: var(--oak-muted); min-width: 18px; padding-top: 2px; }
-  .opp-name { font-size: 0.9rem; color: #e2e8f0; line-height: 1.45; }
+  .opp-list { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.25rem; }
+  .opp-item { display:flex; align-items:flex-start; gap:0.6rem; padding:0.6rem 0.75rem; background:var(--color-background); border-radius:var(--radius-default); border:1px solid var(--color-border); }
+  .opp-num { font-size:0.72rem; font-weight:600; color:var(--oak-muted); min-width:18px; padding-top:2px; }
+  .opp-name { font-size:0.9rem; color:var(--color-text-primary); line-height:1.45; }
 
   @media (max-width: 576px) {
-    .mavzu-card { padding: 1.1rem; }
-    .mavzu-title { font-size: 1rem; }
-    .oak-btn { width: 100%; justify-content: center; }
+    .mavzu-card { padding:1.1rem; }
+    .mavzu-title { font-size:1rem; }
+    .oak-btn { width:100%; justify-content:center; }
   }
 </style>
 {% endblock %}
@@ -86,9 +85,9 @@
 </div>
 
 {% if missing_author %}
-<div class="mb-3" style="background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.35);border-radius:12px;padding:14px 18px;color:#e2e8f0;">
-  ⚠️ Bu dissertatsiya muallifi haqida ma'lumot mavjud emas. Agar siz muallif bo'lsangiz,
-  <a href="/register" style="color:#facc15;font-weight:600;">profilingizni yaratib</a>,
+<div class="mb-3" style="background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:14px 18px;color:var(--color-text-primary);">
+   Bu dissertatsiya muallifi haqida ma'lumot mavjud emas. Agar siz muallif bo'lsangiz,
+  <a href="/register" style="color:var(--color-text-secondary);font-weight:600;">profilingizni yaratib</a>,
   bu dissertatsiyani o'zingizga biriktirishingiz mumkin.
 </div>
 {% endif %}
@@ -120,22 +119,22 @@
     <div class="sec-card">
       <div class="sec-card-title"><i class="bi bi-person-fill"></i>Tadqiqotchi</div>
       <div class="field">
-        <div class="field-lbl">👤 Olim</div>
+        <div class="field-lbl"> Olim</div>
         <div class="field-val" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           {{ avatar(row.get('photo_url') if row.get is defined else None, row.Olim or '', 48) }}
           {% if row.Olim %}<a href="/olim/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>
-          {% else %}<span style="color:#94a3b8;">⚠️ Noma'lum muallif</span>{% endif %}
+          {% else %}<span style="color:var(--color-action);"> Noma'lum muallif</span>{% endif %}
         </div>
       </div>
       {% if row.Mavzu_raqami %}
       <div class="field">
-        <div class="field-lbl">🔢 Ro'yxat raqami</div>
+        <div class="field-lbl"> Ro'yxat raqami</div>
         <div class="field-val">{{ row.Mavzu_raqami }}</div>
       </div>
       {% endif %}
       {% if row.Yonalish %}
       <div class="field">
-        <div class="field-lbl">📋 Yo'nalish</div>
+        <div class="field-lbl"> Yo'nalish</div>
         <div class="field-val">{{ row.Yonalish }}</div>
       </div>
       {% endif %}
@@ -146,31 +145,31 @@
       <div class="sec-card-title"><i class="bi bi-tags-fill"></i>Ixtisoslik</div>
       {% if row.Ixtisoslik %}
       <div class="field">
-        <div class="field-lbl">🔢 Shifr</div>
+        <div class="field-lbl"> Shifr</div>
         <div class="field-val"><a href="/specialization/{{ row.Ixtisoslik|urlencode }}">{{ row.Ixtisoslik }}</a></div>
       </div>
       {% endif %}
       {% if row.Ixtisoslik_nomi %}
       <div class="field">
-        <div class="field-lbl">📖 Nomi</div>
+        <div class="field-lbl"> Nomi</div>
         <div class="field-val">{{ row.Ixtisoslik_nomi }}</div>
       </div>
       {% endif %}
       {% if row.Fan_tarmoqi %}
       <div class="field">
-        <div class="field-lbl">🌿 Fan tarmog'i</div>
+        <div class="field-lbl"> Fan tarmog'i</div>
         <div class="field-val">{{ row.Fan_tarmoqi }}</div>
       </div>
       {% endif %}
       {% if saturation %}
       <div class="field">
-        <div class="field-lbl">📊 Shifr bo'yicha himoya qilingan mavzular</div>
+        <div class="field-lbl"> Shifr bo'yicha himoya qilingan mavzular</div>
         <div class="field-val">
           <span class="sat-badge sat-{{ saturation.level }}">
             {% if saturation.level == 'low' %}<i class="bi bi-stars"></i>{% elif saturation.level == 'medium' %}<i class="bi bi-bar-chart"></i>{% else %}<i class="bi bi-fire"></i>{% endif %}
             {{ saturation.label }}
           </span>
-          <div class="sat-count">Shu ixtisoslikda: <b style="color:#e2e8f0;">{{ saturation.count }}</b> ta himoya</div>
+          <div class="sat-count">Shu ixtisoslikda: <b style="color:var(--color-text-primary);">{{ saturation.count }}</b> ta himoya</div>
         </div>
       </div>
       {% endif %}
@@ -187,7 +186,7 @@
     <div class="sec-card">
       <div class="sec-card-title"><i class="bi bi-person-badge-fill"></i>Ilmiy rahbar</div>
       <div class="field">
-        <div class="field-lbl">👨‍🏫 Ism</div>
+        <div class="field-lbl"> Ism</div>
         <div class="field-val" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
           {% if row.Ilmiy_rahbar %}
             <a href="/olim/{{ row.Ilmiy_rahbar|urlencode }}">{{ row.Ilmiy_rahbar }}</a>
@@ -198,7 +197,7 @@
       </div>
       {% if row.Ilmiy_rahbar_daraja %}
       <div class="field">
-        <div class="field-lbl">🎓 Unvon</div>
+        <div class="field-lbl"> Unvon</div>
         <div class="field-val">{{ row.Ilmiy_rahbar_daraja }}</div>
       </div>
       {% endif %}
@@ -209,19 +208,19 @@
       <div class="sec-card-title"><i class="bi bi-building-fill"></i>Muassasalar</div>
       {% if row.Muassasa %}
       <div class="field">
-        <div class="field-lbl">🏛️ Bajarilgan muassasa</div>
+        <div class="field-lbl"> Bajarilgan muassasa</div>
         <div class="field-val"><a href="/university/{{ row.Muassasa|urlencode }}">{{ row.Muassasa }}</a></div>
       </div>
       {% endif %}
       {% if row.Ilmiy_kengash %}
       <div class="field">
-        <div class="field-lbl">🏢 Ilmiy kengash</div>
+        <div class="field-lbl"> Ilmiy kengash</div>
         <div class="field-val">{{ row.Ilmiy_kengash|uni_link }}</div>
       </div>
       {% endif %}
       {% if row.Ilmiy_kengash_raqami %}
       <div class="field">
-        <div class="field-lbl">🔑 IK raqami</div>
+        <div class="field-lbl"> IK raqami</div>
         <div class="field-val">{{ row.Ilmiy_kengash_raqami }}</div>
       </div>
       {% endif %}
@@ -255,7 +254,7 @@
 {% if row.Yetakchi_tashkilot %}
 <div class="sec-card mb-3">
   <div class="sec-card-title"><i class="bi bi-bank2"></i>Yetakchi tashkilot</div>
-  <div class="field-val">🏢 {{ row.Yetakchi_tashkilot }}</div>
+  <div class="field-val"> {{ row.Yetakchi_tashkilot }}</div>
 </div>
 {% endif %}
 

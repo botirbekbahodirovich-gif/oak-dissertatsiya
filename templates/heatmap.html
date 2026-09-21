@@ -5,64 +5,64 @@
 
 {% block extra_head %}
 <style>
-  .hm-wrap { max-width: 1150px; margin: 0 auto; padding: 8px 0 40px; }
-  .hm-head { text-align: center; margin-bottom: 1.75rem; }
-  .hm-head h1 { font-size: 1.7rem; font-weight: 800; color: var(--color-text-primary); margin: 0 0 8px; }
-  .hm-head p { color: var(--color-text-muted); font-size: 1rem; margin: 0; }
+  .hm-wrap { max-width:1150px; margin:0 auto; padding:8px 0 40px; }
+  .hm-head { text-align:center; margin-bottom:1.75rem; }
+  .hm-head h1 { font-size:1.7rem; font-weight:600; color:var(--color-text-primary); margin:0 0 8px; }
+  .hm-head p { color:var(--color-text-muted); font-size:1rem; margin:0; }
 
-  .hm-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 20px; margin-bottom: 24px; }
-  .hm-card h2 { font-size: 1.15rem; font-weight: 700; color: var(--color-text-primary); margin: 0 0 16px; }
+  .hm-card { background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:20px; margin-bottom:24px; }
+  .hm-card h2 { font-size:1.15rem; font-weight:600; color:var(--color-text-primary); margin:0 0 16px; }
 
-  .hm-map-area { position: relative; }
-  #uz-map { width: 100%; max-height: 520px; display: block; }
-  #uz-map path { transition: filter 0.15s; }
-  #uz-map path:hover { filter: brightness(1.25); }
-  #uz-map text { fill: var(--color-text-primary); font-size: 13px; font-weight: 600; pointer-events: none; text-anchor: middle; }
+  .hm-map-area { position:relative; }
+  #uz-map { width:100%; max-height:520px; display:block; }
+  #uz-map path { transition:filter 0.15s; }
+  #uz-map path:hover { filter:brightness(1.25); }
+  #uz-map text { fill:var(--color-text-primary); font-size:13px; font-weight:600; pointer-events:none; text-anchor:middle; }
 
   #map-tooltip {
-    position: fixed; z-index: 50; pointer-events: none; display: none;
-    background: var(--color-background); border: 1px solid var(--color-text-muted); border-radius: var(--radius-banner);
-    padding: 8px 12px; font-size: 0.85rem; color: var(--color-text-primary); box-shadow: 0 4px 12px rgba(12,15,18,0.08);
+    position:fixed; z-index:50; pointer-events:none; display:none;
+    background:var(--color-background); border:1px solid var(--color-text-muted); border-radius:var(--radius-banner);
+    padding:8px 12px; font-size:0.85rem; color:var(--color-text-primary); box-shadow:none;
   }
-  #map-tooltip b { color: var(--color-action-blue); }
+  #map-tooltip b { color:var(--color-action-blue); }
 
-  .hm-legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: 12px; }
-  .hm-legend .lg { display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; color: var(--color-text-muted); }
-  .hm-legend .sw { width: 16px; height: 16px; border-radius: var(--radius-default); }
+  .hm-legend { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; margin-top:12px; }
+  .hm-legend .lg { display:inline-flex; align-items:center; gap:7px; font-size:0.82rem; color:var(--color-text-muted); }
+  .hm-legend .sw { width:16px; height:16px; border-radius:var(--radius-default); }
 
-  #region-detail { display: none; }
-  .rd-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px; }
-  .rd-name { font-size: 1.5rem; font-weight: 800; color: var(--color-text-primary); margin: 0 0 6px; }
-  .rd-total { color: var(--color-action-blue); font-weight: 700; font-size: 1.05rem; }
-  .rd-split { color: var(--color-text-muted); margin: 4px 0 14px; font-size: 0.92rem; }
-  .rd-split b.phd { color: var(--color-success); } .rd-split b.dsc { color: var(--color-notice); }
-  .rd-list { list-style: none; padding: 0; margin: 0; }
-  .rd-list h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); margin: 0 0 8px; }
-  .rd-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 0.86rem; color: var(--color-text-secondary); padding: 4px 0; border-bottom: 1px solid var(--color-border-subtle); }
-  .rd-list li span:last-child { color: var(--color-action-blue); font-weight: 700; }
-  .rd-spark { margin-top: 10px; }
+  #region-detail { display:none; }
+  .rd-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:20px; }
+  .rd-name { font-size:1.5rem; font-weight:600; color:var(--color-text-primary); margin:0 0 6px; }
+  .rd-total { color:var(--color-action-blue); font-weight:600; font-size:1.05rem; }
+  .rd-split { color:var(--color-text-muted); margin:4px 0 14px; font-size:0.92rem; }
+  .rd-split b.phd { color:var(--color-success); } .rd-split b.dsc { color:var(--color-notice); }
+  .rd-list { list-style:none; padding:0; margin:0; }
+  .rd-list h4 { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); margin:0 0 8px; }
+  .rd-list li { display:flex; justify-content:space-between; gap:10px; font-size:0.86rem; color:var(--color-text-secondary); padding:4px 0; border-bottom:1px solid var(--color-border-subtle); }
+  .rd-list li span:last-child { color:var(--color-action-blue); font-weight:600; }
+  .rd-spark { margin-top:10px; }
 
-  table.hm-table { width: 100%; border-collapse: collapse; }
-  table.hm-table th { text-align: left; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-muted); padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
-  table.hm-table td { padding: 9px 10px; font-size: 0.88rem; color: var(--color-text-primary); border-bottom: 1px solid var(--color-border-subtle); vertical-align: middle; }
-  .hm-bar-cell { min-width: 180px; }
-  .hm-bar-track { background: var(--color-background-soft); border-radius: var(--radius-default); height: 22px; position: relative; overflow: hidden; }
-  .hm-bar-fill { background: var(--color-action-blue); height: 100%; border-radius: var(--radius-default); min-width: 2px; }
-  .hm-bar-pct { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.76rem; color: var(--color-text-secondary); font-weight: 600; }
-  .hm-rank { color: var(--color-text-muted); font-weight: 700; }
-  .num-phd { color: var(--color-success); font-weight: 700; } .num-dsc { color: var(--color-notice); font-weight: 700; }
+  table.hm-table { width:100%; border-collapse:collapse; }
+  table.hm-table th { text-align:left; font-size:0.74rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); padding:8px 10px; border-bottom:1px solid var(--color-border); }
+  table.hm-table td { padding:9px 10px; font-size:0.88rem; color:var(--color-text-primary); border-bottom:1px solid var(--color-border-subtle); vertical-align:middle; }
+  .hm-bar-cell { min-width:180px; }
+  .hm-bar-track { background:var(--color-background-soft); border-radius:var(--radius-default); height:22px; position:relative; overflow:hidden; }
+  .hm-bar-fill { background:var(--color-action-blue); height:100%; border-radius:var(--radius-default); min-width:2px; }
+  .hm-bar-pct { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:0.76rem; color:var(--color-text-secondary); font-weight:600; }
+  .hm-rank { color:var(--color-text-muted); font-weight:600; }
+  .num-phd { color:var(--color-success); font-weight:600; } .num-dsc { color:var(--color-notice); font-weight:600; }
 
-  .uni-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .uni-card { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 16px; }
-  .uni-card .un { font-weight: 700; color: var(--color-text-primary); font-size: 0.92rem; margin-bottom: 8px; line-height: 1.35; }
-  .uni-card .meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .reg-badge { font-size: var(--text-meta); font-weight: 600; padding: 2px var(--space-8); border-radius: var(--radius-rounded); background: var(--color-blue-soft); color: var(--color-action-blue); }
-  .uni-card .cnt { color: var(--color-action-blue); font-weight: 800; }
-  .uni-card .sp { font-size: 0.78rem; color: var(--color-text-muted); }
+  .uni-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:14px; }
+  .uni-card { background:var(--color-background-soft); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:16px; }
+  .uni-card .un { font-weight:600; color:var(--color-text-primary); font-size:0.92rem; margin-bottom:8px; line-height:1.35; }
+  .uni-card .meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .reg-badge { font-size:var(--text-meta); font-weight:600; padding:2px var(--space-8); border-radius:var(--radius-rounded); background:var(--color-blue-soft); color:var(--color-action-blue); }
+  .uni-card .cnt { color:var(--color-action-blue); font-weight:600; }
+  .uni-card .sp { font-size:0.78rem; color:var(--color-text-muted); }
 
   @media (max-width: 820px) {
-    .rd-grid { grid-template-columns: 1fr; }
-    .uni-grid { grid-template-columns: 1fr; }
+    .rd-grid { grid-template-columns:1fr; }
+    .uni-grid { grid-template-columns:1fr; }
   }
 </style>
 {% endblock %}
@@ -88,10 +88,10 @@
       <svg id="uz-map" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div class="hm-legend">
-      <span class="lg"><span class="sw" style="background:var(--color-blue-soft)"></span> &lt; 100</span>
-      <span class="lg"><span class="sw" style="background:var(--color-action-blue-dark)"></span> 100–500</span>
-      <span class="lg"><span class="sw" style="background:var(--color-action-blue)"></span> 500–2000</span>
-      <span class="lg"><span class="sw" style="background:var(--color-action-blue)"></span> 2000+</span>
+      <span class="lg"><span class="sw" style="background:var(--color-blue-soft);"></span> &lt; 100</span>
+      <span class="lg"><span class="sw" style="background:var(--color-action-blue-dark);"></span> 100–500</span>
+      <span class="lg"><span class="sw" style="background:var(--color-action-blue);"></span> 500–2000</span>
+      <span class="lg"><span class="sw" style="background:var(--color-action-blue);"></span> 2000+</span>
     </div>
   </div>
 

@@ -3,143 +3,143 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
-.ob { background: #0f172a; color: #e2e8f0; min-height: 92vh; padding: 0 0 60px; }
-.ob-hero { background: linear-gradient(135deg,#1e3a8a 0%,#6366f1 100%); padding: 34px 20px 28px; text-align: center; }
-.ob-hero h1 { font-size: 1.7rem; font-weight: 800; color: #fff; margin: 0 0 6px; }
-.ob-hero p { color: rgba(255,255,255,0.9); margin: 0; font-size: 0.98rem; }
-.ob-wrap { max-width: 720px; margin: -18px auto 0; padding: 0 18px; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; }
+.ob { background:var(--color-surface); color:var(--color-text-primary); min-height:92vh; padding:0 0 60px; }
+.ob-hero { background:var(--color-surface); padding:34px 20px 28px; text-align:center; }
+.ob-hero h1 { font-size:1.7rem; font-weight:600; color:var(--color-text-primary); margin:0 0 6px; }
+.ob-hero p { color:var(--color-text-secondary); margin:0; font-size:0.98rem; }
+.ob-wrap { max-width:720px; margin:-18px auto 0; padding:0 18px; }
 
-.ob-progress { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; }
-.ob-progress .lab { display: flex; justify-content: space-between; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 8px; font-weight: 600; }
-.ob-progress .lab b { color: #60a5fa; }
-.ob-bar { height: 8px; background: #0b1220; border-radius: 6px; overflow: hidden; }
-.ob-bar > div { height: 100%; width: 0; background: linear-gradient(90deg,#3b82f6,#22c55e); transition: width 0.35s; }
+.ob-progress { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:14px 18px; margin-bottom:16px; }
+.ob-progress .lab { display:flex; justify-content:space-between; font-size:0.85rem; color:var(--color-text-primary); margin-bottom:8px; font-weight:600; }
+.ob-progress .lab b { color:var(--color-action); }
+.ob-bar { height:8px; background:var(--color-surface); border-radius:var(--radius-default); overflow:hidden; }
+.ob-bar > div { height:100%; width:0; background:var(--color-surface); transition:width 0.35s; }
 
-.ob-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 16px; }
-.ob-card h3 { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
-.ob-card .desc { color: #94a3b8; font-size: 0.86rem; margin: 0 0 16px; }
-.ob-step { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #3b82f6; color: #fff; font-size: 0.8rem; font-weight: 700; margin-right: 8px; }
+.ob-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:22px; margin-bottom:16px; }
+.ob-card h3 { font-size:1.1rem; font-weight:600; color:var(--color-text-primary); margin:0 0 4px; }
+.ob-card .desc { color:var(--color-action); font-size:0.86rem; margin:0 0 16px; }
+.ob-step { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--color-background); color:var(--color-text-primary); font-size:0.8rem; font-weight:600; margin-right:8px; }
 
-.ob-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-.ob-group { margin-bottom: 4px; }
-.ob-group.full { grid-column: 1 / -1; }
-.ob-group label { display: block; font-size: 0.76rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
-.ob-input, .ob-select { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 13px; font-size: 0.92rem; font-family: inherit; }
-.ob-input:focus, .ob-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.ob-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.ob-group { margin-bottom:4px; }
+.ob-group.full { grid-column:1 / -1; }
+.ob-group label { display:block; font-size:0.76rem; font-weight:600; color:var(--color-action); margin-bottom:6px; }
+.ob-input, .ob-select { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:11px 13px; font-size:0.92rem; font-family:inherit; }
+.ob-input:focus, .ob-select:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
 
 /* match panel */
-.ob-matches { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-.ob-match { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; }
-.ob-match .mn { font-weight: 700; color: #e2e8f0; }
-.ob-match .mm { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
-.ob-deg { font-size: 0.68rem; font-weight: 700; color: #fff; padding: 1px 8px; border-radius: 999px; margin-right: 6px; }
-.ob-deg.phd { background: #059669; } .ob-deg.dsc { background: #e36403; }
-.ob-match button { background: #22c55e; color: #06281a; font-weight: 700; border: none; border-radius: 9px; padding: 9px 16px; cursor: pointer; font-size: 0.86rem; white-space: nowrap; }
-.ob-match button:hover { background: #16a34a; }
-.ob-hint { color: #64748b; font-size: 0.82rem; margin-top: 10px; }
+.ob-matches { margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+.ob-match { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:12px 14px; }
+.ob-match .mn { font-weight:600; color:var(--color-text-primary); }
+.ob-match .mm { font-size:0.8rem; color:var(--color-action); margin-top:2px; }
+.ob-deg { font-size:0.68rem; font-weight:600; color:var(--color-surface); padding:1px 8px; border-radius:var(--radius-default); margin-right:6px; }
+.ob-deg.phd { background:var(--color-background); } .ob-deg.dsc { background:var(--color-background); }
+.ob-match button { background:var(--color-action); color:var(--color-action); font-weight:600; border:none; border-radius:var(--radius-default); padding:9px 16px; cursor:pointer; font-size:0.86rem; white-space:nowrap; }
+.ob-match button:hover { background:var(--color-action); }
+.ob-hint { color:var(--color-text-secondary); font-size:0.82rem; margin-top:10px; }
 
-.ob-linked { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.35); border-radius: 12px; padding: 14px 16px; margin-top: 12px; display: none; }
-.ob-linked.show { display: block; }
-.ob-linked h4 { margin: 0 0 8px; color: #4ade80; font-size: 0.95rem; }
-.ob-linked .row { font-size: 0.86rem; color: #cbd5e1; margin: 3px 0; }
-.ob-linked .row b { color: #e2e8f0; }
-.ob-linked .unlink { background: none; border: none; color: #fca5a5; font-size: 0.8rem; cursor: pointer; margin-top: 8px; padding: 0; }
+.ob-linked { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:14px 16px; margin-top:12px; display:none; }
+.ob-linked.show { display:block; }
+.ob-linked h4 { margin:0 0 8px; color:var(--color-action); font-size:0.95rem; }
+.ob-linked .row { font-size:0.86rem; color:var(--color-text-primary); margin:3px 0; }
+.ob-linked .row b { color:var(--color-text-primary); }
+.ob-linked .unlink { background:none; border:none; color:var(--color-action); font-size:0.8rem; cursor:pointer; margin-top:8px; padding:0; }
 
 /* degree radios */
-.ob-degrees { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ob-degree { position: relative; }
-.ob-degree input { position: absolute; opacity: 0; }
-.ob-degree label { display: block; background: #162032; border: 1.5px solid #334155; border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; }
-.ob-degree label .t { font-weight: 700; color: #e2e8f0; font-size: 0.92rem; }
-.ob-degree label .s { display: block; color: #94a3b8; font-size: 0.76rem; margin-top: 2px; }
-.ob-degree input:checked + label { border-color: #3b82f6; background: rgba(59,130,246,0.14); }
-.ob-degree input:focus + label { box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
+.ob-degrees { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ob-degree { position:relative; }
+.ob-degree input { position:absolute; opacity:0; }
+.ob-degree label { display:block; background:var(--color-surface); border:1.5px solid var(--color-border); border-radius:var(--radius-default); padding:12px 14px; cursor:pointer; transition:all 0.15s; }
+.ob-degree label .t { font-weight:600; color:var(--color-text-primary); font-size:0.92rem; }
+.ob-degree label .s { display:block; color:var(--color-action); font-size:0.76rem; margin-top:2px; }
+.ob-degree input:checked + label { border-color:var(--color-border); background:var(--color-background); }
+.ob-degree input:focus + label { box-shadow:none; }
 
-.ob-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
-.ob-skip { color: #94a3b8; font-size: 0.9rem; text-decoration: none; }
-.ob-skip:hover { color: #cbd5e1; }
-.ob-btn { background: #3b82f6; color: #fff; font-weight: 700; padding: 12px 26px; border: none; border-radius: 11px; cursor: pointer; font-size: 0.95rem; }
-.ob-btn:hover { background: #2563eb; }
-.ob-btn:disabled { opacity: 0.6; cursor: default; }
-.ob-toast { position: fixed; top: 18px; right: 18px; z-index: 3000; padding: 12px 18px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; opacity: 0; transform: translateY(-10px); transition: 0.25s; }
-.ob-toast.show { opacity: 1; transform: translateY(0); }
-.ob-toast.ok { background: #059669; color: #fff; } .ob-toast.err { background: #ef4444; color: #fff; }
+.ob-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; }
+.ob-skip { color:var(--color-action); font-size:0.9rem; text-decoration:none; }
+.ob-skip:hover { color:var(--color-text-primary); }
+.ob-btn { background:var(--color-action); color:var(--color-surface); font-weight:600; padding:12px 26px; border:none; border-radius:var(--radius-default); cursor:pointer; font-size:0.95rem; }
+.ob-btn:hover { background:var(--color-action); }
+.ob-btn:disabled { opacity:0.6; cursor:default; }
+.ob-toast { position:fixed; top:18px; right:18px; z-index:3000; padding:12px 18px; border-radius:var(--radius-default); font-weight:600; font-size:0.9rem; opacity:0; transform:translateY(-10px); transition:0.25s; }
+.ob-toast.show { opacity:1; transform:translateY(0); }
+.ob-toast.ok { background:var(--color-background); color:var(--color-text-primary); } .ob-toast.err { background:var(--color-background); color:var(--color-text-primary); }
 
 @media (max-width: 620px) {
-  .ob-grid, .ob-degrees { grid-template-columns: 1fr; }
+  .ob-grid, .ob-degrees { grid-template-columns:1fr; }
 }
 
 /* ── Foydalanuvchi turi — kichik tab bar (onboarding tepasida) ── */
 .olz-type-tabs {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 720px;
-  margin: 14px auto 0;
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  font-size: 14px;
-  flex-wrap: wrap;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  max-width:720px;
+  margin:14px auto 0;
+  padding:12px 16px;
+  background:var(--color-background);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-default);
+  font-size:14px;
+  flex-wrap:wrap;
 }
 .olz-type-tabs__label {
-  color: rgba(255,255,255,0.7);
-  font-size: 13px;
-  margin-right: 8px;
-  white-space: nowrap;
+  color:var(--color-text-secondary);
+  font-size:13px;
+  margin-right:8px;
+  white-space:nowrap;
 }
 .olz-type-tabs__buttons {
-  display: flex;
-  gap: 6px;
-  flex: 1;
-  flex-wrap: wrap;
+  display:flex;
+  gap:6px;
+  flex:1;
+  flex-wrap:wrap;
 }
 .olz-type-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  color: rgba(255,255,255,0.85);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 14px;
+  background:var(--color-background);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-default);
+  color:var(--color-text-secondary);
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  transition:all 0.15s ease;
 }
 .olz-type-tab:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.2);
+  background:var(--color-background);
+  border-color:var(--color-border);
 }
-.olz-type-tab:disabled { opacity: 0.6; cursor: default; }
+.olz-type-tab:disabled { opacity:0.6; cursor:default; }
 .olz-type-tab.active {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: rgba(59, 130, 246, 0.5);
-  color: #93c5fd;
+  background:var(--color-background);
+  border-color:var(--color-border);
+  color:var(--color-action);
 }
-.olz-type-tab__icon { font-size: 14px; }
+.olz-type-tab__icon { font-size:14px; }
 .olz-type-tabs__skip {
-  color: rgba(255,255,255,0.5);
-  font-size: 12px;
-  text-decoration: none;
-  margin-left: auto;
-  white-space: nowrap;
-  transition: color 0.15s;
+  color:var(--color-text-secondary);
+  font-size:12px;
+  text-decoration:none;
+  margin-left:auto;
+  white-space:nowrap;
+  transition:color 0.15s;
 }
-.olz-type-tabs__skip:hover { color: rgba(255,255,255,0.8); }
+.olz-type-tabs__skip:hover { color:var(--color-text-secondary); }
 
 @media (max-width: 640px) {
   .olz-type-tabs {
-    padding: 10px 12px;
-    flex-direction: column;
-    align-items: stretch;
+    padding:10px 12px;
+    flex-direction:column;
+    align-items:stretch;
   }
-  .olz-type-tabs__label { margin: 0 0 4px 0; }
-  .olz-type-tabs__buttons { justify-content: center; }
-  .olz-type-tabs__skip { margin: 4px 0 0 0; text-align: center; }
+  .olz-type-tabs__label { margin:0 0 4px 0; }
+  .olz-type-tabs__buttons { justify-content:center; }
+  .olz-type-tabs__skip { margin:4px 0 0 0; text-align:center; }
 }
 </style>
 {% endblock %}
@@ -152,13 +152,13 @@
     <div class="olz-type-tabs__label">Kim ekaningizni tanlang:</div>
     <div class="olz-type-tabs__buttons">
       <button type="button" class="olz-type-tab" data-type="researcher">
-        <span class="olz-type-tab__icon">🎓</span><span class="olz-type-tab__label">Izlanuvchi</span>
+        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Izlanuvchi</span>
       </button>
       <button type="button" class="olz-type-tab" data-type="student">
-        <span class="olz-type-tab__icon">📚</span><span class="olz-type-tab__label">Talaba</span>
+        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Talaba</span>
       </button>
       <button type="button" class="olz-type-tab" data-type="regular">
-        <span class="olz-type-tab__icon">👤</span><span class="olz-type-tab__label">Oddiy</span>
+        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Oddiy</span>
       </button>
     </div>
     <a href="{{ url_for('home') }}" class="olz-type-tabs__skip"
@@ -168,7 +168,7 @@
   </div>
   {% endif %}
   <div class="ob-hero">
-    <h1>👋 Xush kelibsiz! Profilingizni to'ldiring</h1>
+    <h1> Xush kelibsiz! Profilingizni to'ldiring</h1>
     <p>Bu ma'lumotlar ilmiy portfoliongizni to'ldiradi va sizni bazadagi dissertatsiyangiz bilan bog'laydi</p>
   </div>
 
@@ -183,25 +183,29 @@
       <h3><span class="ob-step">1</span>To'liq ismingiz</h3>
       <p class="desc">Ism-familiyangizni kiriting — bazadan dissertatsiyangizni avtomatik topamiz.</p>
       <div class="ob-grid">
-        <div class="ob-group"><label>Familiya</label><input class="ob-input auto-capitalize" id="ob-last" type="text" value="{{ profile.last_name or session.pop('prefill_familiya', '') }}" placeholder="Karimov"></div>
-        <div class="ob-group"><label>Ism</label><input class="ob-input auto-capitalize" id="ob-first" type="text" value="{{ profile.first_name or session.pop('prefill_ism', '') }}" placeholder="Aziz"></div>
-        <div class="ob-group"><label>Otasining ismi</label><input class="ob-input auto-capitalize" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
+        <div class="ob-group"><label>Familiya</label><label class="ol-label" for="ob-last">Karimov</label>
+<input class="ob-input auto-capitalize" id="ob-last" type="text" value="{{ profile.last_name or session.pop('prefill_familiya', '') }}" placeholder="Karimov"></div>
+        <div class="ob-group"><label>Ism</label><label class="ol-label" for="ob-first">Aziz</label>
+<input class="ob-input auto-capitalize" id="ob-first" type="text" value="{{ profile.first_name or session.pop('prefill_ism', '') }}" placeholder="Aziz"></div>
+        <div class="ob-group"><label>Otasining ismi</label><label class="ol-label" for="ob-patr">Akmalovich</label>
+<input class="ob-input auto-capitalize" id="ob-patr" type="text" value="{{ profile.patronymic or '' }}" placeholder="Akmalovich"></div>
       </div>
       <div class="ob-group" style="margin-top:10px;">
-        <label>🔗 Sahifa manzili (ixtiyoriy) — olimlar.uz/@</label>
-        <input class="ob-input" id="ob-slug" type="text" value="{{ profile.slug or '' }}"
+        <label> Sahifa manzili (ixtiyoriy) — olimlar.uz/@</label>
+        <label class="ol-label" for="ob-slug">babayev_said</label>
+<input class="ob-input" id="ob-slug" type="text" value="{{ profile.slug or '' }}"
                placeholder="babayev_said" autocomplete="off" maxlength="30" spellcheck="false"
                oninput="this.value=this.value.toLowerCase()">
-        <small style="color:#94a3b8;">3-30 belgi, kichik lotin harflar/raqam/_. Keyin Kabinetda o'zgartirsangiz bo'ladi.</small>
+        <small style="color:var(--color-action);">3-30 belgi, kichik lotin harflar/raqam/_. Keyin Kabinetda o'zgartirsangiz bo'ladi.</small>
       </div>
 
       <div class="ob-matches" id="ob-matches"></div>
       <div class="ob-hint" id="ob-hint" style="display:none;">Ismni to'liqroq kiriting — mos olimlarni ko'rsatamiz.</div>
 
       <div class="ob-linked" id="ob-linked">
-        <h4>✓ Dissertatsiyangiz topildi va biriktirildi</h4>
+        <h4> Dissertatsiyangiz topildi va biriktirildi</h4>
         <div id="ob-linked-body"></div>
-        <button class="unlink" id="ob-unlink" type="button">✕ Bu men emasman — ajratish</button>
+        <button class="unlink" id="ob-unlink" type="button"> Bu men emasman — ajratish</button>
       </div>
     </div>
 
@@ -241,14 +245,15 @@
           </select>
         </div>
         <div class="ob-group full"><label>Ta'lim / ish muassasasi</label>
-          <input class="ob-input" id="ob-inst" type="text" list="ob-muassasa-list" value="{{ profile.institution or '' }}" placeholder="Masalan: Toshkent davlat texnika universiteti">
+          <label class="ol-label" for="ob-inst">Masalan: Toshkent davlat texnika universiteti</label>
+<input class="ob-input" id="ob-inst" type="text" list="ob-muassasa-list" value="{{ profile.institution or '' }}" placeholder="Masalan: Toshkent davlat texnika universiteti">
         </div>
       </div>
     </div>
 
     <div class="ob-actions">
       <a class="ob-skip" href="/cabinet">Hozircha o'tkazib yuborish →</a>
-      <button class="ob-btn" id="ob-finish">Saqlash va davom etish ✓</button>
+      <button class="ob-btn" id="ob-finish">Saqlash va davom etish </button>
     </div>
   </div>
 </div>
@@ -324,7 +329,7 @@
           var deg = it.daraja === 'PHD' ? '<span class="ob-deg phd">PhD</span>' : (it.daraja === 'DSC' ? '<span class="ob-deg dsc">DSc</span>' : '');
           return '<div class="ob-match"><div style="min-width:0;"><div class="mn">' + esc(it.name) + '</div>' +
                  '<div class="mm">' + deg + esc((it.mavzu || '').slice(0, 70)) + '</div></div>' +
-                 '<button data-i="' + i + '">Ha, bu menman ✓</button></div>';
+                 '<button data-i="' + i + '">Ha, bu menman </button></div>';
         }).join('');
         var btns = box.querySelectorAll('.ob-match button');
         rows.forEach(function (it, i) { btns[i].addEventListener('click', function () { claim(it.name); }); });
@@ -355,7 +360,7 @@
       document.getElementById('ob-linked-body').innerHTML = body || '<div class="row">Profil biriktirildi.</div>';
       document.getElementById('ob-linked').classList.add('show');
       document.getElementById('ob-matches').innerHTML = '';
-      toast('Dissertatsiyangiz biriktirildi ✓', true);
+      toast('Dissertatsiyangiz biriktirildi ', true);
       updateProgress();
     }).catch(function () { toast('Tarmoq xatosi', false); });
   }
@@ -385,7 +390,7 @@
       profile_completed: '1'
     };
     post('/cabinet/api/profile/save', body).then(function (d) {
-      if (d.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.href = '/cabinet'; }, 700); }
+      if (d.ok) { toast('Saqlandi ', true); setTimeout(function () { location.href = '/cabinet'; }, 700); }
       else { toast(d.error || 'Xatolik', false); btn.disabled = false; }
     }).catch(function () { toast('Tarmoq xatosi', false); btn.disabled = false; });
   });

@@ -5,55 +5,55 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.tr { background: var(--color-background); color: var(--color-text-primary); min-height: 90vh; padding: 0 0 64px; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; margin:0 !important; }
+.tr { background:var(--color-background); color:var(--color-text-primary); min-height:90vh; padding:0 0 64px; }
 /* Hero avval to'q ko'k gradient banner edi; endi och kulrang sarlavha bloki. */
-.tr-hero { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
-  padding: var(--space-48) var(--space-24); }
-.tr-hero-inner { max-width: 1180px; margin: 0 auto; }
-.tr-hero h1 { font-family: var(--font-serif); font-size: var(--text-h1); font-weight: 700;
-  color: var(--color-text-primary); margin: 0 0 var(--space-12); line-height: var(--leading-heading); }
-.tr-hero p { color: var(--color-text-muted); font-size: var(--text-body-lg); margin: 0; max-width: 70ch; }
-@media (max-width: 649px) { .tr-hero { padding: var(--space-32) var(--space-16); } .tr-hero h1 { font-size: 32px; } }
-.tr-wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--space-24); }
-.tr-sec { margin-top: var(--space-48); }
-.tr-sec h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-4); display: flex; align-items: center; gap: var(--space-8); }
-.tr-sec .sub { color: var(--color-text-muted); font-size: var(--text-small); margin: 0 0 var(--space-16); }
-.tr-card { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); }
-.tr-chart { position: relative; }
-.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
-.kpi { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 16px 18px; }
-.kpi .k-l { color: var(--color-text-muted); font-size: 0.82rem; }
-.kpi .k-v { color: var(--color-text-primary); font-size: 1.4rem; font-weight: 800; margin-top: 4px; }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
-.grow-card h3 { font-size: 1.02rem; font-weight: 800; margin: 0 0 14px; color: var(--color-text-primary); }
-.grow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.grow-rank { color: var(--color-text-muted); font-weight: 800; width: 20px; flex-shrink: 0; }
-.grow-code { font-family: ui-monospace, monospace; color: var(--color-text-primary); width: 78px; flex-shrink: 0; font-size: 0.9rem; }
+.tr-hero { background:var(--color-background-soft); border-bottom:1px solid var(--color-border);
+  padding:var(--space-48) var(--space-24); }
+.tr-hero-inner { max-width:1180px; margin:0 auto; }
+.tr-hero h1 { font-family:var(--font-serif); font-size:var(--text-h1); font-weight:600;
+  color:var(--color-text-primary); margin:0 0 var(--space-12); line-height:var(--leading-heading); }
+.tr-hero p { color:var(--color-text-muted); font-size:var(--text-body-lg); margin:0; max-width:70ch; }
+@media (max-width: 649px) { .tr-hero { padding:var(--space-32) var(--space-16); } .tr-hero h1 { font-size:32px; } }
+.tr-wrap { max-width:1180px; margin:0 auto; padding:0 var(--space-24); }
+.tr-sec { margin-top:var(--space-48); }
+.tr-sec h2 { font-size:var(--text-h5); font-weight:600; color:var(--color-text-primary); margin:0 0 var(--space-4); display:flex; align-items:center; gap:var(--space-8); }
+.tr-sec .sub { color:var(--color-text-muted); font-size:var(--text-small); margin:0 0 var(--space-16); }
+.tr-card { background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:var(--space-24); }
+.tr-chart { position:relative; }
+.kpi-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:16px; }
+.kpi { background:var(--color-background-soft); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:16px 18px; }
+.kpi .k-l { color:var(--color-text-muted); font-size:0.82rem; }
+.kpi .k-v { color:var(--color-text-primary); font-size:1.4rem; font-weight:600; margin-top:4px; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:18px; }
+.grow-card h3 { font-size:1.02rem; font-weight:600; margin:0 0 14px; color:var(--color-text-primary); }
+.grow-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.grow-rank { color:var(--color-text-muted); font-weight:600; width:20px; flex-shrink:0; }
+.grow-code { font-family:ui-monospace, monospace; color:var(--color-text-primary); width:78px; flex-shrink:0; font-size:0.9rem; }
 /* Track oq fonda ko'rinishi uchun soft-grey (avval to'q fon edi). */
-.grow-bar { flex: 1; height: 8px; background: var(--color-background-soft); border-radius: var(--radius-full); overflow: hidden; }
-.grow-bar > div { height: 100%; border-radius: var(--radius-full); }
-.grow-pct { width: 64px; text-align: right; font-weight: 800; font-size: 0.88rem; flex-shrink: 0; }
-.up { color: var(--color-success); } .up-bg { background: var(--color-success); }
-.down { color: var(--color-error); } .down-bg { background: var(--color-error); }
+.grow-bar { flex:1; height:8px; background:var(--color-background-soft); border-radius:var(--radius-full); overflow:hidden; }
+.grow-bar > div { height:100%; border-radius:var(--radius-full); }
+.grow-pct { width:64px; text-align:right; font-weight:600; font-size:0.88rem; flex-shrink:0; }
+.up { color:var(--color-success); } .up-bg { background:var(--color-success); }
+.down { color:var(--color-error); } .down-bg { background:var(--color-error); }
 /* uni heatmap */
-.heat-scroll { overflow-x: auto; }
-.heat-table { border-collapse: separate; border-spacing: 4px; font-size: 0.8rem; width: 100%; }
-.heat-table th { color: var(--color-text-muted); font-weight: 600; font-size: 0.72rem; padding: 4px 6px; text-align: center; white-space: nowrap; }
-.heat-table td.uni { text-align: left; color: var(--color-text-secondary); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 6px 10px; }
-.heat-table td.cell { text-align: center; border-radius: var(--radius-default); font-weight: 700; padding: 7px 9px; min-width: 38px; color: var(--color-text-primary); }
+.heat-scroll { overflow-x:auto; }
+.heat-table { border-collapse:separate; border-spacing:4px; font-size:0.8rem; width:100%; }
+.heat-table th { color:var(--color-text-muted); font-weight:600; font-size:0.72rem; padding:4px 6px; text-align:center; white-space:nowrap; }
+.heat-table td.uni { text-align:left; color:var(--color-text-secondary); max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:6px 10px; }
+.heat-table td.cell { text-align:center; border-radius:var(--radius-default); font-weight:600; padding:7px 9px; min-width:38px; color:var(--color-text-primary); }
 /* advisors */
-.adv-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--color-border-subtle); }
-.adv-row:last-child { border-bottom: none; }
-.adv-rank { color: var(--color-text-muted); font-weight: 800; width: 22px; flex-shrink: 0; }
-.adv-name { flex: 1; min-width: 0; }
-.adv-name a { color: var(--color-action-blue); font-weight: 700; text-decoration: none; }
-.adv-name a:hover { text-decoration: underline; }
-.adv-spark { width: 120px; height: 32px; flex-shrink: 0; }
-.adv-total { width: 90px; text-align: right; flex-shrink: 0; }
-.adv-total b { color: var(--color-text-primary); } .adv-total span { color: var(--color-text-muted); font-size: 0.8rem; }
-.tr-empty { text-align: center; color: var(--color-text-muted); padding: 3rem; }
-@media (max-width: 768px) { .kpi-row { grid-template-columns: 1fr; } .two-col { grid-template-columns: 1fr; } .adv-spark { width: 80px; } }
+.adv-row { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--color-border-subtle); }
+.adv-row:last-child { border-bottom:none; }
+.adv-rank { color:var(--color-text-muted); font-weight:600; width:22px; flex-shrink:0; }
+.adv-name { flex:1; min-width:0; }
+.adv-name a { color:var(--color-action-blue); font-weight:600; text-decoration:none; }
+.adv-name a:hover { text-decoration:underline; }
+.adv-spark { width:120px; height:32px; flex-shrink:0; }
+.adv-total { width:90px; text-align:right; flex-shrink:0; }
+.adv-total b { color:var(--color-text-primary); } .adv-total span { color:var(--color-text-muted); font-size:0.8rem; }
+.tr-empty { text-align:center; color:var(--color-text-muted); padding:3rem; }
+@media (max-width: 768px) { .kpi-row { grid-template-columns:1fr; } .two-col { grid-template-columns:1fr; } .adv-spark { width:80px; } }
 </style>
 {% endblock %}
 
@@ -223,8 +223,8 @@ var T = {{ t|tojson }};
         backgroundColor: YEAR_COLORS[i % YEAR_COLORS.length], borderRadius: 3 };
     }) },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#333333', boxWidth: 13 } }, tooltip: TT },
-      scales: { x: { grid: { display: false }, ticks: { color: '#666666', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
+      plugins: { legend: { labels: { color: OlimlarCharts.tokens.textPrimary, boxWidth: 13 } }, tooltip: TT },
+      scales: { x: { grid: { display: false }, ticks: { color: OlimlarCharts.tokens.textSecondary, maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
   });
 
   // 5) monthly bar
@@ -235,7 +235,7 @@ var T = {{ t|tojson }};
     data: { labels: mlabels, datasets: [{ label: 'Himoyalar', data: T.monthly.map(function (m) { return m.cnt; }), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 3 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: TT },
-      scales: { x: { grid: { display: false }, ticks: { color: '#666666', maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
+      scales: { x: { grid: { display: false }, ticks: { color: OlimlarCharts.tokens.textSecondary, maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
   });
 
   // 6) gender stacked bar + female % line
@@ -244,14 +244,14 @@ var T = {{ t|tojson }};
   new Chart(document.getElementById('c-gender'), {
     data: { labels: gy, datasets: [
       { type: 'bar', label: 'Erkak', data: T.gender.map(function (r) { return r.male; }), backgroundColor: 'rgba(0,86,214,0.8)', stack: 'g', borderRadius: 3, yAxisID: 'y' },
-      { type: 'bar', label: 'Ayol', data: T.gender.map(function (r) { return r.female; }), backgroundColor: '#ec4899cc', stack: 'g', borderRadius: 3, yAxisID: 'y' },
-      { type: 'line', label: 'Ayollar %', data: femPct, borderColor: '#ff9900', backgroundColor: '#ff9900', borderWidth: 2, tension: 0.35, pointRadius: 3, yAxisID: 'y1' }
+      { type: 'bar', label: 'Ayol', data: T.gender.map(function (r) { return r.female; }), backgroundColor: (OlimlarCharts.tokens.series3 + 'cc'), stack: 'g', borderRadius: 3, yAxisID: 'y' },
+      { type: 'line', label: 'Ayollar %', data: femPct, borderColor: OlimlarCharts.tokens.series4, backgroundColor: OlimlarCharts.tokens.series4, borderWidth: 2, tension: 0.35, pointRadius: 3, yAxisID: 'y1' }
     ] },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#333333', boxWidth: 13 } }, tooltip: TT },
+      plugins: { legend: { labels: { color: OlimlarCharts.tokens.textPrimary, boxWidth: 13 } }, tooltip: TT },
       scales: { x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, grid: grid, beginAtZero: true, title: { display: true, text: 'Soni', color: '#666666' } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, title: { display: true, text: 'Ayollar %', color: '#ff9900' } } } }
+        y: { stacked: true, grid: grid, beginAtZero: true, title: { display: true, text: 'Soni', color: OlimlarCharts.tokens.textSecondary } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + '%'; } }, title: { display: true, text: 'Ayollar %', color: OlimlarCharts.tokens.series4 } } } }
   });
 
   // 7) advisor sparklines (inline SVG)

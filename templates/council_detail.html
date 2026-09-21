@@ -4,60 +4,60 @@
 
 {% block extra_head %}
 <style>
-.cd-wrap { max-width: 1080px; margin: 0 auto; }
-.cd-back { display: inline-block; color: #2563eb; font-size: 0.86rem; font-weight: 600; text-decoration: none; margin-bottom: 14px; }
-.cd-back:hover { text-decoration: underline; }
-.cd-h1 { font-size: clamp(1.35rem, 3vw, 1.8rem); font-weight: 800; color: #0f172a; margin: 0 0 6px; line-height: 1.25; }
-.cd-raqam { font-family: ui-monospace, monospace; font-size: 0.88rem; color: #475569; margin-bottom: 18px; }
+.cd-wrap { max-width:1080px; margin:0 auto; }
+.cd-back { display:inline-block; color:var(--color-action); font-size:0.86rem; font-weight:600; text-decoration:none; margin-bottom:14px; }
+.cd-back:hover { text-decoration:underline; }
+.cd-h1 { font-size:clamp(1.35rem, 3vw, 1.8rem); font-weight:600; color:var(--color-text-primary); margin:0 0 6px; line-height:1.25; }
+.cd-raqam { font-family:ui-monospace, monospace; font-size:0.88rem; color:var(--color-action); margin-bottom:18px; }
 
 /* statistika kartalari */
-.cd-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 26px; }
-.cd-stat { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; padding: 14px 16px; }
-.cd-stat-n { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.cd-stat-l { color: #64748b; font-size: 0.8rem; margin-top: 4px; }
-.cd-stat.phd .cd-stat-n { color: #15803d; }
-.cd-stat.dsc .cd-stat-n { color: #6d28d9; }
+.cd-stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:26px; }
+.cd-stat { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-background); padding:14px 16px; }
+.cd-stat-n { font-size:1.5rem; font-weight:600; color:var(--color-text-primary); line-height:1.1; font-variant-numeric:tabular-nums; }
+.cd-stat-l { color:var(--color-text-secondary); font-size:0.8rem; margin-top:4px; }
+.cd-stat.phd .cd-stat-n { color:var(--color-text-secondary); }
+.cd-stat.dsc .cd-stat-n { color:var(--color-text-secondary); }
 
-.cd-sec-h { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
-.cd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 28px; }
-.cd-panel { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; }
+.cd-sec-h { font-size:1.05rem; font-weight:600; color:var(--color-text-primary); margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+.cd-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-bottom:28px; }
+.cd-panel { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); padding:18px 20px; }
 
 /* ixtisosliklar */
-.cd-spec { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef2f7; }
-.cd-spec:last-child { border-bottom: none; }
-.cd-spec-code { font-family: ui-monospace, monospace; font-weight: 700; color: #2563eb; font-size: 0.86rem; flex-shrink: 0; }
-.cd-spec-name { color: #475569; font-size: 0.85rem; flex: 1; min-width: 0; }
-.cd-spec-cnt { color: #94a3b8; font-size: 0.8rem; flex-shrink: 0; }
+.cd-spec { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:8px 0; border-bottom:1px solid var(--color-border); }
+.cd-spec:last-child { border-bottom:none; }
+.cd-spec-code { font-family:ui-monospace, monospace; font-weight:600; color:var(--color-action); font-size:0.86rem; flex-shrink:0; }
+.cd-spec-name { color:var(--color-action); font-size:0.85rem; flex:1; min-width:0; }
+.cd-spec-cnt { color:var(--color-action); font-size:0.8rem; flex-shrink:0; }
 
 /* yillik bar chart */
-.cd-chart { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 18px; }
-.cd-bar { flex: 1 1 0; min-width: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
-.cd-bar-v { font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 3px; }
-.cd-bar-fill { width: 66%; background: #3b82f6; border-radius: 3px 3px 0 0; min-height: 3px; transition: background 0.15s; }
-.cd-bar:hover .cd-bar-fill { background: #2563eb; }
-.cd-chart-x { display: flex; gap: 4px; margin-top: 5px; }
-.cd-chart-x span { flex: 1 1 0; min-width: 10px; text-align: center; font-size: 0.7rem; color: #94a3b8; }
+.cd-chart { display:flex; align-items:flex-end; gap:4px; height:150px; padding-top:18px; }
+.cd-bar { flex:1 1 0; min-width:10px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.cd-bar-v { font-size:0.7rem; font-weight:600; color:var(--color-action); margin-bottom:3px; }
+.cd-bar-fill { width:66%; background:var(--color-background); border-radius:3px 3px 0 0; min-height:3px; transition:background 0.15s; }
+.cd-bar:hover .cd-bar-fill { background:var(--color-action); }
+.cd-chart-x { display:flex; gap:4px; margin-top:5px; }
+.cd-chart-x span { flex:1 1 0; min-width:10px; text-align:center; font-size:0.7rem; color:var(--color-action); }
 
 /* olimlar jadvali */
-.cd-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
-.cd-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 640px; }
-.cd-table thead th { text-align: left; padding: 12px 14px; font-size: 0.76rem; font-weight: 800; color: #64748b;
-  text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e2e8f0; background: #f8fafc; white-space: nowrap; }
-.cd-table tbody td { padding: 12px 14px; border-bottom: 1px solid #eef2f7; color: #1e293b; vertical-align: top; }
-.cd-table tbody tr:last-child td { border-bottom: none; }
-.cd-table tbody tr:hover td { background: #f8fafc; }
-.cd-olim { font-weight: 700; color: #2563eb; text-decoration: none; }
-.cd-olim:hover { text-decoration: underline; }
-.cd-mavzu { color: #1e293b; max-width: 380px; }
-.cd-pill { font-size: 0.74rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.cd-pill.phd { background: rgba(34,197,94,0.12); color: #15803d; }
-.cd-pill.dsc { background: rgba(124,92,252,0.12); color: #6d28d9; }
-.cd-pill.other { background: rgba(148,163,184,0.14); color: #475569; }
-.cd-muted { color: #94a3b8; font-size: 0.84rem; white-space: nowrap; }
+.cd-table-wrap { overflow-x:auto; border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); }
+.cd-table { width:100%; border-collapse:collapse; font-size:0.9rem; min-width:640px; }
+.cd-table thead th { text-align:left; padding:12px 14px; font-size:0.76rem; font-weight:600; color:var(--color-text-secondary);
+  text-transform:uppercase; letter-spacing:0.03em; border-bottom:1px solid var(--color-border); background:var(--color-background); white-space:nowrap; }
+.cd-table tbody td { padding:12px 14px; border-bottom:1px solid var(--color-border); color:var(--color-text-primary); vertical-align:top; }
+.cd-table tbody tr:last-child td { border-bottom:none; }
+.cd-table tbody tr:hover td { background:var(--color-background); }
+.cd-olim { font-weight:600; color:var(--color-action); text-decoration:none; }
+.cd-olim:hover { text-decoration:underline; }
+.cd-mavzu { color:var(--color-text-primary); max-width:380px; }
+.cd-pill { font-size:0.74rem; font-weight:600; padding:2px 8px; border-radius:var(--radius-full); white-space:nowrap; }
+.cd-pill.phd { background:var(--color-background); color:var(--color-text-secondary); }
+.cd-pill.dsc { background:var(--color-background); color:var(--color-text-secondary); }
+.cd-pill.other { background:var(--color-background); color:var(--color-action); }
+.cd-muted { color:var(--color-action); font-size:0.84rem; white-space:nowrap; }
 
 @media (max-width: 767px) {
-  .cd-stats { grid-template-columns: repeat(2, 1fr); }
-  .cd-grid { grid-template-columns: 1fr; gap: 18px; }
+  .cd-stats { grid-template-columns:repeat(2, 1fr); }
+  .cd-grid { grid-template-columns:1fr; gap:18px; }
 }
 </style>
 {% endblock %}
@@ -77,7 +77,7 @@
 
   <div class="cd-grid">
     <div class="cd-panel">
-      <div class="cd-sec-h">🏷️ Qabul qiladigan ixtisosliklar</div>
+      <div class="cd-sec-h"> Qabul qiladigan ixtisosliklar</div>
       {% for s in specialties %}
       <div class="cd-spec">
         <span class="cd-spec-code">{{ s.code }}</span>
@@ -90,7 +90,7 @@
     </div>
 
     <div class="cd-panel">
-      <div class="cd-sec-h">📈 Yillar bo'yicha himoyalar</div>
+      <div class="cd-sec-h"> Yillar bo'yicha himoyalar</div>
       {% if timeline %}
       <div class="cd-chart">
         {% for t in timeline %}
@@ -109,7 +109,7 @@
     </div>
   </div>
 
-  <div class="cd-sec-h">🎓 Himoya qilgan olimlar <span class="cd-muted">({{ total }})</span></div>
+  <div class="cd-sec-h"> Himoya qilgan olimlar <span class="cd-muted">({{ total }})</span></div>
   <div class="cd-table-wrap">
     <table class="cd-table">
       <thead>

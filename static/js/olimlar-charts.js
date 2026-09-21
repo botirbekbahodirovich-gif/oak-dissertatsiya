@@ -2,40 +2,23 @@
    Har bir sahifada alohida rang massivi yozmang; shu yerdagi
    OlimlarCharts.palette() dan foydalaning.
 
-   Qiymatlar olimlar-design-system.css tokenlariga mos keladi. Chart.js
-   CSS o'zgaruvchilarini canvas ichida o'qiy olmagani uchun ular bu yerda
-   takrorlanadi — token o'zgarsa, shu fayl ham yangilansin. */
+   Canvas ranglari CSS tokenlaridan o‘qiladi; tokenlar yagona manba. */
 (function (global) {
   'use strict';
 
+  var css = global.getComputedStyle(document.documentElement);
+  function token(name) { return css.getPropertyValue(name).trim(); }
   var TOKENS = {
-    textPrimary: '#0c0f12',
-    textSecondary: '#333333',
-    textMuted: '#666666',
-    border: '#e6e6e6',
-    borderSubtle: '#ecebe9',
-    white: '#ffffff',
-    actionBlue: '#0056d6',
-    brandOrange: '#ff4203',
-    success: '#0c8930',
-    error: '#af1d1d',
-    notice: '#ff9900'
+    textPrimary: token('--color-text-primary'), textSecondary: token('--color-text-secondary'),
+    textMuted: token('--color-text-muted'), border: token('--color-border'),
+    borderSubtle: token('--color-border-subtle'), white: token('--color-white'),
+    actionBlue: token('--color-action-blue'), brandOrange: token('--color-brand-orange'),
+    success: token('--color-success'), error: token('--color-error'), notice: token('--color-notice')
   };
+  // Ordered blue series; category labels and tooltips carry the meaning.
+  var CATEGORICAL = [1,2,3,4,5,6].map(function(n){return token('--color-series-'+n);});
 
-  /* Kategoriya palitrasi — oq fonda bir-biridan ajraladi, neon emas.
-     Tartib ataylab qo'shni ranglar kontrast bo'ladigan qilib tanlangan. */
-  var CATEGORICAL = [
-    '#0056d6', // action blue
-    '#ff4203', // brand orange
-    '#0c8930', // success green
-    '#7a3ea3', // violet
-    '#00808c', // teal
-    '#af1d1d', // error red
-    '#8a5200', // amber dark
-    '#3d5a80', // slate blue
-    '#5c8001', // olive
-    '#a3357e'  // magenta
-  ];
+  CATEGORICAL.forEach(function(value, i){ TOKENS['series' + (i + 1)] = value; });
 
   function palette(count) {
     if (!count || count <= CATEGORICAL.length) {

@@ -5,38 +5,38 @@
 {% block content %}
 <div class="kfd">
   <style>
-    .kfd { max-width: 1100px; margin: 0 auto; padding: 8px 4px 40px; }
-    .kfd-hero { text-align: center; padding: 36px 16px 28px; }
-    .kfd-hero h1 { font-weight: 800; font-size: 2rem; margin-bottom: 10px; }
-    .kfd-hero p { opacity: 0.75; max-width: 640px; margin: 0 auto; }
-    .kfd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-top: 24px; }
-    .kfd-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 10px; transition: transform .15s, border-color .15s; }
-    .kfd-card:hover { transform: translateY(-2px); border-color: rgba(74,158,255,0.4); }
-    .kfd-icon { font-size: 2rem; }
-    .kfd-card h3 { font-size: 1.08rem; font-weight: 700; margin: 0; }
-    .kfd-card p { font-size: 0.88rem; opacity: 0.75; flex: 1; margin: 0; }
-    .kfd-card-actions { display: flex; gap: 8px; margin-top: 6px; }
+    .kfd { max-width:1100px; margin:0 auto; padding:8px 4px 40px; }
+    .kfd-hero { text-align:center; padding:36px 16px 28px; }
+    .kfd-hero h1 { font-weight:600; font-size:2rem; margin-bottom:10px; }
+    .kfd-hero p { opacity:0.75; max-width:640px; margin:0 auto; }
+    .kfd-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:18px; margin-top:24px; }
+    .kfd-card { background:var(--color-background); border:1px solid var(--color-border);
+      border-radius:var(--radius-card); padding:22px; display:flex; flex-direction:column; gap:10px; transition:transform .15s, border-color .15s; }
+    .kfd-card:hover { transform:translateY(-2px); border-color:var(--color-border); }
+    .kfd-icon { font-size:2rem; }
+    .kfd-card h3 { font-size:1.08rem; font-weight:600; margin:0; }
+    .kfd-card p { font-size:0.88rem; opacity:0.75; flex:1; margin:0; }
+    .kfd-card-actions { display:flex; gap:8px; margin-top:6px; }
 
-    .kfd-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 1200;
-      display: none; align-items: center; justify-content: center; padding: 24px; }
-    .kfd-modal-overlay.open { display: flex; }
-    .kfd-modal-paper { background: #fff; color: #0f172a; border-radius: 10px; max-width: 720px; width: 100%;
-      max-height: 86vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-    .kfd-modal-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
-    .kfd-modal-badge { background: #fef3c7; color: #92400e; font-size: 0.72rem; font-weight: 700;
-      padding: 3px 10px; border-radius: 999px; letter-spacing: 0.03em; }
-    .kfd-modal-title { font-weight: 700; flex: 1; }
-    .kfd-modal-head a, .kfd-modal-head button { color: #0f172a; text-decoration: none; font-size: 1.1rem;
-      background: none; border: none; cursor: pointer; padding: 4px 8px; }
-    .kfd-modal-body { overflow-y: auto; padding: 28px 34px; font-family: "Times New Roman", Times, serif;
-      line-height: 1.5; background: #f8fafc; }
-    .kfd-modal-body .kfd-paper { background: #fff; padding: 30px 36px; box-shadow: 0 1px 8px rgba(0,0,0,0.08); min-height: 400px; }
-    .kfd-modal-loading { text-align: center; padding: 60px 0; color: #64748b; }
+    .kfd-modal-overlay { position:fixed; inset:0; background:var(--color-overlay); z-index:1200;
+      display:none; align-items:center; justify-content:center; padding:24px; }
+    .kfd-modal-overlay.open { display:flex; }
+    .kfd-modal-paper { background:var(--color-background); color:var(--color-text-primary); border-radius:var(--radius-card); max-width:720px; width:100%;
+      max-height:86vh; display:flex; flex-direction:column; box-shadow:0 20px 60px var(--color-overlay); }
+    .kfd-modal-head { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--color-border); }
+    .kfd-modal-badge { background:var(--color-background); color:var(--color-text-secondary); font-size:0.72rem; font-weight:600;
+      padding:3px 10px; border-radius:var(--radius-card); letter-spacing:0.03em; }
+    .kfd-modal-title { font-weight:600; flex:1; }
+    .kfd-modal-head a, .kfd-modal-head button { color:var(--color-text-primary); text-decoration:none; font-size:1.1rem;
+      background:none; border:none; cursor:pointer; padding:4px 8px; }
+    .kfd-modal-body { overflow-y:auto; padding:28px 34px; font-family:"Times New Roman", Times, serif;
+      line-height:1.5; background:var(--color-background); }
+    .kfd-modal-body .kfd-paper { background:var(--color-background); padding:30px 36px; box-shadow:0 1px 8px var(--color-overlay); min-height:400px; }
+    .kfd-modal-loading { text-align:center; padding:60px 0; color:var(--color-text-secondary); }
   </style>
 
   <div class="kfd-hero">
-    <h1>🎓 Kafedra hujjatlari</h1>
+    <h1> Kafedra hujjatlari</h1>
     <p>Oliy ta'lim professor-o'qituvchilari uchun o'quv va uslubiy hujjatlar — sun'iy intellekt yordamida bir necha daqiqada tayyor.</p>
     {% if current_user.is_authenticated %}
     <a href="/kafedra/tarix/" class="btn btn-outline-light btn-sm mt-2"><i class="bi bi-clock-history"></i> Mening hujjatlarim</a>
@@ -51,7 +51,7 @@
       <p>{{ cfg.description }}</p>
       <div class="kfd-card-actions">
         <a href="/kafedra/{{ key }}/" class="btn btn-primary btn-sm flex-grow-1">Boshlash</a>
-        <button type="button" class="btn btn-outline-light btn-sm kfd-namuna-btn" data-doc-type="{{ key }}" data-doc-label="{{ cfg.label }}">👁 Namuna</button>
+        <button type="button" class="btn btn-outline-light btn-sm kfd-namuna-btn" data-doc-type="{{ key }}" data-doc-label="{{ cfg.label }}"> Namuna</button>
       </div>
     </div>
     {% endfor %}
@@ -64,7 +64,7 @@
       <span class="kfd-modal-badge">NAMUNA</span>
       <span class="kfd-modal-title" id="kfdModalTitle"></span>
       <a href="#" id="kfdModalDownload" title="Yuklab olish"><i class="bi bi-download"></i></a>
-      <button type="button" id="kfdModalClose" title="Yopish">✕</button>
+      <button type="button" id="kfdModalClose" title="Yopish" aria-label="Yopish"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></button>
     </div>
     <div class="kfd-modal-body" id="kfdModalBody">
       <div class="kfd-modal-loading">Yuklanmoqda...</div>

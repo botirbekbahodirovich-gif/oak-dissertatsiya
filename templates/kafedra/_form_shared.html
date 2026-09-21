@@ -57,64 +57,64 @@
 {% block content %}
 <div class="kfd-form">
   <style>
-    .kfd-form { max-width: 800px; margin: 0 auto; padding: 8px 4px 60px; }
-    .kfd-form-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
-    .kfd-form-head .ic { font-size: 2.2rem; }
-    .kfd-form-head h1 { font-size: 1.5rem; font-weight: 800; margin: 0; }
-    .kfd-form-head p { margin: 2px 0 0; opacity: 0.7; font-size: 0.9rem; }
-    .kfd-steps { display: flex; gap: 8px; margin-bottom: 10px; }
-    .kfd-step-dot { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); }
-    .kfd-step-dot.active { background: #4a9eff; }
-    .kfd-progress-label { font-size: 0.82rem; opacity: 0.65; margin-bottom: 18px; }
-    .kfd-panel { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px; padding: 26px; }
-    .kfd-field { margin-bottom: 16px; }
-    .kfd-field label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
-    .kfd-field-hint { font-size: 0.78rem; opacity: 0.6; margin-top: 4px; }
-    .kfd-sec-heading { font-size: 1rem; font-weight: 700; margin: 4px 0 14px; display: flex; align-items: center; gap: 8px; }
-    .kfd-main-progress { font-size: 0.8rem; opacity: 0.6; margin-left: auto; font-weight: 500; }
-    .kfd-optional-intro { font-size: 0.85rem; opacity: 0.65; margin: 26px 0 14px; padding-top: 18px;
-      border-top: 1px dashed rgba(255,255,255,0.12); }
-    .kfd-collapse { margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
-    .kfd-collapse summary { cursor: pointer; padding: 12px 16px; font-weight: 600; font-size: 0.92rem;
-      display: flex; align-items: center; gap: 10px; list-style: none; }
-    .kfd-collapse summary::-webkit-details-marker { display: none; }
-    .kfd-collapse summary .chev { transition: transform 0.15s; }
-    .kfd-collapse[open] summary .chev { transform: rotate(90deg); }
-    .kfd-collapse-summary { margin-left: auto; font-size: 0.8rem; opacity: 0.55; font-weight: 400; }
-    .kfd-collapse-body { padding: 4px 16px 18px; }
-    .kfd-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
-    .kfd-grid2 .kfd-full { grid-column: 1 / -1; }
-    .kfd-hours-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-    .kfd-hours-grid .kfd-field label { font-size: 0.76rem; }
-    .kfd-jami-box { margin-top: 10px; padding: 10px 14px; background: rgba(255,255,255,0.06); border-radius: 8px;
-      font-size: 0.85rem; display: flex; justify-content: space-between; }
-    .kfd-chips-preset { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-    .kfd-chip-preset { border: 1px solid rgba(255,255,255,0.16); background: transparent; color: inherit;
-      border-radius: 999px; padding: 6px 14px; font-size: 0.82rem; cursor: pointer; }
-    .kfd-chip-preset:hover { border-color: #4a9eff; }
-    .kfd-total-badge { display: inline-block; padding: 3px 12px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
-    .kfd-total-badge.ok { background: rgba(34,197,94,0.18); color: #4ade80; }
-    .kfd-total-badge.bad { background: rgba(239,68,68,0.18); color: #f87171; }
-    .kfd-chips, .kfd-toggle { display: flex; gap: 8px; flex-wrap: wrap; }
-    .kfd-chip, .kfd-toggle-btn { border: 1px solid rgba(255,255,255,0.16); background: transparent; color: inherit;
-      border-radius: 999px; padding: 8px 16px; font-size: 0.86rem; cursor: pointer; }
-    .kfd-chip.active, .kfd-toggle-btn.active { background: #4a9eff; border-color: #4a9eff; color: #fff; font-weight: 600; }
-    .kfd-checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .kfd-checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 0.86rem; font-weight: 400; cursor: pointer; }
-    .kfd-warning-box { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); border-radius: 10px;
-      padding: 12px 16px; font-size: 0.84rem; margin-bottom: 16px; color: #fde047; }
-    .kfd-autofill-banner { background: rgba(74,158,255,0.12); border: 1px solid rgba(74,158,255,0.3);
-      border-radius: 10px; padding: 10px 16px; font-size: 0.85rem; margin-bottom: 16px; color: #93bbfc; }
-    .kfd-savelocal { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; margin-bottom: 16px; opacity: 0.85; }
-    .kfd-sample-link { font-size: 0.78rem; color: #4a9eff; cursor: pointer; text-decoration: underline; float: right; }
-    .kfd-hint { font-size: 0.8rem; opacity: 0.55; margin-top: 16px; }
-    .kfd-summary dt { opacity: 0.65; font-size: 0.85rem; }
-    .kfd-summary dd { margin-bottom: 10px; }
-    .kfd-loading { text-align: center; padding: 30px 10px; }
-    .kfd-loading .spinner-border { width: 3rem; height: 3rem; }
-    .kfd-actions { display: flex; justify-content: space-between; margin-top: 22px; gap: 10px; }
-    .kfd-submit-full { width: 100%; padding: 14px; font-size: 1.02rem; font-weight: 700; }
+    .kfd-form { max-width:800px; margin:0 auto; padding:8px 4px 60px; }
+    .kfd-form-head { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+    .kfd-form-head .ic { font-size:2.2rem; }
+    .kfd-form-head h1 { font-size:1.5rem; font-weight:600; margin:0; }
+    .kfd-form-head p { margin:2px 0 0; opacity:0.7; font-size:0.9rem; }
+    .kfd-steps { display:flex; gap:8px; margin-bottom:10px; }
+    .kfd-step-dot { flex:1; height:4px; border-radius:var(--radius-default); background:var(--color-background); }
+    .kfd-step-dot.active { background:var(--color-action); }
+    .kfd-progress-label { font-size:0.82rem; opacity:0.65; margin-bottom:18px; }
+    .kfd-panel { background:var(--color-background); border:1px solid var(--color-border);
+      border-radius:var(--radius-card); padding:26px; }
+    .kfd-field { margin-bottom:16px; }
+    .kfd-field label { display:block; font-size:0.88rem; font-weight:600; margin-bottom:6px; }
+    .kfd-field-hint { font-size:0.78rem; opacity:0.6; margin-top:4px; }
+    .kfd-sec-heading { font-size:1rem; font-weight:600; margin:4px 0 14px; display:flex; align-items:center; gap:8px; }
+    .kfd-main-progress { font-size:0.8rem; opacity:0.6; margin-left:auto; font-weight:500; }
+    .kfd-optional-intro { font-size:0.85rem; opacity:0.65; margin:26px 0 14px; padding-top:18px;
+      border-top:1px dashed var(--color-border); }
+    .kfd-collapse { margin-bottom:12px; border:1px solid var(--color-border); border-radius:var(--radius-default); overflow:hidden; }
+    .kfd-collapse summary { cursor:pointer; padding:12px 16px; font-weight:600; font-size:0.92rem;
+      display:flex; align-items:center; gap:10px; list-style:none; }
+    .kfd-collapse summary::-webkit-details-marker { display:none; }
+    .kfd-collapse summary .chev { transition:transform 0.15s; }
+    .kfd-collapse[open] summary .chev { transform:rotate(90deg); }
+    .kfd-collapse-summary { margin-left:auto; font-size:0.8rem; opacity:0.55; font-weight:400; }
+    .kfd-collapse-body { padding:4px 16px 18px; }
+    .kfd-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+    .kfd-grid2 .kfd-full { grid-column:1 / -1; }
+    .kfd-hours-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; }
+    .kfd-hours-grid .kfd-field label { font-size:0.76rem; }
+    .kfd-jami-box { margin-top:10px; padding:10px 14px; background:var(--color-background); border-radius:var(--radius-card);
+      font-size:0.85rem; display:flex; justify-content:space-between; }
+    .kfd-chips-preset { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+    .kfd-chip-preset { border:1px solid var(--color-border); background:transparent; color:inherit;
+      border-radius:var(--radius-full); padding:6px 14px; font-size:0.82rem; cursor:pointer; }
+    .kfd-chip-preset:hover { border-color:var(--color-border); }
+    .kfd-total-badge { display:inline-block; padding:3px 12px; border-radius:var(--radius-default); font-weight:600; font-size:0.85rem; }
+    .kfd-total-badge.ok { background:var(--color-background); color:var(--color-text-secondary); }
+    .kfd-total-badge.bad { background:var(--color-background); color:var(--color-text-secondary); }
+    .kfd-chips, .kfd-toggle { display:flex; gap:8px; flex-wrap:wrap; }
+    .kfd-chip, .kfd-toggle-btn { border:1px solid var(--color-border); background:transparent; color:inherit;
+      border-radius:var(--radius-full); padding:8px 16px; font-size:0.86rem; cursor:pointer; }
+    .kfd-chip.active, .kfd-toggle-btn.active { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); font-weight:600; }
+    .kfd-checkbox-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .kfd-checkbox-item { display:flex; align-items:center; gap:8px; font-size:0.86rem; font-weight:400; cursor:pointer; }
+    .kfd-warning-box { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-card);
+      padding:12px 16px; font-size:0.84rem; margin-bottom:16px; color:var(--color-warning-ink); }
+    .kfd-autofill-banner { background:var(--color-background); border:1px solid var(--color-border);
+      border-radius:var(--radius-default); padding:10px 16px; font-size:0.85rem; margin-bottom:16px; color:var(--color-action); }
+    .kfd-savelocal { display:flex; align-items:center; gap:8px; font-size:0.84rem; margin-bottom:16px; opacity:0.85; }
+    .kfd-sample-link { font-size:0.78rem; color:var(--color-action); cursor:pointer; text-decoration:underline; float:right; }
+    .kfd-hint { font-size:0.8rem; opacity:0.55; margin-top:16px; }
+    .kfd-summary dt { opacity:0.65; font-size:0.85rem; }
+    .kfd-summary dd { margin-bottom:10px; }
+    .kfd-loading { text-align:center; padding:30px 10px; }
+    .kfd-loading .spinner-border { width:3rem; height:3rem; }
+    .kfd-actions { display:flex; justify-content:space-between; margin-top:22px; gap:10px; }
+    .kfd-submit-full { width:100%; padding:14px; font-size:1.02rem; font-weight:600; }
   </style>
 
   <div class="kfd-form-head">
@@ -137,7 +137,7 @@
     <div class="kfd-panel" data-step="1">
 
       {% if profile_autofilled %}
-      <div class="kfd-autofill-banner">✓ Profilingizdagi ma'lumotlar bilan to'ldirildi</div>
+      <div class="kfd-autofill-banner"> Profilingizdagi ma'lumotlar bilan to'ldirildi</div>
       {% endif %}
 
       <div class="kfd-sec-heading">A. Asosiy ma'lumotlar <span class="kfd-main-progress" id="kfdMainProgress">0/{{ cfg.main_fields|length }} to'ldirildi</span></div>
@@ -222,7 +222,7 @@
             <div class="kfd-field"><label>{{ sect.fields.mavzular_qoshimcha.label }}</label>{{ widget('mavzular_qoshimcha', sect.fields.mavzular_qoshimcha, defaults.get('mavzular_qoshimcha')) }}</div>
 
           {% elif sect_key in ('muassasa_shaxslar_full', 'muassasa_shaxslar_qisqa') %}
-            <div class="kfd-warning-box">⚠️ {{ sect.warning }}</div>
+            <div class="kfd-warning-box"> {{ sect.warning }}</div>
             <label class="kfd-savelocal">
               <input type="checkbox" id="kfdSaveLocal"> Bu ma'lumotlarni brauzerda saqlab qolish
             </label>

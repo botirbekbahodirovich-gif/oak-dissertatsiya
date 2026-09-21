@@ -4,86 +4,86 @@
 
 {% block extra_head %}
 <style>
-  .rk-wrap { max-width: 1160px; margin: 0 auto; padding: 0 4px; }
-  .rk-title { font-size: 1.7rem; font-weight: 800; margin: 0 0 6px; }
-  .rk-title .em { font-size: 1.5rem; }
+  .rk-wrap { max-width:1160px; margin:0 auto; padding:0 4px; }
+  .rk-title { font-size:1.7rem; font-weight:600; margin:0 0 6px; }
+  .rk-title .em { font-size:1.5rem; }
 
   /* manba attribution — majburiy */
-  .rk-source { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2);
-    border-radius: 10px; padding: 9px 14px; font-size: 0.86rem; color: #64748b; margin: 12px 0 20px; }
-  .rk-source b { color: #334155; }
-  .rk-source a { color: #2563eb; font-weight: 700; text-decoration: none; }
-  .rk-source a:hover { text-decoration: underline; }
-  .rk-source .rk-snap { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-  .rk-source select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 9px;
-    font-size: 0.84rem; font-family: inherit; color: #0f172a; background: #fff; }
+  .rk-source { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--color-background); border:1px solid var(--color-border);
+    border-radius:var(--radius-default); padding:9px 14px; font-size:0.86rem; color:var(--color-text-secondary); margin:12px 0 20px; }
+  .rk-source b { color:var(--color-brand-ink); }
+  .rk-source a { color:var(--color-brand-ink); font-weight:600; text-decoration:none; }
+  .rk-source a:hover { text-decoration:underline; }
+  .rk-source .rk-snap { margin-left:auto; display:flex; align-items:center; gap:6px; }
+  .rk-source select { border:1px solid var(--color-border); border-radius:var(--radius-default); padding:5px 9px;
+    font-size:0.84rem; font-family:inherit; color:var(--color-text-primary); background:var(--color-background); }
 
   /* tablar */
-  .rk-tabs { display: flex; gap: 4px; border-bottom: 2px solid #e2e8f0; margin-bottom: 18px; }
-  .rk-tab { background: none; border: none; padding: 11px 18px; font-size: 0.96rem; font-weight: 700;
-    color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
-  .rk-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
-  .rk-tab:hover { color: #2563eb; }
+  .rk-tabs { display:flex; gap:4px; border-bottom:2px solid var(--color-border); margin-bottom:18px; }
+  .rk-tab { background:none; border:none; padding:11px 18px; font-size:0.96rem; font-weight:600;
+    color:var(--color-text-secondary); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; }
+  .rk-tab.active { color:var(--color-action); border-bottom-color:var(--color-border); }
+  .rk-tab:hover { color:var(--color-action); }
 
   /* filtrlar */
-  .rk-filter { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
-  .rk-fld { display: flex; flex-direction: column; gap: 4px; }
-  .rk-fld.grow { flex: 1; min-width: 200px; }
-  .rk-lbl { font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
-  .rk-filter input, .rk-filter select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 12px;
-    font-size: 0.9rem; font-family: inherit; color: #0f172a; background: #fff; width: 100%; box-sizing: border-box; }
-  .rk-filter input:focus, .rk-filter select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
-  .rk-count { color: #64748b; font-size: 0.85rem; margin: 4px 2px 12px; min-height: 1.1em; }
+  .rk-filter { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; }
+  .rk-fld { display:flex; flex-direction:column; gap:4px; }
+  .rk-fld.grow { flex:1; min-width:200px; }
+  .rk-lbl { font-size:0.72rem; font-weight:600; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:0.04em; }
+  .rk-filter input, .rk-filter select { border:1px solid var(--color-border); border-radius:var(--radius-default); padding:9px 12px;
+    font-size:0.9rem; font-family:inherit; color:var(--color-text-primary); background:var(--color-background); width:100%; box-sizing:border-box; }
+  .rk-filter input:focus, .rk-filter select:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
+  .rk-count { color:var(--color-text-secondary); font-size:0.85rem; margin:4px 2px 12px; min-height:1.1em; }
 
   /* jadval */
-  .rk-tbl-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; }
-  .rk-tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 720px; }
-  .rk-tbl thead th { text-align: left; padding: 12px 14px; font-size: 0.74rem; font-weight: 800; color: #64748b;
-    text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid #e2e8f0; white-space: nowrap; background: #f8fafc; }
-  .rk-tbl thead th.num { text-align: right; }
-  .rk-tbl thead th.sortable { cursor: pointer; user-select: none; }
-  .rk-tbl thead th.sortable:hover { color: #2563eb; }
-  .rk-tbl thead th .arr { opacity: 0.4; font-size: 0.7rem; }
-  .rk-tbl thead th.sorted .arr { opacity: 1; color: #2563eb; }
-  .rk-tbl tbody td { padding: 11px 14px; border-bottom: 1px solid #eef2f7; color: #1e293b; vertical-align: middle; }
-  .rk-tbl tbody tr:last-child td { border-bottom: none; }
-  .rk-tbl tbody tr:hover td { background: #f8fafc; }
-  .rk-rank { font-weight: 800; color: #64748b; white-space: nowrap; font-variant-numeric: tabular-nums; width: 56px; }
-  .rk-rank .medal { font-size: 1.15rem; }
-  .rk-name { font-weight: 700; color: #0f172a; }
-  .rk-name a { color: #2563eb; text-decoration: none; }
-  .rk-name a:hover { text-decoration: underline; }
-  .rk-name .link-ic { font-size: 0.72rem; opacity: 0.6; }
-  .rk-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-top: 2px; }
-  .rk-h { text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 1.02rem; color: #0f172a; }
-  .rk-h.zero { color: #cbd5e1; font-weight: 500; }
-  .rk-cat { font-size: 0.76rem; font-weight: 700; padding: 2px 9px; border-radius: 999px;
-    background: rgba(124,92,252,0.12); color: #6d28d9; white-space: nowrap; }
-  .rk-orcid { color: #A6CE39; font-size: 0.95rem; text-decoration: none; }
-  .rk-state { padding: 44px 20px; text-align: center; color: #94a3b8; font-size: 0.92rem; }
-  .rk-spin { display: inline-block; width: 18px; height: 18px; border: 3px solid #dbeafe; border-top-color: #3b82f6;
-    border-radius: 50%; animation: rk-spin 0.8s linear infinite; vertical-align: -4px; margin-right: 8px; }
-  @keyframes rk-spin { to { transform: rotate(360deg); } }
+  .rk-tbl-wrap { overflow-x:auto; border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); }
+  .rk-tbl { width:100%; border-collapse:collapse; font-size:0.9rem; min-width:720px; }
+  .rk-tbl thead th { text-align:left; padding:12px 14px; font-size:0.74rem; font-weight:600; color:var(--color-text-secondary);
+    text-transform:uppercase; letter-spacing:0.03em; border-bottom:1px solid var(--color-border); white-space:nowrap; background:var(--color-background); }
+  .rk-tbl thead th.num { text-align:right; }
+  .rk-tbl thead th.sortable { cursor:pointer; user-select:none; }
+  .rk-tbl thead th.sortable:hover { color:var(--color-action); }
+  .rk-tbl thead th .arr { opacity:0.4; font-size:0.7rem; }
+  .rk-tbl thead th.sorted .arr { opacity:1; color:var(--color-action); }
+  .rk-tbl tbody td { padding:11px 14px; border-bottom:1px solid var(--color-border); color:var(--color-text-primary); vertical-align:middle; }
+  .rk-tbl tbody tr:last-child td { border-bottom:none; }
+  .rk-tbl tbody tr:hover td { background:var(--color-background); }
+  .rk-rank { font-weight:600; color:var(--color-text-secondary); white-space:nowrap; font-variant-numeric:tabular-nums; width:56px; }
+  .rk-rank .medal { font-size:1.15rem; }
+  .rk-name { font-weight:600; color:var(--color-text-primary); }
+  .rk-name a { color:var(--color-action); text-decoration:none; }
+  .rk-name a:hover { text-decoration:underline; }
+  .rk-name .link-ic { font-size:0.72rem; opacity:0.6; }
+  .rk-sub { font-size:0.8rem; color:var(--color-text-secondary); font-weight:500; margin-top:2px; }
+  .rk-h { text-align:right; font-variant-numeric:tabular-nums; font-weight:600; font-size:1.02rem; color:var(--color-text-primary); }
+  .rk-h.zero { color:var(--color-text-primary); font-weight:500; }
+  .rk-cat { font-size:0.76rem; font-weight:600; padding:2px 9px; border-radius:var(--radius-default);
+    background:var(--color-background); color:var(--color-text-secondary); white-space:nowrap; }
+  .rk-orcid { color:var(--color-text-secondary); font-size:0.95rem; text-decoration:none; }
+  .rk-state { padding:44px 20px; text-align:center; color:var(--color-action); font-size:0.92rem; }
+  .rk-spin { display:inline-block; width:18px; height:18px; border:3px solid var(--color-border); border-top-color:var(--color-border);
+    border-radius:50%; animation:rk-spin 0.8s linear infinite; vertical-align:-4px; margin-right:8px; }
+  @keyframes rk-spin { to { transform:rotate(360deg); } }
 
-  .rk-empty { border: 1px dashed #cbd5e1; border-radius: 14px; padding: 48px 20px; text-align: center; color: #94a3b8; }
-  .rk-empty h3 { color: #475569; margin: 0 0 8px; }
+  .rk-empty { border:1px dashed var(--color-border); border-radius:var(--radius-card); padding:48px 20px; text-align:center; color:var(--color-action); }
+  .rk-empty h3 { color:var(--color-action); margin:0 0 8px; }
 
   @media (max-width: 560px) {
-    .rk-fld.grow { min-width: 100%; }
-    .rk-source .rk-snap { margin-left: 0; width: 100%; }
+    .rk-fld.grow { min-width:100%; }
+    .rk-source .rk-snap { margin-left:0; width:100%; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="rk-wrap">
-  <h1 class="rk-title"><span class="em">🏆</span> H-index reyting</h1>
+  <h1 class="rk-title"><span class="em"></span> H-index reyting</h1>
 
   <div class="rk-source">
     <span>Ma'lumot manbasi: <a href="https://uz.h-index.com" target="_blank" rel="noopener nofollow">{{ source_name }}</a></span>
     {% if latest_date %}<span>· holat: <b id="rk-snap-label">{{ latest_date }}</b></span>{% endif %}
-    <span class="rk-snap" id="rk-snap-box" style="{% if not has_data %}display:none;{% endif %}">
+    <span class="rk-snap" id="rk-snap-box" style="{% if not has_data %}display:none;{% endif %};">
       <label class="rk-lbl" for="rk-snap-sel" style="margin:0;">Snapshot:</label>
       <select id="rk-snap-sel"></select>
     </span>
@@ -97,8 +97,8 @@
   {% else %}
 
   <div class="rk-tabs">
-    <button class="rk-tab" id="tab-scholars" onclick="rkSwitch('scholars')">👤 TOP Olimlar</button>
-    <button class="rk-tab" id="tab-institutions" onclick="rkSwitch('institutions')">🏛️ Tashkilotlar reytingi</button>
+    <button class="rk-tab" id="tab-scholars" onclick="rkSwitch('scholars')"> TOP Olimlar</button>
+    <button class="rk-tab" id="tab-institutions" onclick="rkSwitch('institutions')"> Tashkilotlar reytingi</button>
   </div>
 
   <!-- ── OLIMLAR ── -->
@@ -196,9 +196,9 @@
 
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   function medal(rank, i) {
-    if (rank === 1 || (rank == null && i === 0)) return '<span class="medal">🥇</span>';
-    if (rank === 2 || (rank == null && i === 1)) return '<span class="medal">🥈</span>';
-    if (rank === 3 || (rank == null && i === 2)) return '<span class="medal">🥉</span>';
+    if (rank === 1 || (rank == null && i === 0)) return '<span class="medal"></span>';
+    if (rank === 2 || (rank == null && i === 1)) return '<span class="medal"></span>';
+    if (rank === 3 || (rank == null && i === 2)) return '<span class="medal"></span>';
     return '#' + (rank != null ? rank : (i + 1));
   }
   function hcell(v) {

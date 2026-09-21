@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-heading">
   <div>
-    <h1><i class="bi bi-bell-fill me-2" style="color:#4a9eff;"></i>Yangiliklar</h1>
+    <h1><i class="bi bi-bell-fill me-2" style="color:var(--color-action);"></i>Yangiliklar</h1>
     <p>Scraper tomonidan qo'shilgan yangi dissertatsiyalar haqida xabarlar.</p>
   </div>
   <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left me-1"></i>Ortga</a>
@@ -13,12 +13,12 @@
 <div class="d-flex flex-column gap-2">
   {% for n in notifications %}
   <div class="content-card" style="padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-    <div style="width:40px;height:40px;border-radius:50%;background:rgba(74,158,255,0.12);display:grid;place-items:center;flex-shrink:0;">
-      <i class="bi bi-file-earmark-plus" style="color:#4a9eff;font-size:1.1rem;"></i>
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--color-background);display:grid;place-items:center;flex-shrink:0;">
+      <i class="bi bi-file-earmark-plus" style="color:var(--color-action);font-size:1.1rem;"></i>
     </div>
     <div style="flex:1;min-width:0;">
-      <span style="display:inline-block;background:rgba(74,158,255,0.14);color:#4a9eff;border-radius:20px;padding:2px 10px;font-size:0.72rem;font-weight:700;margin-bottom:5px;">📄 Dissertatsiyalar bazasi</span>
-      <div style="font-size:0.95rem;color:#e2e8f0;">{{ n.message }}</div>
+      <span style="display:inline-block;background:var(--color-background);color:var(--color-action);border-radius:var(--radius-default);padding:2px 10px;font-size:0.72rem;font-weight:600;margin-bottom:5px;"> Dissertatsiyalar bazasi</span>
+      <div style="font-size:0.95rem;color:var(--color-text-primary);">{{ n.message }}</div>
       <div style="font-size:0.78rem;color:var(--oak-muted);margin-top:3px;">{{ n.created_at }}</div>
     </div>
   </div>

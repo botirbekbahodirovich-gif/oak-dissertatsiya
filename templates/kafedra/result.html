@@ -4,13 +4,13 @@
 {% block content %}
 <div class="kfd-result" style="max-width:640px;margin:0 auto;padding:30px 4px 60px;">
   <style>
-    .kfd-result-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px; padding: 32px; text-align: center; }
-    .kfd-result-ic { font-size: 3rem; margin-bottom: 10px; }
+    .kfd-result-card { background:var(--color-background); border:1px solid var(--color-border);
+      border-radius:var(--radius-card); padding:32px; text-align:center; }
+    .kfd-result-ic { font-size:3rem; margin-bottom:10px; }
   </style>
   <div class="kfd-result-card">
     {% if document.status == 'completed' %}
-    <div class="kfd-result-ic">✅</div>
+    <div class="kfd-result-ic"></div>
     <h2>Hujjat tayyor!</h2>
     <p class="opacity-75 mb-4">{{ document.document_label }} — {{ document.fan_nomi }}</p>
     <a href="/kafedra/generated/{{ document.id }}/download" class="btn btn-primary btn-lg">
@@ -22,7 +22,7 @@
       <a href="/kafedra/tarix/">Barcha hujjatlarim</a>
     </div>
     {% elif document.status == 'failed' %}
-    <div class="kfd-result-ic">⚠️</div>
+    <div class="kfd-result-ic"></div>
     <h2>Hujjatni yaratib bo'lmadi</h2>
     <p class="opacity-75 mb-4">{{ document.error_message or "Noma'lum xatolik yuz berdi." }}</p>
     <a href="/kafedra/{{ document.document_type }}/" class="btn btn-primary">Qayta urinib ko'rish</a>

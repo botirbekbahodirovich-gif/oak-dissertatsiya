@@ -4,26 +4,26 @@
 {% block meta_description %}O'zbekiston ilmiy-tadqiqot statistikasi. PhD, DSc, muassasalar, ixtisosliklar.{% endblock %}
 {% block extra_head %}
 <style>
-  .summary-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .summary-chips { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; }
   .chip {
-    background: var(--oak-surface); border: 1px solid var(--oak-border);
-    border-radius: 20px; padding: 5px 14px; font-size: 0.78rem; color: var(--oak-muted);
-    display: inline-flex; align-items: center; gap: 6px;
+    background:var(--oak-surface); border:1px solid var(--oak-border);
+    border-radius:var(--radius-default); padding:5px 14px; font-size:0.78rem; color:var(--oak-muted);
+    display:inline-flex; align-items:center; gap:6px;
   }
-  .chip span { color: var(--oak-text); font-weight: 700; }
-  .heatmap-table { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 0.75rem; }
-  .heatmap-table th { color: var(--oak-muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 8px; text-align: center; white-space: nowrap; }
-  .heatmap-table th.row-header { text-align: left; max-width: 200px; }
-  .heatmap-table td { border-radius: 5px; text-align: center; padding: 8px 12px; font-weight: 700; font-size: 0.82rem; transition: transform 0.1s; cursor: default; }
-  .heatmap-table td:hover { transform: scale(1.08); }
-  .heatmap-table td.row-label { text-align: left; background: var(--oak-surface-2); color: var(--oak-muted); font-weight: 500; font-size: 0.75rem; padding: 8px 10px; max-width: 200px; white-space: normal; line-height: 1.3; }
-  .heatmap-table td.total-cell { background: rgba(74,158,255,0.08); color: #4a9eff; font-size: 0.78rem; }
+  .chip span { color:var(--oak-text); font-weight:600; }
+  .heatmap-table { width:100%; border-collapse:separate; border-spacing:3px; font-size:0.75rem; }
+  .heatmap-table th { color:var(--oak-muted); font-weight:600; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.4px; padding:4px 8px; text-align:center; white-space:nowrap; }
+  .heatmap-table th.row-header { text-align:left; max-width:200px; }
+  .heatmap-table td { border-radius:var(--radius-default); text-align:center; padding:8px 12px; font-weight:600; font-size:0.82rem; transition:transform 0.1s; cursor:default; }
+  .heatmap-table td:hover { transform:scale(1.08); }
+  .heatmap-table td.row-label { text-align:left; background:var(--oak-surface-2); color:var(--oak-muted); font-weight:500; font-size:0.75rem; padding:8px 10px; max-width:200px; white-space:normal; line-height:1.3; }
+  .heatmap-table td.total-cell { background:var(--color-background); color:var(--color-action); font-size:0.78rem; }
 </style>
 {% endblock %}
 {% block content %}
 <div class="page-heading">
   <div>
-    <h1><i class="bi bi-bar-chart-fill me-2" style="color:#4a9eff;"></i>Tahlil va grafiklar</h1>
+    <h1><i class="bi bi-bar-chart-fill me-2" style="color:var(--color-action);"></i>Tahlil va grafiklar</h1>
     <p>Dissertatsiyalar bazasi bo'yicha statistik ko'rsatkichlar va vizualizatsiya.</p>
   </div>
 </div>
@@ -55,13 +55,13 @@
 {{ ad_banner('stats-mid', 'horizontal') }}
 
 <!-- Gender statistics -->
-<h2 style="font-size:1.1rem;font-weight:700;color:#e8edf5;margin:0.5rem 0 1rem;"><i class="bi bi-gender-ambiguous me-2" style="color:#ec4899;"></i>Jins bo'yicha statistika</h2>
+<h2 style="font-size:1.1rem;font-weight:600;color:var(--color-text-primary);margin:0.5rem 0 1rem;"><i class="bi bi-gender-ambiguous me-2" style="color:var(--color-text-secondary);"></i>Jins bo'yicha statistika</h2>
 <div class="row g-3 mb-3">
   <div class="col-12 col-lg-5">
     <div class="chart-card">
       <div class="chart-title"><i class="bi bi-people-fill"></i>Tadqiqotchilar jins bo'yicha</div>
       <div class="chart-container" style="height:300px;"><canvas id="chart-gender"></canvas></div>
-      <div id="gender-legend" style="text-align:center;margin-top:12px;color:#8899b4;font-size:0.85rem;line-height:1.8;"></div>
+      <div id="gender-legend" style="text-align:center;margin-top:12px;color:var(--color-action);font-size:0.85rem;line-height:1.8;"></div>
     </div>
   </div>
   <div class="col-12 col-lg-7">
@@ -126,48 +126,35 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  // Light fon uchun: oldingi qiymatlar dark fonga mo'ljallangan edi va
-  // oq fonda gridline'lar umuman ko'rinmay qolgan.
-  Chart.defaults.color = '#666666';            // --color-text-muted
-  Chart.defaults.borderColor = '#e6e6e6';      // --color-border
-  Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
-  Chart.defaults.font.size = 12;
-
-  const PALETTE = [
-    '#4a9eff', '#34d399', '#a78bfa', '#fbbf24', '#f87171',
-    '#38bdf8', '#4ade80', '#c084fc', '#fb923c', '#e879f9',
-    '#67e8f9', '#86efac', '#d8b4fe', '#fcd34d', '#fca5a5',
-    '#7dd3fc', '#6ee7b7', '#e9d5ff', '#fde68a', '#fecaca'
-  ];
-
-  const TOOLTIP_STYLE = {
-    backgroundColor: '#1a1d23', borderColor: 'rgba(255,255,255,0.12)', borderWidth: 1,
-    titleColor: '#e8edf5', bodyColor: '#8899b4', padding: 10, cornerRadius: 8,
-    displayColors: true, boxPadding: 4
-  };
-
+  OlimlarCharts.applyDefaults();
+  const CT = OlimlarCharts.tokens;
+  const PALETTE = OlimlarCharts.palette(20);
+  const TOOLTIP_STYLE = { backgroundColor: CT.textPrimary, titleColor: CT.white,
+    bodyColor: CT.white, borderWidth: 0, padding: 12, cornerRadius: 4 };
   function heatColor(value, max) {
-    if (value === 0) return { bg: 'rgba(255,255,255,0.03)', color: '#3a445a' };
-    const ratio = value / max;
-    if (ratio < 0.25) return { bg: 'rgba(74,158,255,0.12)', color: '#4a9eff' };
-    if (ratio < 0.5)  return { bg: 'rgba(74,158,255,0.28)', color: '#7ab8ff' };
-    if (ratio < 0.75) return { bg: 'rgba(74,158,255,0.50)', color: '#c2dcff' };
-    return { bg: 'rgba(74,158,255,0.78)', color: '#fff' };
+    const ratio = max ? value / max : 0;
+    if (!value) return {bg: CT.white, color: CT.textSecondary};
+    if (ratio < 0.25) return {bg: PALETTE[0] + '18', color: CT.textPrimary};
+    if (ratio < 0.5) return {bg: PALETTE[0] + '38', color: CT.textPrimary};
+    if (ratio < 0.75) return {bg: PALETTE[1], color: CT.white};
+    return {bg: PALETTE[0], color: CT.white};
   }
 
   async function loadAndRender() {
     const res = await fetch('/analytics-data');
+    if (!res.ok) throw new Error('Analytics unavailable');
     const d = await res.json();
 
     const statsRes = await fetch('/stats-json');
+    if (!statsRes.ok) throw new Error('Summary unavailable');
     const stats = await statsRes.json();
     document.getElementById('summary-chips').innerHTML = `
-      <div class="chip"><i class="bi bi-collection" style="color:#4a9eff;"></i>Jami: <span>${(stats.total||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-award" style="color:#34d399;"></i>PhD: <span>${(stats.phd||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-patch-star" style="color:#e36403;"></i>DSc: <span>${(stats.dsc||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-person-lines-fill" style="color:#fb923c;"></i>Ilmiy rahbarlar: <span>${(stats.rahbarlar||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-building" style="color:#fbbf24;"></i>Muassasalar: <span>${(stats.muassasalar||0).toLocaleString('uz')}</span></div>
-      <div class="chip"><i class="bi bi-mortarboard" style="color:#38bdf8;"></i>Olimlar: <span>${(stats.olim||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-collection" style="color:var(--color-action);"></i>Jami: <span>${(stats.total||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-award" style="color:var(--color-text-secondary);"></i>PhD: <span>${(stats.phd||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-patch-star" style="color:var(--color-text-secondary);"></i>DSc: <span>${(stats.dsc||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-person-lines-fill" style="color:var(--color-text-secondary);"></i>Ilmiy rahbarlar: <span>${(stats.rahbarlar||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-building" style="color:var(--color-text-secondary);"></i>Muassasalar: <span>${(stats.muassasalar||0).toLocaleString('uz')}</span></div>
+      <div class="chip"><i class="bi bi-mortarboard" style="color:var(--color-action);"></i>Olimlar: <span>${(stats.olim||0).toLocaleString('uz')}</span></div>
     `;
 
     // 1. Top 20 universities horizontal bar
@@ -182,8 +169,8 @@
         borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 } } },
-          y: { grid: { display: false }, ticks: { color: '#8899b4', font: { size: 11 },
+        scales: { x: { grid: { color: CT.border }, ticks: { color: CT.textSecondary, font: { size: 11 } } },
+          y: { grid: { display: false }, ticks: { color: CT.textSecondary, font: { size: 11 },
             callback: function(val) { const label = this.getLabelForValue(val); return label.length > 30 ? label.slice(0, 28) + '…' : label; } } } } }
     });
 
@@ -199,20 +186,20 @@
           borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
-          scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99' } }, y: { grid: { display: false }, ticks: { color: '#8899b4' } } } }
+          scales: { x: { grid: { color: CT.border }, ticks: { color: CT.textSecondary } }, y: { grid: { display: false }, ticks: { color: CT.textSecondary } } } }
       });
     }
 
     // 3. PhD vs DSc doughnut
     const darajaLabels = d.daraja_ratio.map(r => r.daraja);
     const darajaCounts = d.daraja_ratio.map(r => r.count);
-    const darajaColors = darajaLabels.map(l => l.toUpperCase() === 'PHD' ? '#34d399' : l.toUpperCase() === 'DSC' ? '#e36403' : '#fbbf24');
+    const darajaColors = darajaLabels.map(l => l.toUpperCase() === 'PHD' ? PALETTE[0] : l.toUpperCase() === 'DSC' ? PALETTE[2] : PALETTE[4]);
     new Chart(document.getElementById('chart-daraja'), {
       type: 'doughnut',
       data: { labels: darajaLabels, datasets: [{ data: darajaCounts,
         backgroundColor: darajaColors.map(c => c + 'bb'), borderColor: darajaColors, borderWidth: 2, hoverOffset: 8 }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
-        plugins: { legend: { position: 'bottom', labels: { color: '#8899b4', padding: 16, font: { size: 12 }, boxWidth: 12, borderRadius: 3 } },
+        plugins: { legend: { position: 'bottom', labels: { color: CT.textSecondary, padding: 16, font: { size: 12 }, boxWidth: 12, borderRadius: 3 } },
           tooltip: { ...TOOLTIP_STYLE, callbacks: { label: ctx => { const total = ctx.dataset.data.reduce((a, b) => a + b, 0); const pct = ((ctx.parsed / total) * 100).toFixed(1); return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`; } } } } }
     });
 
@@ -222,12 +209,12 @@
     new Chart(document.getElementById('chart-trend'), {
       type: 'line',
       data: { labels: trendLabels, datasets: [{ label: 'Dissertatsiyalar', data: trendCounts,
-        borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.1)', borderWidth: 2,
-        pointBackgroundColor: '#4a9eff', pointRadius: trendLabels.length > 30 ? 2 : 4, pointHoverRadius: 6, fill: true, tension: 0.4 }] },
+        borderColor: PALETTE[0], backgroundColor: PALETTE[0] + '18', borderWidth: 2,
+        pointBackgroundColor: PALETTE[0], pointRadius: trendLabels.length > 30 ? 2 : 4, pointHoverRadius: 6, fill: true, tension: 0.4 }] },
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', maxRotation: 45, font: { size: 10 } } },
-          y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 }, beginAtZero: true } } }
+        scales: { x: { grid: { color: CT.border }, ticks: { color: CT.textSecondary, maxRotation: 45, font: { size: 10 } } },
+          y: { grid: { color: CT.border }, ticks: { color: CT.textSecondary, font: { size: 11 }, stepSize: 1 }, beginAtZero: true } } }
     });
 
     // 5. Top 15 ixtisoslik horizontal bar
@@ -236,17 +223,17 @@
     new Chart(document.getElementById('chart-ixtisosliklar'), {
       type: 'bar',
       data: { labels: ixLabels, datasets: [{ label: 'Dissertatsiyalar', data: ixCounts,
-        backgroundColor: '#a78bfa55', borderColor: '#a78bfa', borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
+        backgroundColor: PALETTE[0] + '66', borderColor: PALETTE[0], borderWidth: 1, borderRadius: 5, borderSkipped: false }] },
       options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE } },
-        scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 } },
-          y: { grid: { display: false }, ticks: { color: '#8899b4', font: { size: 11 } } } } }
+        scales: { x: { grid: { color: CT.border }, ticks: { color: CT.textSecondary, font: { size: 11 }, stepSize: 1 } },
+          y: { grid: { display: false }, ticks: { color: CT.textSecondary, font: { size: 11 } } } } }
     });
 
     // 6. Heatmap table
     const hm = d.heatmap;
     if (hm.muassasalar.length === 0) {
-      document.getElementById('heatmap-table').innerHTML = '<tr><td colspan="4" style="color:#4a556a;text-align:center;padding:2rem;">Ma\'lumot yo\'q</td></tr>';
+      document.getElementById('heatmap-table').innerHTML = '<tr><td colspan="4" style="color:var(--color-text-secondary);text-align:center;padding:2rem;">Ma\'lumot yo\'q</td></tr>';
       return;
     }
     let maxVal = 0;
@@ -269,7 +256,14 @@
     document.getElementById('heatmap-table').innerHTML = thead + tbody;
   }
 
-  loadAndRender().catch(err => console.error('Analytics load error:', err));
+  loadAndRender().catch(function () {
+    document.querySelectorAll('.chart-container').forEach(function (container) {
+      if (container.querySelector('canvas[id^="chart-gender"]')) return;
+      container.innerHTML = '<div class="ol-state ol-state--error" role="alert"><p>Statistikani yuklab bo‘lmadi.</p><button type="button" class="ol-btn ol-btn--secondary" onclick="location.reload()">Qayta urinish</button></div>';
+    });
+    document.getElementById('heatmap-table').innerHTML = '<tbody><tr><td>Ma’lumot yuklanmadi.</td></tr></tbody>';
+    document.getElementById('summary-chips').textContent = 'Ko‘rsatkichlar hozircha mavjud emas.';
+  });
 
   // ── Gender statistics (server-injected, cached) ──
   var GENDER = {{ {'stats': gender_stats, 'degree': gender_by_degree, 'year': gender_by_year} | tojson }};
@@ -282,27 +276,27 @@
       type: 'doughnut',
       data: { labels: ['Erkak', 'Ayol', 'Aniqlanmagan'],
         datasets: [{ data: [gs.male || 0, gs.female || 0, gs.unknown || 0],
-          backgroundColor: ['#3b82f6bb', '#ec4899bb', '#64748bbb'],
-          borderColor: ['#3b82f6', '#ec4899', '#64748b'], borderWidth: 2, hoverOffset: 8 }] },
+          backgroundColor: [PALETTE[0] + 'bb', PALETTE[2] + 'bb', PALETTE[5] + 'bb'],
+          borderColor: [PALETTE[0], PALETTE[2], PALETTE[5]], borderWidth: 2, hoverOffset: 8 }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
         plugins: { legend: { display: false }, tooltip: { ...TOOLTIP_STYLE,
           callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${pct(ctx.parsed)}%)` } } } }
     });
     document.getElementById('gender-legend').innerHTML =
-      '👨 Erkak: <b style="color:#3b82f6">' + (gs.male || 0) + '</b> (' + pct(gs.male || 0) + '%) &nbsp;·&nbsp; ' +
-      '👩 Ayol: <b style="color:#ec4899">' + (gs.female || 0) + '</b> (' + pct(gs.female || 0) + '%) &nbsp;·&nbsp; ' +
-      '❓ Aniqlanmagan: <b style="color:#94a3b8">' + (gs.unknown || 0) + '</b> (' + pct(gs.unknown || 0) + '%)';
+      ' Erkak: <b style="color:var(--color-action);">' + (gs.male || 0) + '</b> (' + pct(gs.male || 0) + '%) &nbsp;·&nbsp; ' +
+      ' Ayol: <b style="color:var(--color-text-secondary);">' + (gs.female || 0) + '</b> (' + pct(gs.female || 0) + '%) &nbsp;·&nbsp; ' +
+      ' Aniqlanmagan: <b style="color:var(--color-action);">' + (gs.unknown || 0) + '</b> (' + pct(gs.unknown || 0) + '%)';
 
     // degree bars
     var dg = GENDER.degree || {};
     function bar(label, male, female) {
       var t = (male + female) || 1;
       var mp = Math.round(male / t * 100);
-      return '<div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#8899b4;margin-bottom:6px;">' +
-        '<span style="font-weight:700;color:#e8edf5;">' + label + '</span><span>👨 ' + male + ' · 👩 ' + female + '</span></div>' +
-        '<div style="display:flex;height:24px;border-radius:7px;overflow:hidden;background:#162032;">' +
-        (male ? '<div style="width:' + mp + '%;background:#3b82f6;" title="Erkak: ' + male + '"></div>' : '') +
-        (female ? '<div style="width:' + (100 - mp) + '%;background:#ec4899;" title="Ayol: ' + female + '"></div>' : '') +
+      return '<div><div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--color-action);margin-bottom:6px;">' +
+        '<span style="font-weight:600;color:var(--color-text-primary);">' + label + '</span><span> ' + male + ' ·  ' + female + '</span></div>' +
+        '<div style="display:flex;height:24px;border-radius:var(--radius-default);overflow:hidden;background:var(--color-surface);">' +
+        (male ? '<div style="width:' + mp + '%;background:var(--color-series-1);" title="Erkak: ' + male + '"></div>' : '') +
+        (female ? '<div style="width:' + (100 - mp) + '%;background:var(--color-series-3);" title="Ayol: ' + female + '"></div>' : '') +
         '</div></div>';
     }
     document.getElementById('gender-degree-bars').innerHTML =
@@ -316,13 +310,13 @@
       new Chart(document.getElementById('chart-gender-year'), {
         type: 'bar',
         data: { labels: years, datasets: [
-          { label: 'Erkak', data: years.map(y => yr[y].male || 0), backgroundColor: '#3b82f6cc', borderRadius: 4 },
-          { label: 'Ayol', data: years.map(y => yr[y].female || 0), backgroundColor: '#ec4899cc', borderRadius: 4 }
+          { label: 'Erkak', data: years.map(y => yr[y].male || 0), backgroundColor: (OlimlarCharts.tokens.series1 + 'cc'), borderRadius: 4 },
+          { label: 'Ayol', data: years.map(y => yr[y].female || 0), backgroundColor: (OlimlarCharts.tokens.series3 + 'cc'), borderRadius: 4 }
         ] },
         options: { responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: '#8899b4', boxWidth: 12, padding: 14 } }, tooltip: { ...TOOLTIP_STYLE } },
-          scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#6b7a99', font: { size: 11 } } },
-            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7a99', font: { size: 11 } }, beginAtZero: true } } }
+          plugins: { legend: { position: 'bottom', labels: { color: CT.textSecondary, boxWidth: 12, padding: 14 } }, tooltip: { ...TOOLTIP_STYLE } },
+          scales: { x: { stacked: true, grid: { display: false }, ticks: { color: CT.textSecondary, font: { size: 11 } } },
+            y: { stacked: true, grid: { color: CT.border }, ticks: { color: CT.textSecondary, font: { size: 11 } }, beginAtZero: true } } }
       });
     }
   })();

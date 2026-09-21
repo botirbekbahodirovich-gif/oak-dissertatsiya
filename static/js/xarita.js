@@ -111,8 +111,8 @@
     var labels = yillar.map(function (y) { return y.year; });
     var data = yillar.map(function (y) { return y.count; });
     var css = getComputedStyle(document.documentElement);
-    var accent = (css.getPropertyValue('--oak-accent') || '#3b82f6').trim() || '#3b82f6';
-    var muted = (css.getPropertyValue('--oak-muted') || '#94a3b8').trim() || '#94a3b8';
+    var accent = (css.getPropertyValue('--oak-accent') || OlimlarCharts.tokens.series1).trim() || OlimlarCharts.tokens.series1;
+    var muted = (css.getPropertyValue('--oak-muted') || OlimlarCharts.tokens.textSecondary).trim() || OlimlarCharts.tokens.textSecondary;
     state.chart = new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {

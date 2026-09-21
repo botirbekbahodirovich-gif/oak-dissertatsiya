@@ -8,34 +8,34 @@
         <p>Mavjud dissertatsiyalar jadvalini yangi CSV bilan yangilang.</p>
       </div>
     </div>
-    <div id="drop-zone" class="content-card" style="border:1px dashed rgba(74,158,255,0.35);text-align:center;cursor:pointer;padding:2rem;">
+    <div id="drop-zone" class="content-card" style="border:1px dashed var(--color-border);text-align:center;cursor:pointer;padding:2rem;">
       <div class="mb-3"><i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:var(--oak-accent);"></i></div>
       <div class="h5">CSV faylni bu yerga tashlang</div>
       <p class="form-text">Yoki bosib<br>faqat <strong>.csv</strong> fayllar qabul qilinadi.</p>
       <input id="file-input" type="file" accept=".csv" style="display:none;" />
-      <div id="file-name" class="form-text mt-2" style="color:#34d399;display:none;"></div>
+      <div id="file-name" class="form-text mt-2" style="color:var(--color-text-secondary);display:none;"></div>
     </div>
     <button id="btn-submit" class="btn btn-primary w-100 mt-3" disabled><i class="bi bi-cloud-upload me-1"></i>Yuklash</button>
     <div id="status-box" class="alert-inline" style="display:none;margin-top:1rem;"></div>
   </div>
 
   <!-- Clear & Upload (admin only) -->
-  <div class="content-card mt-4" style="max-width:700px;margin:1.5rem auto 0;border-color:rgba(248,113,113,0.3);">
+  <div class="content-card mt-4" style="max-width:700px;margin:1.5rem auto 0;border-color:var(--color-border);">
     <div class="page-heading">
       <div>
-        <h1 style="color:#f87171;font-size:1.1rem;">⚠ Bazani tozalab yuklash</h1>
-        <p style="color:#f87171;opacity:.8;">Bu amal <strong>barcha mavjud yozuvlarni o'chiradi</strong> va yangi fayl bilan almashtiradi.</p>
+        <h1 style="color:var(--color-text-secondary);font-size:1.1rem;"> Bazani tozalab yuklash</h1>
+        <p style="color:var(--color-text-secondary);opacity:.8;">Bu amal <strong>barcha mavjud yozuvlarni o'chiradi</strong> va yangi fayl bilan almashtiradi.</p>
       </div>
     </div>
-    <div id="drop-zone-bulk" class="content-card" style="border:1px dashed rgba(248,113,113,0.4);text-align:center;cursor:pointer;padding:2rem;">
-      <div class="mb-3"><i class="bi bi-file-earmark-excel" style="font-size:2rem;color:#f87171;"></i></div>
+    <div id="drop-zone-bulk" class="content-card" style="border:1px dashed var(--color-border);text-align:center;cursor:pointer;padding:2rem;">
+      <div class="mb-3"><i class="bi bi-file-earmark-excel" style="font-size:2rem;color:var(--color-text-secondary);"></i></div>
       <div class="h5">.xlsx yoki .csv faylni bu yerga tashlang</div>
       <p class="form-text">Barcha ustunlar yangi format bilan mos kelishi kerak.</p>
       <input id="file-input-bulk" type="file" accept=".csv,.xlsx,.xls" style="display:none;" />
-      <div id="file-name-bulk" class="form-text mt-2" style="color:#f87171;display:none;"></div>
+      <div id="file-name-bulk" class="form-text mt-2" style="color:var(--color-text-secondary);display:none;"></div>
     </div>
     <button id="btn-submit-bulk" class="btn w-100 mt-3" disabled
-      style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:#f87171;font-weight:600;">
+      style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);font-weight:600;">
       <i class="bi bi-trash3 me-1"></i>Bazani tozalab yuklash
     </button>
     <div id="status-box-bulk" class="alert-inline" style="display:none;margin-top:1rem;"></div>
@@ -114,7 +114,7 @@
   btnBulk.addEventListener('click', async () => {
     if (!bulkFile) return;
     const confirmed = confirm(
-      '⚠ DIQQAT!\n\nBu amal bazadagi BARCHA yozuvlarni o\'chiradi va yangi fayl bilan almashtiradi.\n\nDavom etasizmi?'
+      ' DIQQAT!\n\nBu amal bazadagi BARCHA yozuvlarni o\'chiradi va yangi fayl bilan almashtiradi.\n\nDavom etasizmi?'
     );
     if (!confirmed) return;
     const formData = new FormData();

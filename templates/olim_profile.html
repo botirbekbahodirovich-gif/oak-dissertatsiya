@@ -11,199 +11,199 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
-.op { color: #0f172a; }
-.op * { box-sizing: border-box; }
-.op-container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; margin:0 !important; }
+.op { color:var(--color-text-primary); }
+.op * { box-sizing:border-box; }
+.op-container { max-width:1100px; margin:0 auto; padding:0 24px; }
 
 /* ── header ── */
-.op-header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff; padding: 40px 0 36px; position: relative; }
-.op-edit-fab { position: absolute; top: 16px; right: 16px; z-index: 100; background: #fff; color: #3b82f6; border-radius: 999px; padding: 10px 20px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,0.28); text-decoration: none; font-size: 0.9rem; }
-.op-edit-fab:hover { color: #2563eb; text-decoration: none; transform: translateY(-1px); }
-.op-edit-ic { display: inline-flex; align-items: center; font-size: 0.85rem; text-decoration: none; opacity: 0.85; margin-left: 8px; }
-.op-edit-ic:hover { opacity: 1; text-decoration: none; }
-.op-owner-banner { background: rgba(59,130,246,0.10); border-left: 4px solid #3b82f6; }
-.op-owner-banner .ob-inner { max-width: 1100px; margin: 0 auto; padding: 12px 24px; color: #60a5fa; font-size: 0.92rem; }
-.op-owner-banner a { color: #93bbfc; font-weight: 700; }
-.op-header-inner { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
-.op-avatar-wrap { position: relative; flex-shrink: 0; text-align: center; }
+.op-header { background:var(--color-surface); color:var(--color-text-primary); padding:40px 0 36px; position:relative; }
+.op-edit-fab { position:absolute; top:16px; right:16px; z-index:100; background:var(--color-background); color:var(--color-action); border-radius:var(--radius-default); padding:10px 20px; font-weight:600; box-shadow:none; text-decoration:none; font-size:0.9rem; }
+.op-edit-fab:hover { color:var(--color-action); text-decoration:none; transform:translateY(-1px); }
+.op-edit-ic { display:inline-flex; align-items:center; font-size:0.85rem; text-decoration:none; opacity:0.85; margin-left:8px; }
+.op-edit-ic:hover { opacity:1; text-decoration:none; }
+.op-owner-banner { background:var(--color-background); border-left:4px solid var(--color-border); }
+.op-owner-banner .ob-inner { max-width:1100px; margin:0 auto; padding:12px 24px; color:var(--color-action); font-size:0.92rem; }
+.op-owner-banner a { color:var(--color-action); font-weight:600; }
+.op-header-inner { display:flex; align-items:center; gap:28px; flex-wrap:wrap; }
+.op-avatar-wrap { position:relative; flex-shrink:0; text-align:center; }
 .op-avatar {
-  width: 140px; height: 140px; border-radius: 50%; border: 3px solid #3b82f6; overflow: hidden;
-  background: linear-gradient(135deg, #60a5fa, #a855f7); display: grid; place-items: center;
-  font-size: 3.4rem; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  width:140px; height:140px; border-radius:50%; border:3px solid var(--color-border); overflow:hidden;
+  background:var(--color-surface); display:grid; place-items:center;
+  font-size:3.4rem; color:var(--color-text-primary); box-shadow:none;
 }
-.op-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.op-avatar img { width:100%; height:100%; object-fit:cover; }
 .op-cam {
-  position: absolute; right: 6px; bottom: 34px; width: 34px; height: 34px; border-radius: 50%;
-  background: #fff; color: #1e40af; display: grid; place-items: center; font-size: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2); opacity: 0.85;
+  position:absolute; right:6px; bottom:34px; width:34px; height:34px; border-radius:50%;
+  background:var(--color-background); color:var(--color-action); display:grid; place-items:center; font-size:1rem;
+  box-shadow:none; opacity:0.85;
 }
 .op-works-badge {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
-  background: rgba(255,255,255,0.15); color: #fff; font-size: 0.82rem; font-weight: 600;
-  padding: 5px 14px; border-radius: 999px;
+  display:inline-flex; align-items:center; gap:6px; margin-top:12px;
+  background:var(--color-background); color:var(--color-text-primary); font-size:0.82rem; font-weight:600;
+  padding:5px 14px; border-radius:var(--radius-default);
 }
-.op-info { flex: 1; min-width: 240px; }
-.op-info h1 { font-size: 2rem; font-weight: 800; margin: 0 0 10px; line-height: 1.2; }
-.op-degs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.deg-pill { font-size: 0.85rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; color: #fff; }
-.deg-pill.phd { background: #059669; }
-.deg-pill.dsc { background: #e36403; }
-.deg-pill.role-sup { background: #2563eb; }
-.deg-pill.role-opp { background: #7c3aed; }
-.op-empty.role-empty { padding: 24px; margin-bottom: 8px; }
-.role-mavzu { font-size: 0.9rem; color: #0f172a; line-height: 1.4; font-weight: 600; }
-.role-mavzu a { color: inherit; }
-.role-student { font-weight: 700; }
-.role-student a { color: #60a5fa; }
-.op-stats { display: flex; gap: 8px 22px; flex-wrap: wrap; font-size: 0.95rem; color: rgba(255,255,255,0.92); }
-.op-stats b { color: #fff; font-size: 1.05rem; }
-.op-hidx { display: inline-flex; flex-direction: column; gap: 3px; margin-top: 12px; text-decoration: none;
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px;
-  padding: 9px 14px; max-width: max-content; transition: background 0.15s; }
-.op-hidx:hover { background: rgba(255,255,255,0.2); }
-.op-hidx-ttl { font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.95); }
-.op-hidx-ttl b { color: #fde047; }
-.op-hidx-nums { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.92rem; color: rgba(255,255,255,0.9); }
-.op-hidx-nums b { color: #fff; font-size: 1.05rem; }
-.op-hidx-src { font-size: 0.7rem; color: rgba(255,255,255,0.6); }
-.op-uname { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 12px; flex-wrap: wrap; }
-.username-badge { font-family: ui-monospace, monospace; font-size: 0.78rem; font-weight: 700;
-  color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 999px; }
-.op-uname-txt { font-family: ui-monospace, monospace; font-size: 0.92rem; font-weight: 700;
-  color: #fff; background: rgba(255,255,255,0.14); padding: 4px 12px; border-radius: 999px; }
-.op-uname-btn { background: rgba(255,255,255,0.14); border: none; color: #fff; cursor: pointer;
-  width: 30px; height: 30px; border-radius: 50%; font-size: 0.82rem; text-decoration: none;
-  display: inline-grid; place-items: center; }
-.op-uname-btn:hover { background: rgba(255,255,255,0.28); color: #fff; }
-.op-uname-set { color: rgba(255,255,255,0.85); font-size: 0.85rem; text-decoration: none;
-  background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 999px; }
-.op-uname-set:hover { background: rgba(255,255,255,0.2); color: #fff; text-decoration: none; }
-.op-side { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
-.op-socials { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 240px; }
+.op-info { flex:1; min-width:240px; }
+.op-info h1 { font-size:2rem; font-weight:600; margin:0 0 10px; line-height:1.2; }
+.op-degs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.deg-pill { font-size:0.85rem; font-weight:600; padding:4px 14px; border-radius:var(--radius-full); color:var(--color-surface); }
+.deg-pill.phd { background:var(--color-background); }
+.deg-pill.dsc { background:var(--color-background); }
+.deg-pill.role-sup { background:var(--color-background); }
+.deg-pill.role-opp { background:var(--color-background); }
+.op-empty.role-empty { padding:24px; margin-bottom:8px; }
+.role-mavzu { font-size:0.9rem; color:var(--color-text-primary); line-height:1.4; font-weight:600; }
+.role-mavzu a { color:inherit; }
+.role-student { font-weight:600; }
+.role-student a { color:var(--color-action); }
+.op-stats { display:flex; gap:8px 22px; flex-wrap:wrap; font-size:0.95rem; color:var(--color-text-secondary); }
+.op-stats b { color:var(--color-surface); font-size:1.05rem; }
+.op-hidx { display:inline-flex; flex-direction:column; gap:3px; margin-top:12px; text-decoration:none;
+  background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default);
+  padding:9px 14px; max-width:max-content; transition:background 0.15s; }
+.op-hidx:hover { background:var(--color-background); }
+.op-hidx-ttl { font-size:0.82rem; font-weight:600; color:var(--color-text-secondary); }
+.op-hidx-ttl b { color:var(--color-text-secondary); }
+.op-hidx-nums { display:flex; gap:14px; flex-wrap:wrap; font-size:0.92rem; color:var(--color-text-secondary); }
+.op-hidx-nums b { color:var(--color-surface); font-size:1.05rem; }
+.op-hidx-src { font-size:0.7rem; color:var(--color-text-secondary); }
+.op-uname { display:inline-flex; align-items:center; gap:6px; margin:2px 0 12px; flex-wrap:wrap; }
+.username-badge { font-family:ui-monospace, monospace; font-size:0.78rem; font-weight:600;
+  color:var(--color-text-secondary); background:var(--color-background); padding:3px 10px; border-radius:var(--radius-default); }
+.op-uname-txt { font-family:ui-monospace, monospace; font-size:0.92rem; font-weight:600;
+  color:var(--color-text-primary); background:var(--color-background); padding:4px 12px; border-radius:var(--radius-default); }
+.op-uname-btn { background:var(--color-background); border:none; color:var(--color-text-primary); cursor:pointer;
+  width:30px; height:30px; border-radius:50%; font-size:0.82rem; text-decoration:none;
+  display:inline-grid; place-items:center; }
+.op-uname-btn:hover { background:var(--color-background); color:var(--color-text-primary); }
+.op-uname-set { color:var(--color-text-secondary); font-size:0.85rem; text-decoration:none;
+  background:var(--color-background); padding:5px 14px; border-radius:var(--radius-default); }
+.op-uname-set:hover { background:var(--color-background); color:var(--color-text-primary); text-decoration:none; }
+.op-side { display:flex; flex-direction:column; align-items:flex-end; gap:14px; }
+.op-socials { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width:240px; }
 .op-soc {
-  width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff;
-  display: grid; place-items: center; font-size: 1.1rem; text-decoration: none;
-  transition: background 0.2s ease, transform 0.2s ease;
+  width:40px; height:40px; border-radius:50%; background:var(--color-background); color:var(--color-text-primary);
+  display:grid; place-items:center; font-size:1.1rem; text-decoration:none;
+  transition:background 0.2s ease, transform 0.2s ease;
 }
-.op-soc:hover { background: rgba(255,255,255,0.3); color: #fff; transform: translateY(-2px); text-decoration: none; }
-.op-acad { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.op-soc.disabled, .op-acad .disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+.op-soc:hover { background:var(--color-background); color:var(--color-text-primary); transform:translateY(-2px); text-decoration:none; }
+.op-acad { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.op-soc.disabled, .op-acad .disabled { opacity:0.4; cursor:default; pointer-events:none; }
 .op-share {
-  display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: none;
-  background: #fff; color: #1e40af; font-weight: 700; font-size: 0.95rem;
-  padding: 11px 24px; border-radius: 50px; box-shadow: 0 4px 14px rgba(0,0,0,0.2);
-  transition: transform 0.2s ease;
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer; border:none;
+  background:var(--color-background); color:var(--color-action); font-weight:600; font-size:0.95rem;
+  padding:11px 24px; border-radius:var(--radius-default); box-shadow:none;
+  transition:transform 0.2s ease;
 }
-.op-share:hover { transform: scale(1.03); }
+.op-share:hover { transform:scale(1.03); }
 
 /* ── body ── */
-.op-body { background: #f8fafc; padding: 40px 0 64px; min-height: 40vh; }
-.op-sec-title { font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 18px; display: flex; align-items: center; gap: 10px; }
-.op-sec-title .cnt { background: #dbeafe; color: #2563eb; border-radius: 999px; padding: 2px 12px; font-size: 0.82rem; font-weight: 700; }
+.op-body { background:var(--color-background); padding:40px 0 64px; min-height:40vh; }
+.op-sec-title { font-size:1.2rem; font-weight:600; color:var(--color-text-primary); margin:0 0 18px; display:flex; align-items:center; gap:10px; }
+.op-sec-title .cnt { background:var(--color-background); color:var(--color-action); border-radius:var(--radius-default); padding:2px 12px; font-size:0.82rem; font-weight:600; }
 
-.diss-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-.diss-col { display: flex; flex-direction: column; gap: 18px; }
+.diss-columns { display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
+.diss-col { display:flex; flex-direction:column; gap:18px; }
 .op-card {
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px 22px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06); transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:20px 22px;
+  box-shadow:none; transition:transform 0.3s ease, box-shadow 0.3s ease;
 }
-.op-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.1); }
-.op-card-deg { display: inline-block; font-size: 0.8rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; color: #fff; margin-bottom: 10px; }
-.op-card-deg.phd { background: #059669; } .op-card-deg.dsc { background: #e36403; } .op-card-deg.other { background: #94a3b8; }
-.op-card h3 { font-size: 1.02rem; font-weight: 700; color: #0f172a; line-height: 1.4; margin: 0 0 12px;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.op-card-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.84rem; color: #64748b; margin-bottom: 12px; }
-.op-card-meta span { display: flex; align-items: flex-start; gap: 7px; }
-.op-card-meta a { color: #2563eb; }
-.op-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.op-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; padding: 7px 14px; border-radius: 10px; text-decoration: none; }
-.op-btn.primary { background: #3b82f6; color: #fff; } .op-btn.primary:hover { background: #2563eb; color: #fff; text-decoration: none; }
-.op-btn.ghost { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; } .op-btn.ghost:hover { background: #dbeafe; color: #2563eb; text-decoration: none; }
+.op-card:hover { transform:translateY(-4px); box-shadow:none; }
+.op-card-deg { display:inline-block; font-size:0.8rem; font-weight:600; padding:4px 14px; border-radius:var(--radius-card); color:var(--color-text-primary); margin-bottom:10px; }
+.op-card-deg.phd { background:var(--color-surface); } .op-card-deg.dsc { background:var(--color-surface); } .op-card-deg.other { background:var(--color-surface); }
+.op-card h3 { font-size:1.02rem; font-weight:600; color:var(--color-text-primary); line-height:1.4; margin:0 0 12px;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.op-card-meta { display:flex; flex-direction:column; gap:6px; font-size:0.84rem; color:var(--color-text-secondary); margin-bottom:12px; }
+.op-card-meta span { display:flex; align-items:flex-start; gap:7px; }
+.op-card-meta a { color:var(--color-action); }
+.op-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.op-btn { display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:7px 14px; border-radius:var(--radius-default); text-decoration:none; }
+.op-btn.primary { background:var(--color-action); color:var(--color-surface); } .op-btn.primary:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
+.op-btn.ghost { background:var(--color-background); color:var(--color-action); border:1px solid var(--color-border); } .op-btn.ghost:hover { background:var(--color-action-soft); color:var(--color-action); text-decoration:none; }
 
 /* ── tabs ── */
-.op-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin: 40px 0 24px; }
+.op-tabs { display:flex; gap:10px; flex-wrap:wrap; margin:40px 0 24px; }
 .op-tab {
-  border: none; cursor: pointer; font-weight: 600; font-size: 0.92rem; padding: 10px 22px;
-  border-radius: 50px; background: #e0e7ff; color: #4338ca; transition: background 0.2s ease, color 0.2s ease;
+  border:none; cursor:pointer; font-weight:600; font-size:0.92rem; padding:10px 22px;
+  border-radius:var(--radius-default); background:var(--color-background); color:var(--color-action); transition:background 0.2s ease, color 0.2s ease;
 }
-.op-tab.active { background: #3b82f6; color: #fff; }
-.op-tabpane { display: none; }
-.op-tabpane.active { display: block; }
-.op-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 18px; }
+.op-tab.active { background:var(--color-action); color:var(--color-surface); }
+.op-tabpane { display:none; }
+.op-tabpane.active { display:block; }
+.op-subtabs { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 18px; }
 .op-subtab {
-  border: none; cursor: pointer; font-weight: 600; font-size: 0.84rem; padding: 8px 18px;
-  border-radius: 50px; background: #eff6ff; color: #2563eb; transition: background 0.2s ease, color 0.2s ease;
+  border:none; cursor:pointer; font-weight:600; font-size:0.84rem; padding:8px 18px;
+  border-radius:var(--radius-default); background:var(--color-background); color:var(--color-action); transition:background 0.2s ease, color 0.2s ease;
 }
-.op-subtab.active { background: #3b82f6; color: #fff; }
-.op-subtabpane { display: none; }
-.op-subtabpane.active { display: block; }
-.op-empty { background: #fff; border: 1px dashed #cbd5e1; border-radius: 16px; padding: 40px 24px; text-align: center; color: #64748b; }
-.op-empty .ico { font-size: 2.4rem; margin-bottom: 12px; }
-.op-empty .add-btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; background: #3b82f6; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 50px; text-decoration: none; }
-.op-empty .add-btn:hover { background: #2563eb; color: #fff; text-decoration: none; }
-.op-list-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
-.op-list-card .lc-title { font-weight: 700; color: #1e40af; font-size: 1rem; }
-.op-list-card .lc-meta { font-size: 0.85rem; color: #64748b; margin-top: 4px; display: flex; gap: 6px 16px; flex-wrap: wrap; }
-.op-gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.op-gallery img { width: 100%; height: 160px; object-fit: cover; border-radius: 12px; }
-.op-gallery figcaption { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+.op-subtab.active { background:var(--color-action); color:var(--color-surface); }
+.op-subtabpane { display:none; }
+.op-subtabpane.active { display:block; }
+.op-empty { background:var(--color-background); border:1px dashed var(--color-border); border-radius:var(--radius-card); padding:40px 24px; text-align:center; color:var(--color-text-secondary); }
+.op-empty .ico { font-size:2.4rem; margin-bottom:12px; }
+.op-empty .add-btn { display:inline-flex; align-items:center; gap:8px; margin-top:16px; background:var(--color-action); color:var(--color-surface); font-weight:600; padding:10px 22px; border-radius:var(--radius-card); text-decoration:none; }
+.op-empty .add-btn:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
+.op-list-card { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:16px 20px; margin-bottom:12px; }
+.op-list-card .lc-title { font-weight:600; color:var(--color-action); font-size:1rem; }
+.op-list-card .lc-meta { font-size:0.85rem; color:var(--color-text-secondary); margin-top:4px; display:flex; gap:6px 16px; flex-wrap:wrap; }
+.op-gallery { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+.op-gallery img { width:100%; height:160px; object-fit:cover; border-radius:var(--radius-default); }
+.op-gallery figcaption { font-size:0.8rem; color:var(--color-text-secondary); margin-top:4px; }
 
 /* roles */
-.role-item { display: flex; align-items: flex-start; gap: 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-.role-mini { font-weight: 700; font-size: 0.74rem; flex-shrink: 0; padding-top: 2px; }
-.role-mini.phd { color: #059669; } .role-mini.dsc { color: #e36403; } .role-mini.other { color: #94a3b8; }
-.role-main .rm-title { font-size: 0.9rem; color: #0f172a; line-height: 1.4; }
-.role-main .rm-title a { color: #0f172a; }
-.role-main .rm-sub { font-size: 0.8rem; color: #64748b; margin-top: 4px; display: flex; gap: 6px 16px; flex-wrap: wrap; }
-.role-main .rm-sub a { color: #2563eb; }
+.role-item { display:flex; align-items:flex-start; gap:12px; background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:14px 16px; margin-bottom:10px; }
+.role-mini { font-weight:600; font-size:0.74rem; flex-shrink:0; padding-top:2px; }
+.role-mini.phd { color:var(--color-text-secondary); } .role-mini.dsc { color:var(--color-text-secondary); } .role-mini.other { color:var(--color-action); }
+.role-main .rm-title { font-size:0.9rem; color:var(--color-text-primary); line-height:1.4; }
+.role-main .rm-title a { color:var(--color-text-primary); }
+.role-main .rm-sub { font-size:0.8rem; color:var(--color-text-secondary); margin-top:4px; display:flex; gap:6px 16px; flex-wrap:wrap; }
+.role-main .rm-sub a { color:var(--color-action); }
 
-.op-back { display: inline-flex; align-items: center; gap: 6px; margin-top: 28px; border: 2px solid #3b82f6; color: #3b82f6; font-weight: 600; padding: 10px 22px; border-radius: 50px; text-decoration: none; }
-.op-back:hover { background: #3b82f6; color: #fff; text-decoration: none; }
+.op-back { display:inline-flex; align-items:center; gap:6px; margin-top:28px; border:2px solid var(--color-border); color:var(--color-action); font-weight:600; padding:10px 22px; border-radius:var(--radius-default); text-decoration:none; }
+.op-back:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
 
 @media (max-width: 900px) {
-  .op-header-inner { flex-direction: column; text-align: center; }
-  .op-info { text-align: center; }
-  .op-degs, .op-stats { justify-content: center; }
-  .op-side { align-items: center; }
-  .op-socials, .op-acad { justify-content: center; }
-  .diss-columns { grid-template-columns: 1fr; }
-  .op-gallery { grid-template-columns: repeat(2, 1fr); }
+  .op-header-inner { flex-direction:column; text-align:center; }
+  .op-info { text-align:center; }
+  .op-degs, .op-stats { justify-content:center; }
+  .op-side { align-items:center; }
+  .op-socials, .op-acad { justify-content:center; }
+  .diss-columns { grid-template-columns:1fr; }
+  .op-gallery { grid-template-columns:repeat(2, 1fr); }
 }
 @media (max-width: 575px) {
-  .op-info h1 { font-size: 1.5rem; }
-  .op-avatar { width: 110px; height: 110px; font-size: 2.6rem; }
+  .op-info h1 { font-size:1.5rem; }
+  .op-avatar { width:110px; height:110px; font-size:2.6rem; }
 }
 
 /* ── genealogy tree ── */
-.gen-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.gen-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.78rem; color: #94a3b8; }
-.gen-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.gen-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-.gen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.gen-btn { background: #162032; border: 1px solid #334155; color: #93bbfc; font-size: 0.82rem; font-weight: 600; padding: 7px 14px; border-radius: 9px; cursor: pointer; text-decoration: none; }
-.gen-btn:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
-.gen-stage { position: relative; background: #0f172a; border: 1px solid #334155; border-radius: 16px; height: 560px; overflow: hidden; }
-.gen-stage svg { width: 100%; height: 100%; display: block; cursor: grab; }
-.gen-stage svg:active { cursor: grabbing; }
-.gen-loading, .gen-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-align: center; padding: 20px; }
-.gen-tooltip { position: absolute; pointer-events: none; background: #1e293b; border: 1px solid #475569; color: #e2e8f0; font-size: 0.8rem; padding: 7px 11px; border-radius: 8px; opacity: 0; transition: opacity 0.12s; z-index: 5; max-width: 240px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-.gen-hint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; color: #475569; white-space: nowrap; pointer-events: none; }
+.gen-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.gen-legend { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:0.78rem; color:var(--color-action); }
+.gen-legend span { display:inline-flex; align-items:center; gap:6px; }
+.gen-legend .dot { width:12px; height:12px; border-radius:var(--radius-default); display:inline-block; }
+.gen-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.gen-btn { background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-action); font-size:0.82rem; font-weight:600; padding:7px 14px; border-radius:var(--radius-default); cursor:pointer; text-decoration:none; }
+.gen-btn:hover { border-color:var(--color-border); color:var(--color-surface); text-decoration:none; }
+.gen-stage { position:relative; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); height:560px; overflow:hidden; }
+.gen-stage svg { width:100%; height:100%; display:block; cursor:grab; }
+.gen-stage svg:active { cursor:grabbing; }
+.gen-loading, .gen-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--color-action); text-align:center; padding:20px; }
+.gen-tooltip { position:absolute; pointer-events:none; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); font-size:0.8rem; padding:7px 11px; border-radius:var(--radius-default); opacity:0; transition:opacity 0.12s; z-index:5; max-width:240px; box-shadow:none; }
+.gen-hint { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); font-size:0.72rem; color:var(--color-action); white-space:nowrap; pointer-events:none; }
 /* ── D3 tree (genealogy_tree.js → window.ShajaraTree) ── */
-#gen-canvas { position: absolute; inset: 0; }
-.shajara-svg { cursor: grab; }
-.shajara-svg:active { cursor: grabbing; }
-.sh-link { fill: none; stroke: #334155; stroke-width: 1.8px; stroke-opacity: 0.7; }
-.sh-node { cursor: pointer; }
-.sh-node .sh-bg { transition: stroke 0.25s, filter 0.25s; }
-.sh-node:hover .sh-bg { filter: brightness(1.12); }
-.sh-init { font-weight: 800; pointer-events: none; }
-.sh-avatar { pointer-events: none; }
-.sh-badge-bg { fill: #e36403; stroke: #0b1220; stroke-width: 2px; }
-.sh-badge-t { fill: #fff; font-size: 11px; font-weight: 800; pointer-events: none; }
-.sh-label { fill: #cbd5e1; font-size: 12px; font-weight: 600; pointer-events: none; }
-.shajara-error { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #f87171; }
-@media (max-width: 768px) { .gen-stage { height: 460px; } }
+#gen-canvas { position:absolute; inset:0; }
+.shajara-svg { cursor:grab; }
+.shajara-svg:active { cursor:grabbing; }
+.sh-link { fill:none; stroke:var(--color-action); stroke-width:1.8px; stroke-opacity:0.7; }
+.sh-node { cursor:pointer; }
+.sh-node .sh-bg { transition:stroke 0.25s, filter 0.25s; }
+.sh-node:hover .sh-bg { filter:brightness(1.12); }
+.sh-init { font-weight:600; pointer-events:none; }
+.sh-avatar { pointer-events:none; }
+.sh-badge-bg { fill:var(--color-text-secondary); stroke:var(--color-text-primary); stroke-width:2px; }
+.sh-badge-t { fill:var(--color-surface); font-size:11px; font-weight:600; pointer-events:none; }
+.sh-label { fill:var(--color-text-primary); font-size:12px; font-weight:600; pointer-events:none; }
+.shajara-error { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--color-danger); }
+@media (max-width: 768px) { .gen-stage { height:460px; } }
 </style>
 {% endblock %}
 
@@ -222,51 +222,50 @@
 </script>
 <script>
 function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
-  navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if (profile and profile.slug) else (public_id or "") }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi ✓';setTimeout(function(){t.textContent=old;},1200);});}
+  navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if (profile and profile.slug) else (public_id or "") }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi';setTimeout(function(){t.textContent=old;},1200);});}
 </script>
 {% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
 {% set gender = detect_gender(olim_name) %}
-{% set gender_emoji = '👨‍🎓' if gender == 'male' else ('👩‍🎓' if gender == 'female' else '🎓') %}
-{% set gender_icon = '👨' if gender == 'male' else ('👩' if gender == 'female' else '') %}
+{% set gender_emoji = '' if gender == 'male' else ('' if gender == 'female' else '') %}
+{% set gender_icon = '' if gender == 'male' else ('' if gender == 'female' else '') %}
 <div class="op">
 
 <!-- ═══ HEADER ═══ -->
 <header class="op-header">
-  {% if is_owner %}<a href="/cabinet" class="op-edit-fab">✏️ Profilni tahrirlash</a>{% endif %}
+  {% if is_owner %}<a href="/cabinet" class="op-edit-fab"> Profilni tahrirlash</a>{% endif %}
   <div class="op-container op-header-inner">
     <div class="op-avatar-wrap">
       <div class="op-avatar">
-        <img src="{{ photo or (olim_name | avatar_url) }}" alt="{{ olim_name }}"
-             onerror="this.onerror=null; this.src='{{ DEFAULT_AVATAR }}';">
+        {% if photo %}<img src="{{ photo }}" alt="{{ olim_name }}" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span hidden aria-hidden="true">{{ olim_name[:1] }}</span>{% else %}<span aria-hidden="true">{{ olim_name[:1] }}</span>{% endif %}
       </div>
-      <span class="op-cam" title="Rasm yuklash (tez orada)">📷</span>
-      <div><span class="op-works-badge">📋 Ilmiy ishlar {{ stats.total }}</span></div>
+      <span class="op-cam" title="Rasm yuklash (tez orada)"></span>
+      <div><span class="op-works-badge"> Ilmiy ishlar {{ stats.total }}</span></div>
     </div>
 
     <div class="op-info">
-      <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash">✏️</a>{% endif %}</h1>
+      <h1>{{ olim_name }}{% if gender_icon %}<span title="Jins (ismdan aniqlangan)" style="font-size:1rem;margin-left:8px;opacity:0.8;">{{ gender_icon }}</span>{% endif %}{% if is_owner %}<a href="/cabinet#profile" class="op-edit-ic" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}</h1>
       {% if profile and profile.slug %}
       <div class="op-uname">
         <span class="username-badge" title="Sayt ichidagi nom">{{ profile.slug }}</span>
         <span class="op-uname-txt" id="op-uname">olimlar.uz/{{ profile.slug }}</span>
-        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
-        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
+        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash" aria-label="Nusxalash"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
+        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ profile.slug)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram" aria-label="Telegram orqali ulashish"><i class="bi bi-telegram" aria-hidden="true"></i></a>
       </div>
       {% elif public_id %}
       <div class="op-uname">
         <span class="username-badge" title="Doimiy Olimlar ID">{{ public_id }}</span>
         <span class="op-uname-txt" id="op-uname">olimlar.uz/{{ public_id }}</span>
-        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash">📋</button>
-        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ public_id)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram">✈️</a>
+        <button type="button" class="op-uname-btn" onclick="opCopyUname()" title="Nusxalash" aria-label="Nusxalash"><i class="bi bi-clipboard" aria-hidden="true"></i></button>
+        <a class="op-uname-btn" href="https://t.me/share/url?url={{ ('https://olimlar.uz/' ~ public_id)|urlencode }}&text={{ olim_name|urlencode }}" target="_blank" rel="noopener" title="Telegram" aria-label="Telegram orqali ulashish"><i class="bi bi-telegram" aria-hidden="true"></i></a>
       </div>
       {% elif is_owner %}
-      <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">🔗 Sodda sahifa manzili (username) o'rnating</a></div>
+      <div class="op-uname"><a href="/cabinet#profile" class="op-uname-set">Sodda sahifa manzili (username) o'rnating</a></div>
       {% endif %}
       <div class="op-degs">
         {% if stats.phd %}<span class="deg-pill phd">{{ stats.phd }} PhD</span>{% endif %}
         {% if stats.dsc %}<span class="deg-pill dsc">{{ stats.dsc }} DSc</span>{% endif %}
-        {% if as_supervisor %}<span class="deg-pill role-sup">👨‍🏫 Ilmiy rahbar</span>{% endif %}
-        {% if as_opponent %}<span class="deg-pill role-opp">📋 Opponent</span>{% endif %}
+        {% if as_supervisor %}<span class="deg-pill role-sup"> Ilmiy rahbar</span>{% endif %}
+        {% if as_opponent %}<span class="deg-pill role-opp"> Opponent</span>{% endif %}
       </div>
       <div class="op-stats">
         <span><b>{{ stats.total }}</b> himoya</span>
@@ -277,15 +276,15 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       {% if profile and profile.institution %}
       <div class="op-uname">
         {% if profile.university_name %}
-        <a class="op-uname-set" href="/university/{{ profile.university_name|urlencode }}">🏛️ {{ profile.institution }}</a>
+        <a class="op-uname-set" href="/university/{{ profile.university_name|urlencode }}">{{ profile.institution }}</a>
         {% else %}
-        <span class="op-uname-txt">🏛️ {{ profile.institution }}</span>
+        <span class="op-uname-txt">{{ profile.institution }}</span>
         {% endif %}
       </div>
       {% endif %}
       {% if research_metrics %}
       <a href="/reyting" class="op-hidx" title="H-index reyting — uz.h-index.com">
-        <span class="op-hidx-ttl">📊 H-index va O‘zbekiston bo‘yicha o‘rin</span>
+        <span class="op-hidx-ttl">H-index va O‘zbekiston bo‘yicha o‘rin</span>
         <span class="op-hidx-nums">
           {% for metric in research_metrics %}
           <span>
@@ -299,7 +298,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       </a>
       {% elif h_index %}
       <a href="/reyting" class="op-hidx" title="H-index reyting — uz.h-index.com">
-        <span class="op-hidx-ttl">📊 H-index{% if h_index.rank %} · <b>{{ h_index.rank }}-o'rin</b>{% endif %}</span>
+        <span class="op-hidx-ttl"> H-index{% if h_index.rank %} · <b>{{ h_index.rank }}-o'rin</b>{% endif %}</span>
         <span class="op-hidx-nums">
           {% if h_index.h_scopus %}<span>Scopus <b>{{ h_index.h_scopus }}</b></span>{% endif %}
           {% if h_index.h_wos %}<span>WoS <b>{{ h_index.h_wos }}</b></span>{% endif %}
@@ -310,8 +309,8 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       {% endif %}
       {% if message_target_id and not is_owner %}
       <button onclick="startConversation({{ message_target_id }})"
-              style="margin-top:10px;border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:8px 18px;border-radius:50px;cursor:pointer;font-size:0.86rem;">
-        ✉️ Xabar yuborish</button>
+              style="margin-top:10px;border:none;background:var(--color-surface);color:var(--color-text-primary);font-weight:600;padding:8px 18px;border-radius:var(--radius-default);cursor:pointer;font-size:0.86rem;">
+         Xabar yuborish</button>
       <script src="/static/js/messages.js" defer></script>
       {% endif %}
     </div>
@@ -319,13 +318,13 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     <div class="op-side">
       <div class="op-acad">
         {% set scopus = profile.scopus_url if profile else None %}
-        {% if scopus %}<a class="op-soc" href="{{ scopus }}" target="_blank" rel="noopener" title="Scopus">🔬</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">🔬</span>{% endif %}
+        {% if scopus %}<a class="op-soc" href="{{ scopus }}" target="_blank" rel="noopener" title="Scopus" aria-label="Scopus"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
         {% set wos = profile.wos_url if profile else None %}
-        {% if wos %}<a class="op-soc" href="{{ wos }}" target="_blank" rel="noopener" title="Web of Science">📚</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">📚</span>{% endif %}
+        {% if wos %}<a class="op-soc" href="{{ wos }}" target="_blank" rel="noopener" title="Web of Science" aria-label="Web of Science"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
         {% set scholar = profile.scholar_url if profile else None %}
-        {% if scholar %}<a class="op-soc" href="{{ scholar }}" target="_blank" rel="noopener" title="Google Scholar">🎓</a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan">🎓</span>{% endif %}
+        {% if scholar %}<a class="op-soc" href="{{ scholar }}" target="_blank" rel="noopener" title="Google Scholar" aria-label="Google Scholar"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
         {% set orcid = profile.orcid_url if profile else None %}
-        {% if orcid %}<a class="op-soc" href="{{ orcid }}" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill" style="color:#A6CE39;"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-person-badge-fill"></i></span>{% endif %}
+        {% if orcid %}<a class="op-soc" href="{{ orcid }}" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill" style="color:var(--color-text-secondary);"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-person-badge-fill"></i></span>{% endif %}
       </div>
       <div class="op-socials">
         {% set socials = [
@@ -342,9 +341,9 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         {% endfor %}
       </div>
       {% if cabinet_olim_name and cabinet_olim_name|lower == olim_name|lower %}
-      <a class="op-share" href="/cabinet" style="text-decoration:none;">Profilni tahrirlash ✏️</a>
+      <a class="op-share" href="/cabinet" style="text-decoration:none;">Profilni tahrirlash </a>
       {% endif %}
-      <button class="op-share" id="op-share-btn" type="button">ULASHISH 📨</button>
+      <button class="op-share" id="op-share-btn" type="button">ULASHISH </button>
     </div>
   </div>
 </header>
@@ -362,32 +361,32 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     {% if reputation %}
     <!-- ═══ Obro' metrikalari (Olimlar katalogi 2.0) ═══ -->
     <style>
-      .op-rep { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px 22px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-      .op-rep-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-      .op-rep-stat { background: #f8fafc; border-radius: 12px; padding: 14px 10px; text-align: center; }
-      .op-rep-stat b { display: block; font-size: 1.5rem; font-weight: 800; color: #0f172a; }
-      .op-rep-stat span { font-size: 0.78rem; color: #64748b; }
-      .op-rep-stat small { display: block; font-size: 0.68rem; color: #94a3b8; margin-top: 2px; }
-      .op-rep-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
-      .op-rep-spark { flex: 1; min-width: 180px; }
-      .op-rep-spark .lbl { font-size: 0.74rem; color: #64748b; margin-bottom: 4px; }
-      .op-rep-gs { display: inline-flex; align-items: center; gap: 7px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-weight: 700; font-size: 0.86rem; padding: 9px 16px; border-radius: 10px; text-decoration: none; }
-      .op-rep-gs:hover { background: #dbeafe; color: #2563eb; text-decoration: none; }
-      .op-sim { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 8px; }
-      .op-sim a { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; text-decoration: none; }
-      .op-sim a:hover { border-color: #93c5fd; }
-      .op-sim .nm { font-weight: 700; color: #0f172a; font-size: 0.88rem; }
-      .op-sim .mt { font-size: 0.76rem; color: #64748b; }
-      @media (max-width: 560px) { .op-rep-stats { grid-template-columns: repeat(2, 1fr); } }
+      .op-rep { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:20px 22px; margin-bottom:22px; box-shadow:none; }
+      .op-rep-stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+      .op-rep-stat { background:var(--color-background); border-radius:var(--radius-default); padding:14px 10px; text-align:center; }
+      .op-rep-stat b { display:block; font-size:1.5rem; font-weight:600; color:var(--color-text-primary); }
+      .op-rep-stat span { font-size:0.78rem; color:var(--color-text-secondary); }
+      .op-rep-stat small { display:block; font-size:0.68rem; color:var(--color-action); margin-top:2px; }
+      .op-rep-foot { display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:16px; }
+      .op-rep-spark { flex:1; min-width:180px; }
+      .op-rep-spark .lbl { font-size:0.74rem; color:var(--color-text-secondary); margin-bottom:4px; }
+      .op-rep-gs { display:inline-flex; align-items:center; gap:7px; background:var(--color-background); color:var(--color-action); border:1px solid var(--color-border); font-weight:600; font-size:0.86rem; padding:9px 16px; border-radius:var(--radius-default); text-decoration:none; }
+      .op-rep-gs:hover { background:var(--color-action-soft); color:var(--color-action); text-decoration:none; }
+      .op-sim { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin-top:8px; }
+      .op-sim a { display:flex; align-items:center; gap:10px; background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:10px 12px; text-decoration:none; }
+      .op-sim a:hover { border-color:var(--color-border); }
+      .op-sim .nm { font-weight:600; color:var(--color-text-primary); font-size:0.88rem; }
+      .op-sim .mt { font-size:0.76rem; color:var(--color-text-secondary); }
+      @media (max-width: 560px) { .op-rep-stats { grid-template-columns:repeat(2, 1fr); } }
     </style>
     <div class="op-rep">
       <div class="op-rep-stats">
-        <div class="op-rep-stat"><b>{{ reputation.total_students }}</b><span>👥 Shogirdlar</span>
+        <div class="op-rep-stat"><b>{{ reputation.total_students }}</b><span> Shogirdlar</span>
           <small>PhD: {{ reputation.phd_students }} · DSc: {{ reputation.dsc_students }}</small></div>
-        <div class="op-rep-stat"><b>{{ reputation.opponent_count }}</b><span>⚖️ Opponentlik</span></div>
-        <div class="op-rep-stat"><b>{{ reputation.next_gen_advisors }}</b><span>🌳 Ilmiy avlod</span>
+        <div class="op-rep-stat"><b>{{ reputation.opponent_count }}</b><span> Opponentlik</span></div>
+        <div class="op-rep-stat"><b>{{ reputation.next_gen_advisors }}</b><span> Ilmiy avlod</span>
           <small>rahbar bo'lgan shogirdlar</small></div>
-        <div class="op-rep-stat"><b>{{ reputation.publications_count }}</b><span>📄 Nashrlar</span></div>
+        <div class="op-rep-stat"><b>{{ reputation.publications_count }}</b><span> Nashrlar</span></div>
       </div>
       {% if reputation.sparkline or reputation.has_google_scholar %}
       <div class="op-rep-foot">
@@ -395,27 +394,27 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <div class="op-rep-spark"><div class="lbl">Yillik faollik</div>{{ reputation.sparkline|safe }}</div>
         {% endif %}
         {% if reputation.has_google_scholar %}
-        <a class="op-rep-gs" href="{{ reputation.google_scholar_url }}" target="_blank" rel="noopener">🎓 Google Scholar profili →</a>
+        <a class="op-rep-gs" href="{{ reputation.google_scholar_url }}" target="_blank" rel="noopener"> Google Scholar profili →</a>
         {% endif %}
       </div>
       {% endif %}
     </div>
 
     {% if reputation.similar %}
-    <div class="op-sec-title" style="margin-bottom:14px;"><i class="bi bi-people" style="color:#2563eb;"></i>Shu sohada yana</div>
+    <div class="op-sec-title" style="margin-bottom:14px;"><i class="bi bi-people" style="color:var(--color-action);"></i>Shu sohada yana</div>
     <div class="op-sim">
       {% for s in reputation.similar %}
       <a href="/olim/{{ s.name|urlencode }}">
-        <div><div class="nm">{{ s.display }}</div><div class="mt">👥 {{ s.total_students }} shogird{% if s.dsc_students %} · DSc{% endif %}</div></div>
+        <div><div class="nm">{{ s.display }}</div><div class="mt"> {{ s.total_students }} shogird{% if s.dsc_students %} · DSc{% endif %}</div></div>
       </a>
       {% endfor %}
     </div>
     {% endif %}
     {% endif %}
 
-    <div class="op-sec-title"><i class="bi bi-journal-text" style="color:#3b82f6;"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
+    <div class="op-sec-title"><i class="bi bi-journal-text" style="color:var(--color-action);"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
     {% if not dissertations %}
-    <div class="op-empty role-empty"><div class="ico">🎓</div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
+    <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
     {% endif %}
     <div class="diss-columns">
       <div class="diss-col">
@@ -425,16 +424,16 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
             <span class="op-card-deg {{ 'phd' if dar=='PHD' else 'other' }}">{{ d.Daraja or '—' }}</span>
             <h3>{{ d.Mavzu or '—' }}</h3>
             <div class="op-card-meta">
-              {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-              {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
-              {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
-              {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
+              {% if d.Sana %}<span> {{ d.Sana }}</span>{% endif %}
+              {% if d.Ixtisoslik %}<span> <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
+              {% if d.Muassasa %}<span> Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Ilmiy_rahbar %}<span> Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} </a></span>{% endif %}
+              {% if d.Ilmiy_kengash %}<span> {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
               {% if d.Opponent_1 %}{% set _ = opps.append(d.Opponent_1) %}{% endif %}
               {% if d.Opponent_2 %}{% set _ = opps.append(d.Opponent_2) %}{% endif %}
               {% if d.Opponent_3 %}{% set _ = opps.append(d.Opponent_3) %}{% endif %}
-              {% if opps %}<span>👥 {{ opps|join('; ') }}</span>{% endif %}
+              {% if opps %}<span> {{ opps|join('; ') }}</span>{% endif %}
             </div>
             <div class="op-card-actions">
               <a href="/dissertation/{{ d.id }}" class="op-btn primary">Batafsil</a>
@@ -449,16 +448,16 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
             <span class="op-card-deg dsc">DSc</span>
             <h3>{{ d.Mavzu or '—' }}</h3>
             <div class="op-card-meta">
-              {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-              {% if d.Ixtisoslik %}<span>📎 <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
-              {% if d.Muassasa %}<span>🏛️ Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
-              {% if d.Ilmiy_rahbar %}<span>👨‍🏫 Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} 👨‍🎓</a></span>{% endif %}
-              {% if d.Ilmiy_kengash %}<span>🏛️ {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
+              {% if d.Sana %}<span> {{ d.Sana }}</span>{% endif %}
+              {% if d.Ixtisoslik %}<span> <a href="/specialization/{{ d.Ixtisoslik|urlencode }}">{{ d.Ixtisoslik }}{% if d.Ixtisoslik_nomi %} — {{ d.Ixtisoslik_nomi }}{% endif %}</a></span>{% endif %}
+              {% if d.Muassasa %}<span> Bajarilgan muassasa: <a href="/university/{{ d.Muassasa|urlencode }}">{{ d.Muassasa }}</a></span>{% endif %}
+              {% if d.Ilmiy_rahbar %}<span> Ilmiy rahbar: <a href="/olim/{{ d.Ilmiy_rahbar|urlencode }}">{{ d.Ilmiy_rahbar_short or d.Ilmiy_rahbar }}</a><a class="supervisor-badge" href="/olim/{{ d.Ilmiy_rahbar|urlencode }}" title="Shogird chiqargan">{{ supervisor_count(d.Ilmiy_rahbar) }} </a></span>{% endif %}
+              {% if d.Ilmiy_kengash %}<span> {{ d.Ilmiy_kengash }}{% if d.Ilmiy_kengash_raqami %} ({{ d.Ilmiy_kengash_raqami }}){% endif %}</span>{% endif %}
               {% set opps = [] %}
               {% if d.Opponent_1 %}{% set _ = opps.append(d.Opponent_1) %}{% endif %}
               {% if d.Opponent_2 %}{% set _ = opps.append(d.Opponent_2) %}{% endif %}
               {% if d.Opponent_3 %}{% set _ = opps.append(d.Opponent_3) %}{% endif %}
-              {% if opps %}<span>👥 {{ opps|join('; ') }}</span>{% endif %}
+              {% if opps %}<span> {{ opps|join('; ') }}</span>{% endif %}
             </div>
             <div class="op-card-actions">
               <a href="/dissertation/{{ d.id }}" class="op-btn primary">Batafsil</a>
@@ -470,11 +469,11 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     </div>
 
     <!-- ═══ AS SUPERVISOR (shogirdlar) — PhD/DSc (OAK) + Magistratura (o'zi kiritgan) ═══ -->
-    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-person-badge" style="color:#2563eb;"></i>Ilmiy rahbarlik qilgan shogirdlari <span class="cnt">{{ (as_supervisor|length) + (magistratura_talabalari|length) }} ta shogird</span></div>
+    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-person-badge" style="color:var(--color-action);"></i>Ilmiy rahbarlik qilgan shogirdlari <span class="cnt">{{ (as_supervisor|length) + (magistratura_talabalari|length) }} ta shogird</span></div>
     <div class="op-subtabs">
       <button class="op-subtab active" data-subtab="phd-dsc">PhD / DSc shogirdlar ({{ as_supervisor|length }})</button>
       <button class="op-subtab" data-subtab="magistr">Magistratura talabalari ({{ magistratura_talabalari|length }})</button>
-      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#shogirdlar" title="Tahrirlash">✏️</a>{% endif %}
+      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#shogirdlar" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}
     </div>
 
     <div class="op-subtabpane active" id="subtab-phd-dsc">
@@ -484,17 +483,17 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
           <div class="role-item">
             <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
             <div class="role-main">
-              <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
+              <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}"> {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
               <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
               <div class="rm-sub">
-                {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-                {% if d.Ixtisoslik %}<a href="/specialization/{{ d.Ixtisoslik|urlencode }}">📎 {{ d.Ixtisoslik }}</a>{% endif %}
+                {% if d.Sana %}<span> {{ d.Sana }}</span>{% endif %}
+                {% if d.Ixtisoslik %}<a href="/specialization/{{ d.Ixtisoslik|urlencode }}"> {{ d.Ixtisoslik }}</a>{% endif %}
               </div>
             </div>
           </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty role-empty"><div class="ico">👨‍🏫</div><div>Bu shaxs hali ilmiy rahbarlik qilmagan.</div></div>
+        <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali ilmiy rahbarlik qilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -504,41 +503,41 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
           <div class="role-item">
             <span class="role-mini other">Magistr</span>
             <div class="role-main">
-              <div class="role-student">👤 {{ s.student_name }}</div>
+              <div class="role-student"> {{ s.student_name }}</div>
               {% if s.mavzu %}<div class="rm-title">{{ s.mavzu }}</div>{% endif %}
               <div class="rm-sub">
-                {% if s.year %}<span>📅 {{ s.year }}</span>{% endif %}
+                {% if s.year %}<span> {{ s.year }}</span>{% endif %}
                 <span>{{ 'Himoya qildi' if (s.holati or '')|lower == 'himoya qildi' else 'Jarayonda' }}</span>
               </div>
             </div>
           </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty role-empty"><div class="ico">🎓</div><div>Bu shaxs hali magistratura talabasi qo'shmagan.</div>
+        <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali magistratura talabasi qo'shmagan.</div>
         {% if is_owner %}<a href="/cabinet#shogirdlar" class="add-btn">Talaba qo'shish →</a>{% endif %}
         </div>
       {% endif %}
     </div>
 
     <!-- ═══ AS OPPONENT ═══ -->
-    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-people" style="color:#e36403;"></i>Opponent sifatida ishtirok etgan dissertatsiyalar <span class="cnt">{{ as_opponent|length }} ta ishtirok</span></div>
+    <div class="op-sec-title" style="margin-top:44px;"><i class="bi bi-people" style="color:var(--color-text-secondary);"></i>Opponent sifatida ishtirok etgan dissertatsiyalar <span class="cnt">{{ as_opponent|length }} ta ishtirok</span></div>
     {% if as_opponent %}
       {% for d in as_opponent %}
         {% set rd = (d.Daraja or '')|upper %}
         <div class="role-item">
           <span class="role-mini {{ 'phd' if rd=='PHD' else 'dsc' if rd=='DSC' else 'other' }}">{{ 'PhD' if rd=='PHD' else 'DSc' if rd=='DSC' else '—' }}</span>
           <div class="role-main">
-            <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}">👤 {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
+            <div class="role-student">{% if d.Olim %}<a href="/olim/{{ d.Olim|urlencode }}"> {{ d.Olim_short or d.Olim }}</a>{% else %}—{% endif %}</div>
             <div class="rm-title"><a href="/dissertation/{{ d.id }}">{{ d.Mavzu or '—' }}</a></div>
             <div class="rm-sub">
-              {% if d.Sana %}<span>📅 {{ d.Sana }}</span>{% endif %}
-              {% if d.Muassasa %}<a href="/university/{{ d.Muassasa|urlencode }}">🏛️ {{ d.Muassasa }}</a>{% endif %}
+              {% if d.Sana %}<span> {{ d.Sana }}</span>{% endif %}
+              {% if d.Muassasa %}<a href="/university/{{ d.Muassasa|urlencode }}"> {{ d.Muassasa }}</a>{% endif %}
             </div>
           </div>
         </div>
       {% endfor %}
     {% else %}
-      <div class="op-empty role-empty"><div class="ico">📋</div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
+      <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
     {% endif %}
 
     {{ ad_banner('profile-mid', 'inline') }}
@@ -546,14 +545,14 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     <!-- ═══ TABS ═══ -->
     <div class="op-tabs">
       <button class="op-tab active" data-tab="maqolalar">Maqolalar</button>
-      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#maqolalar" title="Tahrirlash">✏️</a>{% endif %}
+      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#maqolalar" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}
       <button class="op-tab" data-tab="konferensiyalar">Konferensiyalar</button>
-      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#konferensiyalar" title="Tahrirlash">✏️</a>{% endif %}
+      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#konferensiyalar" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}
       <button class="op-tab" data-tab="ish">Ish faoliyati</button>
-      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#ish" title="Tahrirlash">✏️</a>{% endif %}
+      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#ish" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}
       <button class="op-tab" data-tab="rasmlar">Rasmlar</button>
-      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#rasmlar" title="Tahrirlash">✏️</a>{% endif %}
-      <button class="op-tab" data-tab="shajara" id="tab-btn-shajara">🌳 Ilmiy shajara{% if tree_parents or tree_children %} ({{ tree_parents }}↑ {{ tree_children }}↓){% endif %}</button>
+      {% if is_owner %}<a class="op-edit-ic" href="/cabinet#rasmlar" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>{% endif %}
+      <button class="op-tab" data-tab="shajara" id="tab-btn-shajara"> Ilmiy shajara{% if tree_parents or tree_children %} ({{ tree_parents }}↑ {{ tree_children }}↓){% endif %}</button>
     </div>
 
     <div class="op-tabpane active" id="tab-maqolalar">
@@ -562,16 +561,16 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <div class="op-list-card">
           <div class="lc-title">{% if m.url %}<a href="{{ m.url }}" target="_blank" rel="noopener">{{ m.title }}</a>{% else %}{{ m.title }}{% endif %}</div>
           <div class="lc-meta">
-            {% if m.year %}<span>📅 {{ m.year }}</span>{% endif %}
-            {% if m.authors %}<span>✍️ {{ m.authors }}</span>{% endif %}
-            {% if m.journal %}<span>📖 {% set _jid = journal_map.get(m.journal|lower|trim) if journal_map else None %}{% if _jid %}<a href="/journals/{{ _jid }}" style="color:#60a5fa;">{{ m.journal }}</a>{% else %}{{ m.journal }}{% endif %}</span>{% endif %}
-            {% if m.citations %}<span>📊 {{ m.citations }} sitata</span>{% endif %}
+            {% if m.year %}<span> {{ m.year }}</span>{% endif %}
+            {% if m.authors %}<span> {{ m.authors }}</span>{% endif %}
+            {% if m.journal %}<span> {% set _jid = journal_map.get(m.journal|lower|trim) if journal_map else None %}{% if _jid %}<a href="/journals/{{ _jid }}" style="color:var(--color-action);">{{ m.journal }}</a>{% else %}{{ m.journal }}{% endif %}</span>{% endif %}
+            {% if m.citations %}<span> {{ m.citations }} sitata</span>{% endif %}
           </div>
         </div>
         {% endfor %}
       {% else %}
         <div class="op-empty">
-          <div class="ico">📝</div>
+          <div class="ico"></div>
           <div>Hali maqolalar qo'shilmagan. O'z maqolalaringizni qo'shish uchun kabinetga kiring.</div>
           <a href="/cabinet" class="add-btn">Maqola qo'shish →</a>
         </div>
@@ -584,14 +583,14 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <div class="op-list-card">
           <div class="lc-title">{% if k.url %}<a href="{{ k.url }}" target="_blank" rel="noopener">{{ k.title }}</a>{% else %}{{ k.title }}{% endif %}</div>
           <div class="lc-meta">
-            {% if k.conference_name %}<span>🎤 {{ k.conference_name }}</span>{% endif %}
-            {% if k.location %}<span>📍 {{ k.location }}</span>{% endif %}
-            {% if k.date %}<span>📅 {{ k.date }}</span>{% endif %}
+            {% if k.conference_name %}<span> {{ k.conference_name }}</span>{% endif %}
+            {% if k.location %}<span> {{ k.location }}</span>{% endif %}
+            {% if k.date %}<span> {{ k.date }}</span>{% endif %}
           </div>
         </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty"><div class="ico">🎤</div><div>Hali konferensiyalar qo'shilmagan.</div></div>
+        <div class="op-empty"><div class="ico"></div><div>Hali konferensiyalar qo'shilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -601,13 +600,13 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         <div class="op-list-card">
           <div class="lc-title">{{ w.position }}</div>
           <div class="lc-meta">
-            {% if w.organization %}<span>🏢 {{ w.organization }}</span>{% endif %}
-            {% if w.start_date %}<span>📅 {{ w.start_date }}{% if w.end_date %} — {{ w.end_date }}{% elif w.is_current %} — hozir{% endif %}</span>{% endif %}
+            {% if w.organization %}<span> {{ w.organization }}</span>{% endif %}
+            {% if w.start_date %}<span> {{ w.start_date }}{% if w.end_date %} — {{ w.end_date }}{% elif w.is_current %} — hozir{% endif %}</span>{% endif %}
           </div>
         </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty"><div class="ico">💼</div><div>Hali ish faoliyati qo'shilmagan.</div></div>
+        <div class="op-empty"><div class="ico"></div><div>Hali ish faoliyati qo'shilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -620,41 +619,41 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         </div>
       {% elif is_owner %}
         <div class="op-empty">
-          <div class="ico">📷</div>
-          <div style="font-size:1.05rem;font-weight:700;color:#0f172a;margin-bottom:10px;">Faoliyatingizni rasmlar orqali ko'rsating</div>
+          <div class="ico"></div>
+          <div style="font-size:1.05rem;font-weight:600;color:var(--color-text-primary);margin-bottom:10px;">Faoliyatingizni rasmlar orqali ko'rsating</div>
           <div style="max-width:480px;margin:0 auto;line-height:1.6;">Rasmlar profilingizni jonlantiradi va tashrif buyuruvchilarda ishonch uyg'otadi. Konferensiyalardagi chiqishlaringiz, dars jarayonlari, laboratoriya ishlari, taqdirlash marosimlari — bularning barchasi ilmiy faoliyatingizning jonli hujjati.</div>
           <a href="/cabinet#rasmlar" class="add-btn">Rasm qo'shish →</a>
         </div>
       {% else %}
-        <div class="op-empty role-empty"><div style="font-size:0.88rem;color:#94a3b8;">Bu olim hali rasm qo'shmagan</div></div>
+        <div class="op-empty role-empty"><div style="font-size:0.88rem;color:var(--color-action);">Bu olim hali rasm qo'shmagan</div></div>
       {% endif %}
     </div>
 
     <div class="op-tabpane" id="tab-shajara">
       <div class="gen-toolbar">
         <div class="gen-legend">
-          <span><i class="dot" style="background:#1e40af;border:2px solid #3b82f6;"></i> Markaz</span>
-          <span><i class="dot" style="background:#1e3a8a;"></i> Rahbar</span>
-          <span><i class="dot" style="background:#059669;"></i> PhD shogird</span>
-          <span><i class="dot" style="background:#e36403;"></i> DSc shogird</span>
-          <span><i class="dot" style="background:#334155;"></i> Hamkasb</span>
+          <span><i class="dot" style="background:var(--color-background);border:2px solid var(--color-border);"></i> Markaz</span>
+          <span><i class="dot" style="background:var(--color-background);"></i> Rahbar</span>
+          <span><i class="dot" style="background:var(--color-background);"></i> PhD shogird</span>
+          <span><i class="dot" style="background:var(--color-background);"></i> DSc shogird</span>
+          <span><i class="dot" style="background:var(--color-background);"></i> Hamkasb</span>
         </div>
         <div class="gen-actions">
-          <button type="button" class="gen-btn" id="gen-reset">🔄 Qayta joylashtirish</button>
+          <button type="button" class="gen-btn" id="gen-reset"> Qayta joylashtirish</button>
           <a class="gen-btn" href="/genealogy/{{ olim_name|urlencode }}">To'liq ekranda ko'rish →</a>
-          <a class="gen-btn" href="/olim/{{ olim_name|urlencode }}/daraxt" style="background:#1877F2;border-color:#1877F2;color:#fff;">🌳 Shajarani ulashish</a>
+          <a class="gen-btn" href="/olim/{{ olim_name|urlencode }}/daraxt" style="background:var(--color-background);border-color:var(--color-border);color:var(--color-text-primary);"> Shajarani ulashish</a>
         </div>
       </div>
       <div class="gen-stage" id="gen-stage">
-        <div class="gen-loading" id="gen-loading">🌳 Shajara daraxtini qurilmoqda...</div>
+        <div class="gen-loading" id="gen-loading"> Shajara daraxtini qurilmoqda...</div>
         <div class="gen-empty" id="gen-empty" style="display:none;">
-          <div style="font-size:2.4rem;margin-bottom:10px;">🌳</div>
+          <div style="font-size:2.4rem;margin-bottom:10px;"></div>
           <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
-          <div style="color:#64748b;font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
+          <div style="color:var(--color-text-secondary);font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
         </div>
         <div id="gen-canvas" style="display:none;"></div>
         <div class="gen-tooltip" id="gen-tooltip"></div>
-        <div class="gen-hint">🖱️ Suring · ⚲ Aylantiring · sharni bosing → shogirdlarni oching/yoping</div>
+        <div class="gen-hint"> Suring ·  Aylantiring · sharni bosing → shogirdlarni oching/yoping</div>
       </div>
     </div>
 
@@ -662,9 +661,9 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     <div class="op-list-card" style="margin-top:18px;">
       <div class="lc-title">Fanlaringiz uchun hujjat yarating</div>
       <div class="lc-meta" style="margin:10px 0 0;flex-wrap:wrap;gap:8px;">
-        <a href="/kafedra/sillabus/?scholar_id={{ profile.id }}" class="gen-btn">📘 Sillabus</a>
-        <a href="/kafedra/ishchi-dastur/?scholar_id={{ profile.id }}" class="gen-btn">📗 Ishchi dastur</a>
-        <a href="/kafedra/test-savollari/?scholar_id={{ profile.id }}" class="gen-btn">✅ Test savollari</a>
+        <a href="/kafedra/sillabus/?scholar_id={{ profile.id }}" class="gen-btn"> Sillabus</a>
+        <a href="/kafedra/ishchi-dastur/?scholar_id={{ profile.id }}" class="gen-btn"> Ishchi dastur</a>
+        <a href="/kafedra/test-savollari/?scholar_id={{ profile.id }}" class="gen-btn"> Test savollari</a>
         <a href="/kafedra/" class="gen-btn">Barchasi →</a>
       </div>
     </div>
@@ -675,12 +674,12 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <h3 class="olz-dual-cta__title">Siz ham o'z profilingizni yarating</h3>
       <div class="olz-dual-cta__grid">
         <div class="olz-dual-cta__card">
-          <div class="olz-dual-cta__icon">🎓</div>
+          <div class="olz-dual-cta__icon"></div>
           <h4>PhD/DSc olim bo'lsangiz</h4>
           <p>Ilmiy merosingizni saqlang, shogirdlaringizni ko'rsating, ilmiy shajarangizni tuzing.</p>
         </div>
         <div class="olz-dual-cta__card">
-          <div class="olz-dual-cta__icon">📚</div>
+          <div class="olz-dual-cta__icon"></div>
           <h4>Magistratura talabasimisiz?</h4>
           <p>Portfoliongizni hozirdan boshlab yaratib boring — kelajakda katta yordam beradi.</p>
         </div>

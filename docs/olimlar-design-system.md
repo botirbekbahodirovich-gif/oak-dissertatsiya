@@ -47,18 +47,19 @@ sahifa CSS'ida **xom HEX yozilmaydi** — faqat `var(--color-…)`.
 
 | Token | Qiymat | Qayerda |
 | --- | --- | --- |
-| `--color-brand-orange` | `#ff4203` | Faqat brend detali: logotipdagi nuqta, brend badge. Tugma foni emas. |
+| `--color-brand-orange` | `#e8631a` | Faqat brend detali: logotipdagi nuqta, brend badge. Tugma foni emas. |
 | `--color-action-blue` | `#0056d6` | Asosiy tugma, link, active tab, focus ring, checkbox. |
 | `--color-action-blue-light` | `#6593dc` | Karta/chip hover chegarasi. |
-| `--color-action-blue-dark` | `#00429f` | Ko'k tugmaning bosilgan/hover holati. |
+| `--color-action-blue-dark` | `#2f6feb` | Ko'k tugmaning bosilgan/hover holati. |
 | `--color-text-primary` | `#0c0f12` | Sarlavha, asosiy matn, jadval kataklari. |
-| `--color-text-secondary` | `#333333` | Label, nav link, ikkilamchi matn. |
-| `--color-text-muted` | `#666666` | Meta, izoh, sanoq, placeholder. |
-| `--color-white` / `--color-background` | `#ffffff` | Sahifa va karta yuzasi. |
-| `--color-background-soft` | `#f6f6f6` | Jadval sarlavhasi, footer, bo'sh holat. |
-| `--color-border` | `#e6e6e6` | Karta, maydon, jadvalning tashqi chegarasi. |
-| `--color-border-subtle` | `#ecebe9` | Ichki qator ajratgichi, grafik grid. |
-| `--color-orange-soft` | `#fff7ef` | Brend badge foni. |
+| `--color-text-secondary` | `#57626f` | Label, nav link, ikkilamchi matn. |
+| `--color-text-muted` | `#57626f` | Meta, izoh, sanoq, placeholder. |
+| `--color-white` / `--color-surface` | `#ffffff` | Karta yuzasi. |
+| `--color-background` | `#f4f7fb` | Sahifa foni. |
+| `--color-background-soft` | `#f4f7fb` | Jadval sarlavhasi, footer, bo'sh holat. |
+| `--color-border` | `#dce3ec` | Karta, maydon, jadvalning tashqi chegarasi. |
+| `--color-border-subtle` | `#dce3ec` | Ichki qator ajratgichi, grafik grid. |
+| `--color-orange-soft` | `#fdeee3` | Brend badge foni. |
 | `--color-blue-soft` | `#ebf1f9` | Qator hover, chip, avatar, nav hover. |
 
 ### Holat ranglari
@@ -67,17 +68,14 @@ sahifa CSS'ida **xom HEX yozilmaydi** — faqat `var(--color-…)`.
 | --- | --- | --- |
 | `--color-success` | `#0c8930` | `--color-success-soft` `#f4faf6` |
 | `--color-error` | `#af1d1d` | `--color-error-soft` `#fdf4f4` |
-| `--color-notice` | `#ff9900` | `--color-notice-soft` `#fff9e6` |
+| `--color-notice` | `#c98a16` | `--color-notice-soft` `#fff9e6` |
 
 To'yingan rang — matn va ikonka uchun; soft rang — fon uchun. Juftlikni
 aralashtirmang.
 
 ### AI yuzasi
 
-`--color-ai-background: #171426` — **semantik** to'q rang. Bu global dark
-theme emas va bo'lmaydi. U faqat AI konteksti uchun zaxiraga olingan
-(masalan, kelajakdagi AI paneli). Hozircha iste'molchisi yo'q: `#ai-panel`
-oq fonda. Sahifa yoki karta foniga hech qachon qo'ymang.
+`--color-ai-background: #1f2a44` — AI va premium bloklari, launcher va panel sarlavhasi uchun. Global dark tema emas.
 
 ### Rang bilan bog'liq uchta qoida
 
@@ -95,37 +93,13 @@ oq fonda. Sahifa yoki karta foniga hech qachon qo'ymang.
 
 | Rol | Shrift | Token |
 | --- | --- | --- |
-| H1, H2 | **serif** | `--font-serif` = `'Noto Serif', Georgia, 'Times New Roman', serif` |
-| H3–H6, body, nav, jadval, tugma | **sans** | `--font-sans` = `'Inter', 'Manrope', system-ui, …` |
-| (`--font-display`) | sans | `'Manrope', 'Inter', …` — nomiga qaramay sans-serif |
+| H1–H3, ilmiy nom va sarlavhalar | Source Serif 4 600 | `--font-serif` |
+| H4–H6, body, nav, jadval, tugma | Inter 400/500/600 | `--font-sans` |
+| `--font-display` | serif | `var(--font-serif)` |
 
-Serif/sans bo'linishi tasodifiy emas: serif sarlavha sahifaga akademik
-nashr ohangini beradi, sans esa zich UI va raqamlarda ancha yaxshi
-o'qiladi.
+Source Serif 4 va Inter `static/fonts/` dan yuklanadi. Source Serif 4 litsenziyasi shu papkada saqlanadi. Ish vaqtida Google Fonts so‘rovi kerak emas.
 
-**Muhim:** `Noto Serif` repoga yuklanmagan. Loyiha ataylab Google Fonts'siz
-ishlaydi (O'zbekistondagi latency sababli), shuning uchun serif fallback —
-Georgia, u lotin va kirill uchun ishonchli. Inter va Manrope esa
-`static/fonts/` da variable woff2 sifatida self-host qilingan, lotin +
-kirill subsetlari bilan (OAK ma'lumotlari kirill bo'lishi mumkin).
-
-### O'lchov shkalasi
-
-| Token | px | Mobil (≤649px) |
-| --- | --- | --- |
-| `--text-hero` | 56 | 40 |
-| `--text-h1` | 48 | 32 |
-| `--text-h2` | 40 | 28 |
-| `--text-h3` | 32 | 24 |
-| `--text-h4` | 24 | 20 |
-| `--text-h5` | 20 | 18 |
-| `--text-body-lg` | 20 | 16 |
-| `--text-body` | 16 | — |
-| `--text-small` | 14 | — |
-| `--text-meta` | 12 | — |
-
-Line-height: `--leading-heading` 1.25, `--leading-body` 1.5,
-`--leading-meta` 1.4.
+Desktop shkala: H1 48px, H2 34px, H3 24px, H4 22px, body 16px, kichik matn 14px, meta 12px. Mobil qiymatlar token manbasida belgilanadi. Line-height: sarlavha 1.25, matn 1.5.
 
 ### Sarlavha qoidalari
 
@@ -138,7 +112,7 @@ Line-height: `--leading-heading` 1.25, `--leading-body` 1.5,
 
 ## 4. Spacing
 
-Baza — **4px**. Boshqa qiymat yo'q.
+Asosiy ritm — **8px**. Ixcham ikonka, badge va forma ichida 4px qadamdan foydalanish mumkin.
 
 ```
 --space-4  --space-8   --space-12  --space-16  --space-20  --space-24
@@ -159,23 +133,15 @@ Amaliy tanlov:
 > gap'larida ishlatiladi. Yangi kodda 6px qo'shmang, lekin tokenni ham
 > o'chirmang.
 
-**Radius:** `--radius-default` 4px (karta, maydon, tugma, jadval),
-`--radius-banner` 8px (banner), `--radius-rounded` 24px (badge, chip),
-`--radius-full` (avatar, nuqta).
+**Radius:** karta 8px (`--radius-card`); maydon, tugma, badge 4px (`--radius-input` / `--radius-default`). Doira faqat avatar va nuqta uchun.
 
-**Soya:** butun tizimda bitta — `--shadow-dropdown`
-(`0 4px 12px rgba(12,15,18,0.08)`), va u faqat dropdown/drawer uchun.
-Karta va panel soya emas, **1px chegara** bilan ajraladi.
-
----
+**Soya:** dropdown va bosiladigan karta uchun minimal. Oddiy panel 1px chegara bilan ajraladi.
 
 ## 5. Grid
 
-- `.ol-container` — `max-width: 1600px`, padding `clamp(24px, 8vw, 130px)`.
-- `.ol-container--wide` — padding `clamp(16px, 3vw, 40px)`; jadval va
-  grafik sahifalari uchun.
-- `.ol-grid` — **12 ustun** desktop/planshet, **6 ustun** ≤649px.
-- `--gutter` — 20px → 16px (≤1023px) → 12px (≤649px).
+- Konteyner 1280px; desktop yon bo‘shliq 32px, mobil 16px.
+- 12 ustun desktop/planshet, 6 ustun kichik ekranlarda.
+- Mobil jadvallar mos kelganida sarlavhali qator kartalariga aylanadi; issiqlik xaritasi jadval holida qoladi.
 
 Sahifa karkasi:
 
@@ -561,7 +527,7 @@ tuzatish" mumkin emas.
    turadi. Yangi kod bu qiymatlarni takrorlamaydi.
 2. **`journals.html`** hali `rgba(239,68,68,…)` va `#fca5a5` (dark tema
    uchun mo'ljallangan och qizil matn) ishlatadi — oq fonda kontrasti past.
-3. **`trends.html`** ba'zi joylarda `'#333333'`, `'#666666'`,
+3. **`trends.html`** ba'zi joylarda `'#57626f'`, `'#57626f'`,
    `rgba(59,130,246,0.7)` ni to'g'ridan-to'g'ri yozadi, `OlimlarCharts.tokens`
    o'rniga.
 4. **44px qoidasidan istisnolar** token faylining o'zida bor: `.ol-pager`
@@ -601,3 +567,11 @@ Manbalar ustuvorligi (ziddiyat bo'lsa yuqoridagisi g'alaba qiladi):
 
 Agar task prompti dizayn tizimiga zid bo'lsa, Claude ziddiyatni yashirmaydi
 — dizayn tizimiga mos variantni bajaradi va farqni hisobotda yozadi.
+
+## 2026-09 mahsulot yangilanishi
+
+Qidiruv markazli bosh sahifa haqiqiy mavjud endpointlardan foydalanadi: dissertatsiyalar, olimlar, universitetlar, grantlar. Umumiy qidiruv API yo‘qligi sababli qo‘llanmaydigan “Barchasi” rejimi chiqarilmaydi. Statistika faqat server ma’lumotidan olinadi; test namunalari faqat `artifacts/redesign` ichida.
+
+`olimlar-product.css` sahifa kompozitsiyalari uchun, tokenlar esa yagona `olimlar-design-system.css` faylida. `OlimlarCharts.tokens` va `palette()` canvas/SVG uchun CSS tokenlarining hisoblangan qiymatlarini beradi.
+
+Tekshiruv qamrovi va cheklovlar: [UI tekshiruv hisoboti](ui-redesign-verification.md).

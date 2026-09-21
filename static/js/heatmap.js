@@ -31,10 +31,10 @@
   };
 
   function colorFor(c) {
-    if (c >= 2000) return '#60a5fa';
-    if (c >= 500) return '#3b82f6';
-    if (c >= 100) return '#2563eb';
-    return '#1e3a5f';
+    if (c >= 2000) return OlimlarCharts.tokens.series2;
+    if (c >= 500) return OlimlarCharts.tokens.series1;
+    if (c >= 100) return OlimlarCharts.tokens.series3;
+    return OlimlarCharts.tokens.series5;
   }
 
   var SVGNS = 'http://www.w3.org/2000/svg';
@@ -59,7 +59,7 @@
     var p = document.createElementNS(SVGNS, 'path');
     p.setAttribute('d', PATHS[name]);
     p.setAttribute('fill', colorFor(r.total || 0));
-    p.setAttribute('stroke', '#0f172a');
+    p.setAttribute('stroke', OlimlarCharts.tokens.border);
     p.setAttribute('stroke-width', '1.5');
     p.setAttribute('data-region', name);
     p.style.cursor = 'pointer';
@@ -85,7 +85,7 @@
     if (!items || !items.length) {
       var emptyItem = document.createElement('li');
       var emptyText = document.createElement('span');
-      emptyText.style.color = '#64748b';
+      emptyText.style.color = OlimlarCharts.tokens.textSecondary;
       emptyText.textContent = "Ma'lumot yo'q";
       emptyItem.appendChild(emptyText);
       container.appendChild(emptyItem);
@@ -124,7 +124,7 @@
           labels: years.map(function (y) { return y.year; }),
           datasets: [{
             data: years.map(function (y) { return y.count; }),
-            borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.18)',
+            borderColor: OlimlarCharts.tokens.series2, backgroundColor: 'rgba(96,165,250,0.18)',
             fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2
           }]
         },
@@ -132,8 +132,8 @@
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
-            y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: '#28344a' } }
+            x: { ticks: { color: OlimlarCharts.tokens.textSecondary, font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }, grid: { display: false } },
+            y: { ticks: { color: OlimlarCharts.tokens.textSecondary, font: { size: 9 } }, grid: { color: OlimlarCharts.tokens.border } }
           }
         }
       });

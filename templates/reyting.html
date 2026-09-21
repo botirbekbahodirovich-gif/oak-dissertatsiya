@@ -4,54 +4,54 @@
 
 {% block extra_head %}
 <style>
-.ry-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 18px 0; }
-.ry-filters select, .ry-filters input { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px;
-  font-size: 0.88rem; background: #fff; color: #0f172a; min-width: 150px; }
-.ry-filters input[type="search"] { flex: 1; min-width: 180px; }
-.ry-clear { border: none; background: rgba(239,68,68,0.08); color: #dc2626; border-radius: 10px;
-  padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: none; }
-.ry-tabs { display: flex; gap: 8px; margin: 4px 0 16px; }
-.ry-tab { border: 1px solid #e2e8f0; background: #fff; color: #475569; padding: 8px 20px;
-  border-radius: 50px; font-size: 0.92rem; font-weight: 700; cursor: pointer; }
-.ry-tab.active { background: linear-gradient(135deg, #3b82f6, #7c5cfc); border-color: transparent; color: #fff; }
-.ry-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.ry-table th { text-align: left; color: #64748b; font-size: 0.75rem; text-transform: uppercase;
-  letter-spacing: 0.4px; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-.ry-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-.ry-table tr:hover td { background: rgba(59,130,246,0.04); }
-.ry-rank { font-weight: 800; color: #64748b; width: 52px; white-space: nowrap; }
-.ry-name a { color: #0f172a; font-weight: 700; text-decoration: none; }
-.ry-name a:hover { color: #2563eb; }
-.ry-sub { color: #64748b; font-size: 0.78rem; margin-top: 2px; }
-.ry-sub a { color: #64748b; text-decoration: none; }
-.ry-sub a:hover { color: #2563eb; }
-.ry-score { font-weight: 800; color: #2563eb; white-space: nowrap; }
-.ry-chip { display: inline-block; padding: 2px 10px; border-radius: 50px; font-size: 0.75rem;
-  font-weight: 600; background: rgba(100,116,139,0.1); color: #475569; }
-.ry-chip.dsc { background: rgba(168,85,247,0.12); color: #9333ea; }
-.ry-chip.phd { background: rgba(59,130,246,0.12); color: #2563eb; }
-.ry-orgbtn { border: none; background: rgba(59,130,246,0.08); color: #2563eb; border-radius: 8px;
-  padding: 5px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.ry-more { display: block; margin: 16px auto 0; border: 1px solid #e2e8f0; background: #fff;
-  color: #2563eb; padding: 9px 26px; border-radius: 50px; font-weight: 700; cursor: pointer; }
-.ry-stats { display: flex; gap: 18px; flex-wrap: wrap; color: #64748b; font-size: 0.85rem; margin-top: 2px; }
-.ry-stats b { color: #0f172a; }
-.ry-note { color: #94a3b8; font-size: 0.78rem; margin-top: 14px; line-height: 1.5; }
-.ry-loading { text-align: center; color: #94a3b8; padding: 32px 0; }
-.ry-wrap { overflow-x: auto; }
-@media (max-width: 640px) { .ry-table { font-size: 0.82rem; } .ry-table td, .ry-table th { padding: 7px 6px; } }
+.ry-filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:18px 0; }
+.ry-filters select, .ry-filters input { border:1px solid var(--color-border); border-radius:var(--radius-default); padding:8px 12px;
+  font-size:0.88rem; background:var(--color-background); color:var(--color-text-primary); min-width:150px; }
+.ry-filters input[type="search"] { flex:1; min-width:180px; }
+.ry-clear { border:none; background:var(--color-background); color:var(--color-text-secondary); border-radius:var(--radius-default);
+  padding:8px 14px; font-size:0.85rem; font-weight:600; cursor:pointer; display:none; }
+.ry-tabs { display:flex; gap:8px; margin:4px 0 16px; }
+.ry-tab { border:1px solid var(--color-border); background:var(--color-background); color:var(--color-action); padding:8px 20px;
+  border-radius:var(--radius-default); font-size:0.92rem; font-weight:600; cursor:pointer; }
+.ry-tab.active { background:var(--color-action); border-color:transparent; color:var(--color-surface); }
+.ry-table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+.ry-table th { text-align:left; color:var(--color-text-secondary); font-size:0.75rem; text-transform:uppercase;
+  letter-spacing:0.4px; padding:8px 10px; border-bottom:2px solid var(--color-border); white-space:nowrap; }
+.ry-table td { padding:10px; border-bottom:1px solid var(--color-border); vertical-align:middle; }
+.ry-table tr:hover td { background:var(--color-background); }
+.ry-rank { font-weight:600; color:var(--color-text-secondary); width:52px; white-space:nowrap; }
+.ry-name a { color:var(--color-text-primary); font-weight:600; text-decoration:none; }
+.ry-name a:hover { color:var(--color-action); }
+.ry-sub { color:var(--color-text-secondary); font-size:0.78rem; margin-top:2px; }
+.ry-sub a { color:var(--color-text-secondary); text-decoration:none; }
+.ry-sub a:hover { color:var(--color-action); }
+.ry-score { font-weight:600; color:var(--color-action); white-space:nowrap; }
+.ry-chip { display:inline-block; padding:2px 10px; border-radius:var(--radius-default); font-size:0.75rem;
+  font-weight:600; background:var(--color-background); color:var(--color-action); }
+.ry-chip.dsc { background:var(--color-background); color:var(--color-text-secondary); }
+.ry-chip.phd { background:var(--color-background); color:var(--color-action); }
+.ry-orgbtn { border:none; background:var(--color-background); color:var(--color-action); border-radius:var(--radius-default);
+  padding:5px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+.ry-more { display:block; margin:16px auto 0; border:1px solid var(--color-border); background:var(--color-background);
+  color:var(--color-action); padding:9px 26px; border-radius:var(--radius-default); font-weight:600; cursor:pointer; }
+.ry-stats { display:flex; gap:18px; flex-wrap:wrap; color:var(--color-text-secondary); font-size:0.85rem; margin-top:2px; }
+.ry-stats b { color:var(--color-text-primary); }
+.ry-note { color:var(--color-action); font-size:0.78rem; margin-top:14px; line-height:1.5; }
+.ry-loading { text-align:center; color:var(--color-action); padding:32px 0; }
+.ry-wrap { overflow-x:auto; }
+@media (max-width: 640px) { .ry-table { font-size:0.82rem; } .ry-table td, .ry-table th { padding:7px 6px; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content-card" style="max-width:1080px;margin:0 auto;">
-  <h1 style="margin-bottom:4px;">🏆 Reyting</h1>
-  <p style="color:#94a3b8;margin-bottom:6px;">Tashkilotlar va olimlar — yagona zanjirda. Tashkilot bali = undagi olimlar ballari yig'indisi.</p>
+  <h1 style="margin-bottom:4px;"> Reyting</h1>
+  <p style="color:var(--color-action);margin-bottom:6px;">Tashkilotlar va olimlar — yagona zanjirda. Tashkilot bali = undagi olimlar ballari yig'indisi.</p>
   <div class="ry-stats">
     {% if totals %}
-    <span>🏛️ Tashkilotlar: <b>{{ totals.orgs }}</b></span>
-    <span>👨‍🎓 Olimlar: <b>{{ "{:,}".format(totals.scholars).replace(",", " ") }}</b></span>
-    <span>📄 Dissertatsiyalar: <b>{{ "{:,}".format(totals.dissertations).replace(",", " ") }}</b></span>
+    <span> Tashkilotlar: <b>{{ totals.orgs }}</b></span>
+    <span> Olimlar: <b>{{ "{:,}".format(totals.scholars).replace(",", " ") }}</b></span>
+    <span> Dissertatsiyalar: <b>{{ "{:,}".format(totals.dissertations).replace(",", " ") }}</b></span>
     {% endif %}
   </div>
 
@@ -65,14 +65,16 @@
       <option value="">Barcha turlar</option>
       {% for key, label in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
     </select>
-    <input id="f-code" type="text" placeholder="Ixtisoslik shifri (masalan 05.01)" style="width:210px;">
-    <input id="f-q" type="search" placeholder="🔍 Nomi bo'yicha qidirish…">
-    <button class="ry-clear" id="f-clear">✕ Filtrlarni tozalash</button>
+    <label class="ol-label" for="f-code">Ixtisoslik shifri (masalan 05.01)</label>
+<input id="f-code" type="text" placeholder="Ixtisoslik shifri (masalan 05.01)" style="width:210px;">
+    <label class="ol-label" for="f-q"> Nomi bo'yicha qidirish</label>
+<input id="f-q" type="search" placeholder=" Nomi bo'yicha qidirish…">
+    <button class="ry-clear" id="f-clear"> Filtrlarni tozalash</button>
   </div>
 
   <div class="ry-tabs">
-    <button class="ry-tab active" data-tab="orgs">🏛️ Tashkilotlar</button>
-    <button class="ry-tab" data-tab="olimlar">👨‍🎓 Olimlar</button>
+    <button class="ry-tab active" data-tab="orgs"> Tashkilotlar</button>
+    <button class="ry-tab" data-tab="olimlar"> Olimlar</button>
   </div>
 
   <div class="ry-wrap">
@@ -135,11 +137,11 @@
     var tb = els.tblOrgs.querySelector('tbody');
     tb.innerHTML = '';
     if (!items.length) {
-      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:28px;">Mos tashkilot topilmadi</td></tr>';
+      tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--color-action);padding:28px;">Mos tashkilot topilmadi</td></tr>';
       return;
     }
     items.forEach(function (o) {
-      var medal = o.rank === 1 ? '🥇' : o.rank === 2 ? '🥈' : o.rank === 3 ? '🥉' : '#' + o.rank;
+      var medal = o.rank === 1 ? '' : o.rank === 2 ? '' : o.rank === 3 ? '' : '#' + o.rank;
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="ry-rank">' + medal + '</td>' +
@@ -165,17 +167,17 @@
     var tb = els.tblOlim.querySelector('tbody');
     if (!append) tb.innerHTML = '';
     if (!items.length && !append) {
-      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:28px;">Mos olim topilmadi</td></tr>';
+      tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--color-action);padding:28px;">Mos olim topilmadi</td></tr>';
       return;
     }
     items.forEach(function (s) {
-      var medal = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : '#' + s.rank;
+      var medal = s.rank === 1 ? '' : s.rank === 2 ? '' : s.rank === 3 ? '' : '#' + s.rank;
       var deg = '';
       if (s.dsc) deg += '<span class="ry-chip dsc">DSc×' + s.dsc + '</span> ';
       if (s.phd) deg += '<span class="ry-chip phd">PhD×' + s.phd + '</span> ';
       if (s.other) deg += '<span class="ry-chip">boshqa×' + s.other + '</span>';
       var orgLine = s.org
-        ? '<div class="ry-sub"><a href="/university/' + encodeURIComponent(s.org) + '">🏛️ ' + esc(s.org_latin) +
+        ? '<div class="ry-sub"><a href="/university/' + encodeURIComponent(s.org) + '"> ' + esc(s.org_latin) +
           (s.org_rank ? ' <span class="ry-chip">reytingda #' + s.org_rank + '</span>' : '') + '</a></div>'
         : '';
       var tr = document.createElement('tr');

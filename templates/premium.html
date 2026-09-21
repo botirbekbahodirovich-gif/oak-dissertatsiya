@@ -7,102 +7,102 @@
 /* Premium — light-only, dizayn tizimi tokenlari bilan.
    Ilgari bu sahifada to'q gradient hero, gradient tugmalar va to'q kartalar
    bor edi; ustiga [data-bs-theme="light"] override'lari qo'yilgan edi. */
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; margin: 0 !important; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; margin:0 !important; }
 
-.pr-hero { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
-  padding: var(--space-64) var(--space-24) var(--space-48); text-align: center; }
-.pr-hero h1 { font-family: var(--font-serif); font-size: var(--text-h2); font-weight: 700;
-  color: var(--color-text-primary); margin: 0 0 var(--space-12); line-height: var(--leading-heading); }
+.pr-hero { background:var(--color-background-soft); border-bottom:1px solid var(--color-border);
+  padding:var(--space-64) var(--space-24) var(--space-48); text-align:center; }
+.pr-hero h1 { font-family:var(--font-serif); font-size:var(--text-h2); font-weight:600;
+  color:var(--color-text-primary); margin:0 0 var(--space-12); line-height:var(--leading-heading); }
 /* Brend aksenti: gradient matn emas, oddiy orange urg'u. */
-.pr-hero h1 .pr-grad { color: var(--color-brand-orange); }
-.pr-hero p { color: var(--color-text-muted); font-size: var(--text-body-lg); max-width: 620px; margin: 0 auto; }
-.pr-ribbon { display: inline-block; margin-bottom: var(--space-12); background: var(--color-notice-soft);
-  color: #8a5200; font-weight: 600; font-size: var(--text-meta); padding: 2px var(--space-12);
-  border-radius: var(--radius-rounded); letter-spacing: 0.06em; }
-.pr-wrap { max-width: 980px; margin: 0 auto; padding: 0 var(--space-24) var(--space-64); }
-.pr-active { margin-top: var(--space-24); background: var(--color-success-soft);
-  border: 1px solid var(--color-success-soft); color: var(--color-success);
-  border-radius: var(--radius-default); padding: var(--space-16); font-weight: 600; text-align: center; }
+.pr-hero h1 .pr-grad { color:var(--color-brand-orange); }
+.pr-hero p { color:var(--color-text-muted); font-size:var(--text-body-lg); max-width:620px; margin:0 auto; }
+.pr-ribbon { display:inline-block; margin-bottom:var(--space-12); background:var(--color-notice-soft);
+  color:var(--color-text-secondary); font-weight:600; font-size:var(--text-meta); padding:2px var(--space-12);
+  border-radius:var(--radius-rounded); letter-spacing:0.06em; }
+.pr-wrap { max-width:980px; margin:0 auto; padding:0 var(--space-24) var(--space-64); }
+.pr-active { margin-top:var(--space-24); background:var(--color-success-soft);
+  border:1px solid var(--color-success-soft); color:var(--color-success);
+  border-radius:var(--radius-default); padding:var(--space-16); font-weight:600; text-align:center; }
 
-.pr-cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gutter); margin-top: var(--space-32); }
-.pr-card { background: var(--color-white); border: 1px solid var(--color-border);
-  border-radius: var(--radius-default); padding: var(--space-32); position: relative;
-  display: flex; flex-direction: column; }
+.pr-cards { display:grid; grid-template-columns:1fr 1fr; gap:var(--gutter); margin-top:var(--space-32); }
+.pr-card { background:var(--color-white); border:1px solid var(--color-border);
+  border-radius:var(--radius-default); padding:var(--space-32); position:relative;
+  display:flex; flex-direction:column; }
 /* Tavsiya etilgan tarif — soyasiz, faqat blue chegara bilan ajraladi. */
-.pr-card.year { border-color: var(--color-action-blue); }
-.pr-badge { position: absolute; top: -12px; right: var(--space-20); background: var(--color-action-blue);
-  color: #fff; font-size: var(--text-meta); font-weight: 600; padding: 2px var(--space-12);
-  border-radius: var(--radius-rounded); }
-.pr-plan { color: var(--color-text-muted); font-weight: 600; font-size: var(--text-small);
-  text-transform: uppercase; letter-spacing: 0.08em; }
-.pr-price { color: var(--color-text-primary); font-size: var(--text-h3); font-weight: 600;
-  margin: var(--space-8) 0 2px; font-variant-numeric: tabular-nums; }
-.pr-price span { font-size: var(--text-small); color: var(--color-text-muted); font-weight: 600; }
-.pr-permo { color: var(--color-text-muted); font-size: var(--text-small); margin-bottom: var(--space-16); }
-.pr-buy { margin-top: auto; min-height: 44px; background: var(--color-action-blue); color: #fff;
-  border: none; padding: var(--space-12) var(--space-20); border-radius: var(--radius-default);
-  font-size: var(--text-body); font-weight: 600; cursor: pointer; width: 100%;
-  transition: background 0.15s; text-align: center; text-decoration: none;
-  display: flex; align-items: center; justify-content: center; }
-.pr-buy:hover { background: var(--color-action-blue-dark); color: #fff; }
-.pr-buy:disabled { opacity: 0.55; cursor: not-allowed; }
+.pr-card.year { border-color:var(--color-action-blue); }
+.pr-badge { position:absolute; top:-12px; right:var(--space-20); background:var(--color-action-blue);
+  color:var(--color-surface); font-size:var(--text-meta); font-weight:600; padding:2px var(--space-12);
+  border-radius:var(--radius-rounded); }
+.pr-plan { color:var(--color-text-muted); font-weight:600; font-size:var(--text-small);
+  text-transform:uppercase; letter-spacing:0.08em; }
+.pr-price { color:var(--color-text-primary); font-size:var(--text-h3); font-weight:600;
+  margin:var(--space-8) 0 2px; font-variant-numeric:tabular-nums; }
+.pr-price span { font-size:var(--text-small); color:var(--color-text-muted); font-weight:600; }
+.pr-permo { color:var(--color-text-muted); font-size:var(--text-small); margin-bottom:var(--space-16); }
+.pr-buy { margin-top:auto; min-height:44px; background:var(--color-action-blue); color:var(--color-surface);
+  border:none; padding:var(--space-12) var(--space-20); border-radius:var(--radius-default);
+  font-size:var(--text-body); font-weight:600; cursor:pointer; width:100%;
+  transition:background 0.15s; text-align:center; text-decoration:none;
+  display:flex; align-items:center; justify-content:center; }
+.pr-buy:hover { background:var(--color-action-blue-dark); color:var(--color-surface); }
+.pr-buy:disabled { opacity:0.55; cursor:not-allowed; }
 
-.pr-table-card { margin-top: var(--space-40); background: var(--color-white);
-  border: 1px solid var(--color-border); border-radius: var(--radius-default); overflow: hidden; }
-.pr-table-card h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary);
-  margin: 0; padding: var(--space-20) var(--space-24) var(--space-4); }
-.pr-table-scroll { overflow-x: auto; }
-.pr-table { width: 100%; border-collapse: collapse; min-width: 520px; }
-.pr-table th, .pr-table td { padding: var(--space-12) var(--space-24); text-align: left;
-  font-size: var(--text-small); border-top: 1px solid var(--color-border-subtle); }
-.pr-table th { color: var(--color-text-muted); font-weight: 500; border-top: none;
-  background: var(--color-background-soft); }
-.pr-table th:not(:first-child), .pr-table td:not(:first-child) { text-align: center; width: 160px; }
-.pr-table td { color: var(--color-text-secondary); }
-.pr-yes { color: var(--color-success); font-weight: 600; }
-.pr-no { color: var(--color-text-muted); }
-.pr-col-prem { background: var(--color-blue-soft); }
+.pr-table-card { margin-top:var(--space-40); background:var(--color-white);
+  border:1px solid var(--color-border); border-radius:var(--radius-default); overflow:hidden; }
+.pr-table-card h2 { font-size:var(--text-h5); font-weight:600; color:var(--color-text-primary);
+  margin:0; padding:var(--space-20) var(--space-24) var(--space-4); }
+.pr-table-scroll { overflow-x:auto; }
+.pr-table { width:100%; border-collapse:collapse; min-width:520px; }
+.pr-table th, .pr-table td { padding:var(--space-12) var(--space-24); text-align:left;
+  font-size:var(--text-small); border-top:1px solid var(--color-border-subtle); }
+.pr-table th { color:var(--color-text-muted); font-weight:500; border-top:none;
+  background:var(--color-background-soft); }
+.pr-table th:not(:first-child), .pr-table td:not(:first-child) { text-align:center; width:160px; }
+.pr-table td { color:var(--color-text-secondary); }
+.pr-yes { color:var(--color-success); font-weight:600; }
+.pr-no { color:var(--color-text-muted); }
+.pr-col-prem { background:var(--color-blue-soft); }
 
-.pr-once { margin-top: var(--space-40); }
-.pr-once h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-6); }
-.pr-once p { color: var(--color-text-muted); font-size: var(--text-small); margin: 0 0 var(--space-16); }
-.pr-once-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gutter); }
-.pr-once-card { background: var(--color-white); border: 1px solid var(--color-border);
-  border-radius: var(--radius-default); padding: var(--space-20); display: flex; align-items: center;
-  justify-content: space-between; gap: var(--space-16); flex-wrap: wrap; }
-.pr-once-name { color: var(--color-text-primary); font-weight: 600; }
-.pr-once-desc { color: var(--color-text-muted); font-size: var(--text-meta); margin-top: 2px; }
-.pr-once-price { color: var(--color-text-primary); font-weight: 600; font-size: var(--text-body);
-  white-space: nowrap; font-variant-numeric: tabular-nums; }
-.pr-once-btn { min-height: 44px; background: var(--color-white); color: var(--color-text-secondary);
-  border: 1px solid var(--color-border); padding: var(--space-8) var(--space-16);
-  border-radius: var(--radius-default); font-weight: 600; font-size: var(--text-small); cursor: pointer; }
-.pr-once-btn:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+.pr-once { margin-top:var(--space-40); }
+.pr-once h2 { font-size:var(--text-h5); font-weight:600; color:var(--color-text-primary); margin:0 0 var(--space-6); }
+.pr-once p { color:var(--color-text-muted); font-size:var(--text-small); margin:0 0 var(--space-16); }
+.pr-once-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--gutter); }
+.pr-once-card { background:var(--color-white); border:1px solid var(--color-border);
+  border-radius:var(--radius-default); padding:var(--space-20); display:flex; align-items:center;
+  justify-content:space-between; gap:var(--space-16); flex-wrap:wrap; }
+.pr-once-name { color:var(--color-text-primary); font-weight:600; }
+.pr-once-desc { color:var(--color-text-muted); font-size:var(--text-meta); margin-top:2px; }
+.pr-once-price { color:var(--color-text-primary); font-weight:600; font-size:var(--text-body);
+  white-space:nowrap; font-variant-numeric:tabular-nums; }
+.pr-once-btn { min-height:44px; background:var(--color-white); color:var(--color-text-secondary);
+  border:1px solid var(--color-border); padding:var(--space-8) var(--space-16);
+  border-radius:var(--radius-default); font-weight:600; font-size:var(--text-small); cursor:pointer; }
+.pr-once-btn:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
 
-.pr-pay-row { margin-top: var(--space-48); text-align: center; }
-.pr-pay-row .pr-pay-title { color: var(--color-text-muted); font-size: var(--text-small); margin-bottom: var(--space-12); }
-.pr-logos { display: flex; justify-content: center; align-items: center; gap: var(--space-16); flex-wrap: wrap; }
-.pr-logo { border-radius: var(--radius-default); padding: var(--space-8) var(--space-20);
-  font-weight: 700; font-size: var(--text-small); letter-spacing: 0.02em; }
-.pr-logo.active { background: var(--color-white); color: var(--color-action-blue-dark);
-  border: 1px solid var(--color-action-blue); }
-.pr-logo.soon { background: var(--color-background-soft); color: var(--color-text-muted);
-  border: 1px solid var(--color-border); position: relative; }
-.pr-soon-lbl { display: block; font-size: var(--text-meta); font-weight: 600;
-  color: var(--color-text-muted); letter-spacing: 0.05em; margin-top: 1px; }
-.pr-legal { margin-top: var(--space-32); text-align: center; color: var(--color-text-muted); font-size: var(--text-small); }
-.pr-legal a { color: var(--color-action-blue); text-decoration: none; }
-.pr-legal a:hover { text-decoration: underline; }
-.pr-err { display: none; margin-top: var(--space-20); background: var(--color-error-soft);
-  border: 1px solid var(--color-error-soft); color: var(--color-error);
-  border-radius: var(--radius-default); padding: var(--space-12) var(--space-16);
-  font-size: var(--text-small); text-align: center; }
+.pr-pay-row { margin-top:var(--space-48); text-align:center; }
+.pr-pay-row .pr-pay-title { color:var(--color-text-muted); font-size:var(--text-small); margin-bottom:var(--space-12); }
+.pr-logos { display:flex; justify-content:center; align-items:center; gap:var(--space-16); flex-wrap:wrap; }
+.pr-logo { border-radius:var(--radius-default); padding:var(--space-8) var(--space-20);
+  font-weight:600; font-size:var(--text-small); letter-spacing:0.02em; }
+.pr-logo.active { background:var(--color-white); color:var(--color-action-blue-dark);
+  border:1px solid var(--color-action-blue); }
+.pr-logo.soon { background:var(--color-background-soft); color:var(--color-text-muted);
+  border:1px solid var(--color-border); position:relative; }
+.pr-soon-lbl { display:block; font-size:var(--text-meta); font-weight:600;
+  color:var(--color-text-muted); letter-spacing:0.05em; margin-top:1px; }
+.pr-legal { margin-top:var(--space-32); text-align:center; color:var(--color-text-muted); font-size:var(--text-small); }
+.pr-legal a { color:var(--color-action-blue); text-decoration:none; }
+.pr-legal a:hover { text-decoration:underline; }
+.pr-err { display:none; margin-top:var(--space-20); background:var(--color-error-soft);
+  border:1px solid var(--color-error-soft); color:var(--color-error);
+  border-radius:var(--radius-default); padding:var(--space-12) var(--space-16);
+  font-size:var(--text-small); text-align:center; }
 
 @media (max-width: 767px) {
-  .pr-cards, .pr-once-grid { grid-template-columns: 1fr; }
-  .pr-hero { padding: var(--space-32) var(--space-16); }
-  .pr-hero h1 { font-size: 32px; }
-  .pr-cards { margin-top: var(--space-24); }
+  .pr-cards, .pr-once-grid { grid-template-columns:1fr; }
+  .pr-hero { padding:var(--space-32) var(--space-16); }
+  .pr-hero h1 { font-size:32px; }
+  .pr-cards { margin-top:var(--space-24); }
 }
 </style>
 {% endblock %}
@@ -116,7 +116,7 @@
 
 <div class="pr-wrap">
   {% if is_premium %}
-  <div class="pr-active">⭐ Sizda Premium faol — barcha imkoniyatlar ochiq. <a href="/cabinet/tolovlar" style="color:#4ade80;">To'lovlarim →</a></div>
+  <div class="pr-active">⭐ Sizda Premium faol — barcha imkoniyatlar ochiq. <a href="/cabinet/tolovlar" style="color:var(--color-text-secondary);">To'lovlarim →</a></div>
   {% endif %}
 
   <div class="pr-cards" {% if is_premium %}style="margin-top:26px;"{% endif %}>
@@ -149,8 +149,8 @@
           <tr><td>Tahlil natijasi</td><td>Top-3 o'xshash ish</td><td class="pr-col-prem pr-yes">To'liq (AI xulosa bilan)</td></tr>
           <tr><td>CSV eksport</td><td>50 qator</td><td class="pr-col-prem pr-yes">5 000 qatorgacha, cheksiz</td></tr>
           <tr><td>Konstruktor loyihalari</td><td>1 ta</td><td class="pr-col-prem pr-yes">Cheksiz</td></tr>
-          <tr><td>OAK-format hujjat eksporti</td><td class="pr-no">—</td><td class="pr-col-prem pr-yes">✓</td></tr>
-          <tr><td>Saqlangan tahlillar</td><td class="pr-no">—</td><td class="pr-col-prem pr-yes">✓</td></tr>
+          <tr><td>OAK-format hujjat eksporti</td><td class="pr-no">—</td><td class="pr-col-prem pr-yes"></td></tr>
+          <tr><td>Saqlangan tahlillar</td><td class="pr-no">—</td><td class="pr-col-prem pr-yes"></td></tr>
         </tbody>
       </table>
     </div>
@@ -162,7 +162,7 @@
     <div class="pr-once-grid">
       <div class="pr-once-card">
         <div>
-          <div class="pr-once-name">🎯 AI mavzu tahlili</div>
+          <div class="pr-once-name"> AI mavzu tahlili</div>
           <div class="pr-once-desc">1 ta to'liq tahlil — AI xulosa va barcha o'xshash ishlar</div>
         </div>
         <div class="pr-once-price">{{ '{:,}'.format(prices_som['topic_analysis_1']).replace(',', ' ') }} so'm</div>
@@ -170,7 +170,7 @@
       </div>
       <div class="pr-once-card">
         <div>
-          <div class="pr-once-name">📥 To'liq CSV eksport</div>
+          <div class="pr-once-name"> To'liq CSV eksport</div>
           <div class="pr-once-desc">1 ta eksport — 5 000 qatorgacha, filtr bo'yicha</div>
         </div>
         <div class="pr-once-price">{{ '{:,}'.format(prices_som['csv_export_1']).replace(',', ' ') }} so'm</div>

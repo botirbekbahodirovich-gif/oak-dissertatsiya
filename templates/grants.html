@@ -6,106 +6,106 @@
 <style>
 /* Grantlar — topish va muddatni kuzatish sahifasi.
    Barcha qiymatlar olimlar-design-system.css tokenlaridan. */
-.gr-hero { padding: 0 0 var(--space-8); }
-.gr-stats { display: flex; gap: var(--space-8) var(--space-24); flex-wrap: wrap;
-  color: var(--color-text-muted); font-size: var(--text-small); }
-.gr-stats b { color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
-.gr-search { max-width: 560px; margin: var(--space-16) 0 0; position: relative; }
-.gr-search input { width: 100%; min-height: 44px; padding: var(--space-12) var(--space-16) var(--space-12) 42px;
-  border-radius: var(--radius-default); border: 1px solid var(--color-border);
-  background: var(--color-white); color: var(--color-text-primary); font-size: var(--text-body); }
-.gr-search input:focus { outline: none; border-color: var(--color-action-blue); box-shadow: 0 0 0 3px var(--color-blue-soft); }
-.gr-search::before { content: "\F52A"; font-family: "bootstrap-icons"; position: absolute; left: 15px; top: 50%;
-  transform: translateY(-50%); color: var(--color-text-muted); pointer-events: none; }
+.gr-hero { padding:0 0 var(--space-8); }
+.gr-stats { display:flex; gap:var(--space-8) var(--space-24); flex-wrap:wrap;
+  color:var(--color-text-muted); font-size:var(--text-small); }
+.gr-stats b { color:var(--color-text-primary); font-variant-numeric:tabular-nums; }
+.gr-search { max-width:560px; margin:var(--space-16) 0 0; position:relative; }
+.gr-search input { width:100%; min-height:44px; padding:var(--space-12) var(--space-16) var(--space-12) 42px;
+  border-radius:var(--radius-default); border:1px solid var(--color-border);
+  background:var(--color-white); color:var(--color-text-primary); font-size:var(--text-body); }
+.gr-search input:focus { outline:2px solid var(--color-action); border-color:var(--color-action-blue); box-shadow:none; }
+.gr-search::before { content:"\F52A"; font-family:"bootstrap-icons"; position:absolute; left:15px; top:50%;
+  transform:translateY(-50%); color:var(--color-text-muted); pointer-events:none; }
 
 /* Filter paneli — barcha ro'yxat sahifalarida bir xil ko'rinish. */
-.gr-filterbar { position: sticky; top: 0; z-index: 50;
-  background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default);
-  padding: var(--space-12) var(--space-16); margin: var(--space-20) 0;
-  display: flex; gap: var(--space-12); flex-wrap: wrap; align-items: center; }
-.gr-filterbar select { min-height: 44px; border: 1px solid var(--color-border); border-radius: var(--radius-default);
-  padding: var(--space-8) var(--space-12); background: var(--color-white); color: var(--color-text-primary);
-  font-size: var(--text-small); }
-.gr-toggle-group { display: flex; gap: var(--space-4); flex-wrap: wrap; }
-.gr-toggle { min-height: 36px; border: 1px solid var(--color-border); background: var(--color-white);
-  color: var(--color-text-secondary); padding: var(--space-6) var(--space-12);
-  border-radius: var(--radius-rounded); font-size: var(--text-small); font-weight: 600; cursor: pointer; }
-.gr-toggle:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
-.gr-toggle.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; }
-.gr-clear { min-height: 36px; border: 1px solid var(--color-border); background: var(--color-white);
-  color: var(--color-text-secondary); border-radius: var(--radius-default);
-  padding: var(--space-6) var(--space-12); font-size: var(--text-small); font-weight: 600; cursor: pointer; }
-.gr-clear:hover { border-color: var(--color-error); color: var(--color-error); }
+.gr-filterbar { position:sticky; top:0; z-index:50;
+  background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default);
+  padding:var(--space-12) var(--space-16); margin:var(--space-20) 0;
+  display:flex; gap:var(--space-12); flex-wrap:wrap; align-items:center; }
+.gr-filterbar select { min-height:44px; border:1px solid var(--color-border); border-radius:var(--radius-default);
+  padding:var(--space-8) var(--space-12); background:var(--color-white); color:var(--color-text-primary);
+  font-size:var(--text-small); }
+.gr-toggle-group { display:flex; gap:var(--space-4); flex-wrap:wrap; }
+.gr-toggle { min-height:36px; border:1px solid var(--color-border); background:var(--color-white);
+  color:var(--color-text-secondary); padding:var(--space-6) var(--space-12);
+  border-radius:var(--radius-rounded); font-size:var(--text-small); font-weight:600; cursor:pointer; }
+.gr-toggle:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
+.gr-toggle.active { background:var(--color-action-blue); border-color:var(--color-action-blue); color:var(--color-surface); }
+.gr-clear { min-height:36px; border:1px solid var(--color-border); background:var(--color-white);
+  color:var(--color-text-secondary); border-radius:var(--radius-default);
+  padding:var(--space-6) var(--space-12); font-size:var(--text-small); font-weight:600; cursor:pointer; }
+.gr-clear:hover { border-color:var(--color-error); color:var(--color-error); }
 
-.gr-row-title { font-size: var(--text-h5); font-weight: 600; margin: var(--space-24) 0 var(--space-12);
-  display: flex; align-items: center; gap: var(--space-8); }
-.gr-carousel { display: flex; gap: var(--space-16); overflow-x: auto; padding-bottom: var(--space-12); scroll-snap-type: x mandatory; }
-.gr-carousel .gr-card { min-width: 320px; max-width: 320px; scroll-snap-align: start; }
+.gr-row-title { font-size:var(--text-h5); font-weight:600; margin:var(--space-24) 0 var(--space-12);
+  display:flex; align-items:center; gap:var(--space-8); }
+.gr-carousel { display:flex; gap:var(--space-16); overflow-x:auto; padding-bottom:var(--space-12); scroll-snap-type:x mandatory; }
+.gr-carousel .gr-card { min-width:320px; max-width:320px; scroll-snap-align:start; }
 
-.gr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gutter); }
-@media (max-width: 1024px) { .gr-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .gr-grid { grid-template-columns: 1fr; } }
+.gr-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--gutter); }
+@media (max-width: 1024px) { .gr-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 640px) { .gr-grid { grid-template-columns:1fr; } }
 
 /* Karta: oq fon, 1px chegara, soyasiz; hoverda faqat chegara o'zgaradi. */
-.gr-card { border: 1px solid var(--color-border); border-radius: var(--radius-default); overflow: hidden;
-  background: var(--color-white); display: flex; flex-direction: column; transition: border-color 0.15s; }
-.gr-card:hover { border-color: var(--color-action-blue-light); }
+.gr-card { border:1px solid var(--color-border); border-radius:var(--radius-default); overflow:hidden;
+  background:var(--color-white); display:flex; flex-direction:column; transition:border-color 0.15s; }
+.gr-card:hover { border-color:var(--color-action-blue-light); }
 /* Shoshilinch muddat pulsatsiya bilan emas, chegara + matn bilan belgilanadi. */
-.gr-card.urgent { border-color: var(--color-error); }
-.gr-card.expired { opacity: 0.7; }
-.gr-cover { height: 96px; background: var(--color-background-soft); background-size: cover;
-  background-position: center; position: relative; border-bottom: 1px solid var(--color-border); }
-.gr-cover .gr-badge { position: absolute; top: var(--space-8); right: var(--space-8);
-  background: var(--color-notice-soft); color: #8a5200; font-size: var(--text-meta); font-weight: 600;
-  padding: 2px var(--space-8); border-radius: var(--radius-rounded); }
-.gr-cover .gr-badge.expired-badge { background: var(--color-background-soft); color: var(--color-text-muted); }
-.gr-body { padding: var(--space-16); display: flex; flex-direction: column; gap: var(--space-8); flex: 1; }
-.gr-org { color: var(--color-text-muted); font-size: var(--text-meta); }
-.gr-title-l { font-weight: 600; font-size: var(--text-body); line-height: 1.35; }
-.gr-title-l a { color: var(--color-text-primary); text-decoration: none; }
-.gr-title-l a:hover { color: var(--color-action-blue); text-decoration: underline; }
-.gr-meta { display: flex; gap: var(--space-6) var(--space-12); flex-wrap: wrap; color: var(--color-text-muted); font-size: var(--text-small); }
-.gr-deadline { margin-top: auto; }
-.gr-deadline-txt { display: flex; justify-content: space-between; gap: var(--space-8);
-  font-size: var(--text-small); font-weight: 600; margin-bottom: var(--space-6); }
-.gr-bar { height: 6px; border-radius: var(--radius-full); background: var(--color-background-soft); overflow: hidden; }
-.gr-bar i { display: block; height: 100%; border-radius: var(--radius-full); }
-.gr-actions { display: flex; gap: var(--space-8); margin-top: var(--space-12); }
-.gr-btn { flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--radius-default); padding: var(--space-8) var(--space-12);
-  font-size: var(--text-small); font-weight: 600; cursor: pointer; text-decoration: none; border: 1px solid transparent; }
+.gr-card.urgent { border-color:var(--color-error); }
+.gr-card.expired { opacity:0.7; }
+.gr-cover { height:96px; background:var(--color-background-soft); background-size:cover;
+  background-position:center; position:relative; border-bottom:1px solid var(--color-border); }
+.gr-cover .gr-badge { position:absolute; top:var(--space-8); right:var(--space-8);
+  background:var(--color-notice-soft); color:var(--color-text-secondary); font-size:var(--text-meta); font-weight:600;
+  padding:2px var(--space-8); border-radius:var(--radius-rounded); }
+.gr-cover .gr-badge.expired-badge { background:var(--color-background-soft); color:var(--color-text-muted); }
+.gr-body { padding:var(--space-16); display:flex; flex-direction:column; gap:var(--space-8); flex:1; }
+.gr-org { color:var(--color-text-muted); font-size:var(--text-meta); }
+.gr-title-l { font-weight:600; font-size:var(--text-body); line-height:1.35; }
+.gr-title-l a { color:var(--color-text-primary); text-decoration:none; }
+.gr-title-l a:hover { color:var(--color-action-blue); text-decoration:underline; }
+.gr-meta { display:flex; gap:var(--space-6) var(--space-12); flex-wrap:wrap; color:var(--color-text-muted); font-size:var(--text-small); }
+.gr-deadline { margin-top:auto; }
+.gr-deadline-txt { display:flex; justify-content:space-between; gap:var(--space-8);
+  font-size:var(--text-small); font-weight:600; margin-bottom:var(--space-6); }
+.gr-bar { height:6px; border-radius:var(--radius-full); background:var(--color-background-soft); overflow:hidden; }
+.gr-bar i { display:block; height:100%; border-radius:var(--radius-full); }
+.gr-actions { display:flex; gap:var(--space-8); margin-top:var(--space-12); }
+.gr-btn { flex:1; min-height:44px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:var(--radius-default); padding:var(--space-8) var(--space-12);
+  font-size:var(--text-small); font-weight:600; cursor:pointer; text-decoration:none; border:1px solid transparent; }
 /* Asosiy CTA faqat "Batafsil"da; kuzatish — ikkilamchi, shovqin qilmaydi. */
-.gr-btn.primary { background: var(--color-action-blue); color: #fff; }
-.gr-btn.primary:hover { background: var(--color-action-blue-dark); color: #fff; }
-.gr-btn.track { background: var(--color-white); color: var(--color-text-secondary); border-color: var(--color-border); }
-.gr-btn.track:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
-.gr-btn.track.tracked { background: var(--color-success-soft); color: var(--color-success); border-color: var(--color-success-soft); }
+.gr-btn.primary { background:var(--color-action-blue); color:var(--color-surface); }
+.gr-btn.primary:hover { background:var(--color-action-blue-dark); color:var(--color-surface); }
+.gr-btn.track { background:var(--color-white); color:var(--color-text-secondary); border-color:var(--color-border); }
+.gr-btn.track:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
+.gr-btn.track.tracked { background:var(--color-success-soft); color:var(--color-success); border-color:var(--color-success-soft); }
 
-.gr-pagination { display: flex; gap: var(--space-6); justify-content: center; align-items: center; margin: var(--space-24) 0 var(--space-4); flex-wrap: wrap; }
-.gr-page-btn { min-width: 40px; min-height: 40px; border: 1px solid var(--color-border); background: var(--color-white);
-  color: var(--color-text-primary); padding: var(--space-8) var(--space-12); border-radius: var(--radius-default);
-  cursor: pointer; font-weight: 600; font-size: var(--text-small); }
-.gr-page-btn:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
-.gr-page-btn.active { background: var(--color-action-blue); border-color: var(--color-action-blue); color: #fff; }
-.gr-results { text-align: center; color: var(--color-text-muted); font-size: var(--text-small); }
-.gr-empty { text-align: center; padding: var(--space-48) var(--space-24); color: var(--color-text-muted);
-  border: 1px solid var(--color-border); border-radius: var(--radius-default); background: var(--color-background-soft); }
-.gr-empty .ic { font-size: 1.75rem; color: var(--color-text-muted); }
+.gr-pagination { display:flex; gap:var(--space-6); justify-content:center; align-items:center; margin:var(--space-24) 0 var(--space-4); flex-wrap:wrap; }
+.gr-page-btn { min-width:40px; min-height:40px; border:1px solid var(--color-border); background:var(--color-white);
+  color:var(--color-text-primary); padding:var(--space-8) var(--space-12); border-radius:var(--radius-default);
+  cursor:pointer; font-weight:600; font-size:var(--text-small); }
+.gr-page-btn:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
+.gr-page-btn.active { background:var(--color-action-blue); border-color:var(--color-action-blue); color:var(--color-surface); }
+.gr-results { text-align:center; color:var(--color-text-muted); font-size:var(--text-small); }
+.gr-empty { text-align:center; padding:var(--space-48) var(--space-24); color:var(--color-text-muted);
+  border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-background-soft); }
+.gr-empty .ic { font-size:1.75rem; color:var(--color-text-muted); }
 
-.gr-kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--gutter); }
-.gr-kcol { border: 1px solid var(--color-border); border-radius: var(--radius-default);
-  padding: var(--space-12); background: var(--color-background-soft); }
-.gr-kcol h4 { font-size: var(--text-small); font-weight: 600; margin-bottom: var(--space-12); }
-.gr-kcard { border: 1px solid var(--color-border); border-radius: var(--radius-default);
-  padding: var(--space-12); margin-bottom: var(--space-12); background: var(--color-white); font-size: var(--text-small); }
-.gr-kcard a { color: var(--color-text-primary); font-weight: 600; text-decoration: none; }
-.gr-kcard a:hover { color: var(--color-action-blue); text-decoration: underline; }
-.gr-kcard textarea { width: 100%; margin-top: var(--space-8); border-radius: var(--radius-default);
-  border: 1px solid var(--color-border); background: var(--color-white); color: var(--color-text-primary);
-  font-size: var(--text-small); padding: var(--space-8); min-height: 44px; }
-.gr-kcard select { margin-top: var(--space-6); width: 100%; min-height: 44px; border-radius: var(--radius-default);
-  padding: var(--space-8); font-size: var(--text-small); border: 1px solid var(--color-border);
-  background: var(--color-white); color: var(--color-text-primary); }
+.gr-kanban { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:var(--gutter); }
+.gr-kcol { border:1px solid var(--color-border); border-radius:var(--radius-default);
+  padding:var(--space-12); background:var(--color-background-soft); }
+.gr-kcol h4 { font-size:var(--text-small); font-weight:600; margin-bottom:var(--space-12); }
+.gr-kcard { border:1px solid var(--color-border); border-radius:var(--radius-default);
+  padding:var(--space-12); margin-bottom:var(--space-12); background:var(--color-white); font-size:var(--text-small); }
+.gr-kcard a { color:var(--color-text-primary); font-weight:600; text-decoration:none; }
+.gr-kcard a:hover { color:var(--color-action-blue); text-decoration:underline; }
+.gr-kcard textarea { width:100%; margin-top:var(--space-8); border-radius:var(--radius-default);
+  border:1px solid var(--color-border); background:var(--color-white); color:var(--color-text-primary);
+  font-size:var(--text-small); padding:var(--space-8); min-height:44px; }
+.gr-kcard select { margin-top:var(--space-6); width:100%; min-height:44px; border-radius:var(--radius-default);
+  padding:var(--space-8); font-size:var(--text-small); border:1px solid var(--color-border);
+  background:var(--color-white); color:var(--color-text-primary); }
 </style>
 {% endblock %}
 
@@ -188,7 +188,7 @@
         <div style="color:var(--color-text-muted);font-size:0.76rem;margin-top:3px;">{{ g.country_flag }} {{ g.organization or g.country }}</div>
         {% if g.days_remaining is not none and g.days_remaining >= 0 %}
         <div style="font-size:0.76rem;margin-top:4px;color:{{ 'var(--color-error)' if g.days_remaining <= 3 else ('var(--color-notice)' if g.days_remaining <= 7 else 'var(--color-success)') }};">
-          ⏰ {{ g.days_remaining }} kun qoldi · {{ g.deadline_uz }}</div>
+          {{ g.days_remaining }} kun qoldi · {{ g.deadline_uz }}</div>
         {% elif g.expired %}<div style="font-size:0.76rem;margin-top:4px;color:var(--color-text-muted);">Muddat tugagan</div>{% endif %}
         <select onchange="updateTrackingStatus({{ g.id }}, this.value)">
           {% for k, v in status_labels.items() %}
@@ -223,7 +223,8 @@
       <span><b>{{ stats.tracked }}</b> ta kuzatilmoqda</span>
       {% if current_user.is_authenticated %}<a href="/grants?my=1" style="color:var(--color-action-blue);">Mening grantlarim →</a>{% endif %}
     </div>
-    <div class="gr-search"><input id="gr-search" type="search" placeholder="Grant, tashkilot yoki mamlakat qidirish…"></div>
+    <div class="gr-search"><label class="ol-label" for="gr-search">Grant, tashkilot yoki mamlakat qidirish</label>
+<input id="gr-search" type="search" placeholder="Grant, tashkilot yoki mamlakat qidirish…"></div>
   </div>
 
   <!-- ═══ FILTER BAR ═══ -->
@@ -241,7 +242,7 @@
       {% for k, v in funding_types.items() %}<button class="gr-toggle" data-value="{{ k }}">{{ v }}</button>{% endfor %}
     </div>
     <select id="f-sort" title="Tartiblash">
-      <option value="deadline">⏰ Deadline yaqin</option>
+      <option value="deadline">Deadline yaqin</option>
       <option value="new">🆕 Yangi qo'shilgan</option>
       <option value="popular">Ko'p ko'rilgan</option>
       <option value="stipend">Stipendiya miqdori</option>
@@ -256,7 +257,7 @@
     {% for g in recommended %}{{ card(g, tracking) }}{% endfor %}
   </div>
   {% elif current_user.is_authenticated and not has_profile %}
-  <div style="border:1px dashed var(--color-action-blue-light);border-radius: var(--radius-default);padding:14px 18px;margin-bottom:6px;color:var(--color-text-muted);"><a href="/cabinet" style="color:var(--color-action-blue);font-weight:600;">Profilingizni to'ldiring</a> — sizga mos grantlarni topamiz!
+  <div style="border:1px dashed var(--color-action-blue-light);border-radius:var(--radius-default);padding:14px 18px;margin-bottom:6px;color:var(--color-text-muted);"><a href="/cabinet" style="color:var(--color-action-blue);font-weight:600;">Profilingizni to'ldiring</a> — sizga mos grantlarni topamiz!
   </div>
   {% endif %}
 

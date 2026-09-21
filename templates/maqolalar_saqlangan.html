@@ -3,49 +3,49 @@
 {% block extra_head %}
 <meta name="robots" content="noindex">
 <style>
-  .sm-wrap { max-width: 940px; margin: 0 auto; padding: 8px 0 40px; }
-  .sm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
-  .sm-head h1 { font-size: 1.4rem; font-weight: 800; color: #e8eef8; margin: 0; }
-  .sm-head .sm-count { color: #94a3b8; font-size: 0.9rem; }
-  .sm-back { color: #94a3b8; font-size: 0.86rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-  .sm-back:hover { color: #60a5fa; }
-  .sm-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; }
-  .sm-title { font-size: 1rem; font-weight: 700; line-height: 1.5; color: #e8eef8; text-decoration: none; }
-  .sm-title:hover { color: #60a5fa; }
-  .sm-authors { color: #94a3b8; font-size: 0.84rem; margin-top: 8px; }
-  .sm-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .sm-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: #cbd5e1;
-             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
-             padding: 3px 10px; border-radius: 20px; }
-  .sm-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .sm-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600;
-            padding: 6px 12px; border-radius: 9px; border: 1px solid transparent; cursor: pointer;
-            text-decoration: none; white-space: nowrap; }
-  .sm-btn-primary { background: rgba(74,158,255,0.12); border-color: rgba(74,158,255,0.28); color: #4a9eff; }
-  .sm-btn-primary:hover { background: rgba(74,158,255,0.22); color: #4a9eff; }
-  .sm-btn-danger { background: transparent; border-color: rgba(239,68,68,0.28); color: #f87171; }
-  .sm-btn-danger:hover { background: rgba(239,68,68,0.16); }
-  .sm-empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
-  .sm-empty .em { font-size: 2.6rem; }
-  .sm-empty h2 { color: #e2e8f0; font-size: 1.1rem; margin: 12px 0 6px; }
-  .sm-empty a { color: #60a5fa; text-decoration: none; }
-  .sm-pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; }
-  .sm-pager a, .sm-pager span { font-size: 0.86rem; color: #cbd5e1; text-decoration: none; padding: 6px 14px;
-                                border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; }
-  .sm-pager a:hover { border-color: rgba(74,158,255,0.5); color: #60a5fa; }
-  .sm-pager .disabled { opacity: 0.4; pointer-events: none; }
-  .sm-head h1 { color: #0f172a; }
-  .sm-card { background: #fff; border-color: #e2e8f0; }
-  .sm-title { color: #0f172a; }
-  .sm-chip { color: #475569; background: #f1f5f9; border-color: #e2e8f0; }
-  .sm-empty h2 { color: #0f172a; }
+  .sm-wrap { max-width:940px; margin:0 auto; padding:8px 0 40px; }
+  .sm-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .sm-head h1 { font-size:1.4rem; font-weight:600; color:var(--color-text-primary); margin:0; }
+  .sm-head .sm-count { color:var(--color-action); font-size:0.9rem; }
+  .sm-back { color:var(--color-action); font-size:0.86rem; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  .sm-back:hover { color:var(--color-action); }
+  .sm-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:16px 18px; margin-bottom:12px; }
+  .sm-title { font-size:1rem; font-weight:600; line-height:1.5; color:var(--color-text-primary); text-decoration:none; }
+  .sm-title:hover { color:var(--color-action); }
+  .sm-authors { color:var(--color-action); font-size:0.84rem; margin-top:8px; }
+  .sm-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .sm-chip { display:inline-flex; align-items:center; gap:5px; font-size:0.78rem; color:var(--color-text-primary);
+             background:var(--color-background); border:1px solid var(--color-border);
+             padding:3px 10px; border-radius:var(--radius-default); }
+  .sm-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .sm-btn { display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600;
+            padding:6px 12px; border-radius:var(--radius-default); border:1px solid transparent; cursor:pointer;
+            text-decoration:none; white-space:nowrap; }
+  .sm-btn-primary { background:var(--color-background); border-color:var(--color-border); color:var(--color-action); }
+  .sm-btn-primary:hover { background:var(--color-background); color:var(--color-action); }
+  .sm-btn-danger { background:transparent; border-color:var(--color-border); color:var(--color-danger); }
+  .sm-btn-danger:hover { background:var(--color-background); }
+  .sm-empty { text-align:center; padding:60px 20px; color:var(--color-action); }
+  .sm-empty .em { font-size:2.6rem; }
+  .sm-empty h2 { color:var(--color-text-primary); font-size:1.1rem; margin:12px 0 6px; }
+  .sm-empty a { color:var(--color-action); text-decoration:none; }
+  .sm-pager { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:24px; }
+  .sm-pager a, .sm-pager span { font-size:0.86rem; color:var(--color-text-primary); text-decoration:none; padding:6px 14px;
+                                border:1px solid var(--color-border); border-radius:var(--radius-default); }
+  .sm-pager a:hover { border-color:var(--color-border); color:var(--color-action); }
+  .sm-pager .disabled { opacity:0.4; pointer-events:none; }
+  .sm-head h1 { color:var(--color-text-primary); }
+  .sm-card { background:var(--color-background); border-color:var(--color-border); }
+  .sm-title { color:var(--color-text-primary); }
+  .sm-chip { color:var(--color-action); background:var(--color-background); border-color:var(--color-border); }
+  .sm-empty h2 { color:var(--color-text-primary); }
 </style>
 {% endblock %}
 {% block content %}
 <div class="sm-wrap">
   <div class="mb-2"><a href="/cabinet" class="sm-back"><i class="bi bi-arrow-left"></i> Kabinetga qaytish</a></div>
   <div class="sm-head">
-    <h1>📄 Saqlangan maqolalar</h1>
+    <h1> Saqlangan maqolalar</h1>
     <span class="sm-count">Jami: <b id="sm-total">{{ total }}</b></span>
   </div>
 
@@ -55,15 +55,15 @@
     {% set link = r.doi or r.oa_url or ('https://openalex.org/' ~ r.openalex_id) %}
     <div class="sm-card" data-oid="{{ r.openalex_id }}">
       <a href="{{ link }}" target="_blank" rel="noopener" class="sm-title">{{ r.title or '(nomsiz maqola)' }}</a>
-      {% if r.authors %}<div class="sm-authors">👤 {{ r.authors }}</div>{% endif %}
+      {% if r.authors %}<div class="sm-authors"> {{ r.authors }}</div>{% endif %}
       <div class="sm-meta">
-        {% if r.year %}<span class="sm-chip">📅 {{ r.year }}</span>{% endif %}
-        {% if r.journal %}<span class="sm-chip">📚 {{ r.journal }}</span>{% endif %}
-        {% if r.oa_url %}<span class="sm-chip">🔓 Ochiq kirish</span>{% endif %}
+        {% if r.year %}<span class="sm-chip"> {{ r.year }}</span>{% endif %}
+        {% if r.journal %}<span class="sm-chip"> {{ r.journal }}</span>{% endif %}
+        {% if r.oa_url %}<span class="sm-chip"> Ochiq kirish</span>{% endif %}
       </div>
       <div class="sm-actions">
-        <a href="{{ link }}" target="_blank" rel="noopener" class="sm-btn sm-btn-primary">🔗 Ochish</a>
-        <button type="button" class="sm-btn sm-btn-danger" onclick="smRemove(this)">🗑 Olib tashlash</button>
+        <a href="{{ link }}" target="_blank" rel="noopener" class="sm-btn sm-btn-primary"> Ochish</a>
+        <button type="button" class="sm-btn sm-btn-danger" onclick="smRemove(this)"> Olib tashlash</button>
       </div>
     </div>
     {% endfor %}
@@ -79,9 +79,9 @@
 
   {% else %}
   <div class="sm-empty">
-    <div class="em">📄</div>
+    <div class="em"></div>
     <h2>Hali maqola saqlanmagan</h2>
-    <p><a href="/maqolalar-tahlili">Maqolalar tahlili</a> sahifasida qidiruv qilib, ☆ tugmasi bilan saqlang.</p>
+    <p><a href="/maqolalar-tahlili">Maqolalar tahlili</a> sahifasida qidiruv qilib,  tugmasi bilan saqlang.</p>
   </div>
   {% endif %}
 </div>

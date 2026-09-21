@@ -17,97 +17,97 @@
 
 {% block extra_head %}
 <style>
-  .up-wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 48px; }
+  .up-wrap { max-width:1100px; margin:0 auto; padding:0 16px 48px; }
   /* Akademik/institutsional profil boshi — marketing banneri emas:
      och kulrang fon, qora matn, pastda 1px chegara. */
-  .up-header { background: var(--color-background-soft); border-bottom: 1px solid var(--color-border);
-    padding: var(--space-40) var(--space-24); color: var(--color-text-primary); margin-bottom: var(--space-32); }
-  .up-head-inner { display: flex; align-items: flex-start; gap: var(--space-24); flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
+  .up-header { background:var(--color-background-soft); border-bottom:1px solid var(--color-border);
+    padding:var(--space-40) var(--space-24); color:var(--color-text-primary); margin-bottom:var(--space-32); }
+  .up-head-inner { display:flex; align-items:flex-start; gap:var(--space-24); flex-wrap:wrap; max-width:1100px; margin:0 auto; }
   /* Logo yo'q bo'lsa — neytral bosh harfli fallback (emoji emas). */
-  .up-logo { width: 96px; height: 96px; border-radius: var(--radius-default); background: var(--color-white);
-    border: 1px solid var(--color-border); color: var(--color-action-blue);
-    display: grid; place-items: center; font-size: 2rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
-  .up-logo img { width: 100%; height: 100%; object-fit: contain; }
-  .up-htext { flex: 1; min-width: 260px; }
-  .up-htext h1 { font-family: var(--font-serif); font-size: var(--text-h3); font-weight: 700; margin: 0 0 var(--space-4); line-height: var(--leading-heading); }
-  .up-subname { font-size: var(--text-small); color: var(--color-text-muted); margin: 0 0 var(--space-12); }
-  .up-badges { display: flex; gap: var(--space-8); flex-wrap: wrap; }
+  .up-logo { width:96px; height:96px; border-radius:var(--radius-default); background:var(--color-white);
+    border:1px solid var(--color-border); color:var(--color-action-blue);
+    display:grid; place-items:center; font-size:2rem; font-weight:600; flex-shrink:0; overflow:hidden; }
+  .up-logo img { width:100%; height:100%; object-fit:contain; }
+  .up-htext { flex:1; min-width:260px; }
+  .up-htext h1 { font-family:var(--font-serif); font-size:var(--text-h3); font-weight:600; margin:0 0 var(--space-4); line-height:var(--leading-heading); }
+  .up-subname { font-size:var(--text-small); color:var(--color-text-muted); margin:0 0 var(--space-12); }
+  .up-badges { display:flex; gap:var(--space-8); flex-wrap:wrap; }
   /* Yagona badge tizimi: fon — soft, matn — to'yingan rang. */
-  .up-badge { font-size: var(--text-meta); font-weight: 600; padding: 2px var(--space-8);
-    border-radius: var(--radius-rounded); background: var(--color-background-soft);
-    border: 1px solid var(--color-border); color: var(--color-text-secondary); }
-  .up-badge.davlat, .up-badge.institut { background: var(--color-success-soft); border-color: var(--color-success-soft); color: var(--color-success); }
-  .up-badge.xususiy, .up-badge.universitet { background: var(--color-blue-soft); border-color: var(--color-blue-soft); color: var(--color-action-blue); }
-  .up-badge.xalqaro, .up-badge.akademiya { background: var(--color-blue-soft); border-color: var(--color-blue-soft); color: var(--color-action-blue); }
-  .up-badge.markaz { background: var(--color-orange-soft); border-color: var(--color-orange-soft); color: var(--color-brand-orange); }
-  .up-badge.loc { background: var(--color-white); }
-  .up-badge.hidx { background: var(--color-notice-soft); border-color: var(--color-notice-soft); color: #8a5200; text-decoration: none; }
-  .up-badge.hidx:hover { text-decoration: underline; }
-  .up-stats-row { display: flex; gap: var(--space-32); flex-wrap: wrap; margin-top: var(--space-20); align-items: center; }
-  .up-stat b { font-size: var(--text-h4); font-weight: 600; display: block; font-variant-numeric: tabular-nums; }
-  .up-stat span { font-size: var(--text-meta); color: var(--color-text-muted); }
-  .up-socials { display: flex; gap: var(--space-8); flex-wrap: wrap; }
-  .up-soc { width: 44px; height: 44px; border-radius: var(--radius-default); background: var(--color-white);
-    border: 1px solid var(--color-border); color: var(--color-text-secondary);
-    display: grid; place-items: center; font-size: 1.05rem; text-decoration: none; transition: border-color 0.15s, color 0.15s; }
-  .up-soc:hover { border-color: var(--color-action-blue); color: var(--color-action-blue); }
+  .up-badge { font-size:var(--text-meta); font-weight:600; padding:2px var(--space-8);
+    border-radius:var(--radius-rounded); background:var(--color-background-soft);
+    border:1px solid var(--color-border); color:var(--color-text-secondary); }
+  .up-badge.davlat, .up-badge.institut { background:var(--color-success-soft); border-color:var(--color-success-soft); color:var(--color-success); }
+  .up-badge.xususiy, .up-badge.universitet { background:var(--color-blue-soft); border-color:var(--color-blue-soft); color:var(--color-action-blue); }
+  .up-badge.xalqaro, .up-badge.akademiya { background:var(--color-blue-soft); border-color:var(--color-blue-soft); color:var(--color-action-blue); }
+  .up-badge.markaz { background:var(--color-orange-soft); border-color:var(--color-orange-soft); color:var(--color-brand-orange); }
+  .up-badge.loc { background:var(--color-white); }
+  .up-badge.hidx { background:var(--color-notice-soft); border-color:var(--color-notice-soft); color:var(--color-text-secondary); text-decoration:none; }
+  .up-badge.hidx:hover { text-decoration:underline; }
+  .up-stats-row { display:flex; gap:var(--space-32); flex-wrap:wrap; margin-top:var(--space-20); align-items:center; }
+  .up-stat b { font-size:var(--text-h4); font-weight:600; display:block; font-variant-numeric:tabular-nums; }
+  .up-stat span { font-size:var(--text-meta); color:var(--color-text-muted); }
+  .up-socials { display:flex; gap:var(--space-8); flex-wrap:wrap; }
+  .up-soc { width:44px; height:44px; border-radius:var(--radius-default); background:var(--color-white);
+    border:1px solid var(--color-border); color:var(--color-text-secondary);
+    display:grid; place-items:center; font-size:1.05rem; text-decoration:none; transition:border-color 0.15s, color 0.15s; }
+  .up-soc:hover { border-color:var(--color-action-blue); color:var(--color-action-blue); }
   /* Rector card */
-  .up-rector { display: flex; align-items: center; gap: 14px; background: var(--color-background-soft); border: 1px solid var(--color-border);
-    border-radius: var(--radius-default); padding: 14px 16px; margin-bottom: 16px; }
-  .up-rector .rav { width: 60px; height: 60px; border-radius: var(--radius-full); overflow: hidden; flex-shrink: 0;
-    background: var(--color-blue-soft); color: var(--color-action-blue); display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; }
-  .up-rector .rav img { width: 100%; height: 100%; object-fit: cover; }
-  .up-rector .rlbl { color: var(--color-text-muted); font-size: 0.76rem; }
-  .up-rector .rnm { color: var(--color-text-primary); font-weight: 700; font-size: 1.02rem; }
-  .up-rector .rnm a { color: var(--color-action-blue); }
+  .up-rector { display:flex; align-items:center; gap:14px; background:var(--color-background-soft); border:1px solid var(--color-border);
+    border-radius:var(--radius-default); padding:14px 16px; margin-bottom:16px; }
+  .up-rector .rav { width:60px; height:60px; border-radius:var(--radius-full); overflow:hidden; flex-shrink:0;
+    background:var(--color-blue-soft); color:var(--color-action-blue); display:grid; place-items:center; font-size:1.4rem; font-weight:600; }
+  .up-rector .rav img { width:100%; height:100%; object-fit:cover; }
+  .up-rector .rlbl { color:var(--color-text-muted); font-size:0.76rem; }
+  .up-rector .rnm { color:var(--color-text-primary); font-weight:600; font-size:1.02rem; }
+  .up-rector .rnm a { color:var(--color-action-blue); }
   /* Gallery */
-  .up-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-  .up-gallery figure { margin: 0; position: relative; }
-  .up-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: var(--radius-default); border: 1px solid var(--color-border); }
-  .up-gallery figcaption { color: var(--color-text-muted); font-size: 0.76rem; margin-top: 4px; }
-  .up-gallery .gdel { position: absolute; top: 6px; right: 6px; background: var(--color-error); color: #fff;
-    border: none; border-radius: var(--radius-default); padding: var(--space-4) var(--space-8); cursor: pointer; font-size: var(--text-meta); }
+  .up-gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:12px; }
+  .up-gallery figure { margin:0; position:relative; }
+  .up-gallery img { width:100%; height:140px; object-fit:cover; border-radius:var(--radius-default); border:1px solid var(--color-border); }
+  .up-gallery figcaption { color:var(--color-text-muted); font-size:0.76rem; margin-top:4px; }
+  .up-gallery .gdel { position:absolute; top:6px; right:6px; background:var(--color-error); color:var(--color-surface);
+    border:none; border-radius:var(--radius-default); padding:var(--space-4) var(--space-8); cursor:pointer; font-size:var(--text-meta); }
 
-  .up-section { background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: var(--space-24); margin-bottom: var(--space-20); }
-  .up-section h2 { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-16); }
-  .up-info-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
-  .up-info-item { color: var(--color-text-secondary); font-size: 0.9rem; }
-  .up-info-item b { color: var(--color-text-muted); font-weight: 600; display: block; font-size: 0.78rem; margin-bottom: 2px; }
-  .up-info-item a { color: var(--color-action-blue); }
-  .up-desc { color: var(--color-text-secondary); line-height: 1.7; white-space: pre-line; }
+  .up-section { background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:var(--space-24); margin-bottom:var(--space-20); }
+  .up-section h2 { font-size:var(--text-h5); font-weight:600; color:var(--color-text-primary); margin:0 0 var(--space-16); }
+  .up-info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  .up-info-item { color:var(--color-text-secondary); font-size:0.9rem; }
+  .up-info-item b { color:var(--color-text-muted); font-weight:600; display:block; font-size:0.78rem; margin-bottom:2px; }
+  .up-info-item a { color:var(--color-action-blue); }
+  .up-desc { color:var(--color-text-secondary); line-height:1.7; white-space:pre-line; }
 
   /* Tablar umumiy .ol-tabs/.ol-tab komponentidan keladi
      (olimlar-design-system.css) — bu yerda faqat panel ko'rinishi.
      Mobilda .ol-tabs gorizontal scroll beradi, matn kesilmaydi. */
-  .up-tabs { margin-bottom: var(--space-20); }
-  .up-pane { display: none; }
-  .up-pane.active { display: block; }
+  .up-tabs { margin-bottom:var(--space-20); }
+  .up-pane { display:none; }
+  .up-pane.active { display:block; }
 
-  .up-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 760px) { .up-charts { grid-template-columns: 1fr; } }
-  .up-ix-bar { margin-bottom: 10px; }
-  .up-ix-bar .lbl { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--color-text-secondary); margin-bottom: 4px; }
-  .up-ix-track { height: 18px; background: var(--color-background-soft); border-radius: var(--radius-default); overflow: hidden; }
-  .up-ix-fill { height: 100%; background: var(--color-action-blue); border-radius: var(--radius-default); }
+  .up-charts { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width: 760px) { .up-charts { grid-template-columns:1fr; } }
+  .up-ix-bar { margin-bottom:10px; }
+  .up-ix-bar .lbl { display:flex; justify-content:space-between; font-size:0.82rem; color:var(--color-text-secondary); margin-bottom:4px; }
+  .up-ix-track { height:18px; background:var(--color-background-soft); border-radius:var(--radius-default); overflow:hidden; }
+  .up-ix-fill { height:100%; background:var(--color-action-blue); border-radius:var(--radius-default); }
 
-  .up-people { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
-  .up-person { display: flex; align-items: center; gap: 12px; background: var(--color-white); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 12px; text-decoration: none; transition: border-color 0.15s; }
-  .up-person:hover { border-color: var(--color-action-blue); }
-  .up-person .av { width: 44px; height: 44px; border-radius: var(--radius-full); background: var(--color-blue-soft); color: var(--color-action-blue); display: grid; place-items: center; font-size: 1rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
-  .up-person .av img { width: 100%; height: 100%; object-fit: cover; }
-  .up-person .nm { color: var(--color-text-primary); font-weight: 600; font-size: 0.88rem; }
-  .up-person .meta { color: var(--color-text-muted); font-size: 0.76rem; }
-  .deg-badge { font-size: 0.66rem; font-weight: 700; padding: 1px 8px; border-radius: var(--radius-full); color: #fff; }
-  .deg-phd { background: var(--color-success); } .deg-dsc { background: var(--color-brand-orange); }
+  .up-people { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .up-person { display:flex; align-items:center; gap:12px; background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:12px; text-decoration:none; transition:border-color 0.15s; }
+  .up-person:hover { border-color:var(--color-action-blue); }
+  .up-person .av { width:44px; height:44px; border-radius:var(--radius-full); background:var(--color-blue-soft); color:var(--color-action-blue); display:grid; place-items:center; font-size:1rem; font-weight:600; flex-shrink:0; overflow:hidden; }
+  .up-person .av img { width:100%; height:100%; object-fit:cover; }
+  .up-person .nm { color:var(--color-text-primary); font-weight:600; font-size:0.88rem; }
+  .up-person .meta { color:var(--color-text-muted); font-size:0.76rem; }
+  .deg-badge { font-size:0.66rem; font-weight:600; padding:1px 8px; border-radius:var(--radius-full); color:var(--color-surface); }
+  .deg-phd { background:var(--color-success); } .deg-dsc { background:var(--color-brand-orange); }
 
-  .up-recent .rc { background: var(--color-background-soft); border: 1px solid var(--color-border); border-radius: var(--radius-default); padding: 14px 16px; margin-bottom: 10px; }
-  .up-recent .rc a { color: var(--color-action-blue); font-weight: 600; }
-  .up-recent .rc .mv { color: var(--color-text-secondary); font-size: 0.9rem; margin: 4px 0; }
-  .up-recent .rc .mt { color: var(--color-text-muted); font-size: 0.78rem; }
-  .admin-upload-section { border: 1px dashed var(--color-text-muted); border-radius: var(--radius-default); padding: 18px; background: var(--color-background-soft); }
-  .admin-upload-section input[type=file] { color: var(--color-text-secondary); }
-  .admin-upload-section button { background: var(--color-action-blue); color: #fff; border: none; padding: 8px 18px; border-radius: var(--radius-banner); font-weight: 600; cursor: pointer; margin-left: 8px; }
-  .up-empty { color: var(--color-text-muted); }
+  .up-recent .rc { background:var(--color-background-soft); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:14px 16px; margin-bottom:10px; }
+  .up-recent .rc a { color:var(--color-action-blue); font-weight:600; }
+  .up-recent .rc .mv { color:var(--color-text-secondary); font-size:0.9rem; margin:4px 0; }
+  .up-recent .rc .mt { color:var(--color-text-muted); font-size:0.78rem; }
+  .admin-upload-section { border:1px dashed var(--color-text-muted); border-radius:var(--radius-default); padding:18px; background:var(--color-background-soft); }
+  .admin-upload-section input[type=file] { color:var(--color-text-secondary); }
+  .admin-upload-section button { background:var(--color-action-blue); color:var(--color-surface); border:none; padding:8px 18px; border-radius:var(--radius-banner); font-weight:600; cursor:pointer; margin-left:8px; }
+  .up-empty { color:var(--color-text-muted); }
 </style>
 {% endblock %}
 
@@ -159,19 +159,22 @@
   <div class="up-section" id="uv-pp-edit" style="border:1px dashed var(--color-action-blue-light);">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
       <h2 style="margin:0;">Profilni tahrirlash <small style="color:var(--color-text-muted);font-size:0.7rem;">(universitet paneli)</small></h2>
-      <button id="uv-pp-toggle" style="background:var(--color-blue-soft);color:var(--color-action-blue);border:none;border-radius: var(--radius-banner);padding:6px 14px;font-weight:700;cursor:pointer;">Ochish</button>
+      <button id="uv-pp-toggle" style="background:var(--color-blue-soft);color:var(--color-action-blue);border:none;border-radius:var(--radius-banner);padding:6px 14px;font-weight:600;cursor:pointer;">Ochish</button>
     </div>
     <div id="uv-pp-form" style="display:none;margin-top:12px;">
       <textarea id="uv-pp-desc" rows="4" placeholder="Universitet tavsifi…"
-        style="width:100%;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:10px 12px;font-size:0.86rem;">{{ uni.description or '' }}</textarea>
+        style="width:100%;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:10px 12px;font-size:0.86rem;">{{ uni.description or '' }}</textarea>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-        <input id="uv-pp-web" value="{{ uni.website or '' }}" placeholder="Veb-sayt (https://…)"
-          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
-        <input id="uv-pp-logo" value="" placeholder="Logo URL (ixtiyoriy)"
-          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
-        <input id="uv-pp-email" value="{{ uni.email or '' }}" placeholder="Aloqa email"
-          style="flex:1;min-width:160px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius: var(--radius-default);padding:8px 12px;font-size:0.84rem;">
-        <button id="uv-pp-save" style="background:var(--color-action-blue);color:#fff;border:none;border-radius: var(--radius-default);padding:8px 18px;font-weight:700;cursor:pointer;">Saqlash</button>
+        <label class="ol-label" for="uv-pp-web">Veb-sayt (https://…)</label>
+<input id="uv-pp-web" value="{{ uni.website or '' }}" placeholder="Veb-sayt (https://…)"
+          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;font-size:0.84rem;">
+        <label class="ol-label" for="uv-pp-logo">Logo URL (ixtiyoriy)</label>
+<input id="uv-pp-logo" value="" placeholder="Logo URL (ixtiyoriy)"
+          style="flex:1;min-width:180px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;font-size:0.84rem;">
+        <label class="ol-label" for="uv-pp-email">Aloqa email</label>
+<input id="uv-pp-email" value="{{ uni.email or '' }}" placeholder="Aloqa email"
+          style="flex:1;min-width:160px;background:var(--color-white);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;font-size:0.84rem;">
+        <button id="uv-pp-save" style="background:var(--color-action-blue);color:var(--color-surface);border:none;border-radius:var(--radius-default);padding:8px 18px;font-weight:600;cursor:pointer;">Saqlash</button>
       </div>
       <p id="uv-pp-msg" style="display:none;margin:8px 0 0;font-size:0.8rem;"></p>
     </div>
@@ -205,7 +208,7 @@
   {% endif %}
   <!-- Umumiy ma'lumot -->
   <div class="up-section">
-    <h2>ℹ️ Umumiy ma'lumot</h2>
+    <h2>ℹ Umumiy ma'lumot</h2>
     {% if uni.rector %}
     <div class="up-rector">
       <div class="rav">{% if uni.rector_photo_url %}<img src="{{ uni.rector_photo_url }}" alt="rektor">{% else %}<i class="bi bi-person"></i>{% endif %}</div>
@@ -350,15 +353,18 @@
   <div class="up-section">
     <h2>Logo yuklash (admin)</h2>
     <form class="admin-upload-section" method="POST" action="/admin/university/logo/{{ uni.id }}" enctype="multipart/form-data">
-      <input type="file" name="logo" accept="image/*">
+      <label class="ol-label" for="ol-field-1">Logo</label>
+<input id="ol-field-1" type="file" name="logo" accept="image/*">
       <button type="submit">Yuklash</button>
     </form>
   </div>
   <div class="up-section">
     <h2>Galereyaga rasm qo'shish (admin)</h2>
     <form class="admin-upload-section" method="POST" action="/admin/university/gallery/{{ uni.id }}" enctype="multipart/form-data">
-      <input type="file" name="images" accept="image/*" multiple>
-      <input type="text" name="caption" placeholder="Izoh (ixtiyoriy)" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius: var(--radius-banner);padding:8px 10px;margin-left:8px;">
+      <label class="ol-label" for="ol-field-2">Images</label>
+<input id="ol-field-2" type="file" name="images" accept="image/*" multiple>
+      <label class="ol-label" for="ol-field-3">Izoh (ixtiyoriy)</label>
+<input id="ol-field-3" type="text" name="caption" placeholder="Izoh (ixtiyoriy)" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);border-radius:var(--radius-banner);padding:8px 10px;margin-left:8px;">
       <button type="submit">Yuklash</button>
     </form>
     <p style="color:var(--color-text-muted);font-size:0.8rem;margin-top:8px;">Bir nechta rasmni birdaniga tanlash mumkin. Boshqa ma'lumotlar (rektor, ijtimoiy tarmoqlar) admin tahrirlash bo'limidan kiritiladi.</p>
@@ -411,8 +417,8 @@ function initCharts() {
   if (degEl && (phd + dsc) > 0) {
     new Chart(degEl.getContext('2d'), {
       type: 'doughnut',
-      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: ['#0c8930', '#ff4203'] }] },
-      options: { plugins: { legend: { labels: { color: '#333333' } } } }
+      data: { labels: ['PhD', 'DSc'], datasets: [{ data: [phd, dsc], backgroundColor: OlimlarCharts.palette(2) }] },
+      options: { plugins: { legend: { labels: { color: OlimlarCharts.tokens.textPrimary } } } }
     });
   }
   var years = {{ by_year|tojson }};
@@ -421,10 +427,10 @@ function initCharts() {
     new Chart(yEl.getContext('2d'), {
       type: 'bar',
       data: { labels: years.map(function (y) { return y.year; }),
-              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: '#0056d6' }] },
+              datasets: [{ label: 'Himoyalar', data: years.map(function (y) { return y.count; }), backgroundColor: OlimlarCharts.tokens.actionBlue }] },
       options: { plugins: { legend: { display: false } },
-                 scales: { x: { ticks: { color: '#666666', font: { size: 9 } }, grid: { display: false } },
-                           y: { ticks: { color: '#666666' }, grid: { color: '#28344a' } } } }
+                 scales: { x: { ticks: { color: OlimlarCharts.tokens.textSecondary, font: { size: 9 } }, grid: { display: false } },
+                           y: { ticks: { color: OlimlarCharts.tokens.textSecondary }, grid: { color: OlimlarCharts.tokens.border } } } }
     });
   }
 }

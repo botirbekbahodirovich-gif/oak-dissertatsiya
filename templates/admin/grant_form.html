@@ -2,8 +2,8 @@
 {% block title %}{{ 'Grantni tahrirlash' if edit_mode else 'Yangi grant' }} (admin) — Olimlar.uz{% endblock %}
 {% block content %}
 <div class="content-card" style="max-width:960px;margin:0 auto;">
-  <h1 style="margin-bottom:4px;">{% if edit_mode %}✏️ Grantni tahrirlash (#{{ item.id }}){% else %}➕ Yangi grant qo'shish{% endif %}</h1>
-  <p style="color:#94a3b8;"><a href="/admin/grants" style="color:#4a9eff;">← Grantlar ro'yxati</a></p>
+  <h1 style="margin-bottom:4px;">{% if edit_mode %} Grantni tahrirlash (#{{ item.id }}){% else %} Yangi grant qo'shish{% endif %}</h1>
+  <p style="color:var(--color-action);"><a href="/admin/grants" style="color:var(--color-action);">← Grantlar ro'yxati</a></p>
 
   {% with msgs = get_flashed_messages() %}
     {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
@@ -32,7 +32,7 @@
         <option value="{{ k }}" {{ 'selected' if v.get('funding_type') == k }}>{{ l }}</option>
         {% endfor %}
       </select></label>
-    <fieldset style="border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:8px 12px;">
+    <fieldset style="border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;">
       <legend style="font-size:0.82rem;padding:0 6px;">Darajalar</legend>
       {% for k, l in levels.items() %}
       <label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:0.85rem;">
@@ -67,19 +67,22 @@
     <label style="grid-column:1/-1;">Ariza strategiyasi (tips)
       <textarea name="application_tips" class="form-control" rows="3">{{ v.get('application_tips', '') }}</textarea></label>
 
-    <fieldset style="grid-column:1/-1;border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:10px 14px;">
-      <legend style="font-size:0.85rem;padding:0 6px;">📋 Kerakli hujjatlar ro'yxati</legend>
+    <fieldset style="grid-column:1/-1;border:1px solid var(--color-border);border-radius:var(--radius-default);padding:10px 14px;">
+      <legend style="font-size:0.85rem;padding:0 6px;"> Kerakli hujjatlar ro'yxati</legend>
       <div id="doc-rows">
         {% for d in (v.get('documents_checklist') or []) %}
         <div class="doc-row" style="display:grid;grid-template-columns:2fr 3fr 2fr auto auto;gap:6px;margin-bottom:6px;">
-          <input name="doc_name" class="form-control" placeholder="Hujjat nomi" value="{{ d.get('name', '') }}">
-          <input name="doc_tip" class="form-control" placeholder="Maslahat" value="{{ d.get('tip', '') }}">
-          <input name="doc_template" class="form-control" placeholder="Namuna URL" value="{{ d.get('template_url', '') }}">
+          <label class="ol-label" for="ol-field-1">Hujjat nomi</label>
+<input id="ol-field-1" name="doc_name" class="form-control" placeholder="Hujjat nomi" value="{{ d.get('name', '') }}">
+          <label class="ol-label" for="ol-field-2">Maslahat</label>
+<input id="ol-field-2" name="doc_tip" class="form-control" placeholder="Maslahat" value="{{ d.get('tip', '') }}">
+          <label class="ol-label" for="ol-field-3">Namuna URL</label>
+<input id="ol-field-3" name="doc_template" class="form-control" placeholder="Namuna URL" value="{{ d.get('template_url', '') }}">
           <select name="doc_required" class="form-control">
             <option value="1" {{ 'selected' if d.get('required', True) }}>Majburiy</option>
             <option value="0" {{ 'selected' if not d.get('required', True) }}>Ixtiyoriy</option>
           </select>
-          <button type="button" class="btn btn-sm" style="color:#f87171;" onclick="this.parentElement.remove()">✕</button>
+          <button type="button" class="btn btn-sm" style="color:var(--color-text-secondary);" onclick="this.parentElement.remove()" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
         </div>
         {% endfor %}
       </div>
@@ -87,7 +90,7 @@
     </fieldset>
 
     <label style="display:flex;align-items:center;gap:8px;">
-      <input type="checkbox" name="is_featured" {{ 'checked' if v.get('is_featured') }}> 🌟 Featured (tavsiya etilgan)</label>
+      <input type="checkbox" name="is_featured" {{ 'checked' if v.get('is_featured') }}>  Featured (tavsiya etilgan)</label>
     <label style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" name="is_active" {{ 'checked' if v.get('is_active', True) }}> Faol</label>
 
@@ -100,13 +103,16 @@
 
 <template id="doc-row-tpl">
   <div class="doc-row" style="display:grid;grid-template-columns:2fr 3fr 2fr auto auto;gap:6px;margin-bottom:6px;">
-    <input name="doc_name" class="form-control" placeholder="Hujjat nomi">
-    <input name="doc_tip" class="form-control" placeholder="Maslahat">
-    <input name="doc_template" class="form-control" placeholder="Namuna URL">
+    <label class="ol-label" for="ol-field-4">Hujjat nomi</label>
+<input id="ol-field-4" name="doc_name" class="form-control" placeholder="Hujjat nomi">
+    <label class="ol-label" for="ol-field-5">Maslahat</label>
+<input id="ol-field-5" name="doc_tip" class="form-control" placeholder="Maslahat">
+    <label class="ol-label" for="ol-field-6">Namuna URL</label>
+<input id="ol-field-6" name="doc_template" class="form-control" placeholder="Namuna URL">
     <select name="doc_required" class="form-control">
       <option value="1">Majburiy</option><option value="0">Ixtiyoriy</option>
     </select>
-    <button type="button" class="btn btn-sm" style="color:#f87171;" onclick="this.parentElement.remove()">✕</button>
+    <button type="button" class="btn btn-sm" style="color:var(--color-text-secondary);" onclick="this.parentElement.remove()" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
   </div>
 </template>
 {% endblock %}

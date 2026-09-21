@@ -1,0 +1,23 @@
+{# Shared domain components use only data supplied by existing views. #}
+{% macro deadline_badge(days) -%}
+{% if days is not none %}<span class="ol-badge ol-badge--{{ 'error' if days <= 7 else ('notice' if days <= 30 else 'success') }}">{% if days < 0 %}Muddat tugagan{% elif days == 0 %}Bugun oxirgi kun{% else %}{{ days }} kun qoldi{% endif %}</span>{% endif %}
+{%- endmacro %}
+{% macro empty_state(title, text, href='', action='') -%}
+<div class="ol-state"><i class="bi bi-search" aria-hidden="true"></i><h3>{{ title }}</h3><p>{{ text }}</p>{% if href %}<a class="ol-btn ol-btn--secondary" href="{{ href }}">{{ action }}</a>{% endif %}</div>
+{%- endmacro %}
+{% macro dissertation_card(r) -%}
+<article class="ol-card ol-research-card">
+  <div class="ol-research-card__meta">{% if r.Daraja %}<span class="ol-badge ol-badge--neutral">{{ r.Daraja }}</span>{% endif %}{% if r.Sana %}<span>{{ r.Sana }}</span>{% endif %}</div>
+  <h3><a href="/dissertation/{{ r.id }}">{{ r.Mavzu }}</a></h3>
+  {% if r.Ixtisoslik %}<p class="ol-card__meta">{{ r.Ixtisoslik }}</p>{% endif %}
+  <div class="ol-research-card__foot"><a href="/olim/{{ r.Olim|urlencode }}">{{ r.Olim_display or r.Olim }}</a></div>
+</article>
+{%- endmacro %}
+{% macro grant_card(g) -%}
+<article class="ol-card ol-research-card">
+  <div class="ol-research-card__meta">{{ deadline_badge(g.days) }}{% if g.country %}<span class="ol-badge ol-badge--brand">{{ g.country }}</span>{% endif %}</div>
+  <h3><a href="/grants/{{ g.id }}">{{ g.title }}</a></h3>
+  <p class="ol-card__meta">{{ g.organization }}</p>
+  <div class="ol-research-card__foot ol-research-card__meta"><span>Ariza muddati: {{ g.deadline_uz }}</span><a href="/grants/{{ g.id }}">Talablarni ko‘rish <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+</article>
+{%- endmacro %}

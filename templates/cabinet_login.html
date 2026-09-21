@@ -3,36 +3,36 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
-.cab-auth { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 48px 16px; background: #0f172a; }
-.cab-card { width: 100%; max-width: 480px; background: #1e293b; border: 1px solid #334155; border-radius: 18px; padding: 36px 32px; }
-.cab-card h1 { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin: 0 0 6px; text-align: center; }
-.cab-card .sub { color: #94a3b8; text-align: center; margin: 0 0 26px; font-size: 0.95rem; }
-.cab-tg { display: flex; justify-content: center; margin-bottom: 8px; min-height: 48px; }
-.cab-divider { display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.82rem; margin: 18px 0; }
-.cab-divider::before, .cab-divider::after { content: ""; flex: 1; height: 1px; background: #334155; }
-.cab-group { margin-bottom: 14px; }
-.cab-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
-.cab-input { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 11px 13px; font-size: 0.95rem; }
-.cab-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
-.cab-btn { width: 100%; background: #3b82f6; color: #fff; font-weight: 600; font-size: 1rem; padding: 12px; border: none; border-radius: 10px; cursor: pointer; }
-.cab-btn:hover { background: #2563eb; }
-.cab-foot { text-align: center; margin-top: 18px; color: #94a3b8; font-size: 0.9rem; }
-.cab-foot a { color: #60a5fa; }
-.cab-error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 10px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 16px; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; }
+.cab-auth { min-height:80vh; display:flex; align-items:center; justify-content:center; padding:48px 16px; background:var(--color-surface); }
+.cab-card { width:100%; max-width:480px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:36px 32px; }
+.cab-card h1 { font-size:1.5rem; font-weight:600; color:var(--color-text-primary); margin:0 0 6px; text-align:center; }
+.cab-card .sub { color:var(--color-action); text-align:center; margin:0 0 26px; font-size:0.95rem; }
+.cab-tg { display:flex; justify-content:center; margin-bottom:8px; min-height:48px; }
+.cab-divider { display:flex; align-items:center; gap:12px; color:var(--color-text-secondary); font-size:0.82rem; margin:18px 0; }
+.cab-divider::before, .cab-divider::after { content:""; flex:1; height:1px; background:var(--color-background); }
+.cab-group { margin-bottom:14px; }
+.cab-group label { display:block; font-size:0.8rem; font-weight:600; color:var(--color-action); margin-bottom:6px; }
+.cab-input { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:11px 13px; font-size:0.95rem; }
+.cab-input:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
+.cab-btn { width:100%; background:var(--color-action); color:var(--color-surface); font-weight:600; font-size:1rem; padding:12px; border:none; border-radius:var(--radius-default); cursor:pointer; }
+.cab-btn:hover { background:var(--color-action); }
+.cab-foot { text-align:center; margin-top:18px; color:var(--color-action); font-size:0.9rem; }
+.cab-foot a { color:var(--color-action); }
+.cab-error { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-danger); border-radius:var(--radius-default); padding:10px 14px; font-size:0.88rem; margin-bottom:16px; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="cab-auth">
   <div class="cab-card">
-    <h1>🏠 Kabinetga kirish</h1>
+    <h1> Kabinetga kirish</h1>
     <p class="sub">Ilmiy portfoliyongizni boshqaring</p>
     {% if error %}<div class="cab-error">{{ error }}</div>{% endif %}
     {% if request.args.get('error') == 'google' %}<div class="cab-error">Google bilan kirishda xatolik yuz berdi. Qayta urinib ko'ring.</div>{% endif %}
 
     <a href="/auth/google/login{% if request.args.get('next') %}?next={{ request.args.get('next')|urlencode }}{% endif %}"
-      style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:#333;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;border:1px solid #ddd;transition:all 0.2s;">
+      style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:var(--color-text-primary);padding:14px 24px;border-radius:var(--radius-default);text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;border:1px solid var(--color-border);transition:all 0.2s;">
       <svg width="20" height="20" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -49,11 +49,13 @@
       {{ csrf_token()|safe }}
       <div class="cab-group">
         <label>Email</label>
-        <input class="cab-input" type="email" name="email" placeholder="email@example.com" required>
+        <label class="ol-label" for="ol-field-1">email@example.com</label>
+<input id="ol-field-1" class="cab-input" type="email" name="email" placeholder="email@example.com" required>
       </div>
       <div class="cab-group">
         <label>Parol</label>
-        <input class="cab-input" type="password" name="password" placeholder="••••••" required>
+        <label class="ol-label" for="ol-field-2">••••••</label>
+<input id="ol-field-2" class="cab-input" type="password" name="password" placeholder="••••••" required>
       </div>
       <button class="cab-btn" type="submit">Kirish</button>
     </form>

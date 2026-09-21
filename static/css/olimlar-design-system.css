@@ -13,23 +13,23 @@
   color-scheme: light;
 
   /* ── Rang ── */
-  --color-brand-orange: #ff4203;
+  --color-brand-orange: #e8631a;
   --color-action-blue: #0056d6;
   --color-action-blue-light: #6593dc;
-  --color-action-blue-dark: #00429f;
+  --color-action-blue-dark: #2f6feb;
 
   --color-text-primary: #0c0f12;
-  --color-text-secondary: #333333;
-  --color-text-muted: #666666;
+  --color-text-secondary: #57626f;
+  --color-text-muted: #57626f;
 
   --color-white: #ffffff;
-  --color-background: #ffffff;
-  --color-background-soft: #f6f6f6;
+  --color-background: #f4f7fb;
+  --color-background-soft: #f4f7fb;
 
-  --color-border: #e6e6e6;
-  --color-border-subtle: #ecebe9;
+  --color-border: #dce3ec;
+  --color-border-subtle: #dce3ec;
 
-  --color-orange-soft: #fff7ef;
+  --color-orange-soft: #fdeee3;
   --color-blue-soft: #ebf1f9;
 
   --color-success: #0c8930;
@@ -38,39 +38,25 @@
   --color-error: #af1d1d;
   --color-error-soft: #fdf4f4;
 
-  --color-notice: #ff9900;
+  --color-notice: #c98a16;
   --color-notice-soft: #fff9e6;
 
-  /* SEMANTIK to'q rang — global dark theme EMAS. AI yuzalarini qolgan
-     interfeysdan ajratish uchun zaxiraga olingan (dizayn tizimi kontraktida
-     belgilangan). Hozircha iste'molchisi yo'q: #ai-panel oq fonda.
-     Faqat AI konteksti uchun ishlating; sahifa yoki karta foniga qo'ymang. */
-  --color-ai-background: #171426;
+  /* Navy faqat AI va premium yuzalari uchun. */
+  --color-ai-background: #1f2a44;
 
-  /* ── Tipografiya ──
-     H1/H2 — serif; qolgan hamma narsa (H3–H5, body, navigatsiya, jadval) sans.
-     Inter va Manrope loyihada o'zbek lotin + kirill subsetlari bilan
-     self-host qilingan, shuning uchun Noto Serif o'rniga mavjud shriftlar
-     saqlanadi (spetsifikatsiya shunga ruxsat beradi). */
-  /* H1/H2 uchun haqiqiy serif. Manrope bu yerda EMAS — u sans-serif geometrik
-     shrift bo'lib, "serif" tokeniga noto'g'ri qo'yilgan edi.
-     Noto Serif repoga yuklanmagan: loyiha ataylab Google Fonts'siz ishlaydi
-     (O'zbekiston latency, base.html:69). Foydalanuvchi tizimida Noto Serif
-     bo'lsa ishlatiladi, aks holda Georgia — u lotin va kirill uchun ham
-     ishonchli serif. Batafsil: docs/dead-templates.md yonidagi hisobot. */
-  --font-serif: 'Noto Serif', Georgia, 'Times New Roman', serif;
-  /* Manrope sarlavhaviy sans sifatida saqlanadi (self-hosted, kirill subseti
-     bilan), Inter esa asosiy UI shrifti. */
-  --font-sans: 'Inter', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Manrope', 'Inter', system-ui, sans-serif;
+  /* H1–H3 va ilmiy sarlavhalar: self-hosted Source Serif 4 600. */
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  /* UI, navigatsiya, jadval va boshqaruvlar: Inter. */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-serif);
 
-  --text-hero: 56px;
+  --text-hero: 48px;
   --text-h1: 48px;
-  --text-h2: 40px;
-  --text-h3: 32px;
-  --text-h4: 24px;
+  --text-h2: 34px;
+  --text-h3: 24px;
+  --text-h4: 22px;
   --text-h5: 20px;
-  --text-body-lg: 20px;
+  --text-body-lg: 18px;
   --text-body: 16px;
   --text-small: 14px;
   --text-meta: 12px;
@@ -102,12 +88,12 @@
   /* ── Radius ── */
   --radius-default: 4px;
   --radius-banner: 8px;
-  --radius-rounded: 24px;
+  --radius-rounded: 4px;
   --radius-full: 9999px;
 
   /* ── Container va grid ── */
-  --container-max: 1600px;
-  --container-pad: clamp(24px, 8vw, 130px);
+  --container-max: 1280px;
+  --container-pad: 32px;
   --gutter: 20px;
 
   /* ── Yagona minimal soya (faqat dropdown/drawer uchun) ── */
@@ -129,7 +115,7 @@
 }
 
 /* Jadval va grafik sahifalari uchun kengroq ish maydoni. */
-.ol-container--wide { padding-inline: clamp(16px, 3vw, 40px); }
+.ol-container--wide { padding-inline: var(--container-pad); }
 
 .ol-grid {
   display: grid;
@@ -140,15 +126,16 @@
 
 /* ── Tipografiya ───────────────────────────────────────────────────────────── */
 
-/* Standart: H1 va H2 — serif; H3–H5, body, UI — sans.
+/* Standart: H1–H3 — serif; H4–H6, body, UI — sans.
    Bu element darajasidagi qoida, shuning uchun `.ol-*` klassi yozilmagan
    sahifalar ham to'g'ri ierarxiyani oladi. Sahifa o'z font-family sini
    ataylab bersa, u yuqoriroq spetsifiklik bilan yengadi. */
 h1, h2 { font-family: var(--font-serif); }
-h3, h4, h5, h6 { font-family: var(--font-sans); }
+h3 { font-family: var(--font-serif); }
+h4, h5, h6 { font-family: var(--font-sans); }
 
 .ol-hero-title,
-.ol-h1, .ol-h2 { font-family: var(--font-serif); font-weight: 700; }
+.ol-h1, .ol-h2 { font-family: var(--font-serif); font-weight: 600; }
 .ol-h3, .ol-h4, .ol-h5 { font-family: var(--font-sans); font-weight: 600; }
 
 .ol-hero-title { font-size: var(--text-hero); line-height: 1.2; }
@@ -261,7 +248,7 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
   padding: var(--space-24);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.ol-card:hover { border-color: var(--color-action-blue-light); }
+a.ol-card:hover, .ol-card:has(a):hover { border-color: var(--color-action-blue-light); box-shadow: var(--shadow-card-hover); }
 .ol-card__title { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-8); }
 .ol-card__meta { font-size: var(--text-small); color: var(--color-text-muted); margin: 0; }
 @media (max-width: 649px) { .ol-card { padding: var(--space-16); } }
@@ -360,7 +347,7 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
 
 .ol-page-header { margin-bottom: var(--space-32); }
 .ol-page-header__title { font-family: var(--font-serif); font-size: var(--text-h1);
-  line-height: var(--leading-heading); font-weight: 700; color: var(--color-text-primary);
+  line-height: var(--leading-heading); font-weight: 600; color: var(--color-text-primary);
   margin: 0 0 var(--space-12); }
 .ol-page-header__lead { max-width: 70ch; margin: 0; font-size: var(--text-body-lg);
   line-height: var(--leading-body); color: var(--color-text-muted); }
@@ -560,7 +547,7 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
 .ol-brand__name {
   font-family: var(--font-sans);
   font-size: var(--text-h5);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-primary);
   letter-spacing: -0.02em;
 }
@@ -679,7 +666,7 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
 
 /* Orange yulduz — kichik brend aksenti; blue tugma ustida ham, drawer
    ichidagi to'liq kenglikdagi CTA ustida ham bir xil ko'rinadi. */
-.ol-premium-cta i { color: var(--color-notice); }
+.ol-premium-cta i { color: inherit; }
 
 .ol-account { position: relative; }
 .ol-account__trigger {
@@ -706,7 +693,7 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
   background: var(--color-blue-soft);
   color: var(--color-action-blue);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -819,9 +806,9 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
   grid-template-columns: 1.6fr repeat(5, minmax(0, 1fr));
   gap: var(--space-32) var(--gutter);
 }
-.ol-footer__brand-name { font-size: var(--text-h5); font-weight: 700; color: var(--color-text-primary); }
+.ol-footer__brand-name { font-size: var(--text-h5); font-weight: 600; color: var(--color-text-primary); }
 .ol-footer__mission { max-width: 320px; margin: var(--space-12) 0 var(--space-16); font-size: var(--text-small); line-height: var(--leading-body); color: var(--color-text-muted); }
-.ol-footer__col h2 { font-size: var(--text-small); font-weight: 700; color: var(--color-text-primary); margin: 0 0 var(--space-12); }
+.ol-footer__col h2 { font-size: var(--text-small); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-12); }
 .ol-footer__col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-8); }
 .ol-footer__col a { font-size: var(--text-small); color: var(--color-text-secondary); text-decoration: none; }
 .ol-footer__col a:hover { color: var(--color-action-blue); text-decoration: underline; }
@@ -852,3 +839,55 @@ h3, h4, h5, h6 { font-family: var(--font-sans); }
 
 /* Drawer ochilganda body scroll bloklanadi (JS shu klassni qo'yadi). */
 body.ol-scroll-locked { overflow: hidden; }
+
+/* September 2026 product contract. Legacy aliases above preserve consumers. */
+:root {
+  --color-brand: var(--color-brand-orange);
+  --color-brand-soft: var(--color-orange-soft);
+  --color-action: var(--color-action-blue);
+  --color-action-hover: var(--color-action-blue-dark);
+  --color-action-soft: var(--color-blue-soft);
+  --color-premium: var(--color-ai-background);
+  --color-danger: var(--color-error);
+  --color-warning: var(--color-notice);
+  --color-surface: var(--color-white);
+  --color-text-tertiary: #8d96a3;
+  --color-brand-ink: #a9410d;
+  --color-warning-ink: #805710;
+  --radius-card: 8px;
+  --radius-input: 4px;
+  --shadow-card-hover: 0 4px 16px rgba(12,15,18,.08);
+  --shadow-focus: 0 0 0 3px var(--color-action-soft);
+  --color-overlay: rgba(12,15,18,.4);
+  --bs-primary: var(--color-action);
+  --bs-body-color: var(--color-text-primary);
+  --bs-body-bg: var(--color-background);
+  --bs-border-color: var(--color-border);
+}
+@font-face { font-family:'Source Serif 4'; font-style:normal; font-weight:600; font-display:swap; src:url('/static/fonts/source-serif-4-600.woff2') format('woff2'); }
+.ol-card, .ol-stat, .ol-chart, .ol-filters, .ol-facets, .ol-empty, .ol-table-wrap { border-radius:var(--radius-card); }
+.ol-badge { border-radius:var(--radius-default); white-space:normal; }
+.ol-badge--brand { color:var(--color-brand-ink); }
+.ol-badge--notice { color:var(--color-warning-ink); }
+.ol-badge--premium { background:var(--color-premium); color:var(--color-surface); }
+.ol-btn--premium { background:var(--color-premium); color:var(--color-surface); }
+.ol-btn--premium:hover { background:var(--color-premium); color:var(--color-surface); text-decoration:underline; }
+.ol-chip { border-radius:var(--radius-full); }
+.ol-pager button, .ol-pager a, .ol-facets__opt { min-height:44px; }
+.ol-pager button, .ol-pager a { min-width:44px; }
+.ol-btn:disabled, .ol-btn[aria-disabled="true"], .ol-btn[aria-busy="true"] { opacity:.6; cursor:wait; }
+.ol-btn:disabled, .ol-btn[aria-disabled="true"] { cursor:not-allowed; }
+.ol-btn:active:not(:disabled) { transform:translateY(1px); }
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible { outline:2px solid var(--color-action); outline-offset:3px; }
+input,select,textarea { accent-color:var(--color-action); }
+[aria-invalid="true"] { border-color:var(--color-danger); }
+.ol-skeleton { background:var(--color-border); border-radius:var(--radius-default); min-height:16px; }
+.ol-skeleton + .ol-skeleton { margin-top:var(--space-12); }
+.ol-state { padding:var(--space-32); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); text-align:center; }
+.ol-state h2 { font-size:var(--text-h4); margin-bottom:var(--space-8); }
+.ol-state p { color:var(--color-text-secondary); margin-bottom:var(--space-16); }
+.ol-state--error { border-color:var(--color-danger); }
+.ol-state--error > i { color:var(--color-danger); }
+@media (max-width:767px) { :root { --container-pad:16px; --text-h1:32px; --text-h2:28px; --text-h3:22px; } }
+
+:root { --color-series-1:#0056d6; --color-series-2:#527fbc; --color-series-3:#325984; --color-series-4:#7f9ebf; --color-series-5:#24466b; --color-series-6:#a4b8ce; }

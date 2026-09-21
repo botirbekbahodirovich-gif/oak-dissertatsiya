@@ -66,7 +66,7 @@
       .filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(', ');
     var meta = [];
     if (when) meta.push('📅 ' + esc(when) +
-      (c.is_multiday ? ' <span style="color:#64748b;">(ko‘p kunlik)</span>' : ''));
+      (c.is_multiday ? ' <span style="color:var(--color-text-secondary);">(ko‘p kunlik)</span>' : ''));
     if (place) meta.push('📍 ' + esc(place));
 
     return '<div class="kf-card' + (c.expired ? ' expired' : '') + '">' + star +
@@ -92,7 +92,7 @@
       if (!box) return;
       var opts = (facets && facets[dim]) || [];
       if (!opts.length && !state[dim].length) {
-        box.innerHTML = '<div style="color:#64748b;font-size:0.8rem;">—</div>';
+        box.innerHTML = '<div style="color:var(--color-text-secondary);font-size:0.8rem;">—</div>';
         return;
       }
       // tanlangan, lekin joriy natijada 0 bo'lganlar ham ko'rinib tursin
@@ -162,9 +162,9 @@
     if (pages <= 1) { pagEl.innerHTML = ''; return; }
     var html = '';
     var lo = Math.max(1, page - 2), hi = Math.min(pages, page + 2);
-    if (lo > 1) html += pageBtn(1, page) + (lo > 2 ? '<span style="color:#64748b;">…</span>' : '');
+    if (lo > 1) html += pageBtn(1, page) + (lo > 2 ? '<span style="color:var(--color-text-secondary);">…</span>' : '');
     for (var i = lo; i <= hi; i++) html += pageBtn(i, page);
-    if (hi < pages) html += (hi < pages - 1 ? '<span style="color:#64748b;">…</span>' : '') + pageBtn(pages, page);
+    if (hi < pages) html += (hi < pages - 1 ? '<span style="color:var(--color-text-secondary);">…</span>' : '') + pageBtn(pages, page);
     pagEl.innerHTML = html;
     pagEl.querySelectorAll('button').forEach(function (b) {
       b.addEventListener('click', function () {

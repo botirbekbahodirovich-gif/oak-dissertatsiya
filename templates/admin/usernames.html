@@ -2,8 +2,8 @@
 {% block title %}Username boshqaruvi (admin) — Olimlar.uz{% endblock %}
 {% block content %}
 <div class="content-card" style="max-width:1050px;margin:0 auto;">
-  <h1 style="margin:0 0 6px;">🔗 Username boshqaruvi</h1>
-  <p style="color:#94a3b8;font-size:0.86rem;margin-bottom:16px;">
+  <h1 style="margin:0 0 6px;"> Username boshqaruvi</h1>
+  <p style="color:var(--color-action);font-size:0.86rem;margin-bottom:16px;">
     Olimlarning sahifa manzillari (@slug). Squatting/impersonation holatlarida o'zgartiring yoki olib tashlang.</p>
 
   {% with msgs = get_flashed_messages(with_categories=true) %}
@@ -11,8 +11,9 @@
   {% endwith %}
 
   <form method="get" action="/admin/usernames" style="display:flex;gap:8px;margin:14px 0;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Ism yoki @slug bo'yicha qidirish…"
-      style="flex:1;border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 12px;background:transparent;color:inherit;">
+    <label class="ol-label" for="ol-field-1">Ism yoki @slug bo'yicha qidirish</label>
+<input id="ol-field-1" type="text" name="q" value="{{ q }}" placeholder="Ism yoki @slug bo'yicha qidirish…"
+      style="flex:1;border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;background:transparent;color:inherit;">
     <button type="submit" class="btn btn-action">Qidirish</button>
   </form>
 
@@ -30,9 +31,10 @@
         <td>
           <form method="POST" action="/admin/usernames/{{ it.id }}/set" style="display:flex;gap:6px;align-items:center;">
             {{ csrf_token()|safe }}
-            <span style="color:#94a3b8;font-family:ui-monospace,monospace;">@</span>
-            <input type="text" name="slug" value="{{ it.slug }}" maxlength="30"
-              style="border:1px solid rgba(148,163,184,0.25);border-radius:8px;padding:5px 9px;background:transparent;color:inherit;font-family:ui-monospace,monospace;width:150px;"
+            <span style="color:var(--color-action);font-family:ui-monospace,monospace;">@</span>
+            <label class="ol-label" for="ol-field-2">bo'sh = o'chirish</label>
+<input id="ol-field-2" type="text" name="slug" value="{{ it.slug }}" maxlength="30"
+              style="border:1px solid var(--color-border);border-radius:var(--radius-default);padding:5px 9px;background:transparent;color:inherit;font-family:ui-monospace,monospace;width:150px;"
               placeholder="bo'sh = o'chirish">
             <button type="submit" class="btn btn-sm btn-primary">Saqlash</button>
           </form>
@@ -43,13 +45,13 @@
                 onsubmit="return confirm('@{{ it.slug }} olib tashlansinmi?')">
             {{ csrf_token()|safe }}
             <input type="hidden" name="slug" value="">
-            <button type="submit" class="btn btn-sm btn-action">🗑️</button>
+            <button type="submit" class="btn btn-sm btn-action" aria-label="Yopish"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
           </form>
           {% endif %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:24px;">
+      <tr><td colspan="4" style="text-align:center;color:var(--color-action);padding:24px;">
         {% if q %}Topilmadi.{% else %}Hali hech kim username o'rnatmagan. Qidiruv orqali profil toping va slug bering.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
