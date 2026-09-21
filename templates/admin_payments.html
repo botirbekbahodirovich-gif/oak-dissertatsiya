@@ -2,8 +2,8 @@
 {% block title %}To'lovlar (admin){% endblock %}
 {% block content %}
 <div class="content-card" style="max-width:1200px;margin:0 auto;">
-  <h1 style="margin-bottom:4px;">💳 To'lovlarni boshqarish</h1>
-  <p style="color:#94a3b8;">
+  <h1 style="margin-bottom:4px;"> To'lovlarni boshqarish</h1>
+  <p style="color:var(--color-action);">
     Bugun: <b>{{ '{:,}'.format(totals.today).replace(',', ' ') }} so'm</b> ·
     Shu oy: <b>{{ '{:,}'.format(totals.month).replace(',', ' ') }} so'm</b> ·
     Jami muvaffaqiyatli: <b>{{ totals.count }} ta</b>
@@ -50,14 +50,14 @@
                   onsubmit="return confirm('#{{ r.id }} to\'lovni refunded deb belgilaysizmi? Ishlatilmagan entitlement bekor qilinadi (premium bo\'lsa is_premium qayta hisoblanadi). Pulni ATMOS kabinetida alohida qaytaring.');">
               {{ csrf_token()|safe }}
               <button type="submit" class="btn btn-sm"
-                      style="background:#7f1d1d;color:#fecaca;padding:3px 10px;font-size:0.78rem;border-radius:8px;">
+                      style="background:var(--color-background);color:var(--color-text-secondary);padding:3px 10px;font-size:0.78rem;border-radius:var(--radius-default);">
                 Refunded deb belgilash</button>
             </form>
             {% endif %}
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:24px;">To'lovlar topilmadi.</td></tr>
+        <tr><td colspan="9" style="text-align:center;color:var(--color-action);padding:24px;">To'lovlar topilmadi.</td></tr>
         {% endfor %}
       </tbody>
     </table>

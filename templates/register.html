@@ -12,7 +12,7 @@
     <!-- Google bilan kirish -->
     <a href="/login/google"
        onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();"
-       style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:#333;padding:14px 24px;border-radius:50px;text-decoration:none;font-weight:600;font-size:1rem;margin:0 0 16px;border:1px solid #ddd;">
+       style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:var(--color-text-primary);padding:14px 24px;border-radius:var(--radius-default);text-decoration:none;font-weight:600;font-size:1rem;margin:0 0 16px;border:1px solid var(--color-border);">
       <svg width="20" height="20" viewBox="0 0 24 24">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -22,7 +22,7 @@
       Google bilan kirish
     </a>
 
-    <p style="color:#8899b4;font-size:14px;margin-bottom:16px">— yoki Telegram orqali kiring —</p>
+    <p style="color:var(--color-action);font-size:14px;margin-bottom:16px;">— yoki Telegram orqali kiring —</p>
 
     <!-- Telegram orqali kirish -->
     <div id="tg-container" style="display:flex;justify-content:center;">
@@ -35,12 +35,12 @@
         data-request-access="write">
       </script>
     </div>
-    <p id="tg-status" style="color:#ef4444;font-size:13px;margin-top:8px;display:none"></p>
+    <p id="tg-status" style="color:var(--color-text-secondary);font-size:13px;margin-top:8px;display:none;"></p>
 
     <!-- Keyinroq (hozircha davom etish) -->
     <div class="mt-4">
       <a href="/" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();"
-         style="color:#64748b;font-size:0.85rem;text-decoration:underline;">
+         style="color:var(--color-text-secondary);font-size:0.85rem;text-decoration:underline;">
         Keyinroq (hozircha davom etish)
       </a>
     </div>
@@ -50,7 +50,7 @@
 <script>
   function onTelegramAuth(user) {
     if (window.releaseGuestFreeze) window.releaseGuestFreeze();
-    document.getElementById('tg-container').innerHTML = '<p style="color:#4a9eff;font-size:14px">Tekshirilmoqda...</p>';
+    document.getElementById('tg-container').innerHTML = '<p style="color:var(--color-action);font-size:14px;">Tekshirilmoqda...</p>';
     fetch('/login/telegram', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -62,7 +62,7 @@
       else {
         document.getElementById('tg-status').textContent = d.error || 'Xatolik';
         document.getElementById('tg-status').style.display = 'block';
-        document.getElementById('tg-container').innerHTML = '<p style="color:#8899b4;font-size:13px">Qayta urinish uchun sahifani yangilang</p>';
+        document.getElementById('tg-container').innerHTML = '<p style="color:var(--color-action);font-size:13px;">Qayta urinish uchun sahifani yangilang</p>';
       }
     })
     .catch(() => {

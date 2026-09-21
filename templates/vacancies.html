@@ -3,53 +3,53 @@
 
 {% block extra_head %}
 <style>
-  .vac-wrap { max-width: 1100px; margin: 0 auto; padding: 8px 0 40px; }
-  .vac-head { text-align: center; margin-bottom: 1.75rem; }
-  .vac-head h1 { font-size: 1.7rem; font-weight: 800; color: #f1f5f9; margin: 0 0 8px; }
-  .vac-head p { color: #94a3b8; font-size: 1rem; margin: 0; }
+  .vac-wrap { max-width:1100px; margin:0 auto; padding:8px 0 40px; }
+  .vac-head { text-align:center; margin-bottom:1.75rem; }
+  .vac-head h1 { font-size:1.7rem; font-weight:600; color:var(--color-text-primary); margin:0 0 8px; }
+  .vac-head p { color:var(--color-action); font-size:1rem; margin:0; }
 
-  .vac-filters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 2rem; }
-  .vac-pill { background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 9px 18px; border-radius: 999px; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.15s; }
-  .vac-pill:hover { border-color: #3b82f6; }
-  .vac-pill.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .vac-filters { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:2rem; }
+  .vac-pill { background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); padding:9px 18px; border-radius:var(--radius-full); cursor:pointer; font-size:0.88rem; font-weight:600; transition:all 0.15s; }
+  .vac-pill:hover { border-color:var(--color-border); }
+  .vac-pill.active { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); }
 
-  .vac-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-  .vac-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; transition: transform 0.15s, border-color 0.15s; display: flex; flex-direction: column; }
-  .vac-card:hover { transform: translateY(-2px); border-color: #475569; }
-  .vac-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-  .vac-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; white-space: nowrap; }
-  .vac-badge.full_time { background: #059669; }
-  .vac-badge.part_time { background: #f59e0b; }
-  .vac-badge.project { background: #3b82f6; }
-  .vac-badge.internship { background: #8b5cf6; }
-  .vac-deadline { font-size: 0.8rem; font-weight: 600; color: #94a3b8; white-space: nowrap; }
-  .vac-deadline.past { color: #ef4444; }
-  .vac-deadline.soon { color: #f59e0b; }
+  .vac-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:20px; }
+  .vac-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:24px; transition:transform 0.15s, border-color 0.15s; display:flex; flex-direction:column; }
+  .vac-card:hover { transform:translateY(-2px); border-color:var(--color-border); }
+  .vac-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+  .vac-badge { font-size:0.74rem; font-weight:600; padding:4px 12px; border-radius:var(--radius-default); color:var(--color-surface); white-space:nowrap; }
+  .vac-badge.full_time { background:var(--color-background); }
+  .vac-badge.part_time { background:var(--color-background); }
+  .vac-badge.project { background:var(--color-background); }
+  .vac-badge.internship { background:var(--color-background); }
+  .vac-deadline { font-size:0.8rem; font-weight:600; color:var(--color-warning-ink); white-space:nowrap; }
+  .vac-deadline.past { color:var(--color-warning-ink); }
+  .vac-deadline.soon { color:var(--color-warning-ink); }
 
-  .vac-title { font-size: 1.15rem; font-weight: 800; color: #f1f5f9; margin: 0 0 10px; line-height: 1.3; }
-  .vac-meta { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-  .vac-meta span { font-size: 0.88rem; color: #cbd5e1; }
-  .vac-meta .vac-org a { color: #60a5fa; text-decoration: none; }
-  .vac-meta .vac-org a:hover { text-decoration: underline; }
-  .vac-meta .vac-loc { color: #94a3b8; }
-  .vac-meta .vac-salary { color: #34d399; font-weight: 700; }
+  .vac-title { font-size:1.15rem; font-weight:600; color:var(--color-text-primary); margin:0 0 10px; line-height:1.3; }
+  .vac-meta { display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .vac-meta span { font-size:0.88rem; color:var(--color-text-primary); }
+  .vac-meta .vac-org a { color:var(--color-action); text-decoration:none; }
+  .vac-meta .vac-org a:hover { text-decoration:underline; }
+  .vac-meta .vac-loc { color:var(--color-action); }
+  .vac-meta .vac-salary { color:var(--color-text-secondary); font-weight:600; }
 
-  .vac-req { font-size: 0.86rem; color: #94a3b8; line-height: 1.5; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .vac-actions { display: flex; gap: 10px; margin-top: auto; }
-  .vac-btn { flex: 1; text-align: center; padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; font-weight: 700; text-decoration: none; cursor: pointer; border: none; }
-  .vac-btn.detail { background: #162032; border: 1px solid #334155; color: #cbd5e1; }
-  .vac-btn.detail:hover { border-color: #3b82f6; color: #fff; text-decoration: none; }
-  .vac-btn.apply { background: #3b82f6; color: #fff; }
-  .vac-btn.apply:hover { background: #2563eb; color: #fff; text-decoration: none; }
+  .vac-req { font-size:0.86rem; color:var(--color-action); line-height:1.5; margin-bottom:16px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .vac-actions { display:flex; gap:10px; margin-top:auto; }
+  .vac-btn { flex:1; text-align:center; padding:10px 14px; border-radius:var(--radius-default); font-size:0.88rem; font-weight:600; text-decoration:none; cursor:pointer; border:none; }
+  .vac-btn.detail { background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); }
+  .vac-btn.detail:hover { border-color:var(--color-border); color:var(--color-surface); text-decoration:none; }
+  .vac-btn.apply { background:var(--color-action); color:var(--color-surface); }
+  .vac-btn.apply:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
 
-  .vac-empty { text-align: center; padding: 4rem 1rem; }
-  .vac-empty .emo { font-size: 64px; display: block; margin-bottom: 16px; }
-  .vac-empty h3 { color: #f1f5f9; font-size: 1.3rem; font-weight: 700; margin: 0 0 8px; }
-  .vac-empty p { color: #94a3b8; margin: 0 0 8px; }
-  .vac-empty a { color: #3b82f6; font-weight: 600; text-decoration: none; }
+  .vac-empty { text-align:center; padding:4rem 1rem; }
+  .vac-empty .emo { font-size:64px; display:block; margin-bottom:16px; }
+  .vac-empty h3 { color:var(--color-text-primary); font-size:1.3rem; font-weight:600; margin:0 0 8px; }
+  .vac-empty p { color:var(--color-action); margin:0 0 8px; }
+  .vac-empty a { color:var(--color-action); font-weight:600; text-decoration:none; }
 
   @media (max-width: 768px) {
-    .vac-grid { grid-template-columns: 1fr; }
+    .vac-grid { grid-template-columns:1fr; }
   }
 </style>
 {% endblock %}
@@ -80,13 +80,13 @@
       </div>
       <h3 class="vac-title">{{ v.title }}</h3>
       <div class="vac-meta">
-        <span class="vac-org">🏛️
+        <span class="vac-org">
           {% if v.contact_url %}<a href="{{ v.contact_url }}" target="_blank" rel="noopener">{{ v.organization }}</a>
           {% else %}{{ v.organization }}{% endif %}
         </span>
-        {% if v.location %}<span class="vac-loc">📍 {{ v.location }}</span>{% endif %}
-        {% if v.specialty %}<span>📋 {{ v.specialty }}</span>{% endif %}
-        {% if v.salary %}<span class="vac-salary">💰 {{ v.salary }}</span>{% endif %}
+        {% if v.location %}<span class="vac-loc"> {{ v.location }}</span>{% endif %}
+        {% if v.specialty %}<span> {{ v.specialty }}</span>{% endif %}
+        {% if v.salary %}<span class="vac-salary"> {{ v.salary }}</span>{% endif %}
       </div>
       {% if v.requirements %}
       <div class="vac-req">{{ v.requirements[:200] }}{% if v.requirements|length > 200 %}...{% endif %}</div>
@@ -104,7 +104,7 @@
   </div>
   {% else %}
   <div class="vac-empty">
-    <span class="emo">💼</span>
+    <span class="emo"></span>
     <h3>Hozircha aktiv vakansiyalar yo'q</h3>
     <p>Tez orada yangi takliflar paydo bo'ladi!</p>
     <p><a href="https://t.me/olimlar_uz" target="_blank" rel="noopener">Telegram kanalimizga obuna bo'ling</a></p>

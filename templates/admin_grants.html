@@ -2,15 +2,15 @@
 {% block title %}Grantlar (admin){% endblock %}
 {% block content %}
 <div class="content-card" style="max-width:1100px;margin:0 auto;">
-  <h1 style="margin-bottom:4px;">🏆 Grantlarni boshqarish</h1>
-  <p style="color:#94a3b8;">Jami: {{ grants|length }} ta grant</p>
+  <h1 style="margin-bottom:4px;"> Grantlarni boshqarish</h1>
+  <p style="color:var(--color-action);">Jami: {{ grants|length }} ta grant</p>
 
   {% with msgs = get_flashed_messages() %}
     {% for m in msgs %}<div class="alert-inline success">{{ m }}</div>{% endfor %}
   {% endwith %}
 
   <h2 style="font-size:1.05rem;margin-top:18px;">
-    {% if edit_g %}✏️ Grantni tahrirlash (#{{ edit_g.id }}){% else %}➕ Yangi grant qo'shish{% endif %}
+    {% if edit_g %} Grantni tahrirlash (#{{ edit_g.id }}){% else %} Yangi grant qo'shish{% endif %}
   </h2>
   <form method="POST"
         action="{% if edit_g %}/admin/grants/edit/{{ edit_g.id }}{% else %}/admin/grants/add{% endif %}"
@@ -65,7 +65,7 @@
           <form method="POST" action="/admin/grants/delete/{{ g.id }}" style="display:inline;"
                 onsubmit="return confirm('Grantni o‘chirishni tasdiqlaysizmi?');">
             {{ csrf_token()|safe }}
-            <button type="submit" class="btn btn-sm" style="color:#f87171;">O'chirish</button>
+            <button type="submit" class="btn btn-sm" style="color:var(--color-text-secondary);">O'chirish</button>
           </form>
         </td>
       </tr>

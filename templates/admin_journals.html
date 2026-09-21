@@ -3,52 +3,52 @@
 
 {% block extra_head %}
 <style>
-  .adm-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
-  .adm-head h1 { margin: 0; font-size: 1.45rem; font-weight: 800; color: #f1f5f9; }
-  .adm-add { display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 20px; border-radius: 10px; text-decoration: none; }
-  .adm-add:hover { background: #2563eb; color: #fff; text-decoration: none; }
-  .adm-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
-  .adm-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
-  .adm-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
-  .adm-table-wrap { border-radius: 14px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
-  .adm-table { width: 100%; margin: 0; border-collapse: collapse; }
-  .adm-table th { background: #162032; color: #94a3b8; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 0.9rem; text-align: left; }
-  .adm-table td { padding: 0.6rem 0.9rem; font-size: 0.86rem; color: #e2e8f0; border-top: 1px solid #334155; vertical-align: middle; }
-  .adm-table tbody tr:hover td { background: #243044; }
-  .pub-badge { font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
-  .pub-on { background: rgba(5,150,105,0.16); color: #34d399; } .pub-off { background: rgba(148,163,184,0.16); color: #94a3b8; }
-  .pred-badge { background: rgba(239,68,68,0.16); color: #fca5a5; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-  .adm-actions { display: flex; gap: 8px; align-items: center; }
-  .adm-btn { font-size: 0.95rem; padding: 5px 11px; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; line-height: 1; }
-  .adm-edit { background: rgba(59,130,246,0.15); color: #60a5fa; } .adm-del { background: rgba(239,68,68,0.15); color: #f87171; }
-  .adm-empty { padding: 2.5rem; text-align: center; color: #94a3b8; }
-  .adm-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
-  .adm-stat { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 12px 16px; }
-  .adm-stat b { display: block; font-size: 1.35rem; color: #f1f5f9; }
-  .adm-stat span { font-size: 0.74rem; color: #94a3b8; }
-  .adm-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
-  @media (max-width: 760px) { .adm-tools { grid-template-columns: 1fr; } }
-  .adm-tool { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; }
-  .adm-tool h3 { margin: 0 0 4px; font-size: 0.92rem; color: #e2e8f0; }
-  .adm-tool p { margin: 0 0 10px; font-size: 0.76rem; color: #94a3b8; }
-  .adm-tool form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .adm-tool input[type=file] { flex: 1; min-width: 160px; font-size: 0.78rem; color: #94a3b8; }
-  .adm-tool button { background: #3b82f6; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-  .adm-search { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.9rem; margin-bottom: 14px; }
-  .adm-analytics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
-  @media (max-width: 760px) { .adm-analytics { grid-template-columns: 1fr; } }
-  .adm-panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
-  .adm-panel h3 { margin: 0 0 10px; font-size: 0.95rem; color: #e2e8f0; }
-  .adm-panel table { width: 100%; font-size: 0.82rem; color: #cbd5e1; border-collapse: collapse; }
-  .adm-panel td, .adm-panel th { padding: 5px 8px; border-top: 1px solid #28344a; text-align: left; }
-  .adm-panel th { color: #64748b; font-size: 0.7rem; text-transform: uppercase; }
+  .adm-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+  .adm-head h1 { margin:0; font-size:1.45rem; font-weight:600; color:var(--color-text-primary); }
+  .adm-add { display:inline-flex; align-items:center; gap:6px; background:var(--color-background); color:var(--color-text-primary); font-weight:600; padding:11px 20px; border-radius:var(--radius-default); text-decoration:none; }
+  .adm-add:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
+  .adm-flash { border-radius:var(--radius-default); padding:11px 16px; font-size:0.9rem; margin-bottom:16px; }
+  .adm-flash.success { background:var(--color-background); border:1px solid var(--color-success); color:var(--color-success); }
+  .adm-flash.error { background:var(--color-background); border:1px solid var(--color-danger); color:var(--color-danger); }
+  .adm-table-wrap { border-radius:var(--radius-card); overflow:hidden; border:1px solid var(--color-border); background:var(--color-surface); }
+  .adm-table { width:100%; margin:0; border-collapse:collapse; }
+  .adm-table th { background:var(--color-surface); color:var(--color-action); font-size:0.74rem; text-transform:uppercase; letter-spacing:0.5px; padding:0.75rem 0.9rem; text-align:left; }
+  .adm-table td { padding:0.6rem 0.9rem; font-size:0.86rem; color:var(--color-text-primary); border-top:1px solid var(--color-border); vertical-align:middle; }
+  .adm-table tbody tr:hover td { background:var(--color-action); }
+  .pub-badge { font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-default); white-space:nowrap; }
+  .pub-on { background:var(--color-background); color:var(--color-text-secondary); } .pub-off { background:var(--color-background); color:var(--color-action); }
+  .pred-badge { background:var(--color-background); color:var(--color-text-secondary); font-size:0.7rem; font-weight:600; padding:2px 8px; border-radius:var(--radius-default); }
+  .adm-actions { display:flex; gap:8px; align-items:center; }
+  .adm-btn { font-size:0.95rem; padding:5px 11px; border-radius:var(--radius-default); text-decoration:none; border:none; cursor:pointer; line-height:1; }
+  .adm-edit { background:var(--color-background); color:var(--color-action); } .adm-del { background:var(--color-background); color:var(--color-text-secondary); }
+  .adm-empty { padding:2.5rem; text-align:center; color:var(--color-action); }
+  .adm-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:18px; }
+  .adm-stat { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:12px 16px; }
+  .adm-stat b { display:block; font-size:1.35rem; color:var(--color-text-primary); }
+  .adm-stat span { font-size:0.74rem; color:var(--color-action); }
+  .adm-tools { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+  @media (max-width: 760px) { .adm-tools { grid-template-columns:1fr; } }
+  .adm-tool { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:14px 16px; }
+  .adm-tool h3 { margin:0 0 4px; font-size:0.92rem; color:var(--color-text-primary); }
+  .adm-tool p { margin:0 0 10px; font-size:0.76rem; color:var(--color-action); }
+  .adm-tool form { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .adm-tool input[type=file] { flex:1; min-width:160px; font-size:0.78rem; color:var(--color-action); }
+  .adm-tool button { background:var(--color-action); color:var(--color-surface); border:none; border-radius:var(--radius-default); padding:8px 14px; font-size:0.8rem; font-weight:600; cursor:pointer; }
+  .adm-search { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:10px 14px; font-size:0.9rem; margin-bottom:14px; }
+  .adm-analytics { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
+  @media (max-width: 760px) { .adm-analytics { grid-template-columns:1fr; } }
+  .adm-panel { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:16px; }
+  .adm-panel h3 { margin:0 0 10px; font-size:0.95rem; color:var(--color-text-primary); }
+  .adm-panel table { width:100%; font-size:0.82rem; color:var(--color-text-primary); border-collapse:collapse; }
+  .adm-panel td, .adm-panel th { padding:5px 8px; border-top:1px solid var(--color-border); text-align:left; }
+  .adm-panel th { color:var(--color-text-secondary); font-size:0.7rem; text-transform:uppercase; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="adm-head">
-  <h1>📚 Jurnallar boshqaruvi ({{ items|length }})</h1>
-  <a href="/admin/journals/add" class="adm-add">➕ Jurnal qo'shish</a>
+  <h1> Jurnallar boshqaruvi ({{ items|length }})</h1>
+  <a href="/admin/journals/add" class="adm-add"> Jurnal qo'shish</a>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -66,26 +66,29 @@
 
 <div class="adm-tools">
   <div class="adm-tool">
-    <h3>📥 CSV orqali yuklash</h3>
+    <h3> CSV orqali yuklash</h3>
     <p>Ustunlar: <code>title, issn, source (oak/scopus/wos/manual), is_suspect</code> — ixtiyoriy: eissn, publisher, country, quartile, reason. Mavjud jurnallar yangilanadi.</p>
     <form method="POST" action="/admin/journals/csv" enctype="multipart/form-data">
       {{ csrf_token()|safe }}
-      <input type="file" name="csv_file" accept=".csv" required>
+      <label class="ol-label" for="ol-field-1">Csv file</label>
+<input id="ol-field-1" type="file" name="csv_file" accept=".csv" required>
       <button type="submit">Yuklash</button>
     </form>
   </div>
   <div class="adm-tool">
-    <h3>🛡️ Suspect ro'yxatini yangilash</h3>
+    <h3> Suspect ro'yxatini yangilash</h3>
     <p>JSON fayl: <code>[{"publisher": "...", "reason": "..."}]</code> — eski ro'yxat to'liq almashtiriladi.</p>
     <form method="POST" action="/admin/journals/suspects" enctype="multipart/form-data">
       {{ csrf_token()|safe }}
-      <input type="file" name="suspects_file" accept=".json" required>
+      <label class="ol-label" for="ol-field-2">Suspects file</label>
+<input id="ol-field-2" type="file" name="suspects_file" accept=".json" required>
       <button type="submit">Yangilash</button>
     </form>
   </div>
 </div>
 
-<input type="text" class="adm-search" id="admJrSearch" placeholder="🔍 Jurnal nomi yoki ISSN bo'yicha qidirish...">
+<label class="ol-label" for="admJrSearch"> Jurnal nomi yoki ISSN bo'yicha qidirish</label>
+<input type="text" class="adm-search" id="admJrSearch" placeholder=" Jurnal nomi yoki ISSN bo'yicha qidirish...">
 
 {% if items %}
 <div class="adm-table-wrap">
@@ -97,24 +100,24 @@
       {% for j in items %}
       <tr class="adm-jr-row" data-search="{{ (j.name ~ ' ' ~ j.issn)|lower }}">
         <td>{{ j.id }}</td>
-        <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;">{% else %}📚{% endif %}</td>
-        <td><a href="/journals/{{ j.id }}" style="color:#60a5fa;">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge">⚠️</span>{% endif %}
+        <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:var(--radius-default);object-fit:cover;">{% else %}{% endif %}</td>
+        <td><a href="/journals/{{ j.id }}" style="color:var(--color-action);">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge"></span>{% endif %}
           {% if j.moderation_status == 'pending' %}
-          <span style="font-size:0.68rem;font-weight:800;background:rgba(245,158,11,0.18);color:#fbbf24;border-radius:999px;padding:2px 8px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          <span style="font-size:0.68rem;font-weight:600;background:var(--color-background);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;white-space:nowrap;">⏳ Moderatsiyada</span>
           {% endif %}
-          {% if j.canonical_institution %}<br><small style="color:#60a5fa;">🏛 {{ j.canonical_institution[:44] }}</small>{% endif %}</td>
-        <td style="font-size:0.78rem;color:#94a3b8;">{{ j.issn or '—' }}</td>
-        <td style="color:#93bbfc;font-size:0.78rem;">{{ j.codes or '—' }}</td>
-        <td>{% if j.oak_approved %}✅{% else %}—{% endif %}</td>
-        <td>{% if j.scopus_indexed %}✅{% else %}—{% endif %}</td>
-        <td>{% if j.wos_indexed %}✅{% else %}—{% endif %}</td>
+          {% if j.canonical_institution %}<br><small style="color:var(--color-action);"> {{ j.canonical_institution[:44] }}</small>{% endif %}</td>
+        <td style="font-size:0.78rem;color:var(--color-action);">{{ j.issn or '—' }}</td>
+        <td style="color:var(--color-action);font-size:0.78rem;">{{ j.codes or '—' }}</td>
+        <td>{% if j.oak_approved %}{% else %}—{% endif %}</td>
+        <td>{% if j.scopus_indexed %}{% else %}—{% endif %}</td>
+        <td>{% if j.wos_indexed %}{% else %}—{% endif %}</td>
         <td>
           <form method="POST" action="/admin/journals/toggle-suspect/{{ j.id }}" style="display:inline;"
                 {% if not j.is_predatory %}onsubmit="return confirm('Jurnal shubhali deb belgilansinmi?')"{% endif %}>
             {{ csrf_token()|safe }}
             <button type="submit" class="adm-btn" title="{% if j.is_predatory %}Belgini olib tashlash{% else %}Shubhali deb belgilash{% endif %}"
                     style="background:{% if j.is_predatory %}rgba(239,68,68,0.25){% else %}rgba(148,163,184,0.12){% endif %};color:{% if j.is_predatory %}#f87171{% else %}#64748b{% endif %};">
-              {% if j.is_predatory %}🔴{% else %}○{% endif %}
+              {% if j.is_predatory %}{% else %}○{% endif %}
             </button>
           </form>
         </td>
@@ -124,13 +127,13 @@
             <form method="POST" action="/admin/journals/approve/{{ j.id }}" style="display:inline;">
               {{ csrf_token()|safe }}
               <button type="submit" class="adm-btn" title="Tasdiqlash"
-                      style="background:#059669;color:#fff;">✓</button>
+                      style="background:var(--color-background);color:var(--color-text-primary);" aria-label="Tasdiqlash"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
             </form>
             {% endif %}
-            <a href="/admin/journals/edit/{{ j.id }}" class="adm-btn adm-edit" title="Tahrirlash">✏️</a>
+            <a href="/admin/journals/edit/{{ j.id }}" class="adm-btn adm-edit" title="Tahrirlash" aria-label="Tahrirlash"><i class="bi bi-pencil" aria-hidden="true"></i></a>
             <form method="POST" action="/admin/journals/delete/{{ j.id }}" onsubmit="return confirm('Rostdan o\'chirilsinmi?')" style="display:inline;">
               {{ csrf_token()|safe }}
-              <button type="submit" class="adm-btn adm-del" title="O'chirish">🗑️</button>
+              <button type="submit" class="adm-btn adm-del" title="O'chirish" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
             </form>
           </div>
         </td>
@@ -145,25 +148,25 @@
 
 <div class="adm-analytics">
   <div class="adm-panel">
-    <h3>🔍 Eng ko'p qidirilgan jurnallar (top 10)</h3>
+    <h3> Eng ko'p qidirilgan jurnallar (top 10)</h3>
     {% if top_searches %}
     <table>
       <tr><th>So'rov</th><th>Soni</th><th>Ogohlantirish</th></tr>
       {% for s in top_searches %}
-      <tr><td>{{ s.query[:45] }}</td><td>{{ s.count }}</td><td>{% if s.warned %}⚠️ {{ s.warned }}{% else %}—{% endif %}</td></tr>
+      <tr><td>{{ s.query[:45] }}</td><td>{{ s.count }}</td><td>{% if s.warned %} {{ s.warned }}{% else %}—{% endif %}</td></tr>
       {% endfor %}
     </table>
-    {% else %}<p style="color:#64748b;font-size:0.82rem;margin:0;">Hali qidiruv yo'q.</p>{% endif %}
+    {% else %}<p style="color:var(--color-text-secondary);font-size:0.82rem;margin:0;">Hali qidiruv yo'q.</p>{% endif %}
   </div>
   <div class="adm-panel">
-    <h3>⚠️ Ogohlantirishlar statistikasi</h3>
+    <h3> Ogohlantirishlar statistikasi</h3>
     <table>
       <tr><th>Nashr holati</th><th>Soni</th></tr>
-      <tr><td>✅ Ishonchli jurnal bilan saqlangan</td><td>{{ warn_saves.get('trusted', 0) }}</td></tr>
-      <tr><td>⚠️ Ro'yxatlarda topilmagan jurnal bilan</td><td>{{ warn_saves.get('unknown', 0) }}</td></tr>
-      <tr><td>🔴 Shubhali nashriyot ogohlantirishi bilan</td><td>{{ warn_saves.get('suspect', 0) }}</td></tr>
+      <tr><td> Ishonchli jurnal bilan saqlangan</td><td>{{ warn_saves.get('trusted', 0) }}</td></tr>
+      <tr><td> Ro'yxatlarda topilmagan jurnal bilan</td><td>{{ warn_saves.get('unknown', 0) }}</td></tr>
+      <tr><td> Shubhali nashriyot ogohlantirishi bilan</td><td>{{ warn_saves.get('suspect', 0) }}</td></tr>
     </table>
-    <p style="color:#64748b;font-size:0.74rem;margin:10px 0 0;">Foydalanuvchilar kabinetda maqola qo'shganda jurnal tekshiruvi natijasi saqlanadi. Ogohlantirishlar tavsiya xarakterida — saqlash bloklanmaydi.</p>
+    <p style="color:var(--color-text-secondary);font-size:0.74rem;margin:10px 0 0;">Foydalanuvchilar kabinetda maqola qo'shganda jurnal tekshiruvi natijasi saqlanadi. Ogohlantirishlar tavsiya xarakterida — saqlash bloklanmaydi.</p>
   </div>
 </div>
 

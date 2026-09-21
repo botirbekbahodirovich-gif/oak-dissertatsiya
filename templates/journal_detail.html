@@ -13,47 +13,47 @@
 
 {% block extra_head %}
 <style>
-  .jd-wrap { max-width: 920px; margin: 0 auto; padding: 8px 16px 48px; }
-  .jd-back { display: inline-block; color: #94a3b8; text-decoration: none; font-size: 0.88rem; margin-bottom: 16px; }
-  .jd-header { background: linear-gradient(135deg,#1e40af,#3b82f6); border-radius: 18px; padding: 28px; color: #fff; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
-  .jd-logo { width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,0.15); display: grid; place-items: center; font-size: 2.6rem; overflow: hidden; border: 3px solid rgba(255,255,255,0.3); flex-shrink: 0; }
-  .jd-logo img { width: 100%; height: 100%; object-fit: cover; }
-  .jd-htext h1 { font-size: 1.45rem; font-weight: 800; margin: 0 0 4px; }
-  .jd-en { opacity: 0.9; font-style: italic; margin-bottom: 10px; }
-  .jd-badges { display: flex; gap: 8px; flex-wrap: wrap; }
-  .jd-badge { font-size: 0.74rem; font-weight: 700; padding: 4px 12px; border-radius: 999px; color: #fff; text-decoration: none; }
-  .jd-badge.oak { background: #059669; }
-  .jd-badge.scopus  { background: #ff8608; }
-  .jd-badge.wos     { background: #fbbc05; color: #1f2937; }
-  .jd-badge.scholar { background: #4285f4; }
-  .jd-badge.code { background: rgba(255,255,255,0.2); }
-  .jd-warn { background: rgba(239,68,68,0.12); border: 1px solid #ef4444; color: #fca5a5; border-radius: 12px; padding: 14px 18px; margin-bottom: 22px; font-weight: 600; }
-  .jd-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
-  .jd-section h2 { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; margin: 0 0 14px; }
-  .jd-table { width: 100%; border-collapse: collapse; }
-  .jd-table td { padding: 8px 4px; font-size: 0.9rem; border-bottom: 1px solid #28344a; vertical-align: top; }
-  .jd-table td.lbl { color: #94a3b8; width: 220px; font-weight: 600; }
-  .jd-table td.val { color: #e2e8f0; }
-  .jd-table a { color: #60a5fa; }
-  .jd-req { color: #cbd5e1; line-height: 1.7; white-space: pre-line; }
-  .jd-checklist { list-style: none; padding: 0; margin: 0; }
-  .jd-checklist li { padding: 6px 0; color: #cbd5e1; font-size: 0.9rem; }
-  .jd-checklist li::before { content: '✅ '; }
-  .jd-fee-free { color: #34d399; font-weight: 700; } .jd-fee-paid { color: #f59e0b; font-weight: 700; }
-  .jd-oak-ok { display: inline-flex; align-items: center; gap: 6px; background: rgba(5,150,105,0.16); color: #34d399; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 0.82rem; }
-  .jd-codes { display: flex; flex-direction: column; gap: 8px; }
-  .jd-code-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 10px; padding: 10px 14px; text-decoration: none; }
-  .jd-code-row .c { color: #93bbfc; font-weight: 700; } .jd-code-row .n { color: #cbd5e1; font-size: 0.86rem; }
-  .jd-code-row .cnt { color: #94a3b8; font-size: 0.82rem; }
-  .jd-similar { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; }
-  @media (max-width: 600px) { .jd-similar { grid-template-columns: 1fr; } .jd-table td.lbl { width: 140px; } }
-  .jd-sim-card { display: flex; align-items: center; gap: 10px; background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 12px; text-decoration: none; }
-  .jd-sim-logo { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#1e40af,#3b82f6); display: grid; place-items: center; overflow: hidden; flex-shrink: 0; }
-  .jd-sim-logo img { width: 100%; height: 100%; object-fit: cover; }
-  .jd-sim-card .nm { color: #f1f5f9; font-weight: 600; font-size: 0.86rem; }
-  .jd-sim-card .cd { color: #94a3b8; font-size: 0.74rem; }
-  .jd-admin { display: inline-block; background: #3b82f6; color: #fff; font-weight: 700; padding: 9px 20px; border-radius: 10px; text-decoration: none; }
-  .jd-empty { color: #64748b; font-style: italic; }
+  .jd-wrap { max-width:920px; margin:0 auto; padding:8px 16px 48px; }
+  .jd-back { display:inline-block; color:var(--color-action); text-decoration:none; font-size:0.88rem; margin-bottom:16px; }
+  .jd-header { background:var(--color-surface); border-radius:var(--radius-default); padding:28px; color:var(--color-text-primary); display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:22px; }
+  .jd-logo { width:90px; height:90px; border-radius:50%; background:var(--color-background); display:grid; place-items:center; font-size:2.6rem; overflow:hidden; border:3px solid var(--color-border); flex-shrink:0; }
+  .jd-logo img { width:100%; height:100%; object-fit:cover; }
+  .jd-htext h1 { font-size:1.45rem; font-weight:600; margin:0 0 4px; }
+  .jd-en { opacity:0.9; font-style:italic; margin-bottom:10px; }
+  .jd-badges { display:flex; gap:8px; flex-wrap:wrap; }
+  .jd-badge { font-size:0.74rem; font-weight:600; padding:4px 12px; border-radius:var(--radius-default); color:var(--color-surface); text-decoration:none; }
+  .jd-badge.oak { background:var(--color-background); }
+  .jd-badge.scopus  { background:var(--color-background); }
+  .jd-badge.wos     { background:var(--color-background); color:var(--color-text-primary); }
+  .jd-badge.scholar { background:var(--color-background); }
+  .jd-badge.code { background:var(--color-background); }
+  .jd-warn { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:14px 18px; margin-bottom:22px; font-weight:600; }
+  .jd-section { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:22px; margin-bottom:18px; }
+  .jd-section h2 { font-size:1.1rem; font-weight:600; color:var(--color-text-primary); margin:0 0 14px; }
+  .jd-table { width:100%; border-collapse:collapse; }
+  .jd-table td { padding:8px 4px; font-size:0.9rem; border-bottom:1px solid var(--color-border); vertical-align:top; }
+  .jd-table td.lbl { color:var(--color-action); width:220px; font-weight:600; }
+  .jd-table td.val { color:var(--color-text-primary); }
+  .jd-table a { color:var(--color-action); }
+  .jd-req { color:var(--color-text-primary); line-height:1.7; white-space:pre-line; }
+  .jd-checklist { list-style:none; padding:0; margin:0; }
+  .jd-checklist li { padding:6px 0; color:var(--color-text-primary); font-size:0.9rem; }
+  .jd-checklist li::before { content:' '; }
+  .jd-fee-free { color:var(--color-text-secondary); font-weight:600; } .jd-fee-paid { color:var(--color-text-secondary); font-weight:600; }
+  .jd-oak-ok { display:inline-flex; align-items:center; gap:6px; background:var(--color-background); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:6px 14px; font-weight:600; font-size:0.82rem; }
+  .jd-codes { display:flex; flex-direction:column; gap:8px; }
+  .jd-code-row { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:10px 14px; text-decoration:none; }
+  .jd-code-row .c { color:var(--color-action); font-weight:600; } .jd-code-row .n { color:var(--color-text-primary); font-size:0.86rem; }
+  .jd-code-row .cnt { color:var(--color-action); font-size:0.82rem; }
+  .jd-similar { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media (max-width: 600px) { .jd-similar { grid-template-columns:1fr; } .jd-table td.lbl { width:140px; } }
+  .jd-sim-card { display:flex; align-items:center; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px; text-decoration:none; }
+  .jd-sim-logo { width:40px; height:40px; border-radius:50%; background:var(--color-surface); display:grid; place-items:center; overflow:hidden; flex-shrink:0; }
+  .jd-sim-logo img { width:100%; height:100%; object-fit:cover; }
+  .jd-sim-card .nm { color:var(--color-text-primary); font-weight:600; font-size:0.86rem; }
+  .jd-sim-card .cd { color:var(--color-action); font-size:0.74rem; }
+  .jd-admin { display:inline-block; background:var(--color-background); color:var(--color-text-primary); font-weight:600; padding:9px 20px; border-radius:var(--radius-default); text-decoration:none; }
+  .jd-empty { color:var(--color-text-secondary); font-style:italic; }
 </style>
 {% endblock %}
 
@@ -63,12 +63,12 @@
 
   <!-- A) Header -->
   <div class="jd-header">
-    <div class="jd-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}📚{% endif %}</div>
+    <div class="jd-logo">{% if j.logo_url %}<img src="{{ j.logo_url }}" alt="">{% else %}{% endif %}</div>
     <div class="jd-htext">
       <h1>{{ j.name }}</h1>
       {% if j.name_en %}<div class="jd-en">{{ j.name_en }}</div>{% endif %}
       <div class="jd-badges">
-        {% if j.oak_approved %}<span class="jd-badge oak">OAK ✓</span>{% endif %}
+        {% if j.oak_approved %}<span class="jd-badge oak">OAK </span>{% endif %}
         {% if j.scopus_indexed %}<span class="jd-badge scopus">Scopus</span>{% endif %}
         {% if j.wos_indexed %}<span class="jd-badge wos">WoS</span>{% endif %}
         {% if j.scholar_indexed %}<span class="jd-badge scholar">Google Scholar</span>{% endif %}
@@ -78,12 +78,12 @@
   </div>
 
   {% if j.is_predatory %}
-  <div class="jd-warn">⚠️ DIQQAT: Bu jurnal shubhali (predatory) ro'yxatida. Maqola yuborishdan oldin diqqat bilan tekshiring.</div>
+  <div class="jd-warn"> DIQQAT: Bu jurnal shubhali (predatory) ro'yxatida. Maqola yuborishdan oldin diqqat bilan tekshiring.</div>
   {% endif %}
 
   <!-- B) Umumiy ma'lumot -->
   <div class="jd-section">
-    <h2>ℹ️ Umumiy ma'lumot</h2>
+    <h2>ℹ Umumiy ma'lumot</h2>
     <table class="jd-table">
       {% if j.issn %}<tr><td class="lbl">ISSN</td><td class="val">{{ j.issn }}</td></tr>{% endif %}
       {% if j.eissn %}<tr><td class="lbl">E-ISSN</td><td class="val">{{ j.eissn }}</td></tr>{% endif %}
@@ -101,7 +101,7 @@
 
   <!-- C) Maqola talablari -->
   <div class="jd-section">
-    <h2>📋 Maqola talablari</h2>
+    <h2> Maqola talablari</h2>
     {% if j.article_requirements %}
     <div class="jd-req">{{ j.article_requirements }}</div>
     {% else %}
@@ -118,7 +118,7 @@
 
   <!-- D) Chop etish ma'lumotlari -->
   <div class="jd-section">
-    <h2>💳 Chop etish ma'lumotlari</h2>
+    <h2> Chop etish ma'lumotlari</h2>
     <table class="jd-table">
       <tr><td class="lbl">Narxi</td><td class="val">
         {% if j.publish_fee %}<span class="{% if 'bepul' in j.publish_fee|lower %}jd-fee-free{% else %}jd-fee-paid{% endif %}">{{ j.publish_fee }}</span>{% else %}Ma'lumot yo'q{% endif %}
@@ -126,13 +126,13 @@
       <tr><td class="lbl">Ko'rib chiqish muddati</td><td class="val">{{ j.review_period or "Ma'lumot yo'q" }}</td></tr>
       {% if j.publish_format %}<tr><td class="lbl">Nashr formati</td><td class="val">{{ j.publish_format }}</td></tr>{% endif %}
     </table>
-    {% if j.oak_approved %}<div style="margin-top:14px;"><span class="jd-oak-ok">✓ OAK tomonidan tasdiqlangan</span></div>{% endif %}
+    {% if j.oak_approved %}<div style="margin-top:14px;"><span class="jd-oak-ok"> OAK tomonidan tasdiqlangan</span></div>{% endif %}
   </div>
 
   <!-- E) Mos ixtisosliklar -->
   {% if codes %}
   <div class="jd-section">
-    <h2>🎓 Mos ixtisosliklar</h2>
+    <h2> Mos ixtisosliklar</h2>
     <div class="jd-codes">
       {% for c in codes %}
       <a class="jd-code-row" href="/data?ixtisoslik={{ c.code|urlencode }}">
@@ -147,11 +147,11 @@
   <!-- G) O'xshash jurnallar -->
   {% if similar %}
   <div class="jd-section">
-    <h2>📚 O'xshash jurnallar</h2>
+    <h2> O'xshash jurnallar</h2>
     <div class="jd-similar">
       {% for s in similar %}
       <a class="jd-sim-card" href="/journals/{{ s.id }}">
-        <div class="jd-sim-logo">{% if s.logo_url %}<img src="{{ s.logo_url }}" alt="">{% else %}📚{% endif %}</div>
+        <div class="jd-sim-logo">{% if s.logo_url %}<img src="{{ s.logo_url }}" alt="">{% else %}{% endif %}</div>
         <div style="min-width:0;">
           <div class="nm">{{ s.name }}</div>
           <div class="cd">{{ s.codes|join(', ') }}</div>
@@ -165,7 +165,7 @@
   <!-- H) Admin -->
   {% if is_admin %}
   <div class="jd-section">
-    <a class="jd-admin" href="/admin/journals/edit/{{ j.id }}">✏️ Tahrirlash</a>
+    <a class="jd-admin" href="/admin/journals/edit/{{ j.id }}"> Tahrirlash</a>
   </div>
   {% endif %}
 </div>

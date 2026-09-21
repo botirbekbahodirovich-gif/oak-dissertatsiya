@@ -4,39 +4,39 @@
 
 {% block extra_head %}
 <style>
-.rp-wrap { max-width: 900px; margin: 0 auto; }
-.rp-head { border: 1px solid #e2e8f0; border-radius: 16px; background: #fff; padding: 22px 24px; margin-bottom: 18px; }
-.rp-head h1 { margin: 0 0 4px; font-size: 1.5rem; }
-.rp-daraja { color: #64748b; font-size: 0.92rem; margin-bottom: 12px; }
-.rp-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.rp-badge { background: rgba(59,130,246,0.1); color: #2563eb; border-radius: 9px; padding: 5px 12px;
-  font-size: 0.85rem; font-weight: 700; }
-.rp-badge.dsc { background: rgba(124,92,252,0.12); color: #7c5cfc; }
-.rp-badge.yr { background: rgba(34,197,94,0.12); color: #15803d; }
-.rp-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.rp-btn { display: inline-block; background: linear-gradient(135deg, #3b82f6, #7c5cfc); color: #fff !important;
-  border: none; padding: 10px 20px; border-radius: 10px; font-size: 0.92rem; font-weight: 700;
-  cursor: pointer; text-decoration: none; }
-.rp-btn.ghost { background: none; color: #2563eb !important; border: 1px solid #bfdbfe; }
-.rp-invite-note { margin-top: 12px; padding: 12px 16px; border-radius: 10px; background: rgba(251,191,36,0.1);
-  color: #92400e; font-size: 0.88rem; }
-.rp-invite-note.ok { background: rgba(34,197,94,0.1); color: #15803d; }
-.rp-section { border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; padding: 18px 20px; margin-bottom: 16px; }
-.rp-section h2 { font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0 0 12px; }
-.rp-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.rp-chip { border: 1px solid #e2e8f0; border-radius: 9px; padding: 6px 12px; font-size: 0.83rem; color: #475569; }
-.rp-chip b { color: #2563eb; }
-.rp-inst { color: #475569; font-size: 0.88rem; padding: 4px 0; }
-.rp-year { display: flex; align-items: baseline; gap: 10px; margin: 16px 0 8px; }
-.rp-year b { font-size: 1rem; color: #0f172a; }
-.rp-year .bar { height: 6px; border-radius: 3px; background: linear-gradient(90deg, #3b82f6, #7c5cfc); }
-.rp-year .cnt { color: #94a3b8; font-size: 0.8rem; }
-.rp-stud { border-bottom: 1px solid #eef2f7; padding: 9px 0; font-size: 0.88rem; }
-.rp-stud:last-child { border-bottom: none; }
-.rp-stud a { color: #2563eb; text-decoration: none; font-weight: 600; }
-.rp-stud a:hover { text-decoration: underline; }
-.rp-stud .mavzu { color: #475569; margin-top: 2px; }
-.rp-stud .meta { color: #94a3b8; font-size: 0.78rem; margin-top: 2px; }
+.rp-wrap { max-width:900px; margin:0 auto; }
+.rp-head { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-background); padding:22px 24px; margin-bottom:18px; }
+.rp-head h1 { margin:0 0 4px; font-size:1.5rem; }
+.rp-daraja { color:var(--color-text-secondary); font-size:0.92rem; margin-bottom:12px; }
+.rp-badges { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.rp-badge { background:var(--color-background); color:var(--color-action); border-radius:var(--radius-default); padding:5px 12px;
+  font-size:0.85rem; font-weight:600; }
+.rp-badge.dsc { background:var(--color-background); color:var(--color-action); }
+.rp-badge.yr { background:var(--color-background); color:var(--color-text-secondary); }
+.rp-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.rp-btn { display:inline-block; background:var(--color-action); color:var(--color-surface) !important;
+  border:none; padding:10px 20px; border-radius:var(--radius-default); font-size:0.92rem; font-weight:600;
+  cursor:pointer; text-decoration:none; }
+.rp-btn.ghost { background:none; color:var(--color-action) !important; border:1px solid var(--color-border); }
+.rp-invite-note { margin-top:12px; padding:12px 16px; border-radius:var(--radius-default); background:var(--color-background);
+  color:var(--color-text-secondary); font-size:0.88rem; }
+.rp-invite-note.ok { background:var(--color-background); color:var(--color-text-secondary); }
+.rp-section { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-background); padding:18px 20px; margin-bottom:16px; }
+.rp-section h2 { font-size:1.05rem; font-weight:600; color:var(--color-text-primary); margin:0 0 12px; }
+.rp-chips { display:flex; gap:8px; flex-wrap:wrap; }
+.rp-chip { border:1px solid var(--color-border); border-radius:var(--radius-default); padding:6px 12px; font-size:0.83rem; color:var(--color-action); }
+.rp-chip b { color:var(--color-action); }
+.rp-inst { color:var(--color-action); font-size:0.88rem; padding:4px 0; }
+.rp-year { display:flex; align-items:baseline; gap:10px; margin:16px 0 8px; }
+.rp-year b { font-size:1rem; color:var(--color-text-primary); }
+.rp-year .bar { height:6px; border-radius:var(--radius-default); background:var(--color-surface); }
+.rp-year .cnt { color:var(--color-action); font-size:0.8rem; }
+.rp-stud { border-bottom:1px solid var(--color-border); padding:9px 0; font-size:0.88rem; }
+.rp-stud:last-child { border-bottom:none; }
+.rp-stud a { color:var(--color-action); text-decoration:none; font-weight:600; }
+.rp-stud a:hover { text-decoration:underline; }
+.rp-stud .mavzu { color:var(--color-action); margin-top:2px; }
+.rp-stud .meta { color:var(--color-action); font-size:0.78rem; margin-top:2px; }
 </style>
 {% endblock %}
 
@@ -46,22 +46,22 @@
     <h1>{{ a.name }}</h1>
     <div class="rp-daraja">{{ a.daraja or 'Ilmiy rahbar' }}</div>
     <div class="rp-badges">
-      <span class="rp-badge">👨‍🎓 {{ a.total }} ta shogird</span>
+      <span class="rp-badge"> {{ a.total }} ta shogird</span>
       {% if a.phd_count %}<span class="rp-badge">PhD: {{ a.phd_count }}</span>{% endif %}
       {% if a.dsc_count %}<span class="rp-badge dsc">DSc: {{ a.dsc_count }}</span>{% endif %}
-      {% if a.years %}<span class="rp-badge yr">📅 {{ a.years[0] }}–{{ a.years[-1] }}</span>{% endif %}
+      {% if a.years %}<span class="rp-badge yr"> {{ a.years[0] }}–{{ a.years[-1] }}</span>{% endif %}
     </div>
     <div class="rp-actions">
       {% if registered %}
-      <a class="rp-btn" href="/workspace?invite={{ registered[1] | urlencode }}&role=advisor">📩 Hamkorlik taklifi yuborish</a>
+      <a class="rp-btn" href="/workspace?invite={{ registered[1] | urlencode }}&role=advisor"> Hamkorlik taklifi yuborish</a>
       {% else %}
-      <button class="rp-btn" id="rp-invite-btn">📩 Hamkorlik taklifi yuborish</button>
+      <button class="rp-btn" id="rp-invite-btn"> Hamkorlik taklifi yuborish</button>
       {% endif %}
-      <a class="rp-btn ghost" href="/genealogy/{{ a.name | urlencode }}">🌳 Ilmiy shajara</a>
-      <a class="rp-btn ghost" href="/supervisor/{{ a.name | urlencode }}">📋 Ishlar jadvali</a>
+      <a class="rp-btn ghost" href="/genealogy/{{ a.name | urlencode }}"> Ilmiy shajara</a>
+      <a class="rp-btn ghost" href="/supervisor/{{ a.name | urlencode }}"> Ishlar jadvali</a>
     </div>
     {% if registered %}
-    <div class="rp-invite-note ok">✅ Bu olim platformada ro'yxatdan o'tgan — taklif to'g'ridan-to'g'ri Konstruktorga boradi.</div>
+    <div class="rp-invite-note ok"> Bu olim platformada ro'yxatdan o'tgan — taklif to'g'ridan-to'g'ri Konstruktorga boradi.</div>
     {% else %}
     <div class="rp-invite-note" id="rp-invite-note">Bu olim hali platformada ro'yxatdan o'tmagan. Agar tanisangiz, uni taklif qiling!</div>
     {% endif %}
@@ -69,7 +69,7 @@
 
   {% if spec_breakdown %}
   <div class="rp-section">
-    <h2>🏷 Ixtisoslik taqsimoti</h2>
+    <h2> Ixtisoslik taqsimoti</h2>
     <div class="rp-chips">
       {% for spec, cnt in spec_breakdown %}
       <span class="rp-chip">{{ spec }} — <b>{{ cnt }} ta</b></span>
@@ -80,13 +80,13 @@
 
   {% if a.institutions %}
   <div class="rp-section">
-    <h2>🏛 Muassasalar</h2>
+    <h2> Muassasalar</h2>
     {% for inst in a.institutions %}<div class="rp-inst">• {{ inst }}</div>{% endfor %}
   </div>
   {% endif %}
 
   <div class="rp-section">
-    <h2>👨‍🎓 Shogirdlar timeline</h2>
+    <h2> Shogirdlar timeline</h2>
     {% for year, group in timeline %}
     <div class="rp-year">
       <b>{{ year }}</b>
@@ -146,7 +146,7 @@
       if (d && d.success && d.url) {
         (navigator.clipboard ? navigator.clipboard.writeText(d.url) : Promise.reject())
           .then(function () {
-            note.textContent = '✅ Taklif havolasi nusxalandi — uni rahbaringizga yuboring (7 kun amal qiladi): ' + d.url;
+            note.textContent = ' Taklif havolasi nusxalandi — uni rahbaringizga yuboring (7 kun amal qiladi): ' + d.url;
             note.classList.add('ok');
           })
           .catch(function () { prompt('Taklif havolasini nusxalang (7 kun amal qiladi):', d.url); });

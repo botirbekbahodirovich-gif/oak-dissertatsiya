@@ -4,70 +4,70 @@
    inert until static/js/acquisition_survey.js reveals it via the PopupManager.
    All UI text in Uzbek Latin. Icons are inline Heroicons (no external CDN). #}
 <style>
-  #acqSurvey { position: fixed; inset: 0; z-index: 4300; display: none;
-    align-items: center; justify-content: center; padding: 16px;
-    background: rgba(2,6,23,0.78); backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px); opacity: 0; transition: opacity 0.28s ease; }
-  #acqSurvey.show { display: flex; }
-  #acqSurvey.visible { opacity: 1; }
-  #acqSurvey .acq-card { background: var(--oak-surface, #1a1d23);
-    border: 1px solid var(--oak-border, var(--color-border)); border-radius: 20px;
-    max-width: 560px; width: 100%; padding: 26px 26px 22px;
-    box-shadow: 0 4px 12px rgba(12,15,18,0.08); color: var(--color-text-primary);
-    max-height: 92vh; overflow-y: auto; transform: translateY(10px) scale(0.98);
-    transition: transform 0.28s ease; }
-  #acqSurvey.visible .acq-card { transform: translateY(0) scale(1); }
-  .acq-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .acq-emoji { font-size: 1.9rem; line-height: 1; }
-  .acq-close { background: none; border: none; color: var(--color-text-muted); font-size: 1.35rem;
-    line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 8px; flex-shrink: 0; }
-  .acq-close:hover { color: var(--color-text-primary); background: var(--color-background-soft); }
-  #acqSurvey h3 { margin: 10px 0 6px; font-size: 1.28rem; color: var(--color-text-primary); font-weight: 700; }
-  #acqSurvey .acq-sub { margin: 0 0 18px; color: var(--oak-muted, var(--color-text-muted)); font-size: 0.9rem; line-height: 1.5; }
-  .acq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .acq-grid.secondary { grid-template-columns: repeat(2, 1fr); margin-top: 10px; }
-  .acq-tile { display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px; text-align: center; background: var(--oak-surface-2, #22262f);
-    border: 1px solid var(--oak-border, var(--color-border)); border-radius: 14px;
-    padding: 16px 10px; color: var(--color-text-secondary); font-size: 0.86rem; font-weight: 500;
-    cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.1s; }
-  .acq-tile:hover { border-color: var(--oak-accent, #4a9eff); background: rgba(74,158,255,0.06); }
-  .acq-tile:active { transform: scale(0.98); }
-  .acq-tile svg { width: 26px; height: 26px; color: var(--oak-muted, var(--color-text-muted)); }
-  .acq-grid.secondary .acq-tile { flex-direction: row; gap: 10px; padding: 12px 14px; font-size: 0.85rem; }
-  .acq-grid.secondary .acq-tile svg { width: 22px; height: 22px; }
-  .acq-tile.sel { border-color: var(--oak-accent, #4a9eff); background: rgba(74,158,255,0.14);
-    color: #fff; box-shadow: 0 0 0 2px var(--oak-accent, #4a9eff) inset; }
-  .acq-tile.sel svg { color: var(--oak-accent, #4a9eff); }
-  .acq-other-wrap { margin-top: 12px; display: none; }
-  .acq-other-wrap.show { display: block; }
-  .acq-other-wrap label { display: block; font-size: 0.82rem; color: var(--oak-muted, var(--color-text-muted)); margin-bottom: 6px; }
-  #acqOtherInput { width: 100%; background: var(--oak-surface-2, var(--color-white));
-    border: 1px solid var(--oak-border, var(--color-border)); color: var(--color-text-primary); border-radius: 10px;
-    padding: 10px 12px; font-size: 0.9rem; font-family: inherit; }
-  #acqOtherInput:focus { border-color: var(--oak-accent, #4a9eff); outline: none;
-    box-shadow: 0 0 0 3px rgba(74,158,255,0.14); }
-  .acq-footer { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .acq-skip { background: none; border: none; color: var(--oak-muted, var(--color-text-muted));
-    font-size: 0.86rem; text-decoration: underline; cursor: pointer; padding: 6px 2px; }
-  .acq-skip:hover { color: var(--color-text-secondary); }
-  .acq-submit { background: var(--oak-accent, #4a9eff); color: #fff; border: none;
-    border-radius: 11px; padding: 11px 24px; font-weight: 700; font-size: 0.92rem;
-    cursor: pointer; display: none; }
-  .acq-submit:hover { opacity: 0.92; }
-  .acq-submit:disabled { opacity: 0.45; cursor: not-allowed; }
-  .acq-submit.show { display: inline-block; }
-  .acq-err { color: #f87171; font-size: 0.82rem; margin-top: 10px; min-height: 1em; }
+  #acqSurvey { position:fixed; inset:0; z-index:4300; display:none;
+    align-items:center; justify-content:center; padding:16px;
+    background:var(--color-background); backdrop-filter:none;
+    -webkit-backdrop-filter:blur(4px); opacity:0; transition:opacity 0.28s ease; }
+  #acqSurvey.show { display:flex; }
+  #acqSurvey.visible { opacity:1; }
+  #acqSurvey .acq-card { background:var(--oak-surface, var(--color-surface));
+    border:1px solid var(--oak-border, var(--color-border)); border-radius:var(--radius-card);
+    max-width:560px; width:100%; padding:26px 26px 22px;
+    box-shadow:none; color:var(--color-text-primary);
+    max-height:92vh; overflow-y:auto; transform:translateY(10px) scale(0.98);
+    transition:transform 0.28s ease; }
+  #acqSurvey.visible .acq-card { transform:translateY(0) scale(1); }
+  .acq-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .acq-emoji { font-size:1.9rem; line-height:1; }
+  .acq-close { background:none; border:none; color:var(--color-text-muted); font-size:1.35rem;
+    line-height:1; cursor:pointer; padding:2px 6px; border-radius:var(--radius-default); flex-shrink:0; }
+  .acq-close:hover { color:var(--color-text-primary); background:var(--color-background-soft); }
+  #acqSurvey h3 { margin:10px 0 6px; font-size:1.28rem; color:var(--color-text-primary); font-weight:600; }
+  #acqSurvey .acq-sub { margin:0 0 18px; color:var(--oak-muted, var(--color-text-muted)); font-size:0.9rem; line-height:1.5; }
+  .acq-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+  .acq-grid.secondary { grid-template-columns:repeat(2, 1fr); margin-top:10px; }
+  .acq-tile { display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:8px; text-align:center; background:var(--oak-surface-2, var(--color-surface));
+    border:1px solid var(--oak-border, var(--color-border)); border-radius:var(--radius-default);
+    padding:16px 10px; color:var(--color-text-secondary); font-size:0.86rem; font-weight:500;
+    cursor:pointer; transition:border-color 0.15s, background 0.15s, transform 0.1s; }
+  .acq-tile:hover { border-color:var(--oak-accent, var(--color-border)); background:var(--color-background); }
+  .acq-tile:active { transform:scale(0.98); }
+  .acq-tile svg { width:26px; height:26px; color:var(--oak-muted, var(--color-text-muted)); }
+  .acq-grid.secondary .acq-tile { flex-direction:row; gap:10px; padding:12px 14px; font-size:0.85rem; }
+  .acq-grid.secondary .acq-tile svg { width:22px; height:22px; }
+  .acq-tile.sel { border-color:var(--oak-accent, var(--color-border)); background:var(--color-background);
+    color:var(--color-text-primary); box-shadow:none; }
+  .acq-tile.sel svg { color:var(--oak-accent, var(--color-action)); }
+  .acq-other-wrap { margin-top:12px; display:none; }
+  .acq-other-wrap.show { display:block; }
+  .acq-other-wrap label { display:block; font-size:0.82rem; color:var(--oak-muted, var(--color-text-muted)); margin-bottom:6px; }
+  #acqOtherInput { width:100%; background:var(--oak-surface-2, var(--color-white));
+    border:1px solid var(--oak-border, var(--color-border)); color:var(--color-text-primary); border-radius:var(--radius-default);
+    padding:10px 12px; font-size:0.9rem; font-family:inherit; }
+  #acqOtherInput:focus { border-color:var(--oak-accent, var(--color-border)); outline:2px solid var(--color-action);
+    box-shadow:none; }
+  .acq-footer { margin-top:20px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .acq-skip { background:none; border:none; color:var(--oak-muted, var(--color-text-muted));
+    font-size:0.86rem; text-decoration:underline; cursor:pointer; padding:6px 2px; }
+  .acq-skip:hover { color:var(--color-text-secondary); }
+  .acq-submit { background:var(--oak-accent, var(--color-background)); color:var(--color-surface); border:none;
+    border-radius:var(--radius-default); padding:11px 24px; font-weight:600; font-size:0.92rem;
+    cursor:pointer; display:none; }
+  .acq-submit:hover { opacity:0.92; }
+  .acq-submit:disabled { opacity:0.45; cursor:not-allowed; }
+  .acq-submit.show { display:inline-block; }
+  .acq-err { color:var(--color-text-secondary); font-size:0.82rem; margin-top:10px; min-height:1em; }
   @media (max-width: 520px) {
-    .acq-grid { grid-template-columns: repeat(2, 1fr); }
-    .acq-grid.secondary { grid-template-columns: repeat(2, 1fr); }
-    #acqSurvey .acq-card { padding: 20px 18px 18px; }
+    .acq-grid { grid-template-columns:repeat(2, 1fr); }
+    .acq-grid.secondary { grid-template-columns:repeat(2, 1fr); }
+    #acqSurvey .acq-card { padding:20px 18px 18px; }
   }
 </style>
 <div id="acqSurvey" role="dialog" aria-modal="true" aria-labelledby="acqTitle" aria-describedby="acqSub">
   <div class="acq-card">
     <div class="acq-head">
-      <span class="acq-emoji" aria-hidden="true">🎉</span>
+      <span class="acq-emoji" aria-hidden="true"></span>
       <button type="button" class="acq-close" id="acqClose" aria-label="Yopish">&times;</button>
     </div>
     <h3 id="acqTitle">Bizni qayerdan bildingiz?</h3>

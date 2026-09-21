@@ -3,38 +3,38 @@
 
 {% block extra_head %}
 <style>
-  .acq-summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
-  @media (max-width: 760px) { .acq-summary-grid { grid-template-columns: 1fr 1fr; } }
-  .acq-summary-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; text-align: center; }
-  .acq-summary-card .num { font-size: 1.8rem; font-weight: 800; color: #f1f5f9; display: block; }
-  .acq-summary-card .lbl { font-size: 0.8rem; color: #64748b; }
-  .acq-summary-card.answered .num { color: #34d399; }
-  .acq-summary-card.skipped .num { color: #fbbf24; }
-  .acq-summary-card.pending .num { color: #60a5fa; }
+  .acq-summary-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:24px; }
+  @media (max-width: 760px) { .acq-summary-grid { grid-template-columns:1fr 1fr; } }
+  .acq-summary-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:18px; text-align:center; }
+  .acq-summary-card .num { font-size:1.8rem; font-weight:600; color:var(--color-text-primary); display:block; }
+  .acq-summary-card .lbl { font-size:0.8rem; color:var(--color-text-secondary); }
+  .acq-summary-card.answered .num { color:var(--color-text-secondary); }
+  .acq-summary-card.skipped .num { color:var(--color-text-secondary); }
+  .acq-summary-card.pending .num { color:var(--color-warning-ink); }
 
-  .acq-ranges { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .acq-range { padding: 7px 16px; border-radius: 50px; border: 1px solid #334155;
-    background: #1e293b; color: #94a3b8; font-size: 0.85rem; cursor: pointer; text-decoration: none; }
-  .acq-range:hover { border-color: #3b82f6; color: #60a5fa; text-decoration: none; }
-  .acq-range.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .acq-ranges { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .acq-range { padding:7px 16px; border-radius:var(--radius-default); border:1px solid var(--color-border);
+    background:var(--color-surface); color:var(--color-action); font-size:0.85rem; cursor:pointer; text-decoration:none; }
+  .acq-range:hover { border-color:var(--color-border); color:var(--color-action); text-decoration:none; }
+  .acq-range.active { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); }
 
-  .acq-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-  .acq-card h4 { color: #e2e8f0; font-size: 1rem; font-weight: 700; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+  .acq-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:20px; margin-bottom:20px; }
+  .acq-card h4 { color:var(--color-text-primary); font-size:1rem; font-weight:600; margin:0 0 16px; display:flex; align-items:center; gap:8px; }
 
-  .acq-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-  .acq-bar-label { min-width: 140px; color: #cbd5e1; font-size: 0.86rem; }
-  .acq-bar-track { flex: 1; height: 26px; background: #162032; border-radius: 13px; overflow: hidden; }
-  .acq-bar-fill { height: 100%; border-radius: 13px; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.6s ease; min-width: 2px; }
-  .acq-bar-count { min-width: 96px; text-align: right; color: #e2e8f0; font-size: 0.85rem; font-weight: 600; }
-  .acq-bar-count small { color: #64748b; font-weight: 400; }
-  @media (max-width: 560px) { .acq-bar-label { min-width: 96px; font-size: 0.8rem; } .acq-bar-count { min-width: 68px; } }
+  .acq-bar-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .acq-bar-label { min-width:140px; color:var(--color-text-primary); font-size:0.86rem; }
+  .acq-bar-track { flex:1; height:26px; background:var(--color-surface); border-radius:var(--radius-default); overflow:hidden; }
+  .acq-bar-fill { height:100%; border-radius:var(--radius-default); background:var(--color-surface); transition:width 0.6s ease; min-width:2px; }
+  .acq-bar-count { min-width:96px; text-align:right; color:var(--color-text-primary); font-size:0.85rem; font-weight:600; }
+  .acq-bar-count small { color:var(--color-text-secondary); font-weight:400; }
+  @media (max-width: 560px) { .acq-bar-label { min-width:96px; font-size:0.8rem; } .acq-bar-count { min-width:68px; } }
 
-  .acq-other-item { padding: 10px 0; border-bottom: 1px solid #162032; font-size: 0.88rem; color: #e2e8f0;
-    display: flex; justify-content: space-between; gap: 12px; }
-  .acq-other-item:last-child { border-bottom: none; }
-  .acq-other-meta { color: #64748b; font-size: 0.78rem; white-space: nowrap; flex-shrink: 0; }
-  .acq-empty { color: #64748b; text-align: center; padding: 2rem; }
-  .acq-chart-wrap { position: relative; min-height: 240px; }
+  .acq-other-item { padding:10px 0; border-bottom:1px solid var(--color-border); font-size:0.88rem; color:var(--color-text-primary);
+    display:flex; justify-content:space-between; gap:12px; }
+  .acq-other-item:last-child { border-bottom:none; }
+  .acq-other-meta { color:var(--color-text-secondary); font-size:0.78rem; white-space:nowrap; flex-shrink:0; }
+  .acq-empty { color:var(--color-text-secondary); text-align:center; padding:2rem; }
+  .acq-chart-wrap { position:relative; min-height:240px; }
 </style>
 {% endblock %}
 
@@ -97,11 +97,11 @@
 </div>
 
 <div class="acq-card">
-  <h4><i class="bi bi-chat-quote"></i> "Boshqa" javoblari <small style="color:#64748b;font-weight:400;">(oxirgi 50 ta)</small></h4>
+  <h4><i class="bi bi-chat-quote"></i> "Boshqa" javoblari <small style="color:var(--color-text-secondary);font-weight:400;">(oxirgi 50 ta)</small></h4>
   {% if others %}
     {% for o in others %}
     <div class="acq-other-item">
-      <span>{{ o.text }} <span style="color:#64748b;">— {{ o.username }}</span></span>
+      <span>{{ o.text }} <span style="color:var(--color-text-secondary);">— {{ o.username }}</span></span>
       <span class="acq-other-meta">{{ o.answered_at }}</span>
     </div>
     {% endfor %}
@@ -126,17 +126,17 @@
       datasets: [{
         label: 'Javoblar',
         data: counts,
-        borderColor: '#3b82f6',
+        borderColor: OlimlarCharts.tokens.series1,
         backgroundColor: 'rgba(59,130,246,0.15)',
-        fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#60a5fa'
+        fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: OlimlarCharts.tokens.series2
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,0.08)' } },
-        y: { beginAtZero: true, ticks: { color: '#94a3b8', precision: 0 }, grid: { color: 'rgba(148,163,184,0.08)' } }
+        x: { ticks: { color: OlimlarCharts.tokens.textSecondary }, grid: { color: 'rgba(148,163,184,0.08)' } },
+        y: { beginAtZero: true, ticks: { color: OlimlarCharts.tokens.textSecondary, precision: 0 }, grid: { color: 'rgba(148,163,184,0.08)' } }
       }
     }
   });

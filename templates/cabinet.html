@@ -3,166 +3,169 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding: 0 !important; max-width: none !important; width: 100% !important; }
-.cab { background: #0f172a; color: #e2e8f0; min-height: 90vh; }
-.cab-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 230px 1fr; gap: 24px; }
-.cab-side { position: sticky; top: 16px; align-self: start; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 12px; }
-.cab-side h2 { font-size: 0.95rem; color: #f1f5f9; margin: 6px 10px 12px; }
-.cab-nav { display: flex; flex-direction: column; gap: 2px; }
-.cab-nav button { display: flex; align-items: center; gap: 9px; background: none; border: none; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left; }
-.cab-nav button:hover { background: #162032; color: #e2e8f0; }
-.cab-nav button.active { background: #3b82f6; color: #fff; }
-.cab-nav a.cab-nav-link { display: flex; align-items: center; gap: 9px; color: #94a3b8; font-size: 0.9rem; font-weight: 500; padding: 10px 12px; border-radius: 10px; text-decoration: none; }
-.cab-nav a.cab-nav-link:hover { background: #162032; color: #e2e8f0; }
-.cab-nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #3b82f6; color: #fff; font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
-.cab-logout { margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
-.cab-logout a { display: block; color: #fca5a5; font-size: 0.85rem; padding: 8px 12px; }
-.cab-main { min-width: 0; }
-.cab-panel { display: none; }
-.cab-panel.active { display: block; }
-.cab-section { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 18px; }
-.cab-section h3 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; margin: 0 0 4px; }
-.cab-section .desc { color: #94a3b8; font-size: 0.88rem; margin: 0 0 18px; }
-.cab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.cab-group { margin-bottom: 4px; }
-.cab-group.full { grid-column: 1 / -1; }
-.cab-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
-.cab-input, .cab-select, .cab-textarea { width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 12px; font-size: 0.92rem; font-family: inherit; }
-.cab-input:focus, .cab-select:focus, .cab-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.18); }
-.cab-textarea { resize: vertical; min-height: 90px; }
-.cab-input[readonly] { background: #0f172a; color: #94a3b8; }
-.cab-btn { background: #3b82f6; color: #fff; font-weight: 600; padding: 10px 22px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.92rem; }
-.cab-btn:hover { background: #2563eb; }
-.cab-btn-outline { background: transparent; color: #60a5fa; border: 1px solid #3b82f6; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 0.9rem; }
-.cab-btn-outline:hover { background: rgba(59,130,246,0.12); }
-.cab-btn-red { background: #ef4444; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
-.cab-btn-red:hover { background: #dc2626; }
-.cab-link-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.cab-link-ic { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; background: #162032; border: 1px solid #334155; border-radius: 9px; font-size: 1.05rem; }
-.cab-save-bar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
-.item-card { background: #162032; border: 1px solid #334155; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-.item-card .it-title { font-weight: 700; color: #e2e8f0; }
-.item-card .it-meta { font-size: 0.84rem; color: #94a3b8; margin-top: 3px; }
-.item-card .it-actions { display: flex; gap: 8px; margin-top: 10px; }
-.item-card .it-btn { font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: none; }
-.it-edit { background: rgba(59,130,246,0.15); color: #60a5fa; }
-.it-del { background: rgba(239,68,68,0.15); color: #fca5a5; }
-.item-form { display: none; background: #0f172a; border: 1px dashed #334155; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.item-form.open { display: block; }
-.search-results { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-.sr-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #162032; border: 1px solid #334155; border-radius: 10px; padding: 12px 14px; }
-.sr-mavzu { font-size: 0.8rem; color: #94a3b8; margin: 2px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sr-deg { font-size: 0.68rem; font-weight: 700; color: #fff; padding: 1px 8px; border-radius: 999px; margin-right: 8px; }
-.sr-deg.phd { background: #059669; } .sr-deg.dsc { background: #e36403; }
-.sr-name { font-weight: 600; color: #e2e8f0; }
-.sr-count { font-size: 0.8rem; color: #94a3b8; }
-.sr-claimed { color: #34d399; font-weight: 700; font-size: 0.85rem; }
-.claimed-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.claimed-chip { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: #34d399; border-radius: 999px; padding: 5px 14px; font-size: 0.85rem; }
-.gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.gallery figure { margin: 0; position: relative; }
-.gallery img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid #334155; }
-.gallery .gdel { position: absolute; top: 6px; right: 6px; }
-.cab-toast { position: fixed; top: 18px; right: 18px; z-index: 3000; padding: 12px 18px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; opacity: 0; transform: translateY(-10px); transition: opacity 0.25s, transform 0.25s; }
-.cab-toast.show { opacity: 1; transform: translateY(0); }
-.cab-toast.ok { background: #059669; color: #fff; }
-.cab-toast.err { background: #ef4444; color: #fff; }
-.cab-hero { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
-.cab-hero-avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; font-size: 1.8rem; flex-shrink: 0; }
-.cab-hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.cab-hero h1 { font-size: 1.3rem; color: #f1f5f9; margin: 0; }
-.cab-hero .sub { color: #94a3b8; font-size: 0.85rem; }
+.content-main { padding:0 !important; max-width:none !important; width:100% !important; }
+.cab { background:var(--color-surface); color:var(--color-text-primary); min-height:90vh; }
+.cab-wrap { max-width:1200px; margin:0 auto; padding:24px; display:grid; grid-template-columns:230px 1fr; gap:24px; }
+.cab-side { position:sticky; top:16px; align-self:start; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:12px; }
+.cab-side h2 { font-size:0.95rem; color:var(--color-text-primary); margin:6px 10px 12px; }
+.cab-nav { display:flex; flex-direction:column; gap:2px; }
+.cab-nav button { display:flex; align-items:center; gap:9px; background:none; border:none; color:var(--color-action); font-size:0.9rem; font-weight:500; padding:10px 12px; border-radius:var(--radius-default); cursor:pointer; text-align:left; }
+.cab-nav button:hover { background:var(--color-surface); color:var(--color-text-primary); }
+.cab-nav button.active { background:var(--color-action); color:var(--color-surface); }
+.cab-nav a.cab-nav-link { display:flex; align-items:center; gap:9px; color:var(--color-action); font-size:0.9rem; font-weight:500; padding:10px 12px; border-radius:var(--radius-default); text-decoration:none; }
+.cab-nav a.cab-nav-link:hover { background:var(--color-surface); color:var(--color-text-primary); }
+.cab-nav-badge { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:var(--radius-default); background:var(--color-background); color:var(--color-text-primary); font-size:0.72rem; font-weight:600; display:inline-flex; align-items:center; justify-content:center; }
+.cab-logout { margin-top:10px; border-top:1px solid var(--color-border); padding-top:10px; }
+.cab-logout a { display:block; color:var(--color-text-secondary); font-size:0.85rem; padding:8px 12px; }
+.cab-main { min-width:0; }
+.cab-panel { display:none; }
+.cab-panel.active { display:block; }
+.cab-section { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:24px; margin-bottom:18px; }
+.cab-section h3 { font-size:1.15rem; font-weight:600; color:var(--color-text-primary); margin:0 0 4px; }
+.cab-section .desc { color:var(--color-action); font-size:0.88rem; margin:0 0 18px; }
+.cab-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.cab-group { margin-bottom:4px; }
+.cab-group.full { grid-column:1 / -1; }
+.cab-group label { display:block; font-size:0.78rem; font-weight:600; color:var(--color-action); margin-bottom:6px; }
+.cab-input, .cab-select, .cab-textarea { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:10px 12px; font-size:0.92rem; font-family:inherit; }
+.cab-input:focus, .cab-select:focus, .cab-textarea:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
+.cab-textarea { resize:vertical; min-height:90px; }
+.cab-input[readonly] { background:var(--color-surface); color:var(--color-action); }
+.cab-btn { background:var(--color-action); color:var(--color-surface); font-weight:600; padding:10px 22px; border:none; border-radius:var(--radius-default); cursor:pointer; font-size:0.92rem; }
+.cab-btn:hover { background:var(--color-action); }
+.cab-btn-outline { background:transparent; color:var(--color-action); border:1px solid var(--color-border); font-weight:600; padding:9px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.9rem; }
+.cab-btn-outline:hover { background:var(--color-background); }
+.cab-btn-red { background:var(--color-danger); color:var(--color-surface); border:none; border-radius:var(--radius-default); padding:6px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; }
+.cab-btn-red:hover { background:var(--color-danger); }
+.cab-link-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.cab-link-ic { width:36px; height:36px; flex-shrink:0; display:grid; place-items:center; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); font-size:1.05rem; }
+.cab-save-bar { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+.item-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:14px 16px; margin-bottom:10px; }
+.item-card .it-title { font-weight:600; color:var(--color-text-primary); }
+.item-card .it-meta { font-size:0.84rem; color:var(--color-action); margin-top:3px; }
+.item-card .it-actions { display:flex; gap:8px; margin-top:10px; }
+.item-card .it-btn { font-size:0.78rem; font-weight:600; padding:5px 12px; border-radius:var(--radius-card); cursor:pointer; border:none; }
+.it-edit { background:var(--color-background); color:var(--color-action); }
+.it-del { background:var(--color-background); color:var(--color-text-secondary); }
+.item-form { display:none; background:var(--color-surface); border:1px dashed var(--color-border); border-radius:var(--radius-default); padding:16px; margin-bottom:14px; }
+.item-form.open { display:block; }
+.search-results { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
+.sr-card { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px 14px; }
+.sr-mavzu { font-size:0.8rem; color:var(--color-action); margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sr-deg { font-size:0.68rem; font-weight:600; color:var(--color-text-secondary); padding:1px 8px; border-radius:var(--radius-default); margin-right:8px; }
+.sr-deg.phd { background:var(--color-background); } .sr-deg.dsc { background:var(--color-background); }
+.sr-name { font-weight:600; color:var(--color-text-primary); }
+.sr-count { font-size:0.8rem; color:var(--color-action); }
+.sr-claimed { color:var(--color-text-secondary); font-weight:600; font-size:0.85rem; }
+.claimed-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.claimed-chip { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-full); padding:5px 14px; font-size:0.85rem; }
+.gallery { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+.gallery figure { margin:0; position:relative; }
+.gallery img { width:100%; height:130px; object-fit:cover; border-radius:var(--radius-default); border:1px solid var(--color-border); }
+.gallery .gdel { position:absolute; top:6px; right:6px; }
+.cab-toast { position:fixed; top:18px; right:18px; z-index:3000; padding:12px 18px; border-radius:var(--radius-default); font-size:0.9rem; font-weight:600; opacity:0; transform:translateY(-10px); transition:opacity 0.25s, transform 0.25s; }
+.cab-toast.show { opacity:1; transform:translateY(0); }
+.cab-toast.ok { background:var(--color-background); color:var(--color-text-primary); }
+.cab-toast.err { background:var(--color-background); color:var(--color-text-primary); }
+.cab-hero { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+.cab-hero-avatar { width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--color-surface); display:grid; place-items:center; font-size:1.8rem; flex-shrink:0; }
+.cab-hero-avatar img { width:100%; height:100%; object-fit:cover; }
+.cab-hero h1 { font-size:1.3rem; color:var(--color-text-primary); margin:0; }
+.cab-hero .sub { color:var(--color-action); font-size:0.85rem; }
 /* inline edit fields */
-.profile-field-display { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #334155; }
-.field-label { font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 3px; }
-.field-value { color: #e2e8f0; font-size: 0.95rem; }
-.field-empty { color: #64748b; font-style: italic; }
-.field-edit-btn { background: none; border: 1px solid #334155; color: #60a5fa; padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; cursor: pointer; flex-shrink: 0; }
-.field-edit-btn:hover { border-color: #3b82f6; background: rgba(59,130,246,0.1); }
-.profile-field-edit { padding: 12px 0; border-bottom: 1px solid #334155; }
-.profile-field-edit input, .profile-field-edit select, .profile-field-edit textarea { width: 100%; background: #162032; border: 1px solid #3b82f6; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 0.92rem; font-family: inherit; }
-.profile-field-edit textarea { min-height: 90px; resize: vertical; }
-.field-edit-actions { display: flex; gap: 8px; }
-.field-edit-actions button { padding: 6px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; border: none; }
-.field-edit-actions .fe-save { background: #3b82f6; color: #fff; font-weight: 600; }
-.field-edit-actions .fe-save:hover { background: #2563eb; }
-.field-edit-actions .fe-cancel { background: #162032; color: #94a3b8; border: 1px solid #334155; }
+.profile-field-display { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--color-border); }
+.field-label { font-size:0.78rem; font-weight:600; color:var(--color-action); margin-bottom:3px; }
+.field-value { color:var(--color-text-primary); font-size:0.95rem; }
+.field-empty { color:var(--color-text-secondary); font-style:italic; }
+.field-edit-btn { background:none; border:1px solid var(--color-border); color:var(--color-action); padding:4px 12px; border-radius:var(--radius-default); font-size:0.8rem; cursor:pointer; flex-shrink:0; }
+.field-edit-btn:hover { border-color:var(--color-border); background:var(--color-background); }
+.profile-field-edit { padding:12px 0; border-bottom:1px solid var(--color-border); }
+.profile-field-edit input, .profile-field-edit select, .profile-field-edit textarea { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); padding:10px 14px; border-radius:var(--radius-default); margin-bottom:8px; font-size:0.92rem; font-family:inherit; }
+.profile-field-edit textarea { min-height:90px; resize:vertical; }
+.field-edit-actions { display:flex; gap:8px; }
+.field-edit-actions button { padding:6px 16px; border-radius:var(--radius-default); font-size:0.85rem; cursor:pointer; border:none; }
+.field-edit-actions .fe-save { background:var(--color-background); color:var(--color-text-primary); font-weight:600; }
+.field-edit-actions .fe-save:hover { background:var(--color-action); }
+.field-edit-actions .fe-cancel { background:var(--color-surface); color:var(--color-action); border:1px solid var(--color-border); }
 /* avatar editor */
-.avatar-edit-section { display: flex; align-items: center; gap: 18px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid #334155; }
-.current-avatar { width: 88px; height: 88px; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg,#3b82f6,#8b5cf6); display: grid; place-items: center; flex-shrink: 0; }
-.current-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.avatar-placeholder { font-size: 2.4rem; }
-.avatar-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-.avatar-upload-btn { background: #3b82f6; color: #fff; font-weight: 600; padding: 9px 18px; border-radius: 10px; cursor: pointer; font-size: 0.88rem; }
-.avatar-upload-btn:hover { background: #2563eb; }
-.avatar-remove-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; padding: 7px 16px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; }
-.avatar-hint { color: #64748b; font-size: 0.74rem; }
+.avatar-edit-section { display:flex; align-items:center; gap:18px; margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--color-border); }
+.current-avatar { width:88px; height:88px; border-radius:50%; overflow:hidden; background:var(--color-surface); display:grid; place-items:center; flex-shrink:0; }
+.current-avatar img { width:100%; height:100%; object-fit:cover; }
+.avatar-placeholder { font-size:2.4rem; }
+.avatar-actions { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.avatar-upload-btn { background:var(--color-action); color:var(--color-surface); font-weight:600; padding:9px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.88rem; }
+.avatar-upload-btn:hover { background:var(--color-action); }
+.avatar-remove-btn { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-action); padding:7px 16px; border-radius:var(--radius-default); cursor:pointer; font-size:0.85rem; }
+.avatar-hint { color:var(--color-text-secondary); font-size:0.74rem; }
 @media (max-width: 880px) {
-  .cab-wrap { grid-template-columns: 1fr; }
-  .cab-side { position: static; }
-  .cab-nav { flex-direction: row; flex-wrap: wrap; }
-  .cab-grid { grid-template-columns: 1fr; }
-  .gallery { grid-template-columns: repeat(2, 1fr); }
+  .cab-wrap { grid-template-columns:1fr; }
+  .cab-side { position:static; }
+  .cab-nav { flex-direction:row; flex-wrap:wrap; }
+  .cab-grid { grid-template-columns:1fr; }
+  .gallery { grid-template-columns:repeat(2, 1fr); }
 }
 
 /* ── notification prefs (Bildirishnomalar) ── */
-.np-card { background: #1e293b; border: 1px solid rgba(148,163,184,0.15); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
-.np-group-title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #94a3b8; margin: 0 0 6px; }
-.np-row { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: 1px solid rgba(148,163,184,0.1); }
-.np-row:last-child { border-bottom: none; }
-.np-ic { font-size: 1.25rem; width: 34px; text-align: center; flex-shrink: 0; }
-.np-label { flex: 1; min-width: 0; }
-.np-label b { display: block; color: #e2e8f0; font-size: 0.93rem; font-weight: 600; }
-.np-label small { display: block; color: #94a3b8; font-size: 0.78rem; margin-top: 2px; line-height: 1.4; }
+.np-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:18px 20px; margin-bottom:16px; }
+.np-group-title { font-size:0.8rem; font-weight:600; letter-spacing:0.4px; text-transform:uppercase; color:var(--color-action); margin:0 0 6px; }
+.np-row { display:flex; align-items:center; gap:14px; padding:13px 0; border-bottom:1px solid var(--color-border); }
+.np-row:last-child { border-bottom:none; }
+.np-ic { font-size:1.25rem; width:34px; text-align:center; flex-shrink:0; }
+.np-label { flex:1; min-width:0; }
+.np-label b { display:block; color:var(--color-text-primary); font-size:0.93rem; font-weight:600; }
+.np-label small { display:block; color:var(--color-action); font-size:0.78rem; margin-top:2px; line-height:1.4; }
 /* CSS-only toggle switch */
-.np-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
-.np-switch input { opacity: 0; width: 0; height: 0; }
-.np-slider { position: absolute; inset: 0; cursor: pointer; background: #334155; border-radius: 26px; transition: background 0.2s; }
-.np-slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #94a3b8; border-radius: 50%; transition: transform 0.2s, background 0.2s; }
-.np-switch input:checked + .np-slider { background: linear-gradient(135deg, #3b82f6, #7c5cfc); }
-.np-switch input:checked + .np-slider::before { transform: translateX(20px); background: #fff; }
-.np-switch input:focus-visible + .np-slider { outline: 2px solid #60a5fa; outline-offset: 2px; }
-.np-switch input:disabled + .np-slider { opacity: 0.45; cursor: wait; }
-.np-saving { font-size: 0.78rem; color: #94a3b8; visibility: hidden; }
-.np-saving.on { visibility: visible; }
-@media (max-width: 480px) { .np-label small { font-size: 0.72rem; } .np-card { padding: 14px; } }
+.np-switch { position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0; }
+.np-switch input { opacity:0; width:0; height:0; }
+.np-slider { position:absolute; inset:0; cursor:pointer; background:var(--color-background); border-radius:var(--radius-default); transition:background 0.2s; }
+.np-slider::before { content:""; position:absolute; height:20px; width:20px; left:3px; top:3px; background:var(--color-background); border-radius:50%; transition:transform 0.2s, background 0.2s; }
+.np-switch input:checked + .np-slider { background:var(--color-surface); }
+.np-switch input:checked + .np-slider::before { transform:translateX(20px); background:var(--color-background); }
+.np-switch input:focus-visible + .np-slider { outline:2px solid var(--color-border); outline-offset:2px; }
+.np-switch input:disabled + .np-slider { opacity:0.45; cursor:wait; }
+.np-saving { font-size:0.78rem; color:var(--color-action); visibility:hidden; }
+.np-saving.on { visibility:visible; }
+@media (max-width: 480px) { .np-label small { font-size:0.72rem; } .np-card { padding:14px; } }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set _full = olim_name or ((profile.first_name or '') ~ ' ' ~ (profile.last_name or '')) %}
 {% set _gender = detect_gender(_full) %}
-{% set _avatar_emoji = '👩‍🎓' if _gender == 'female' else ('👨‍🎓' if _gender == 'male' else '🎓') %}
+{% set _avatar_emoji = (_full|trim or 'T')[:1]|upper %}
 <div id="toast" class="cab-toast"></div>
 <div class="cab">
   <div class="cab-wrap">
     <!-- Sidebar -->
     <aside class="cab-side">
-      <h2>🏠 Kabinet</h2>
+      <h2> Kabinet</h2>
+      <button type="button" class="cab-menu-toggle ol-btn ol-btn--secondary" aria-expanded="false" aria-controls="cab-menu">Kabinet bo‘limlari <i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+      <div id="cab-menu">
       <nav class="cab-nav">
-        <button class="active" data-panel="korinish">👁 Mening profilim</button>
-        <button data-panel="profil">📝 Tahrirlash</button>
-        <button data-panel="diss">📄 Dissertatsiyalar</button>
-        <button data-panel="maqolalar">📚 Maqolalar</button>
-        <button data-panel="konf">🎤 Konferensiyalar</button>
-        <button data-panel="shogird">👥 Shogirdlar</button>
-        <button data-panel="ish">💼 Ish faoliyati</button>
-        <button data-panel="rasmlar">📸 Rasmlar</button>
-        <button data-panel="linklar">🔗 Linklar</button>
-        <button data-panel="bildirish">🔔 Bildirishnomalar</button>
-        <a href="/mavzu/tahlil" class="cab-nav-link">🎯 Mavzu tahlili</a>
-        <a href="/cabinet/tolovlar" class="cab-nav-link">💳 To'lovlarim</a>
-        <a class="cab-nav-link" href="/xarita/mening">🗺️ Xaritam</a>
-        <a class="cab-nav-link" href="/cabinet/saqlangan">💾 Saqlangan <span id="saved-nav-count" class="cab-nav-badge" style="display:none;"></span></a>
-        <a class="cab-nav-link" href="/cabinet/maqolalar">📄 Saqlangan maqolalar</a>
+        <button class="active" data-panel="korinish"> Mening profilim</button>
+        <button data-panel="profil"> Tahrirlash</button>
+        <button data-panel="diss"> Dissertatsiyalar</button>
+        <button data-panel="maqolalar"> Maqolalar</button>
+        <button data-panel="konf"> Konferensiyalar</button>
+        <button data-panel="shogird"> Shogirdlar</button>
+        <button data-panel="ish"> Ish faoliyati</button>
+        <button data-panel="rasmlar"> Rasmlar</button>
+        <button data-panel="linklar"> Linklar</button>
+        <button data-panel="bildirish"> Bildirishnomalar</button>
+        <a href="/mavzu/tahlil" class="cab-nav-link"> Mavzu tahlili</a>
+        <a href="/cabinet/tolovlar" class="cab-nav-link"> To'lovlarim</a>
+        <a class="cab-nav-link" href="/xarita/mening"> Xaritam</a>
+        <a class="cab-nav-link" href="/cabinet/saqlangan"> Saqlangan <span id="saved-nav-count" class="cab-nav-badge" style="display:none;"></span></a>
+        <a class="cab-nav-link" href="/cabinet/maqolalar"> Saqlangan maqolalar</a>
       </nav>
       <div class="cab-logout"><form method="post" action="/cabinet/api/logout">
         {{ csrf_token()|safe }}
         <button type="submit" class="btn btn-link p-0">↩ Chiqish</button>
       </form></div>
+      </div>
     </aside>
 
-    <main class="cab-main">
+    <div class="cab-main">
       <div class="cab-hero">
         <div class="cab-hero-avatar">
           {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="avatar">{% else %}{{ _avatar_emoji }}{% endif %}
@@ -172,30 +175,30 @@
           <div class="sub">
             {% if olim_name %}
             <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap;">
-              <span style="color:#94a3b8;font-size:0.9rem;">
-                Biriktirilgan profil: <strong style="color:#60a5fa;">{{ olim_name }}</strong>
+              <span style="color:var(--color-action);font-size:0.9rem;">
+                Biriktirilgan profil: <strong style="color:var(--color-action);">{{ olim_name }}</strong>
               </span>
               <button onclick="unclaimProfile()"
-                style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:5px 14px;border-radius:50px;font-size:0.8rem;cursor:pointer;transition:all 0.2s;"
+                style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.8rem;cursor:pointer;transition:all 0.2s;"
                 onmouseover="this.style.background='rgba(239,68,68,0.3)'"
                 onmouseout="this.style.background='rgba(239,68,68,0.15)'"
                 title="Biriktirilgan olim profilini ajratish">
-                ✕ Ajratish
+                 Ajratish
               </button>
             </div>
             {% else %}
-            <span style="color:#64748b;font-size:0.9rem;">Hali hech qanday profil biriktirilmagan.</span>
+            <span style="color:var(--color-text-secondary);font-size:0.9rem;">Hali hech qanday profil biriktirilmagan.</span>
             {% endif %}
             <div style="margin-top:10px;">
               {% if profile.orcid_url %}
               <a href="{{ profile.orcid_url }}" target="_blank" rel="noopener"
-                 style="display:inline-flex;align-items:center;gap:6px;background:rgba(166,206,57,0.15);border:1px solid rgba(166,206,57,0.4);color:#A6CE39;padding:5px 14px;border-radius:50px;font-size:0.82rem;text-decoration:none;font-weight:600;"
+                 style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;text-decoration:none;font-weight:600;"
                  title="ORCID profili">
                 <i class="bi bi-person-badge-fill"></i> ORCID
               </a>
               {% else %}
               <button onclick="gotoPanel('linklar')"
-                style="display:inline-flex;align-items:center;gap:6px;background:rgba(166,206,57,0.12);border:1px dashed rgba(166,206,57,0.5);color:#A6CE39;padding:5px 14px;border-radius:50px;font-size:0.82rem;cursor:pointer;font-weight:600;"
+                style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background);border:1px dashed var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;cursor:pointer;font-weight:600;"
                 title="ORCID IDingizni biriktiring">
                 + ORCID IDni biriktirish
               </button>
@@ -213,13 +216,13 @@
         {% set _done = _checks|select|list|length %}
         {% set _pct = (_done * 100) // (_checks|length) %}
         <div class="cab-section" style="padding:16px 20px;">
-          <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:#cbd5e1;margin-bottom:8px;font-weight:600;">
-            <span>📊 Profil to'ldirilishi</span><b style="color:#60a5fa;">{{ _pct }}%</b>
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--color-text-primary);margin-bottom:8px;font-weight:600;">
+            <span> Profil to'ldirilishi</span><b style="color:var(--color-action);">{{ _pct }}%</b>
           </div>
-          <div style="height:8px;background:#0b1220;border-radius:6px;overflow:hidden;">
-            <div style="height:100%;width:{{ _pct }}%;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width 0.35s;"></div>
+          <div style="height:8px;background:var(--color-surface);border-radius:var(--radius-default);overflow:hidden;">
+            <div style="height:100%;width:{{ _pct }}%;background:var(--color-surface);transition:width 0.35s;"></div>
           </div>
-          {% if _pct < 100 %}<p class="desc" style="margin:10px 0 0;">Profilingiz to'liq emas — <a href="/cabinet/onboarding" style="color:#60a5fa;">tezkor to'ldirish sahifasi</a>ga o'ting.</p>{% endif %}
+          {% if _pct < 100 %}<p class="desc" style="margin:10px 0 0;">Profilingiz to'liq emas — <a href="/cabinet/onboarding" style="color:var(--color-action);">tezkor to'ldirish sahifasi</a>ga o'ting.</p>{% endif %}
         </div>
         <div class="cab-section">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
@@ -228,8 +231,8 @@
               <p class="desc" style="margin-bottom:0;">{{ profile.position or '' }}{% if profile.institution %} · {{ profile.institution }}{% endif %}</p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              {% if olim_name %}<a class="cab-btn-outline" href="/olim/{{ olim_name|urlencode }}" target="_blank">🔍 Saytdagi sahifam</a>{% endif %}
-              <button class="cab-btn" onclick="gotoPanel('profil')">✏️ Profilni tahrirlash</button>
+              {% if olim_name %}<a class="cab-btn-outline" href="/olim/{{ olim_name|urlencode }}" target="_blank"> Saytdagi sahifam</a>{% endif %}
+              <button class="cab-btn" onclick="gotoPanel('profil')"> Profilni tahrirlash</button>
             </div>
           </div>
 
@@ -244,11 +247,11 @@
             {% endif %}
           </div>
 
-          {% if profile.bio %}<p style="color:#cbd5e1;margin-top:16px;line-height:1.6;">{{ profile.bio }}</p>{% endif %}
+          {% if profile.bio %}<p style="color:var(--color-text-primary);margin-top:16px;line-height:1.6;">{{ profile.bio }}</p>{% endif %}
 
           <!-- Magistratura -->
-          <div class="cab-section" style="margin-top:18px;background:#162032;">
-            <h3 style="font-size:1rem;">🎓 Magistratura</h3>
+          <div class="cab-section" style="margin-top:18px;background:var(--color-surface);">
+            <h3 style="font-size:1rem;"> Magistratura</h3>
             {% if profile.magistratura_mavzu %}
               <div class="field-value">{{ profile.magistratura_mavzu }}</div>
               <div class="it-meta">{{ profile.magistratura_institution or '' }}{% if profile.magistratura_year %} · {{ profile.magistratura_year }}{% endif %}</div>
@@ -256,28 +259,28 @@
           </div>
 
           <!-- PhD / DSc dissertatsiyalar (claimed + details) -->
-          <div class="cab-section" style="margin-top:14px;background:#162032;">
-            <h3 style="font-size:1rem;">📄 Ilmiy darajaviy dissertatsiya</h3>
+          <div class="cab-section" style="margin-top:14px;background:var(--color-surface);">
+            <h3 style="font-size:1rem;"> Ilmiy darajaviy dissertatsiya</h3>
             {% if profile.dissertatsiya_mavzu or profile.ixtisoslik or profile.advisor_name or profile.consultant_name or profile.defense_year %}
               {% if profile.dissertatsiya_mavzu %}<div class="field-value" style="margin-bottom:6px;">{{ profile.dissertatsiya_mavzu }}</div>{% endif %}
               <div class="it-meta">
-                {% if profile.ixtisoslik %}🔢 {{ profile.ixtisoslik }}{% endif %}
-                {% if profile.defense_year %} · 📅 {{ profile.defense_year }}{% endif %}
-                {% if profile.advisor_name %} · 🧑‍🏫 rahbar: {{ profile.advisor_name }}{% endif %}
-                {% if profile.consultant_name %} · 🧑‍🏫 maslahatchi: {{ profile.consultant_name }}{% endif %}
+                {% if profile.ixtisoslik %} {{ profile.ixtisoslik }}{% endif %}
+                {% if profile.defense_year %} ·  {{ profile.defense_year }}{% endif %}
+                {% if profile.advisor_name %} ·  rahbar: {{ profile.advisor_name }}{% endif %}
+                {% if profile.consultant_name %} ·  maslahatchi: {{ profile.consultant_name }}{% endif %}
               </div>
-              {% if profile.opponents %}<div class="it-meta">⚖️ Opponentlar: {{ profile.opponents }}</div>{% endif %}
+              {% if profile.opponents %}<div class="it-meta"> Opponentlar: {{ profile.opponents }}</div>{% endif %}
             {% elif not claimed %}
               <p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan — "Dissertatsiyalar" bo'limidan biriktiring yoki "Tahrirlash"da kiriting.</p>
             {% endif %}
-            {% if claimed %}<div class="claimed-list" style="margin-top:10px;">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}</span>{% endfor %}</div>{% endif %}
+            {% if claimed %}<div class="claimed-list" style="margin-top:10px;">{% for c in claimed %}<span class="claimed-chip"> {{ c }}</span>{% endfor %}</div>{% endif %}
           </div>
 
           <!-- Shogirdlar (overview) -->
           {% if shogirdlar %}
-          <div class="cab-section" style="margin-top:14px;background:#162032;">
-            <h3 style="font-size:1rem;">👥 Shogirdlar <span style="color:#64748b;font-weight:500;">({{ shogirdlar|length }})</span></h3>
-            <div class="claimed-list">{% for s in shogirdlar %}<span class="claimed-chip" style="background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.3);color:#93bbfc;">{{ s.student_name }}{% if s.degree %} · {{ s.degree }}{% endif %}</span>{% endfor %}</div>
+          <div class="cab-section" style="margin-top:14px;background:var(--color-surface);">
+            <h3 style="font-size:1rem;"> Shogirdlar <span style="color:var(--color-text-secondary);font-weight:500;">({{ shogirdlar|length }})</span></h3>
+            <div class="claimed-list">{% for s in shogirdlar %}<span class="claimed-chip" style="background:var(--color-background);border-color:var(--color-border);color:var(--color-action);">{{ s.student_name }}{% if s.degree %} · {{ s.degree }}{% endif %}</span>{% endfor %}</div>
           </div>
           {% endif %}
         </div>
@@ -291,32 +294,33 @@
 
           <!-- ── Username / sahifa manzili ── -->
           <div class="uname-box">
-            <label class="uname-lbl">🔗 Sizning sahifa manzilingiz</label>
+            <label class="uname-lbl"> Sizning sahifa manzilingiz</label>
             <div class="uname-row">
               <span class="uname-prefix">olimlar.uz/@</span>
-              <input class="cab-input uname-input" id="usernameInput" data-pf="slug"
+              <label class="ol-label" for="usernameInput">masalan: babayev_said</label>
+<input class="cab-input uname-input" id="usernameInput" data-pf="slug"
                      type="text" value="{{ profile.slug or '' }}" placeholder="masalan: babayev_said"
                      autocomplete="off" maxlength="30" spellcheck="false"
                      oninput="unameCheck()">
-              <button type="button" class="cab-btn-outline uname-sugg" onclick="unameSuggest()">💡 Taklif</button>
+              <button type="button" class="cab-btn-outline uname-sugg" onclick="unameSuggest()"> Taklif</button>
             </div>
             <div class="uname-status" id="usernameStatus"></div>
             <div class="uname-suggestions" id="usernameSuggestions"></div>
             <p class="desc" style="margin:6px 0 0;">Bu manzilni CV, vizitkarta va ilmiy maqolalarda ishlatishingiz mumkin. Bo'sh qoldirsangiz — eski /olim/ manzil ishlayveradi.</p>
           </div>
           <style>
-            .uname-box { border:1px solid rgba(148,163,184,0.25); border-radius:12px; padding:14px 16px; margin-bottom:18px; }
-            .uname-lbl { font-weight:700; font-size:0.92rem; display:block; margin-bottom:8px; }
+            .uname-box { border:1px solid var(--color-border); border-radius:var(--radius-card); padding:14px 16px; margin-bottom:18px; }
+            .uname-lbl { font-weight:600; font-size:0.92rem; display:block; margin-bottom:8px; }
             .uname-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-            .uname-prefix { color:#94a3b8; font-family:ui-monospace,monospace; font-size:0.9rem; white-space:nowrap; }
+            .uname-prefix { color:var(--color-action); font-family:ui-monospace,monospace; font-size:0.9rem; white-space:nowrap; }
             .uname-input { flex:1; min-width:160px; font-family:ui-monospace,monospace; }
             .uname-sugg { white-space:nowrap; }
             .uname-status { font-size:0.84rem; margin-top:8px; min-height:1.1em; }
-            .uname-status.ok { color:#34d399; } .uname-status.bad { color:#f87171; }
+            .uname-status.ok { color:var(--color-text-secondary); } .uname-status.bad { color:var(--color-text-secondary); }
             .uname-suggestions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-            .uname-chip { background:rgba(59,130,246,0.15); color:#60a5fa; border:none; border-radius:999px;
+            .uname-chip { background:var(--color-background); color:var(--color-action); border:none; border-radius:var(--radius-full);
               padding:4px 12px; font-size:0.82rem; font-family:ui-monospace,monospace; cursor:pointer; }
-            .uname-chip:hover { background:rgba(59,130,246,0.3); }
+            .uname-chip:hover { background:var(--color-background); }
           </style>
 
           <!-- Foydalanuvchi turi -->
@@ -324,9 +328,9 @@
             <label class="uname-lbl">Foydalanuvchi turi</label>
             <form method="POST" action="{{ url_for('cabinet.update_user_type') }}">
               <select name="user_type" class="cab-select" onchange="this.form.submit()">
-                <option value="researcher" {% if user.user_type == 'researcher' %}selected{% endif %}>🎓 Izlanuvchi / Tadqiqotchi</option>
-                <option value="student" {% if user.user_type == 'student' %}selected{% endif %}>📚 Talaba</option>
-                <option value="regular" {% if user.user_type == 'regular' %}selected{% endif %}>👤 Oddiy foydalanuvchi</option>
+                <option value="researcher" {% if user.user_type == 'researcher' %}selected{% endif %}> Izlanuvchi / Tadqiqotchi</option>
+                <option value="student" {% if user.user_type == 'student' %}selected{% endif %}> Talaba</option>
+                <option value="regular" {% if user.user_type == 'regular' %}selected{% endif %}> Oddiy foydalanuvchi</option>
               </select>
             </form>
           </div>
@@ -337,9 +341,9 @@
               {% if profile.photo_url %}<img src="{{ profile.photo_url }}" alt="Avatar">{% else %}<div class="avatar-placeholder">{{ _avatar_emoji }}</div>{% endif %}
             </div>
             <div class="avatar-actions">
-              <label for="avatarFileInput" class="avatar-upload-btn">📷 Rasm yuklash</label>
+              <label for="avatarFileInput" class="avatar-upload-btn"> Rasm yuklash</label>
               <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="uploadAvatar(this)">
-              {% if profile.photo_url %}<button onclick="removeAvatar()" class="avatar-remove-btn">🗑️ O'chirish</button>{% endif %}
+              {% if profile.photo_url %}<button onclick="removeAvatar()" class="avatar-remove-btn"> O'chirish</button>{% endif %}
               <div class="avatar-hint">JPG, PNG yoki WEBP · maks. 5MB</div>
             </div>
           </div>
@@ -347,23 +351,29 @@
           <datalist id="muassasa-list"></datalist>
           <form id="profileForm" onsubmit="return false;">
           <div class="cab-grid">
-            <div class="cab-group"><label>🧑 Ism</label><input class="cab-input auto-capitalize" data-pf="first_name" type="text" value="{{ profile.first_name or '' }}" placeholder="Ismingiz"></div>
-            <div class="cab-group"><label>🧑 Familya</label><input class="cab-input auto-capitalize" data-pf="last_name" type="text" value="{{ profile.last_name or '' }}" placeholder="Familyangiz"></div>
-            <div class="cab-group"><label>🧑 Otasining ismi</label><input class="cab-input auto-capitalize" data-pf="patronymic" type="text" value="{{ profile.patronymic or '' }}" placeholder="Otangizning ismi"></div>
-            <div class="cab-group"><label>💼 Lavozim</label><input class="cab-input" data-pf="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
-            <div class="cab-group"><label>🏛️ Muassasa</label><input class="cab-input" data-pf="institution" type="text" value="{{ profile.institution or '' }}" list="muassasa-list" placeholder="Muassasa nomi"></div>
-            <div class="cab-group"><label>📅 Tug'ilgan yili</label><input class="cab-input" data-pf="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
-            <div class="cab-group"><label>📍 Viloyat</label>
+            <div class="cab-group"><label> Ism</label><label class="ol-label" for="ol-field-1">Ismingiz</label>
+<input id="ol-field-1" class="cab-input auto-capitalize" data-pf="first_name" type="text" value="{{ profile.first_name or '' }}" placeholder="Ismingiz"></div>
+            <div class="cab-group"><label> Familya</label><label class="ol-label" for="ol-field-2">Familyangiz</label>
+<input id="ol-field-2" class="cab-input auto-capitalize" data-pf="last_name" type="text" value="{{ profile.last_name or '' }}" placeholder="Familyangiz"></div>
+            <div class="cab-group"><label> Otasining ismi</label><label class="ol-label" for="ol-field-3">Otangizning ismi</label>
+<input id="ol-field-3" class="cab-input auto-capitalize" data-pf="patronymic" type="text" value="{{ profile.patronymic or '' }}" placeholder="Otangizning ismi"></div>
+            <div class="cab-group"><label> Lavozim</label><label class="ol-label" for="ol-field-4">Kafedra mudiri</label>
+<input id="ol-field-4" class="cab-input" data-pf="position" type="text" value="{{ profile.position or '' }}" placeholder="Kafedra mudiri"></div>
+            <div class="cab-group"><label> Muassasa</label><label class="ol-label" for="ol-field-5">Muassasa nomi</label>
+<input id="ol-field-5" class="cab-input" data-pf="institution" type="text" value="{{ profile.institution or '' }}" list="muassasa-list" placeholder="Muassasa nomi"></div>
+            <div class="cab-group"><label> Tug'ilgan yili</label><label class="ol-label" for="ol-field-6">1985</label>
+<input id="ol-field-6" class="cab-input" data-pf="birth_year" type="number" value="{{ profile.birth_year or '' }}" placeholder="1985"></div>
+            <div class="cab-group"><label> Viloyat</label>
               <select class="cab-select" data-pf="region">
                 <option value="">—</option>
                 {% for rg in uz_regions %}<option value="{{ rg }}" {% if profile.region == rg %}selected{% endif %}>{{ rg }}</option>{% endfor %}
               </select>
             </div>
-            <div class="cab-group full"><label>📝 Bio / Qisqa ma'lumot</label><textarea class="cab-textarea" data-pf="bio" maxlength="1000" placeholder="Qisqa ma'lumot">{{ profile.bio or '' }}</textarea></div>
+            <div class="cab-group full"><label> Bio / Qisqa ma'lumot</label><textarea class="cab-textarea" data-pf="bio" maxlength="1000" placeholder="Qisqa ma'lumot">{{ profile.bio or '' }}</textarea></div>
           </div>
 
           <!-- Ilmiy daraja bloki -->
-          <h3 style="font-size:1rem;margin-top:20px;">🎓 Ilmiy daraja va unvon</h3>
+          <h3 style="font-size:1rem;margin-top:20px;"> Ilmiy daraja va unvon</h3>
           <p class="desc">Agar dissertatsiya yoqlagan bo'lsangiz darajangizni belgilang.</p>
           <div class="cab-grid">
             <div class="cab-group"><label>Ilmiy daraja</label>
@@ -392,34 +402,45 @@
 
           <!-- Magistratura / yo'nalish bloki (Magistrant/Magistr) -->
           <div class="deg-field" data-degs="Magistrant,Magistr">
-            <h3 style="font-size:1rem;margin-top:20px;">📘 Magistratura</h3>
+            <h3 style="font-size:1rem;margin-top:20px;"> Magistratura</h3>
             <div class="cab-grid">
-              <div class="cab-group full"><label>🧭 Yo'nalish nomi</label><input class="cab-input" data-pf="yonalish" type="text" value="{{ profile.yonalish or '' }}" placeholder="Masalan: Informatika va axborot texnologiyalari"></div>
-              <div class="cab-group full"><label>Magistratura dissertatsiyasi mavzusi</label><input class="cab-input" data-pf="magistratura_mavzu" type="text" value="{{ profile.magistratura_mavzu or '' }}" placeholder="Mavzu nomi"></div>
-              <div class="cab-group"><label>Muassasa</label><input class="cab-input" data-pf="magistratura_institution" type="text" value="{{ profile.magistratura_institution or '' }}" list="muassasa-list" placeholder="OTM nomi"></div>
-              <div class="cab-group"><label>Tugatgan yili</label><input class="cab-input" data-pf="magistratura_year" type="number" value="{{ profile.magistratura_year or '' }}" placeholder="2020"></div>
+              <div class="cab-group full"><label> Yo'nalish nomi</label><label class="ol-label" for="ol-field-7">Masalan: Informatika va axborot texnologiyalari</label>
+<input id="ol-field-7" class="cab-input" data-pf="yonalish" type="text" value="{{ profile.yonalish or '' }}" placeholder="Masalan: Informatika va axborot texnologiyalari"></div>
+              <div class="cab-group full"><label>Magistratura dissertatsiyasi mavzusi</label><label class="ol-label" for="ol-field-8">Mavzu nomi</label>
+<input id="ol-field-8" class="cab-input" data-pf="magistratura_mavzu" type="text" value="{{ profile.magistratura_mavzu or '' }}" placeholder="Mavzu nomi"></div>
+              <div class="cab-group"><label>Muassasa</label><label class="ol-label" for="ol-field-9">OTM nomi</label>
+<input id="ol-field-9" class="cab-input" data-pf="magistratura_institution" type="text" value="{{ profile.magistratura_institution or '' }}" list="muassasa-list" placeholder="OTM nomi"></div>
+              <div class="cab-group"><label>Tugatgan yili</label><label class="ol-label" for="ol-field-10">2020</label>
+<input id="ol-field-10" class="cab-input" data-pf="magistratura_year" type="number" value="{{ profile.magistratura_year or '' }}" placeholder="2020"></div>
             </div>
           </div>
 
           <!-- Dissertatsiya bloki (PhD / DSc) — darajaga qarab dinamik ko'rinadi -->
           <div class="deg-field" data-degs="Izlanuvchi PhD,PhD,Izlanuvchi DSc,DSc">
-            <h3 style="font-size:1rem;margin-top:20px;">📄 Dissertatsiya ma'lumotlari</h3>
+            <h3 style="font-size:1rem;margin-top:20px;"> Dissertatsiya ma'lumotlari</h3>
             <p class="desc">Bazada dissertatsiyangiz bo'lsa, biriktirganingizda bu maydonlar avtomatik to'ldiriladi.</p>
             <datalist id="rahbar-list"></datalist>
             <div class="cab-grid">
-              <div class="cab-group"><label>🔢 Ixtisoslik shifri</label><input class="cab-input" data-pf="ixtisoslik" type="text" value="{{ profile.ixtisoslik or '' }}" placeholder="05.01.01"></div>
-              <div class="cab-group"><label>📅 Himoya yili</label><input class="cab-input" data-pf="defense_year" type="number" value="{{ profile.defense_year or '' }}" placeholder="2021"></div>
-              <div class="cab-group full"><label>📄 Dissertatsiya mavzusi</label><input class="cab-input" data-pf="dissertatsiya_mavzu" type="text" value="{{ profile.dissertatsiya_mavzu or '' }}" placeholder="Dissertatsiya mavzusi"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi PhD,PhD"><label>🧑‍🏫 Ilmiy rahbar</label><input class="cab-input auto-capitalize" data-pf="advisor_name" list="rahbar-list" type="text" value="{{ profile.advisor_name or '' }}" placeholder="Ilmiy rahbar F.I.Sh"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🏫 Ilmiy maslahatchi</label><input class="cab-input auto-capitalize" data-pf="consultant_name" list="rahbar-list" type="text" value="{{ profile.consultant_name or '' }}" placeholder="Ilmiy maslahatchi F.I.Sh"></div>
-              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label>🧑‍🎓 O'z PhD ilmiy rahbaringiz</label><input class="cab-input auto-capitalize" data-pf="phd_advisor_name" list="rahbar-list" type="text" value="{{ profile.phd_advisor_name or '' }}" placeholder="PhD ilmiy rahbaringiz"></div>
-              <div class="cab-group full"><label>⚖️ Opponentlar</label><input class="cab-input" data-pf="opponents" type="text" value="{{ profile.opponents or '' }}" placeholder="Opponentlar — ; bilan ajrating"></div>
+              <div class="cab-group"><label> Ixtisoslik shifri</label><label class="ol-label" for="ol-field-11">05.01.01</label>
+<input id="ol-field-11" class="cab-input" data-pf="ixtisoslik" type="text" value="{{ profile.ixtisoslik or '' }}" placeholder="05.01.01"></div>
+              <div class="cab-group"><label> Himoya yili</label><label class="ol-label" for="ol-field-12">2021</label>
+<input id="ol-field-12" class="cab-input" data-pf="defense_year" type="number" value="{{ profile.defense_year or '' }}" placeholder="2021"></div>
+              <div class="cab-group full"><label> Dissertatsiya mavzusi</label><label class="ol-label" for="ol-field-13">Dissertatsiya mavzusi</label>
+<input id="ol-field-13" class="cab-input" data-pf="dissertatsiya_mavzu" type="text" value="{{ profile.dissertatsiya_mavzu or '' }}" placeholder="Dissertatsiya mavzusi"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi PhD,PhD"><label> Ilmiy rahbar</label><label class="ol-label" for="ol-field-14">Ilmiy rahbar F.I.Sh</label>
+<input id="ol-field-14" class="cab-input auto-capitalize" data-pf="advisor_name" list="rahbar-list" type="text" value="{{ profile.advisor_name or '' }}" placeholder="Ilmiy rahbar F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label> Ilmiy maslahatchi</label><label class="ol-label" for="ol-field-15">Ilmiy maslahatchi F.I.Sh</label>
+<input id="ol-field-15" class="cab-input auto-capitalize" data-pf="consultant_name" list="rahbar-list" type="text" value="{{ profile.consultant_name or '' }}" placeholder="Ilmiy maslahatchi F.I.Sh"></div>
+              <div class="cab-group deg-field" data-degs="Izlanuvchi DSc,DSc"><label> O'z PhD ilmiy rahbaringiz</label><label class="ol-label" for="ol-field-16">PhD ilmiy rahbaringiz</label>
+<input id="ol-field-16" class="cab-input auto-capitalize" data-pf="phd_advisor_name" list="rahbar-list" type="text" value="{{ profile.phd_advisor_name or '' }}" placeholder="PhD ilmiy rahbaringiz"></div>
+              <div class="cab-group full"><label> Opponentlar</label><label class="ol-label" for="ol-field-17">Opponentlar — ; bilan ajrating</label>
+<input id="ol-field-17" class="cab-input" data-pf="opponents" type="text" value="{{ profile.opponents or '' }}" placeholder="Opponentlar — ; bilan ajrating"></div>
             </div>
           </div>
 
           <p class="field-empty deg-none" style="display:none;margin-top:16px;">Yuqorida ilmiy darajangizni tanlang — tegishli maydonlar shu yerda paydo bo'ladi.</p>
 
-          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfileForm()">💾 Saqlash</button></div>
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveProfileForm()"> Saqlash</button></div>
           </form>
         </div>
       </section>
@@ -428,14 +449,15 @@
       <section class="cab-panel" id="panel-diss">
         <div class="cab-section">
           <h3>Dissertatsiyani biriktirish</h3>
-          <p class="desc">O'z ismingizni qidiring va "Bu men ✓" tugmasini bosing.</p>
+          <p class="desc">O'z ismingizni qidiring va "Bu men " tugmasini bosing.</p>
           {% if claimed %}
-          <div><strong style="color:#94a3b8;font-size:0.85rem;">Biriktirilgan:</strong>
-            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip">✓ {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:3px 10px;border-radius:50px;font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">✕ Ajratish</button></span>{% endfor %}</div>
+          <div><strong style="color:var(--color-action);font-size:0.85rem;">Biriktirilgan:</strong>
+            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip"> {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-default);font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'"> Ajratish</button></span>{% endfor %}</div>
           </div>
           {% endif %}
           <div style="margin-top:14px;">
-            <input class="cab-input" id="claim-search" type="text" placeholder="O'z dissertatsiyangizni toping (ism familiya)...">
+            <label class="ol-label" for="claim-search">O'z dissertatsiyangizni toping (ism familiya)</label>
+<input class="cab-input" id="claim-search" type="text" placeholder="O'z dissertatsiyangizni toping (ism familiya)...">
           </div>
           <div class="search-results" id="claim-results"></div>
         </div>
@@ -444,24 +466,24 @@
       <!-- ── MAQOLALAR (D) ── -->
       <style>
         /* jurnal tekshiruvi dropdown (maqola formasi) */
-        .jvc-drop { display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 40;
-                    background: #0f172a; border: 1px solid #334155; border-radius: 10px;
-                    margin-top: 4px; max-height: 240px; overflow-y: auto;
-                    box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
-        .jvc-drop.open { display: block; }
-        .jvc-row { padding: 9px 12px; cursor: pointer; font-size: 0.84rem; line-height: 1.4;
-                   border-bottom: 1px solid #1e293b; }
-        .jvc-row:last-child { border-bottom: none; }
-        .jvc-row:hover { background: #1e293b; }
-        .jvc-row .jvc-t { color: #e2e8f0; font-weight: 600; display: block; }
-        .jvc-row .jvc-s { font-size: 0.74rem; }
-        .jvc-row.trusted .jvc-s { color: #34d399; }
-        .jvc-row.unknown .jvc-s { color: #fbbf24; }
-        .jvc-row.suspect .jvc-s { color: #f87171; }
-        .jvc-note { font-size: 0.76rem; margin-top: 5px; line-height: 1.45; display: none; }
-        .jvc-note.trusted { display: block; color: #34d399; }
-        .jvc-note.unknown { display: block; color: #fbbf24; }
-        .jvc-note.suspect { display: block; color: #f87171; }
+        .jvc-drop { display:none; position:absolute; left:0; right:0; top:100%; z-index:40;
+                    background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default);
+                    margin-top:4px; max-height:240px; overflow-y:auto;
+                    box-shadow:0 10px 24px var(--color-overlay); }
+        .jvc-drop.open { display:block; }
+        .jvc-row { padding:9px 12px; cursor:pointer; font-size:0.84rem; line-height:1.4;
+                   border-bottom:1px solid var(--color-border); }
+        .jvc-row:last-child { border-bottom:none; }
+        .jvc-row:hover { background:var(--color-surface); }
+        .jvc-row .jvc-t { color:var(--color-text-primary); font-weight:600; display:block; }
+        .jvc-row .jvc-s { font-size:0.74rem; }
+        .jvc-row.trusted .jvc-s { color:var(--color-text-secondary); }
+        .jvc-row.unknown .jvc-s { color:var(--color-text-secondary); }
+        .jvc-row.suspect .jvc-s { color:var(--color-text-secondary); }
+        .jvc-note { font-size:0.76rem; margin-top:5px; line-height:1.45; display:none; }
+        .jvc-note.trusted { display:block; color:var(--color-text-secondary); }
+        .jvc-note.unknown { display:block; color:var(--color-text-secondary); }
+        .jvc-note.suspect { display:block; color:var(--color-text-secondary); }
       </style>
       <section class="cab-panel" id="panel-maqolalar">
         <div class="cab-section">
@@ -474,7 +496,8 @@
               <div class="cab-group"><label>Mualliflar</label><input class="cab-input" id="maqola-authors" type="text"></div>
               <div class="cab-group" style="position:relative;">
                 <label>Jurnal nomi</label>
-                <input class="cab-input" id="maqola-journal" type="text" autocomplete="off" placeholder="Yozing — OAK/Scopus bo'yicha tekshiramiz">
+                <label class="ol-label" for="maqola-journal">Yozing — OAK/Scopus bo'yicha tekshiramiz</label>
+<input class="cab-input" id="maqola-journal" type="text" autocomplete="off" placeholder="Yozing — OAK/Scopus bo'yicha tekshiramiz">
                 <input type="hidden" id="maqola-journal_flag">
                 <div class="jvc-drop" id="jvc-drop"></div>
                 <div class="jvc-note" id="jvc-note"></div>
@@ -489,10 +512,10 @@
             {% for m in maqolalar %}
             <div class="item-card">
               <div class="it-title">{{ m.title }}</div>
-              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.journal_flag == 'trusted' %} ✅{% elif m.journal_flag == 'suspect' %} <span style="color:#f87171;" title="Ehtiyot bo'ling — nashriyot shubhali deb belgilangan">🔴</span>{% elif m.journal_flag == 'unknown' %} <span style="color:#fbbf24;" title="OAK/Scopus ro'yxatlarida topilmadi">⚠️</span>{% endif %}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
+              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.journal_flag == 'trusted' %} {% elif m.journal_flag == 'suspect' %} <span style="color:var(--color-text-secondary);" title="Ehtiyot bo'ling — nashriyot shubhali deb belgilangan"></span>{% elif m.journal_flag == 'unknown' %} <span style="color:var(--color-text-secondary);" title="OAK/Scopus ro'yxatlarida topilmadi"></span>{% endif %}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
               <div class="it-actions">
-                <button class="it-btn it-edit" onclick='editMaqola({{ m|tojson }})'>Tahrirlash ✏️</button>
-                <button class="it-btn it-del" onclick="delItem('maqola', {{ m.id }})">O'chirish 🗑️</button>
+                <button class="it-btn it-edit" onclick='editMaqola({{ m|tojson }})'>Tahrirlash </button>
+                <button class="it-btn it-del" onclick="delItem('maqola', {{ m.id }})">O'chirish </button>
               </div>
             </div>
             {% else %}<p class="desc">Hali maqola qo'shilmagan.</p>{% endfor %}
@@ -522,8 +545,8 @@
               <div class="it-title">{{ k.title }}</div>
               <div class="it-meta">{{ k.conference_name or '' }}{% if k.location %} · {{ k.location }}{% endif %}{% if k.date %} · {{ k.date }}{% endif %}</div>
               <div class="it-actions">
-                <button class="it-btn it-edit" onclick='editKonf({{ k|tojson }})'>Tahrirlash ✏️</button>
-                <button class="it-btn it-del" onclick="delItem('konf', {{ k.id }})">O'chirish 🗑️</button>
+                <button class="it-btn it-edit" onclick='editKonf({{ k|tojson }})'>Tahrirlash </button>
+                <button class="it-btn it-del" onclick="delItem('konf', {{ k.id }})">O'chirish </button>
               </div>
             </div>
             {% else %}<p class="desc">Hali konferensiya qo'shilmagan.</p>{% endfor %}
@@ -541,7 +564,8 @@
             <input type="hidden" id="shogird-id">
             <datalist id="shogird-list"></datalist>
             <div class="cab-grid">
-              <div class="cab-group full"><label>Shogird F.I.Sh *</label><input class="cab-input auto-capitalize" id="shogird-student_name" list="shogird-list" type="text" placeholder="Ism Familiya"></div>
+              <div class="cab-group full"><label>Shogird F.I.Sh *</label><label class="ol-label" for="shogird-student_name">Ism Familiya</label>
+<input class="cab-input auto-capitalize" id="shogird-student_name" list="shogird-list" type="text" placeholder="Ism Familiya"></div>
               <div class="cab-group"><label>Ilmiy daraja / Tur</label>
                 <select class="cab-select" id="shogird-degree">
                   <option value="">—</option>
@@ -550,8 +574,10 @@
                   <option value="DSc">DSc</option>
                 </select>
               </div>
-              <div class="cab-group"><label>Himoya yili</label><input class="cab-input" id="shogird-year" type="number" placeholder="2022"></div>
-              <div class="cab-group full"><label>Mavzu</label><input class="cab-input" id="shogird-mavzu" type="text" placeholder="Dissertatsiya/bitiruv ishi mavzusi"></div>
+              <div class="cab-group"><label>Himoya yili</label><label class="ol-label" for="shogird-year">2022</label>
+<input class="cab-input" id="shogird-year" type="number" placeholder="2022"></div>
+              <div class="cab-group full"><label>Mavzu</label><label class="ol-label" for="shogird-mavzu">Dissertatsiya/bitiruv ishi mavzusi</label>
+<input class="cab-input" id="shogird-mavzu" type="text" placeholder="Dissertatsiya/bitiruv ishi mavzusi"></div>
               <div class="cab-group"><label>Holati</label>
                 <select class="cab-select" id="shogird-holati">
                   <option value="jarayonda">Jarayonda</option>
@@ -568,8 +594,8 @@
               <div class="it-meta">{% if s.degree %}{{ s.degree }}{% endif %}{% if s.year %} · {{ s.year }}{% endif %}{% if s.holati %} · {{ s.holati }}{% endif %}</div>
               {% if s.mavzu %}<div class="it-meta">{{ s.mavzu }}</div>{% endif %}
               <div class="it-actions">
-                <button class="it-btn it-edit" onclick='editShogird({{ s|tojson }})'>Tahrirlash ✏️</button>
-                <button class="it-btn it-del" onclick="delItem('shogird', {{ s.id }})">O'chirish 🗑️</button>
+                <button class="it-btn it-edit" onclick='editShogird({{ s|tojson }})'>Tahrirlash </button>
+                <button class="it-btn it-del" onclick="delItem('shogird', {{ s.id }})">O'chirish </button>
               </div>
             </div>
             {% else %}<p class="desc">Hali shogird qo'shilmagan.</p>{% endfor %}
@@ -589,7 +615,7 @@
               <div class="cab-group"><label>Tashkilot *</label><input class="cab-input" id="ish-organization" type="text"></div>
               <div class="cab-group"><label>Boshlanish sanasi</label><input class="cab-input" id="ish-start_date" type="date"></div>
               <div class="cab-group"><label>Tugash sanasi</label><input class="cab-input" id="ish-end_date" type="date"></div>
-              <div class="cab-group full"><label class="cab-group" style="display:flex;align-items:center;gap:8px;color:#e2e8f0;"><input type="checkbox" id="ish-is_current" onchange="toggleCurrent()"> Hozir ishlayapman</label></div>
+              <div class="cab-group full"><label class="cab-group" style="display:flex;align-items:center;gap:8px;color:var(--color-text-primary);"><input type="checkbox" id="ish-is_current" onchange="toggleCurrent()"> Hozir ishlayapman</label></div>
             </div>
             <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('ish')">Bekor</button><button class="cab-btn" onclick="saveItem('ish')">Saqlash</button></div>
           </div>
@@ -599,8 +625,8 @@
               <div class="it-title">{{ w.position }}</div>
               <div class="it-meta">{{ w.organization or '' }}{% if w.start_date %} · {{ w.start_date }}{% if w.end_date %} — {{ w.end_date }}{% elif w.is_current %} — hozir{% endif %}{% endif %}</div>
               <div class="it-actions">
-                <button class="it-btn it-edit" onclick='editIsh({{ w|tojson }})'>Tahrirlash ✏️</button>
-                <button class="it-btn it-del" onclick="delItem('ish', {{ w.id }})">O'chirish 🗑️</button>
+                <button class="it-btn it-edit" onclick='editIsh({{ w|tojson }})'>Tahrirlash </button>
+                <button class="it-btn it-del" onclick="delItem('ish', {{ w.id }})">O'chirish </button>
               </div>
             </div>
             {% else %}<p class="desc">Hali ish faoliyati qo'shilmagan.</p>{% endfor %}
@@ -615,7 +641,8 @@
           <button class="cab-btn-outline" onclick="openForm('rasm')">Rasm qo'shish +</button>
           <div class="item-form" id="form-rasm" style="margin-top:14px;">
             <div class="cab-grid">
-              <div class="cab-group full"><label>Rasm URL *</label><input class="cab-input" id="rasm-image_url" type="text" placeholder="https://..."></div>
+              <div class="cab-group full"><label>Rasm URL *</label><label class="ol-label" for="rasm-image_url">https://</label>
+<input class="cab-input" id="rasm-image_url" type="text" placeholder="https://..."></div>
               <div class="cab-group full"><label>Izoh</label><input class="cab-input" id="rasm-caption" type="text"></div>
             </div>
             <div class="cab-save-bar"><button class="cab-btn-outline" onclick="closeForm('rasm')">Bekor</button><button class="cab-btn" onclick="saveItem('rasm')">Saqlash</button></div>
@@ -624,7 +651,7 @@
             {% for img in rasmlar %}
             <figure>
               <img src="{{ img.image_url }}" alt="{{ img.caption or '' }}">
-              <button class="cab-btn-red gdel" onclick="delItem('rasm', {{ img.id }})">🗑️</button>
+              <button class="cab-btn-red gdel" onclick="delItem('rasm', {{ img.id }})" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
             </figure>
             {% else %}<p class="desc">Hali rasm qo'shilmagan.</p>{% endfor %}
           </div>
@@ -637,12 +664,12 @@
           <h3>Akademik havolalar</h3>
           <p class="desc">Akademik profil havolalarini kiriting va yagona "Saqlash" tugmasini bosing.</p>
           {% set links = [
-            ('scopus_url','🔬','Scopus','https://www.scopus.com/authid/...'),
-            ('wos_url','📚','Web of Science','https://www.webofscience.com/...'),
-            ('scholar_url','🎓','Google Scholar profil havolasi','https://scholar.google.com/citations?user=...'),
+            ('scopus_url','','Scopus','https://www.scopus.com/authid/...'),
+            ('wos_url','','Web of Science','https://www.webofscience.com/...'),
+            ('scholar_url','','Google Scholar profil havolasi','https://scholar.google.com/citations?user=...'),
             ('orcid_url','🆔','ORCID','https://orcid.org/0000-...'),
-            ('website_url','🌐','Shaxsiy veb-sayt','https://...'),
-            ('telegram_url','✈️','Telegram','https://t.me/...')
+            ('website_url','','Shaxsiy veb-sayt','https://...'),
+            ('telegram_url','','Telegram','https://t.me/...')
           ] %}
           <form id="linksForm" onsubmit="return false;">
           {% for key, ic, label, ph in links %}
@@ -654,31 +681,31 @@
             </div>
           </div>
           {% endfor %}
-          <div class="cab-save-bar"><button class="cab-btn" onclick="saveLinksForm()">💾 Saqlash</button></div>
+          <div class="cab-save-bar"><button class="cab-btn" onclick="saveLinksForm()"> Saqlash</button></div>
           </form>
         </div>
       </section>
 
-      <!-- ── 🔔 BILDIRISHNOMALAR SOZLAMALARI ── -->
+      <!-- ──  BILDIRISHNOMALAR SOZLAMALARI ── -->
       <section class="cab-panel" id="panel-bildirish">
         <div class="cab-section">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3 style="margin:0;">🔔 Bildirishnomalar sozlamalari</h3>
+            <h3 style="margin:0;"> Bildirishnomalar sozlamalari</h3>
             <span class="np-saving" id="np-saving">Saqlanmoqda…</span>
           </div>
           <p class="desc">O'zgartirishlar avtomatik saqlanadi.</p>
 
           {% set _content_prefs = [
-            ('konferensiya','📅','Konferensiyalar','Yaqin ilmiy konferensiyalar haqida eslatmalar'),
-            ('grant','🏆','Grantlar va moliyalashtirish','ERASMUS, DAAD, British Council va boshqa grant imkoniyatlari'),
-            ('himoya_elon','🎓',"Himoya e'lonlari","Sizning ixtisosligingizga mos yangi dissertatsiya himoyalari"),
-            ('jurnal','📰','Jurnallar',"Siz o'qiydigan sohadagi yangi jurnal sonlari"),
-            ('yangilik','📢','Yangiliklar',"Olimlar.uz ma'muriyatidan umumiy e'lonlar"),
+            ('konferensiya','','Konferensiyalar','Yaqin ilmiy konferensiyalar haqida eslatmalar'),
+            ('grant','','Grantlar va moliyalashtirish','ERASMUS, DAAD, British Council va boshqa grant imkoniyatlari'),
+            ('himoya_elon','',"Himoya e'lonlari","Sizning ixtisosligingizga mos yangi dissertatsiya himoyalari"),
+            ('jurnal','','Jurnallar',"Siz o'qiydigan sohadagi yangi jurnal sonlari"),
+            ('yangilik','','Yangiliklar',"Olimlar.uz ma'muriyatidan umumiy e'lonlar"),
             ('deadline','⏰','Muhim muddatlar','Ariza topshirish, maqola yuborish muddatlari')
           ] %}
           {% set _channel_prefs = [
-            ('telegram_notify','✈️','Telegram orqali xabar olish','Telegram botimiz orqali tezkor bildirishnomalar'),
-            ('email_notify','📧','Email orqali xabar olish','Elektron pochta orqali kunlik xulosa')
+            ('telegram_notify','','Telegram orqali xabar olish','Telegram botimiz orqali tezkor bildirishnomalar'),
+            ('email_notify','','Email orqali xabar olish','Elektron pochta orqali kunlik xulosa')
           ] %}
 
           <div class="np-card">
@@ -714,7 +741,7 @@
           <div class="np-card" id="np-univ-privacy" style="display:none;">
             <p class="np-group-title">Maxfiylik</p>
             <div class="np-row">
-              <span class="np-ic">🏛</span>
+              <span class="np-ic"></span>
               <div class="np-label"><b>Universitetim faolligimni ko'rmasin</b>
                 <small>Yoqilsa, universitetingizning B2B panelida progress
                 ko'rsatkichlaringiz (so'z soni, nashrlar, muddatlar)
@@ -728,23 +755,24 @@
           {% endif %}
         </div>
 
-        <!-- ── 🔔 MENING OBUNALARIM (ixtisoslik bo'yicha yangi himoyalar) ── -->
+        <!-- ──  MENING OBUNALARIM (ixtisoslik bo'yicha yangi himoyalar) ── -->
         <div class="cab-section" style="margin-top:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-            <h3 style="margin:0;">🎯 Mening obunalarim <span id="ss-count" style="color:#64748b;font-weight:500;font-size:0.85rem;"></span></h3>
+            <h3 style="margin:0;"> Mening obunalarim <span id="ss-count" style="color:var(--color-text-secondary);font-weight:500;font-size:0.85rem;"></span></h3>
           </div>
           <p class="desc">Tanlagan ixtisosliklaringizda yangi dissertatsiya himoyasi e'lon qilinsa xabar beramiz (sayt va Telegram).</p>
           <div class="np-card" id="ss-list"></div>
-          <div id="ss-msg" style="display:none;color:#94a3b8;font-size:0.85rem;margin:8px 0;"></div>
+          <div id="ss-msg" style="display:none;color:var(--color-action);font-size:0.85rem;margin:8px 0;"></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;" id="ss-add-row">
-            <input class="cab-input" id="ss-input" list="ss-codes" placeholder="Ixtisoslik shifri (masalan 05.01.01)" style="flex:1;min-width:200px;">
+            <label class="ol-label" for="ss-input">Ixtisoslik shifri (masalan 05.01.01)</label>
+<input class="cab-input" id="ss-input" list="ss-codes" placeholder="Ixtisoslik shifri (masalan 05.01.01)" style="flex:1;min-width:200px;">
             <datalist id="ss-codes"></datalist>
-            <button class="cab-btn" type="button" onclick="ssAdd()">➕ Obuna qo'shish</button>
+            <button class="cab-btn" type="button" onclick="ssAdd()"> Obuna qo'shish</button>
           </div>
         </div>
       </section>
 
-    </main>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -823,7 +851,7 @@ function saveForm(formId) {
     body[el.getAttribute('data-pf')] = (el.value || '').trim();
   });
   post('/cabinet/api/profile/save', body).then(function (data) {
-    if (data.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 600); }
+    if (data.ok) { toast('Saqlandi ', true); setTimeout(function () { location.reload(); }, 600); }
     else { toast(data.error || 'Xatolik yuz berdi', false); }
   }).catch(function () { toast('Tarmoq xatosi', false); });
 }
@@ -843,8 +871,8 @@ function unameCheck() {
     fetch('/api/username/check?slug=' + encodeURIComponent(v))
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.available) { st.className = 'uname-status ok'; st.textContent = '✓ Bu nom bo\'sh'; }
-        else { st.className = 'uname-status bad'; st.textContent = '✗ ' + (d.error || 'Band'); }
+        if (d.available) { st.className = 'uname-status ok'; st.textContent = ' Bu nom bo\'sh'; }
+        else { st.className = 'uname-status bad'; st.textContent = ' ' + (d.error || 'Band'); }
       }).catch(function () { st.className = 'uname-status'; st.textContent = ''; });
   }, 350);
 }
@@ -908,7 +936,7 @@ function saveLinksForm() {
     if (savingEl) savingEl.classList.add('on');
     post('/api/v1/notifications/prefs', body).then(function (d) {
       if (savingEl) savingEl.classList.remove('on');
-      if (d.success) { toast('Sozlamalar saqlandi ✓', true); }
+      if (d.success) { toast('Sozlamalar saqlandi ', true); }
       else { toast(d.error || 'Xatolik yuz berdi', false); }
     }).catch(function () {
       if (savingEl) savingEl.classList.remove('on');
@@ -939,7 +967,7 @@ function saveLinksForm() {
   cb.addEventListener('change', function () {
     post('/univer/api/privacy', { hidden: cb.checked }).then(function (d) {
       if (d.success) toast(cb.checked ?
-        "Universitetingiz endi faolligingizni ko'rmaydi ✓" : 'Sozlama saqlandi ✓', true);
+        "Universitetingiz endi faolligingizni ko'rmaydi " : 'Sozlama saqlandi ', true);
       else toast(d.error || 'Xatolik yuz berdi', false);
     }).catch(function () { toast('Tarmoq xatosi', false); });
   });
@@ -998,7 +1026,7 @@ if (claimSearch) {
           }
           count.appendChild(document.createTextNode(String(it.count || 0) + ' ta dissertatsiya'));
           var claim = document.createElement('button'); claim.className = 'cab-btn';
-          claim.textContent = 'Bu men ✓';
+          claim.textContent = 'Bu men ';
           claim.addEventListener('click', function () { claimName(it.name || ''); });
           info.append(person, topic, count); card.append(info, claim); box.appendChild(card);
         });
@@ -1009,7 +1037,7 @@ if (claimSearch) {
 }
 function claimName(name) {
   post('/cabinet/api/claim', { olim_name: name }).then(function (d) {
-    if (d.ok) { toast('Biriktirildi ✓', true); setTimeout(function () { location.reload(); }, 700); }
+    if (d.ok) { toast('Biriktirildi ', true); setTimeout(function () { location.reload(); }, 700); }
     else toast(d.error || 'Xatolik', false);
   });
 }
@@ -1045,18 +1073,18 @@ function unclaimDissertation(btn, olimName) {
   .then(function (r) { return r.json(); })
   .then(function (data) {
     if (data.success) {
-      btn.textContent = '✓ Ajratildi';
-      btn.style.borderColor = '#059669';
-      btn.style.color = '#34d399';
+      btn.textContent = ' Ajratildi';
+      btn.style.borderColor = OlimlarCharts.tokens.success;
+      btn.style.color = OlimlarCharts.tokens.success;
       setTimeout(function () { location.reload(); }, 800);
     } else {
       alert(data.error || 'Xatolik yuz berdi');
-      btn.disabled = false; btn.textContent = '✕ Ajratish';
+      btn.disabled = false; btn.textContent = ' Ajratish';
     }
   })
   .catch(function () {
     alert('Server bilan aloqa xatosi');
-    btn.disabled = false; btn.textContent = '✕ Ajratish';
+    btn.disabled = false; btn.textContent = ' Ajratish';
   });
 }
 
@@ -1091,7 +1119,7 @@ function saveItem(t) {
   var id = idEl ? idEl.value : '';
   var url = '/cabinet/api/' + APIPATH[t] + '/' + (id ? 'edit/' + id : 'add');
   post(url, body).then(function (d) {
-    if (d.ok) { toast('Saqlandi ✓', true); setTimeout(function () { location.reload(); }, 600); }
+    if (d.ok) { toast('Saqlandi ', true); setTimeout(function () { location.reload(); }, 600); }
     else toast(d.error || 'Xatolik', false);
   });
 }
@@ -1137,9 +1165,9 @@ function editMaqola(o) { fill('maqola', o); }
     flag.value = status || '';
   }
   function rowLabel(r) {
-    if (r.status === 'trusted') return '✅ ' + r.message;
-    if (r.status === 'suspect') return "🔴 Ehtiyot bo'ling — bu nashriyot shubhali deb belgilangan";
-    return "⚠️ OAK/Scopus ro'yxatlarida tasdiqlanmagan";
+    if (r.status === 'trusted') return ' ' + r.message;
+    if (r.status === 'suspect') return " Ehtiyot bo'ling — bu nashriyot shubhali deb belgilangan";
+    return " OAK/Scopus ro'yxatlarida tasdiqlanmagan";
   }
   function closeDrop() { drop.classList.remove('open'); drop.innerHTML = ''; }
 
@@ -1177,9 +1205,9 @@ function editMaqola(o) { fill('maqola', o); }
             closeDrop();
             var w = warnings[0];
             if (w && w.suspect_match) {
-              setNote('suspect', '🔴 ' + escq(w.message) + '<br>' + escq(w.suspect_match));
+              setNote('suspect', ' ' + escq(w.message) + '<br>' + escq(w.suspect_match));
             } else if (w && w.type === 'not_found') {
-              setNote('unknown', '⚠️ ' + escq(w.message));
+              setNote('unknown', ' ' + escq(w.message));
             }
           }
         })
@@ -1222,17 +1250,17 @@ function toggleDegreeFields() {
     countEl.textContent = items.length + ' / ' + MAX;
     if (addRow) addRow.style.display = items.length >= MAX ? 'none' : 'flex';
     if (!items.length) {
-      listEl.innerHTML = '<div style="color:#64748b;font-size:0.85rem;padding:10px 0;">Hali obuna yo\'q — quyida ixtisoslik shifrini kiriting.</div>';
+      listEl.innerHTML = '<div style="color:var(--color-text-secondary);font-size:0.85rem;padding:10px 0;">Hali obuna yo\'q — quyida ixtisoslik shifrini kiriting.</div>';
       return;
     }
     listEl.innerHTML = items.map(function (it) {
       return '<div class="np-row" data-id="' + it.id + '">' +
-        '<span class="np-ic">🏷</span>' +
+        '<span class="np-ic"></span>' +
         '<div class="np-label"><b>' + esc(it.ixtisoslik) + '</b>' +
           '<small>' + esc(it.ixtisoslik_nomi && it.ixtisoslik_nomi !== it.ixtisoslik ? it.ixtisoslik_nomi : 'Yangi himoyalar haqida xabar') + '</small></div>' +
         '<label class="np-switch" title="Saytda"><input type="checkbox" data-ch="site"' + (it.notify_site ? ' checked' : '') + '><span class="np-slider"></span></label>' +
         '<label class="np-switch" title="Telegram orqali' + (tgLinked ? '' : ' (Telegram bog\'lanmagan)') + '"><input type="checkbox" data-ch="telegram"' + (it.notify_telegram ? ' checked' : '') + (tgLinked ? '' : ' disabled') + '><span class="np-slider"></span></label>' +
-        '<button type="button" data-rm style="background:none;border:none;color:#ef4444;font-size:1rem;cursor:pointer;" title="Obunani o\'chirish">✕</button>' +
+        '<button type="button" data-rm style="background:none;border:none;color:var(--color-text-secondary);font-size:1rem;cursor:pointer;" title="Obunani o\'chirish" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>' +
       '</div>';
     }).join('');
     listEl.querySelectorAll('[data-rm]').forEach(function (b) {

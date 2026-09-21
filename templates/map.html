@@ -5,23 +5,23 @@
 {% block extra_head %}
 <style>
   /* Xarita konteyneri sahifa fonidan 1px chegara bilan ajraladi. */
-  .rmap-card { border-radius: var(--radius-default); border:1px solid var(--color-border);
+  .rmap-card { border-radius:var(--radius-default); border:1px solid var(--color-border);
     background:var(--color-white); padding:var(--space-24); position:relative; min-height:420px; }
   #rmap { width:100%; }
   #rmap svg { display:block; }
   /* Tooltip ataylab to'q — oq xarita ustida yuqori kontrast beradi. */
   #rmap-tooltip { position:absolute; pointer-events:none; background:var(--color-text-primary);
-    color:#fff; border:0; border-radius: var(--radius-default); padding:var(--space-8) var(--space-12);
+    color:var(--color-surface); border:0; border-radius:var(--radius-default); padding:var(--space-8) var(--space-12);
     font-size:13px; line-height:1.35; opacity:0; transition:opacity .15s; z-index:20; white-space:nowrap;
-    box-shadow:0 4px 12px rgba(12,15,18,0.08); }
+    box-shadow:none; }
   .rmap-legend { display:flex; justify-content:center; gap:var(--space-16); flex-wrap:wrap; margin-top:var(--space-16);
     font-size:var(--text-meta); color:var(--color-text-muted); }
-  .rmap-legend span.sw { width:14px; height:14px; border-radius:2px; display:inline-block; vertical-align:-2px; margin-right:5px; }
-  .rmap-stat { border-radius: var(--radius-default); background:var(--color-background-soft); border:1px solid var(--color-border);
+  .rmap-legend span.sw { width:14px; height:14px; border-radius:var(--radius-default); display:inline-block; vertical-align:-2px; margin-right:5px; }
+  .rmap-stat { border-radius:var(--radius-default); background:var(--color-background-soft); border:1px solid var(--color-border);
     padding:var(--space-16); text-align:center; }
   .rmap-stat .lbl { font-size:var(--text-meta); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:.4px; }
   .rmap-stat .val { font-size:var(--text-h4); font-weight:600; line-height:1.2; font-variant-numeric:tabular-nums; }
-  .rmap-region path { transition: fill .18s ease; }
+  .rmap-region path { transition:fill .18s ease; }
 </style>
 {% endblock %}
 
@@ -40,16 +40,16 @@
     <p class="mt-2 mb-0">Xarita yuklanmoqda...</p>
   </div>
   <div class="rmap-legend">
-    <span><span class="sw" style="background:#e6e6e6;border:1px solid var(--color-border);"></span>ma'lumot yo'q</span>
-    <span><span class="sw" style="background:#cfe0f7;"></span>&lt; 100</span>
-    <span><span class="sw" style="background:#8fb4e8;"></span>100–500</span>
-    <span><span class="sw" style="background:#3b7fd4;"></span>500–2000</span>
-    <span><span class="sw" style="background:#00429f;"></span>2000+</span>
+    <span><span class="sw" style="background:var(--color-surface);border:1px solid var(--color-border);"></span>ma'lumot yo'q</span>
+    <span><span class="sw" style="background:var(--color-background);"></span>&lt; 100</span>
+    <span><span class="sw" style="background:var(--color-background);"></span>100–500</span>
+    <span><span class="sw" style="background:var(--color-background);"></span>500–2000</span>
+    <span><span class="sw" style="background:var(--color-background);"></span>2000+</span>
   </div>
 </div>
 
 <div id="rmap-detail" class="content-card" style="display:none;">
-  <h5 id="rmap-detail-name" class="mb-3" style="font-weight:700;"></h5>
+  <h5 id="rmap-detail-name" class="mb-3" style="font-weight:600;"></h5>
   <div class="row g-3">
     <div class="col-md-4">
       <div class="rmap-stat">

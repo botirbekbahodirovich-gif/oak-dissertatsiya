@@ -3,84 +3,84 @@
 
 {% block extra_head %}
 <style>
-  .dr-wrap { max-width: 1240px; margin: 0 auto; }
-  .dr-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
-             justify-content: space-between; margin-bottom: 1.1rem; }
-  .dr-head h1 { font-size: 1.55rem; font-weight: 800; color: var(--oak-text); margin: 0; }
-  .dr-box { border: 1px solid var(--oak-border); background: var(--oak-surface);
-            border-radius: 14px; padding: 1.1rem 1.25rem; margin-bottom: 1.2rem; }
-  .muted { color: var(--oak-muted); }
-  .pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
-          font-size: 0.72rem; font-weight: 700; border: 1px solid var(--oak-border); }
-  .lvl-exact { background: #dc2626; border-color: #dc2626; color: #fff; }
-  .lvl-strong { background: #d97706; border-color: #d97706; color: #fff; }
-  .lvl-possible { background: transparent; color: var(--oak-muted); }
-  .st-confirmed { color: #16a34a; border-color: #16a34a; }
-  .st-rejected { color: #dc2626; border-color: #dc2626; }
-  .st-pending { color: var(--oak-muted); }
+  .dr-wrap { max-width:1240px; margin:0 auto; }
+  .dr-head { display:flex; flex-wrap:wrap; gap:1rem; align-items:center;
+             justify-content:space-between; margin-bottom:1.1rem; }
+  .dr-head h1 { font-size:1.55rem; font-weight:600; color:var(--oak-text); margin:0; }
+  .dr-box { border:1px solid var(--oak-border); background:var(--oak-surface);
+            border-radius:var(--radius-card); padding:1.1rem 1.25rem; margin-bottom:1.2rem; }
+  .muted { color:var(--oak-muted); }
+  .pill { display:inline-block; padding:0.1rem 0.55rem; border-radius:var(--radius-full);
+          font-size:0.72rem; font-weight:600; border:1px solid var(--oak-border); }
+  .lvl-exact { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-primary); }
+  .lvl-strong { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-primary); }
+  .lvl-possible { background:transparent; color:var(--oak-muted); }
+  .st-confirmed { color:var(--color-success); border-color:var(--color-success); }
+  .st-rejected { color:var(--color-danger); border-color:var(--color-danger); }
+  .st-pending { color:var(--oak-muted); }
 
   /* progress */
-  .dr-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-  @media (max-width: 900px) { .dr-prog { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 520px) { .dr-prog { grid-template-columns: 1fr; } }
-  .dr-prog .label { color: var(--oak-muted); font-size: 0.7rem; font-weight: 700;
-                    text-transform: uppercase; letter-spacing: 0.4px; }
-  .dr-prog .value { font-size: 1.6rem; font-weight: 800; color: var(--oak-text); }
-  .bar { height: 7px; border-radius: 999px; background: var(--oak-border);
-         overflow: hidden; margin-top: 0.45rem; }
-  .bar > i { display: block; height: 100%; background: #16a34a; }
+  .dr-prog { display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; }
+  @media (max-width: 900px) { .dr-prog { grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width: 520px) { .dr-prog { grid-template-columns:1fr; } }
+  .dr-prog .label { color:var(--oak-muted); font-size:0.7rem; font-weight:600;
+                    text-transform:uppercase; letter-spacing:0.4px; }
+  .dr-prog .value { font-size:1.6rem; font-weight:600; color:var(--oak-text); }
+  .bar { height:7px; border-radius:var(--radius-default); background:var(--oak-border);
+         overflow:hidden; margin-top:0.45rem; }
+  .bar > i { display:block; height:100%; background:var(--color-background); }
 
   /* filters */
-  .dr-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-  .chip { padding: 0.28rem 0.7rem; border-radius: 999px; font-size: 0.78rem;
-          font-weight: 600; border: 1px solid var(--oak-border);
-          color: var(--oak-text); text-decoration: none; }
-  .chip.on { background: #2563eb; border-color: #2563eb; color: #fff; }
+  .dr-filters { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; }
+  .chip { padding:0.28rem 0.7rem; border-radius:var(--radius-full); font-size:0.78rem;
+          font-weight:600; border:1px solid var(--oak-border);
+          color:var(--oak-text); text-decoration:none; }
+  .chip.on { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); }
 
   /* candidate card */
-  .card { border: 1px solid var(--oak-border); background: var(--oak-surface);
-          border-radius: 14px; padding: 1rem 1.1rem; margin-bottom: 1rem;
-          scroll-margin-top: 1rem; }
-  .card.active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.18); }
-  .card.done { opacity: 0.5; }
-  .card-top { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
-              justify-content: space-between; margin-bottom: 0.7rem; }
-  .card-top .ids { font-size: 0.8rem; }
-  .reasons { font-size: 0.8rem; color: var(--oak-muted); margin: 0.35rem 0 0.7rem; }
+  .card { border:1px solid var(--oak-border); background:var(--oak-surface);
+          border-radius:var(--radius-card); padding:1rem 1.1rem; margin-bottom:1rem;
+          scroll-margin-top:1rem; }
+  .card.active { border-color:var(--color-border); box-shadow:none; }
+  .card.done { opacity:0.5; }
+  .card-top { display:flex; flex-wrap:wrap; gap:0.6rem; align-items:center;
+              justify-content:space-between; margin-bottom:0.7rem; }
+  .card-top .ids { font-size:0.8rem; }
+  .reasons { font-size:0.8rem; color:var(--oak-muted); margin:0.35rem 0 0.7rem; }
 
-  .cmp { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  .cmp th, .cmp td { padding: 0.4rem 0.55rem; border-bottom: 1px solid var(--oak-border);
-                     vertical-align: top; text-align: left; }
-  .cmp th { width: 130px; color: var(--oak-muted); font-size: 0.73rem;
-            font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
-  .cmp td { width: 42%; word-break: break-word; }
+  .cmp { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .cmp th, .cmp td { padding:0.4rem 0.55rem; border-bottom:1px solid var(--oak-border);
+                     vertical-align:top; text-align:left; }
+  .cmp th { width:130px; color:var(--oak-muted); font-size:0.73rem;
+            font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+  .cmp td { width:42%; word-break:break-word; }
   /* differing fields carry a left rule + tint, not colour alone */
-  tr.f-differs td { background: rgba(220, 38, 38, 0.07); }
-  tr.f-differs th { border-left: 3px solid #dc2626; }
-  tr.f-one_sided td { background: rgba(217, 119, 6, 0.07); }
-  tr.f-one_sided th { border-left: 3px solid #d97706; }
-  tr.f-minor th { border-left: 3px solid #2563eb; }
-  .f-tag { font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-           letter-spacing: 0.3px; display: block; margin-top: 0.2rem; }
-  .f-tag.differs { color: #dc2626; } .f-tag.one_sided { color: #d97706; }
-  .f-tag.minor { color: #2563eb; }
+  tr.f-differs td { background:var(--color-background); }
+  tr.f-differs th { border-left:3px solid var(--color-border); }
+  tr.f-one_sided td { background:var(--color-background); }
+  tr.f-one_sided th { border-left:3px solid var(--color-border); }
+  tr.f-minor th { border-left:3px solid var(--color-border); }
+  .f-tag { font-size:0.68rem; font-weight:600; text-transform:uppercase;
+           letter-spacing:0.3px; display:block; margin-top:0.2rem; }
+  .f-tag.differs { color:var(--color-text-secondary); } .f-tag.one_sided { color:var(--color-text-secondary); }
+  .f-tag.minor { color:var(--color-action); }
 
-  .acts { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
-          margin-top: 0.8rem; }
-  .btn { padding: 0.35rem 0.85rem; border-radius: 8px; border: 1px solid var(--oak-border);
-         background: var(--oak-surface); color: var(--oak-text); font-size: 0.82rem;
-         font-weight: 600; cursor: pointer; }
-  .btn-ok { border-color: #16a34a; color: #16a34a; }
-  .btn-no { border-color: #dc2626; color: #dc2626; }
-  .btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-  .kbd { font-family: ui-monospace, monospace; font-size: 0.72rem; padding: 0.05rem 0.35rem;
-         border: 1px solid var(--oak-border); border-radius: 5px; color: var(--oak-muted); }
-  .pager { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; }
-  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 1.2rem;
-           background: var(--oak-text); color: var(--oak-surface); padding: 0.5rem 1rem;
-           border-radius: 10px; font-size: 0.85rem; font-weight: 600; opacity: 0;
-           transition: opacity 0.18s; pointer-events: none; z-index: 60; }
-  .toast.show { opacity: 1; }
+  .acts { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;
+          margin-top:0.8rem; }
+  .btn { padding:0.35rem 0.85rem; border-radius:var(--radius-default); border:1px solid var(--oak-border);
+         background:var(--oak-surface); color:var(--oak-text); font-size:0.82rem;
+         font-weight:600; cursor:pointer; }
+  .btn-ok { border-color:var(--color-border); color:var(--color-action); }
+  .btn-no { border-color:var(--color-border); color:var(--color-action); }
+  .btn-primary { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); }
+  .kbd { font-family:ui-monospace, monospace; font-size:0.72rem; padding:0.05rem 0.35rem;
+         border:1px solid var(--oak-border); border-radius:var(--radius-default); color:var(--oak-muted); }
+  .pager { display:flex; gap:0.5rem; align-items:center; margin-top:1rem; }
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:1.2rem;
+           background:var(--oak-text); color:var(--oak-surface); padding:0.5rem 1rem;
+           border-radius:var(--radius-default); font-size:0.85rem; font-weight:600; opacity:0;
+           transition:opacity 0.18s; pointer-events:none; z-index:60; }
+  .toast.show { opacity:1; }
 </style>
 {% endblock %}
 
@@ -128,7 +128,7 @@
 
   <div class="dr-box">
     <div class="dr-filters" style="margin-bottom:0.6rem;">
-      <span class="muted" style="font-size:0.72rem; font-weight:700; text-transform:uppercase;">Daraja</span>
+      <span class="muted" style="font-size:0.72rem; font-weight:600; text-transform:uppercase;">Daraja</span>
       {% for value, label in [('all', 'Hammasi'), ('exact', 'Aniq'), ('strong', 'Kuchli'), ('possible', 'Ehtimoliy')] %}
       <a class="chip {{ 'on' if (filters.get('match_level', 'all')) == value }}"
          href="{{ url_for('data_quality.duplicate_queue', match_level=value,
@@ -136,7 +136,7 @@
       {% endfor %}
     </div>
     <div class="dr-filters" style="margin-bottom:0.6rem;">
-      <span class="muted" style="font-size:0.72rem; font-weight:700; text-transform:uppercase;">Holat</span>
+      <span class="muted" style="font-size:0.72rem; font-weight:600; text-transform:uppercase;">Holat</span>
       {% for value, label in [('pending', 'Ko‘rilmagan'), ('confirmed', 'Tasdiqlangan'), ('rejected', 'Rad etilgan'), ('all', 'Hammasi')] %}
       <a class="chip {{ 'on' if filters.get('status') == value }}"
          href="{{ url_for('data_quality.duplicate_queue', status=value,
@@ -144,7 +144,7 @@
       {% endfor %}
     </div>
     <div class="dr-filters">
-      <span class="muted" style="font-size:0.72rem; font-weight:700; text-transform:uppercase;">Guruh</span>
+      <span class="muted" style="font-size:0.72rem; font-weight:600; text-transform:uppercase;">Guruh</span>
       {% for value, label in [('all', 'Hammasi'), ('high', 'Yuqori hosilli'), ('noisy', 'Shovqinli (past ball)')] %}
       <a class="chip {{ 'on' if (filters.get('bucket', 'all')) == value }}"
          href="{{ url_for('data_quality.duplicate_queue', bucket=value,
@@ -183,8 +183,8 @@
       <table class="cmp">
         <thead>
           <tr><th></th>
-            <td class="muted" style="font-weight:700;">Yozuv #{{ c.record_id_1 }}</td>
-            <td class="muted" style="font-weight:700;">Yozuv #{{ c.record_id_2 }}</td>
+            <td class="muted" style="font-weight:600;">Yozuv #{{ c.record_id_1 }}</td>
+            <td class="muted" style="font-weight:600;">Yozuv #{{ c.record_id_2 }}</td>
           </tr>
         </thead>
         <tbody>

@@ -3,56 +3,56 @@
 
 {% block extra_head %}
 <style>
-  .yf-wrap { max-width: 800px; margin: 0 auto; }
-  .yf-wrap h1 { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin: 0 0 1.25rem; }
-  .yf-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
-  .yf-flash { border-radius: 10px; padding: 11px 16px; font-size: 0.9rem; margin-bottom: 16px; }
-  .yf-flash.success { background: rgba(5,150,105,0.15); border: 1px solid #059669; color: #34d399; }
-  .yf-flash.error { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; }
-  .yf-group { margin-bottom: 1.2rem; }
-  .yf-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px; }
+  .yf-wrap { max-width:800px; margin:0 auto; }
+  .yf-wrap h1 { font-size:1.4rem; font-weight:600; color:var(--color-text-primary); margin:0 0 1.25rem; }
+  .yf-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:32px; }
+  .yf-flash { border-radius:var(--radius-default); padding:11px 16px; font-size:0.9rem; margin-bottom:16px; }
+  .yf-flash.success { background:var(--color-background); border:1px solid var(--color-success); color:var(--color-success); }
+  .yf-flash.error { background:var(--color-background); border:1px solid var(--color-danger); color:var(--color-danger); }
+  .yf-group { margin-bottom:1.2rem; }
+  .yf-group label { display:block; font-size:0.875rem; font-weight:600; color:var(--color-action); margin-bottom:6px; }
   .yf-input, .yf-textarea {
-    width: 100%; background: #162032; border: 1px solid #334155; color: #e2e8f0;
-    border-radius: 8px; padding: 10px 14px; font-size: 0.95rem; font-family: inherit;
+    width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary);
+    border-radius:var(--radius-default); padding:10px 14px; font-size:0.95rem; font-family:inherit;
   }
-  .yf-input::placeholder, .yf-textarea::placeholder { color: #4b5563; }
-  .yf-input:focus, .yf-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
-  .yf-textarea { resize: vertical; min-height: 80px; }
-  .yf-counter { color: #64748b; font-size: 0.75rem; text-align: right; margin-top: 4px; }
+  .yf-input::placeholder, .yf-textarea::placeholder { color:var(--color-text-secondary); }
+  .yf-input:focus, .yf-textarea:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
+  .yf-textarea { resize:vertical; min-height:80px; }
+  .yf-counter { color:var(--color-text-secondary); font-size:0.75rem; text-align:right; margin-top:4px; }
 
   /* image tabs */
-  .img-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-  .img-tab { background: #162032; border: 1px solid #334155; color: #94a3b8; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.86rem; font-weight: 600; }
-  .img-tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-  .img-pane { display: none; }
-  .img-pane.active { display: block; }
-  .file-btn { display: inline-flex; align-items: center; gap: 8px; background: #162032; border: 1px solid #334155; color: #cbd5e1; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
-  .file-btn:hover { border-color: #3b82f6; }
-  #imageFileInput { display: none; }
-  #imagePreview img { max-width: 300px; border-radius: 12px; border: 1px solid #334155; margin-top: 8px; display: block; }
-  .img-remove { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 0.86rem; margin-top: 10px; }
+  .img-tabs { display:flex; gap:8px; margin-bottom:12px; }
+  .img-tab { background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-action); padding:8px 16px; border-radius:var(--radius-default); cursor:pointer; font-size:0.86rem; font-weight:600; }
+  .img-tab.active { background:var(--color-action); border-color:var(--color-border); color:var(--color-surface); }
+  .img-pane { display:none; }
+  .img-pane.active { display:block; }
+  .file-btn { display:inline-flex; align-items:center; gap:8px; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); padding:10px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.9rem; }
+  .file-btn:hover { border-color:var(--color-border); }
+  #imageFileInput { display:none; }
+  #imagePreview img { max-width:300px; border-radius:var(--radius-default); border:1px solid var(--color-border); margin-top:8px; display:block; }
+  .img-remove { display:flex; align-items:center; gap:8px; color:var(--color-action); font-size:0.86rem; margin-top:10px; }
 
   /* toggle switch */
-  .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; }
-  .toggle-switch input { opacity: 0; width: 0; height: 0; }
-  .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 999px; transition: 0.3s; }
-  .slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
-  .toggle-switch input:checked + .slider { background: #3b82f6; }
-  .toggle-switch input:checked + .slider::before { transform: translateX(22px); }
-  .toggle-row { display: flex; align-items: center; gap: 12px; }
-  .toggle-row label { margin: 0; color: #e2e8f0; font-weight: 600; font-size: 0.95rem; }
+  .toggle-switch { position:relative; display:inline-block; width:48px; height:26px; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .slider { position:absolute; cursor:pointer; inset:0; background:var(--color-background); border-radius:var(--radius-default); transition:0.3s; }
+  .slider::before { content:""; position:absolute; height:20px; width:20px; left:3px; bottom:3px; background:var(--color-background); border-radius:50%; transition:0.3s; }
+  .toggle-switch input:checked + .slider { background:var(--color-background); }
+  .toggle-switch input:checked + .slider::before { transform:translateX(22px); }
+  .toggle-row { display:flex; align-items:center; gap:12px; }
+  .toggle-row label { margin:0; color:var(--color-text-primary); font-weight:600; font-size:0.95rem; }
 
-  .yf-actions { display: flex; gap: 12px; margin-top: 1.4rem; }
-  .yf-save { background: #3b82f6; color: #fff; font-weight: 700; padding: 11px 26px; border: none; border-radius: 10px; cursor: pointer; font-size: 0.95rem; }
-  .yf-save:hover { background: #2563eb; }
-  .yf-cancel { display: inline-flex; align-items: center; padding: 11px 22px; border: 1px solid #334155; color: #94a3b8; border-radius: 10px; text-decoration: none; }
-  .yf-cancel:hover { color: #e2e8f0; border-color: #475569; text-decoration: none; }
+  .yf-actions { display:flex; gap:12px; margin-top:1.4rem; }
+  .yf-save { background:var(--color-background); color:var(--color-text-primary); font-weight:600; padding:11px 26px; border:none; border-radius:var(--radius-default); cursor:pointer; font-size:0.95rem; }
+  .yf-save:hover { background:var(--color-action); }
+  .yf-cancel { display:inline-flex; align-items:center; padding:11px 22px; border:1px solid var(--color-border); color:var(--color-action); border-radius:var(--radius-default); text-decoration:none; }
+  .yf-cancel:hover { color:var(--color-text-primary); border-color:var(--color-border); text-decoration:none; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="yf-wrap">
-  <h1>{% if edit_mode %}✏️ Yangilikni tahrirlash{% else %}➕ Yangilik qo'shish{% endif %}</h1>
+  <h1>{% if edit_mode %} Yangilikni tahrirlash{% else %} Yangilik qo'shish{% endif %}</h1>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for cat, msg in messages %}<div class="yf-flash {{ cat }}">{{ msg }}</div>{% endfor %}
@@ -64,7 +64,8 @@
 
     <div class="yf-group">
       <label>Sarlavha *</label>
-      <input class="yf-input" type="text" name="title" required maxlength="500" placeholder="Yangilik sarlavhasi..." value="{{ item.title if item else '' }}">
+      <label class="ol-label" for="ol-field-1">Yangilik sarlavhasi</label>
+<input id="ol-field-1" class="yf-input" type="text" name="title" required maxlength="500" placeholder="Yangilik sarlavhasi..." value="{{ item.title if item else '' }}">
     </div>
 
     <div class="yf-group">
@@ -81,16 +82,17 @@
     <div class="yf-group">
       <label>Rasm</label>
       <div class="img-tabs">
-        <div class="img-tab active" data-pane="file" onclick="imgTab('file')">📁 Fayl yuklash</div>
-        <div class="img-tab" data-pane="url" onclick="imgTab('url')">🔗 URL orqali</div>
+        <div class="img-tab active" data-pane="file" onclick="imgTab('file')"> Fayl yuklash</div>
+        <div class="img-tab" data-pane="url" onclick="imgTab('url')"> URL orqali</div>
       </div>
       <div class="img-pane active" id="pane-file">
-        <label class="file-btn" for="imageFileInput">📁 Fayl tanlash</label>
+        <label class="file-btn" for="imageFileInput"> Fayl tanlash</label>
         <input type="file" name="image_file" accept="image/jpeg,image/png,image/webp" id="imageFileInput">
         <div class="yf-counter" style="text-align:left;">Maksimal hajm: 5MB · JPEG, PNG, WEBP</div>
       </div>
       <div class="img-pane" id="pane-url">
-        <input class="yf-input" type="text" name="image_url_input" id="imageUrlInput" placeholder="https://example.com/image.jpg" value="{{ item.image_url if item and item.image_url and not (item.image_url.startswith('/static/')) else '' }}" oninput="previewUrl()">
+        <label class="ol-label" for="imageUrlInput">https://example.com/image.jpg</label>
+<input class="yf-input" type="text" name="image_url_input" id="imageUrlInput" placeholder="https://example.com/image.jpg" value="{{ item.image_url if item and item.image_url and not (item.image_url.startswith('/static/')) else '' }}" oninput="previewUrl()">
       </div>
       <div id="imagePreview">
         {% if item and item.image_url %}<img src="{{ item.image_url }}" alt="">{% endif %}
@@ -102,7 +104,8 @@
 
     <div class="yf-group">
       <label>Manba havolasi (ixtiyoriy)</label>
-      <input class="yf-input" type="text" name="source_url" placeholder="https://... (ixtiyoriy)" value="{{ item.source_url if item else '' }}">
+      <label class="ol-label" for="ol-field-2">https://... (ixtiyoriy)</label>
+<input id="ol-field-2" class="yf-input" type="text" name="source_url" placeholder="https://... (ixtiyoriy)" value="{{ item.source_url if item else '' }}">
     </div>
 
     <div class="yf-group">
@@ -116,7 +119,7 @@
     </div>
 
     <div class="yf-actions">
-      <button type="submit" class="yf-save">💾 {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
+      <button type="submit" class="yf-save"> {% if edit_mode %}Yangilash{% else %}Saqlash{% endif %}</button>
       <a href="/admin/yangiliklar" class="yf-cancel">Bekor qilish</a>
     </div>
   </form>

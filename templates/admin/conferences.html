@@ -3,11 +3,11 @@
 {% block content %}
 <div class="content-card" style="max-width:1150px;margin:0 auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <h1 style="margin:0;">🎤 Konferensiyalarni boshqarish</h1>
+    <h1 style="margin:0;"> Konferensiyalarni boshqarish</h1>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a href="/admin/conferences/import" class="btn btn-action">📥 Excel import</a>
-      <a href="/admin/conferences/export" class="btn btn-action">📤 Excel eksport</a>
-      <a href="/admin/conferences/add" class="btn btn-primary">➕ Yangi qo'shish</a>
+      <a href="/admin/conferences/import" class="btn btn-action"> Excel import</a>
+      <a href="/admin/conferences/export" class="btn btn-action"> Excel eksport</a>
+      <a href="/admin/conferences/add" class="btn btn-primary"> Yangi qo'shish</a>
     </div>
   </div>
 
@@ -17,9 +17,10 @@
 
   <form method="get" action="/admin/conferences"
         style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Nomi yoki tashkilotchi…"
-      style="flex:1;min-width:220px;border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 12px;background:transparent;color:inherit;">
-    <select name="scope" style="border:1px solid rgba(148,163,184,0.25);border-radius:10px;padding:8px 10px;background:transparent;color:inherit;">
+    <label class="ol-label" for="ol-field-1">Nomi yoki tashkilotchi</label>
+<input id="ol-field-1" type="text" name="q" value="{{ q }}" placeholder="Nomi yoki tashkilotchi…"
+      style="flex:1;min-width:220px;border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 12px;background:transparent;color:inherit;">
+    <select name="scope" style="border:1px solid var(--color-border);border-radius:var(--radius-default);padding:8px 10px;background:transparent;color:inherit;">
       <option value="">Barchasi</option>
       <option value="local" {{ 'selected' if scope == 'local' }}>Mahalliy</option>
       <option value="international" {{ 'selected' if scope == 'international' }}>Xalqaro</option>
@@ -27,7 +28,7 @@
     <button type="submit" class="btn btn-action">Qidirish</button>
     <a href="/admin/conferences{% if moderation != 'pending' %}?moderation=pending{% endif %}"
        class="btn {{ 'btn-primary' if moderation == 'pending' else 'btn-action' }}"
-       style="{% if pending_count %}border-color:#f59e0b;color:{{ '#fff' if moderation == 'pending' else '#fbbf24' }};{% endif %}">
+       style="{% if pending_count %}border-color:var(--color-border);color:{{ '#fff' if moderation == 'pending' else '#fbbf24' }};{% endif %};">
       ⏳ Moderatsiyada{% if pending_count %} ({{ pending_count }}){% endif %}</a>
   </form>
 
@@ -43,22 +44,22 @@
         <td>{{ c.id }}</td>
         <td><a href="/konferensiya/{{ c.slug }}" target="_blank">{{ c.title[:56] }}</a>
           {% if c.moderation_status == 'pending' %}
-          <span style="font-size:0.68rem;font-weight:800;background:rgba(245,158,11,0.18);color:#fbbf24;border-radius:999px;padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          <span style="font-size:0.68rem;font-weight:600;background:var(--color-background);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
           {% endif %}
-          {% if c.organizer %}<br><small style="color:#94a3b8;">{{ c.organizer[:44] }}</small>{% endif %}
-          {% if c.canonical_institution %}<br><small style="color:#60a5fa;">🏛 {{ c.canonical_institution[:44] }}</small>{% endif %}</td>
-        <td>{{ '🇺🇿' if c.scope == 'local' else '🌍' }} {{ c.event_type or '—' }}</td>
+          {% if c.organizer %}<br><small style="color:var(--color-action);">{{ c.organizer[:44] }}</small>{% endif %}
+          {% if c.canonical_institution %}<br><small style="color:var(--color-action);"> {{ c.canonical_institution[:44] }}</small>{% endif %}</td>
+        <td>{{ '🇺🇿' if c.scope == 'local' else '' }} {{ c.event_type or '—' }}</td>
         <td style="white-space:nowrap;">{{ c.start_date or '—' }}
-          {% if c.submission_deadline %}<br><small style="color:#94a3b8;">CFP: {{ c.submission_deadline }}</small>{% endif %}</td>
+          {% if c.submission_deadline %}<br><small style="color:var(--color-action);">CFP: {{ c.submission_deadline }}</small>{% endif %}</td>
         <td style="font-size:0.82rem;">{{ c.city or c.region or c.country or '—' }}</td>
-        <td>{{ '✓' if c.is_scopus_indexed else '—' }}</td>
-        <td>{{ '🟢' if c.is_active else '⚪' }}</td>
+        <td>{{ '' if c.is_scopus_indexed else '—' }}</td>
+        <td>{{ '' if c.is_active else '' }}</td>
         <td style="white-space:nowrap;">
           {% if c.moderation_status == 'pending' %}
           <form method="POST" action="/admin/conferences/approve/{{ c.id }}" style="display:inline;">
             {{ csrf_token()|safe }}
             <button type="submit" class="btn btn-sm"
-              style="background:#059669;color:#fff;border-radius:8px;">✓ Tasdiqlash</button>
+              style="background:var(--color-background);color:var(--color-text-primary);border-radius:var(--radius-default);"> Tasdiqlash</button>
           </form>
           {% endif %}
           <a href="/admin/conferences/edit/{{ c.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
@@ -71,12 +72,12 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="8" style="color:#94a3b8;text-align:center;padding:24px;">Hech narsa topilmadi.</td></tr>
+      <tr><td colspan="8" style="color:var(--color-action);text-align:center;padding:24px;">Hech narsa topilmadi.</td></tr>
       {% endfor %}
     </tbody>
   </table>
   </div>
-  <div style="color:#64748b;font-size:0.8rem;margin-top:10px;">
+  <div style="color:var(--color-text-secondary);font-size:0.8rem;margin-top:10px;">
     Import: xalqaro — haftalik GitHub Actions (confs.tech); mahalliy —
     <code>python3 scripts/scrape_conferences_local.py --pdf &lt;reja.pdf&gt; --year YYYY</code>.
     Scopus belgisi faqat shu yerda qo'lda qo'yiladi — scraper hech qachon taxmin qilmaydi.

@@ -17,10 +17,10 @@
   var MIN_R = 25, MAX_R = 60;      // node radius bounds (px)
   var LEVEL_GAP = 260;             // horizontal distance between generations
   var DURATION = 450;              // expand/collapse animation (ms)
-  var FALLBACK_COLORS = ['#3b82f6', '#059669', '#e36403', '#8b5cf6', '#ec4899', '#0ea5e9'];
+  var FALLBACK_COLORS = [OlimlarCharts.tokens.series1, OlimlarCharts.tokens.series2, OlimlarCharts.tokens.series4, OlimlarCharts.tokens.series3, OlimlarCharts.tokens.series3, OlimlarCharts.tokens.series2];
 
   function degColor(deg) {
-    return deg === 'DSc' ? '#e36403' : deg === 'PhD' ? '#059669' : '#3b82f6';
+    return deg === 'DSc' ? OlimlarCharts.tokens.series4 : deg === 'PhD' ? OlimlarCharts.tokens.series2 : OlimlarCharts.tokens.series1;
   }
   function initials(name) {
     var p = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -54,7 +54,7 @@
     var glow = defs.append('filter').attr('id', 'sh-glow')
       .attr('x', '-60%').attr('y', '-60%').attr('width', '220%').attr('height', '220%');
     glow.append('feDropShadow').attr('dx', 0).attr('dy', 0).attr('stdDeviation', 6)
-      .attr('flood-color', '#3b82f6').attr('flood-opacity', 0.85);
+      .attr('flood-color', OlimlarCharts.tokens.series1).attr('flood-opacity', 0.85);
 
     var viewport = svg.append('g').attr('class', 'sh-viewport');
     var gLink = viewport.append('g').attr('class', 'sh-links');
@@ -174,7 +174,7 @@
         // Initials sit behind the avatar; visible if the photo 404s.
         g.append('text').attr('class', 'sh-init')
           .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
-          .attr('font-size', Math.max(12, r * 0.8)).attr('fill', '#fff')
+          .attr('font-size', Math.max(12, r * 0.8)).attr('fill', OlimlarCharts.tokens.white)
           .text(initials(d.data.name));
         if (d.data.avatar) {
           g.append('image').attr('class', 'sh-avatar')
@@ -203,7 +203,7 @@
 
       // Degree colour ring; collapsed / has-more → orange dashed indicator.
       nodeUpdate.select('circle.sh-bg')
-        .attr('stroke', function (d) { return hasHidden(d) ? '#f59e0b' : degColor(d.data.degree); })
+        .attr('stroke', function (d) { return hasHidden(d) ? OlimlarCharts.tokens.notice : degColor(d.data.degree); })
         .attr('stroke-width', function (d) { return d.depth === 0 ? 4 : 2.5; })
         .attr('stroke-dasharray', function (d) { return hasHidden(d) ? '5 4' : null; })
         .style('filter', function (d) { return d.depth === 0 ? 'url(#sh-glow)' : null; });

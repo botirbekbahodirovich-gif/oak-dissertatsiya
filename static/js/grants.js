@@ -35,6 +35,7 @@
   /* ── 1. Filter system (AJAX) ─────────────────────────────────────────── */
   var filters = { country: '', level: '', funding: '', sort: 'deadline', search: '', page: 1 };
 
+  var filterRequest = 0;
   function applyFilters() {
     var grid = document.getElementById('gr-grid');
     if (!grid) return;
@@ -45,16 +46,20 @@
     if (filters.search) p.set('search', filters.search);
     p.set('sort', filters.sort);
     p.set('page', filters.page);
+    var request = ++filterRequest;
+    grid.setAttribute('aria-busy', 'true');
     grid.style.opacity = '0.5';
     fetch('/api/grants?' + p.toString())
-      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error('Request failed'); return r.json(); })
       .then(function (d) {
+        if (request !== filterRequest) return;
+        grid.setAttribute('aria-busy', 'false');
         grid.style.opacity = '';
         renderGrid(d.grants || []);
         renderPagination(d.page || 1, d.pages || 1, d.total || 0);
         updateClearBtn();
       })
-      .catch(function () { grid.style.opacity = ''; });
+      .catch(function () { if (request !== filterRequest) return; grid.setAttribute('aria-busy', 'false'); grid.style.opacity = ''; grid.innerHTML = '<div class="ol-state ol-state--error" role="alert"><h3>Grantlarni yuklab bo‘lmadi</h3><p>Internet aloqasini tekshiring va qayta urinib ko‘ring.</p><button type="button" class="ol-btn ol-btn--secondary" onclick="applyFilters()">Qayta urinish</button></div>'; });
   }
   window.applyFilters = applyFilters;
 
@@ -95,19 +100,19 @@
   function renderCard(g) {
     var coverUrl = safeImageUrl(g.cover_image_url);
     var urgent = g.days_remaining !== null && g.days_remaining >= 0 && g.days_remaining < 7;
-    var color = g.days_remaining > 7 ? '#4ade80' : (g.days_remaining >= 3 ? '#fbbf24' : '#f87171');
+    var color = g.days_remaining > 7 ? 'var(--color-success)' : (g.days_remaining >= 3 ? 'var(--color-warning-ink)' : 'var(--color-danger)');
     var pct = Math.min(100, Math.max(5, 100 - Math.floor(g.days_remaining * 100 / 60)));
     var deadlineHtml;
     if (g.days_remaining !== null && !g.expired) {
       deadlineHtml =
-        '<div class="gr-deadline-txt"><span style="color:' + color + ';" class="countdown" data-deadline="' + esc(g.deadline) + '">⏰ ' +
-        g.days_remaining + ' kun qoldi</span><span style="color:#64748b;">' + esc(g.deadline_uz) + '</span></div>' +
+        '<div class="gr-deadline-txt"><span style="color:' + color + ';" class="countdown" data-deadline="' + esc(g.deadline) + '">' +
+        g.days_remaining + ' kun qoldi</span><span style="color:var(--color-text-secondary);">' + esc(g.deadline_uz) + '</span></div>' +
         '<div class="gr-bar"><i style="width:' + pct + '%;background:' + color + ';"></i></div>';
     } else if (g.expired) {
-      deadlineHtml = '<div class="gr-deadline-txt"><span style="color:#94a3b8;">Muddat tugagan</span>' +
-        '<span style="color:#64748b;">' + esc(g.deadline_uz) + '</span></div>';
+      deadlineHtml = '<div class="gr-deadline-txt"><span style="color:var(--color-text-secondary);">Muddat tugagan</span>' +
+        '<span style="color:var(--color-text-secondary);">' + esc(g.deadline_uz) + '</span></div>';
     } else {
-      deadlineHtml = '<div class="gr-deadline-txt"><span style="color:#94a3b8;">Doimiy ochiq</span></div>';
+      deadlineHtml = '<div class="gr-deadline-txt"><span style="color:var(--color-text-secondary);">Doimiy ochiq</span></div>';
     }
     var badge = g.expired ? '<span class="gr-badge expired-badge">Muddat tugagan</span>'
       : (g.is_featured ? '<span class="gr-badge">🌟 Tavsiya</span>' : '');
@@ -128,7 +133,7 @@
       '<div class="gr-actions">' +
       '<a class="gr-btn primary" href="/grants/' + encodeURIComponent(g.slug) + '">Batafsil →</a>' +
       '<button class="gr-btn track' + (tracked ? ' tracked' : '') + '" onclick="toggleTrackGrant(' + g.id + ', this)">' +
-      (tracked ? '✅ Kuzatilmoqda' : '⭐ Kuzatish') + '</button>' +
+      (tracked ? 'Kuzatilmoqda' : 'Kuzatish') + '</button>' +
       '</div></div></div>';
   }
 
@@ -183,9 +188,9 @@
     document.querySelectorAll('.countdown[data-deadline]').forEach(function (el) {
       var dl = new Date(el.getAttribute('data-deadline') + 'T23:59:59');
       var days = Math.floor((dl - now) / 86400000);
-      if (days < 0) { el.textContent = 'Muddat tugagan'; el.style.color = '#94a3b8'; return; }
-      el.textContent = '⏰ ' + (days === 0 ? 'Bugun oxirgi kun!' : days + ' kun qoldi');
-      el.style.color = days > 7 ? '#4ade80' : (days >= 3 ? '#fbbf24' : '#f87171');
+      if (days < 0) { el.textContent = 'Muddat tugagan'; el.style.color = 'var(--color-text-secondary)'; return; }
+      el.textContent = '' + (days === 0 ? 'Bugun oxirgi kun!' : days + ' kun qoldi');
+      el.style.color = days > 7 ? 'var(--color-success)' : (days >= 3 ? 'var(--color-warning-ink)' : 'var(--color-danger)');
     });
     // detal sahifadagi katta countdown (kun/soat/daqiqa)
     var big = document.getElementById('gd-countdown');
@@ -215,7 +220,7 @@
         button.disabled = false;
         if (!d.success) return;
         button.classList.toggle('tracked', d.tracked);
-        button.textContent = d.tracked ? '✅ Kuzatilmoqda' : (button.id === 'gd-track' ? '⭐ Kuzatishga olish' : '⭐ Kuzatish');
+        button.textContent = d.tracked ? 'Kuzatilmoqda' : (button.id === 'gd-track' ? 'Kuzatishga olish' : 'Kuzatish');
         var sel = document.getElementById('gd-status');
         if (sel) sel.style.display = d.tracked ? '' : 'none';
       })
@@ -318,7 +323,7 @@
   /* ── init ────────────────────────────────────────────────────────────── */
   document.addEventListener('DOMContentLoaded', function () {
     var q = document.getElementById('gr-search');
-    if (q) q.addEventListener('input', function () { searchGrants(q.value); });
+    if (q) { q.addEventListener('input', function () { searchGrants(q.value); }); var initialQuery = new URLSearchParams(location.search).get('q'); if (initialQuery) { q.value = initialQuery; filters.search = initialQuery; applyFilters(); } }
     var country = document.getElementById('f-country');
     if (country) country.addEventListener('change', function () {
       filters.country = country.value; filters.page = 1; applyFilters();

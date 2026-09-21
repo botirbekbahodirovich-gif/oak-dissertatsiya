@@ -3,11 +3,11 @@
   'use strict';
 
   var DEG = {
-    PhD: { bg: '#059669', label: 'PhD' },
-    DSc: { bg: '#e36403', label: 'DSc' }
+    PhD: { bg: OlimlarCharts.tokens.series2, label: 'PhD' },
+    DSc: { bg: OlimlarCharts.tokens.series4, label: 'DSc' }
   };
 
-  function degColor(d) { return DEG[d] ? DEG[d].bg : '#334155'; }
+  function degColor(d) { return DEG[d] ? DEG[d].bg : OlimlarCharts.tokens.textSecondary; }
 
   function sizeFor(role) {
     if (role === 'center') return { w: 200, h: 70 };
@@ -87,7 +87,7 @@
     var f = defs.append('filter').attr('id', 'gen-glow').attr('x', '-50%').attr('y', '-50%')
       .attr('width', '200%').attr('height', '200%');
     f.append('feDropShadow').attr('dx', 0).attr('dy', 0).attr('stdDeviation', 6)
-      .attr('flood-color', '#3b82f6').attr('flood-opacity', 0.9);
+      .attr('flood-color', OlimlarCharts.tokens.series1).attr('flood-opacity', 0.9);
 
     function layout() {
       // group by tier
@@ -131,7 +131,7 @@
       ls.exit().remove();
       ls.enter().append('path')
         .attr('class', 'gen-link')
-        .attr('fill', 'none').attr('stroke', '#cbd5e1').attr('stroke-width', 2).attr('stroke-opacity', 0.5)
+        .attr('fill', 'none').attr('stroke', OlimlarCharts.tokens.border).attr('stroke-width', 2).attr('stroke-opacity', 0.5)
         .merge(ls)
         .attr('d', function (d) { return linkGen(topLink(d)); })
         .attr('data-s', function (d) { return d.s.name; })
@@ -188,21 +188,21 @@
       // style rects by role/degree
       all.select('rect.gn-rect')
         .attr('fill', function (d) {
-          if (d.role === 'center') return '#1e40af';
-          if (d.role === 'parent' || d.role === 'grandparent') return '#1e3a8a';
-          if (d.role === 'sibling') return '#334155';
-          return '#162032';
+          if (d.role === 'center') return OlimlarCharts.tokens.series1;
+          if (d.role === 'parent' || d.role === 'grandparent') return OlimlarCharts.tokens.series3;
+          if (d.role === 'sibling') return OlimlarCharts.tokens.textSecondary;
+          return OlimlarCharts.tokens.series5;
         })
         .attr('stroke', function (d) {
-          if (d.role === 'center') return '#3b82f6';
+          if (d.role === 'center') return OlimlarCharts.tokens.series1;
           if (d.role === 'child' || d.role === 'grandchild') return degColor(d.degree);
-          return '#475569';
+          return OlimlarCharts.tokens.textSecondary;
         })
         .attr('stroke-width', function (d) { return d.role === 'center' ? 3 : 2; })
         .style('filter', function (d) { return d.role === 'center' ? 'url(#gen-glow)' : null; });
 
       all.select('circle.gn-av').attr('fill', function (d) {
-        return d.role === 'child' ? degColor(d.degree) : '#3b82f6';
+        return d.role === 'child' ? degColor(d.degree) : OlimlarCharts.tokens.series1;
       });
 
       // interactions
@@ -214,7 +214,7 @@
         linkLayer.selectAll('path').attr('stroke-opacity', function (l) {
           return (l.s.name === d.name || l.t.name === d.name) ? 1 : 0.15;
         }).attr('stroke', function (l) {
-          return (l.s.name === d.name || l.t.name === d.name) ? '#60a5fa' : '#cbd5e1';
+          return (l.s.name === d.name || l.t.name === d.name) ? OlimlarCharts.tokens.series2 : OlimlarCharts.tokens.border;
         });
         if (tip) {
           var bits = [];
@@ -232,7 +232,7 @@
         if (tip) tip.style('left', (ev.offsetX + 14) + 'px').style('top', (ev.offsetY + 14) + 'px');
       });
       all.on('mouseleave', function () {
-        linkLayer.selectAll('path').attr('stroke-opacity', 0.5).attr('stroke', '#cbd5e1');
+        linkLayer.selectAll('path').attr('stroke-opacity', 0.5).attr('stroke', OlimlarCharts.tokens.border);
         if (tip) tip.style('opacity', 0);
       });
     }

@@ -183,8 +183,9 @@ class DesignTokenTests(unittest.TestCase):
     def test_headings_use_the_serif_token(self):
         self.assertRegex(self.css, r'h1,\s*h2\s*\{[^}]*var\(--font-serif\)')
 
-    def test_subheadings_use_the_sans_token(self):
-        self.assertRegex(self.css, r'h3,\s*h4,\s*h5,\s*h6\s*\{[^}]*var\(--font-sans\)')
+    def test_academic_h3_uses_serif_and_small_ui_headings_use_sans(self):
+        self.assertRegex(self.css, r'h3\s*\{[^}]*var\(--font-serif\)')
+        self.assertRegex(self.css, r'h4,\s*h5,\s*h6\s*\{[^}]*var\(--font-sans\)')
 
 
 class ManifestTests(unittest.TestCase):

@@ -2,80 +2,80 @@
 
 {% block uv_head %}
 <style>
-  .uvk-row { cursor: pointer; }
-  .uvk-name { display: flex; align-items: center; gap: 9px; font-weight: 700; }
-  .uvk-av { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #1d4ed8;
-    color: #fff; display: grid; place-items: center; font-size: 0.8rem; font-weight: 800; flex: 0 0 30px; }
-  .uvk-pub { font-family: ui-monospace, monospace; font-size: 0.78rem; white-space: nowrap; }
-  .uvk-pub b.ok { color: #34d399; } .uvk-pub b.no { color: #fbbf24; }
-  .uvk-wbar { width: 110px; height: 8px; background: rgba(148,163,184,0.12); border-radius: 5px;
-    overflow: hidden; margin-top: 4px; }
-  .uvk-wbar i { display: block; height: 100%; background: linear-gradient(90deg,#1d4ed8,#3b82f6); }
-  .uvk-holat { font-size: 0.7rem; font-weight: 800; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
-  .uvk-holat.active { background: rgba(59,130,246,0.15); color: #7cb8ff; }
-  .uvk-holat.good { background: rgba(5,150,105,0.15); color: #34d399; }
-  .uvk-holat.muted { background: rgba(148,163,184,0.12); color: #94a3b8; }
-  .uvk-days { font-size: 0.74rem; color: #94a3b8; }
-  .uvk-days b.soon { color: #fbbf24; } .uvk-days b.past { color: #f87171; }
+  .uvk-row { cursor:pointer; }
+  .uvk-name { display:flex; align-items:center; gap:9px; font-weight:600; }
+  .uvk-av { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--color-background);
+    color:var(--color-text-primary); display:grid; place-items:center; font-size:0.8rem; font-weight:600; flex:0 0 30px; }
+  .uvk-pub { font-family:ui-monospace, monospace; font-size:0.78rem; white-space:nowrap; }
+  .uvk-pub b.ok { color:var(--color-text-secondary); } .uvk-pub b.no { color:var(--color-text-secondary); }
+  .uvk-wbar { width:110px; height:8px; background:var(--color-background); border-radius:var(--radius-default);
+    overflow:hidden; margin-top:4px; }
+  .uvk-wbar i { display:block; height:100%; background:var(--color-surface); }
+  .uvk-holat { font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-default); white-space:nowrap; }
+  .uvk-holat.active { background:var(--color-background); color:var(--color-action); }
+  .uvk-holat.good { background:var(--color-background); color:var(--color-text-secondary); }
+  .uvk-holat.muted { background:var(--color-background); color:var(--color-action); }
+  .uvk-days { font-size:0.74rem; color:var(--color-action); }
+  .uvk-days b.soon { color:var(--color-warning-ink); } .uvk-days b.past { color:var(--color-text-secondary); }
   /* drawer */
-  .uvk-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.6); z-index: 1050;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-  .uvk-overlay.open { opacity: 1; pointer-events: auto; }
-  .uvk-drawer { position: fixed; top: 0; right: -520px; width: min(500px, 94vw); height: 100vh;
-    background: #101828; border-left: 1px solid rgba(255,255,255,0.09); z-index: 1060;
-    transition: right 0.25s; overflow-y: auto; padding: 22px; }
-  .uvk-drawer.open { right: 0; }
-  .uvk-ring { width: 110px; height: 110px; margin: 0 auto; position: relative; }
-  .uvk-ring svg { transform: rotate(-90deg); }
-  .uvk-ring .val { position: absolute; inset: 0; display: grid; place-items: center;
-    font-size: 1.35rem; font-weight: 800; color: #f1f5f9; }
-  .uvk-sec { margin-top: 18px; }
-  .uvk-sec h4 { font-size: 0.82rem; font-weight: 800; color: #94a3b8; text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 10px; }
-  .uvk-chap { margin-bottom: 9px; font-size: 0.8rem; color: #cbd5e1; }
-  .uvk-chap .t { display: flex; justify-content: space-between; gap: 8px; }
-  .uvk-chap .t span:last-child { color: #8899b4; font-family: ui-monospace, monospace; white-space: nowrap; }
-  .uvk-chap .bar { height: 7px; background: rgba(148,163,184,0.12); border-radius: 5px;
-    overflow: hidden; margin-top: 3px; }
-  .uvk-chap .bar i { display: block; height: 100%; background: linear-gradient(90deg,#1d4ed8,#3b82f6); }
-  .uvk-publi { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.8rem; }
-  .uvk-publi b { color: #e2e8f0; display: block; }
-  .uvk-publi span { color: #8899b4; font-size: 0.72rem; }
-  .uvk-tl { list-style: none; margin: 0; padding: 0; }
-  .uvk-tl li { display: flex; gap: 8px; padding: 5px 0; font-size: 0.78rem; color: #cbd5e1; align-items: baseline; }
-  .uvk-tl .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; align-self: center; }
-  .uvk-tl .dot.done { background: #34d399; } .uvk-tl .dot.active { background: #3b82f6; }
-  .uvk-tl .dot.past { background: #f87171; } .uvk-tl .dot.future { background: #475569; }
-  .uvk-tl .dt { margin-left: auto; color: #64748b; font-size: 0.7rem; white-space: nowrap; }
-  .uvk-consent { margin-top: 18px; font-size: 0.72rem; color: #64748b; border-top: 1px dashed
-    rgba(255,255,255,0.1); padding-top: 10px; }
-  .uvk-invite { background: rgba(15,23,42,0.6); border: 1px dashed rgba(74,158,255,0.3);
-    border-radius: 12px; padding: 14px; margin-top: 14px; font-size: 0.82rem; color: #cbd5e1; }
-  .uvk-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-  .uvk-tab { background: rgba(148,163,184,0.1); color: #94a3b8; border: none;
-    border-radius: 999px; padding: 7px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-  .uvk-tab.on { background: rgba(74,158,255,0.18); color: #7cb8ff; }
-  .uvk-pane { display: none; } .uvk-pane.on { display: block; }
-  .uvk-risk { font-size: 0.95rem; cursor: help; }
-  .uvk-load-flag { font-size: 0.68rem; font-weight: 800; background: rgba(239,68,68,0.16);
-    color: #f87171; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
-  .uvk-bulk textarea { width: 100%; background: rgba(15,23,42,0.6); color: #e2e8f0;
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 12px;
-    font-size: 0.84rem; font-family: ui-monospace, monospace; }
-  .uvk-links { margin-top: 10px; font-size: 0.76rem; color: #94a3b8; max-height: 220px; overflow-y: auto; }
-  .uvk-links div { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .uvk-overlay { position:fixed; inset:0; background:var(--color-overlay); z-index:1050;
+    opacity:0; pointer-events:none; transition:opacity 0.2s; }
+  .uvk-overlay.open { opacity:1; pointer-events:auto; }
+  .uvk-drawer { position:fixed; top:0; right:-520px; width:min(500px, 94vw); height:100vh;
+    background:var(--color-surface); border-left:1px solid var(--color-border); z-index:1060;
+    transition:right 0.25s; overflow-y:auto; padding:22px; }
+  .uvk-drawer.open { right:0; }
+  .uvk-ring { width:110px; height:110px; margin:0 auto; position:relative; }
+  .uvk-ring svg { transform:rotate(-90deg); }
+  .uvk-ring .val { position:absolute; inset:0; display:grid; place-items:center;
+    font-size:1.35rem; font-weight:600; color:var(--color-text-primary); }
+  .uvk-sec { margin-top:18px; }
+  .uvk-sec h4 { font-size:0.82rem; font-weight:600; color:var(--color-action); text-transform:uppercase;
+    letter-spacing:0.5px; margin-bottom:10px; }
+  .uvk-chap { margin-bottom:9px; font-size:0.8rem; color:var(--color-text-primary); }
+  .uvk-chap .t { display:flex; justify-content:space-between; gap:8px; }
+  .uvk-chap .t span:last-child { color:var(--color-action); font-family:ui-monospace, monospace; white-space:nowrap; }
+  .uvk-chap .bar { height:7px; background:var(--color-background); border-radius:var(--radius-default);
+    overflow:hidden; margin-top:3px; }
+  .uvk-chap .bar i { display:block; height:100%; background:var(--color-surface); }
+  .uvk-publi { padding:8px 0; border-bottom:1px solid var(--color-border); font-size:0.8rem; }
+  .uvk-publi b { color:var(--color-text-primary); display:block; }
+  .uvk-publi span { color:var(--color-action); font-size:0.72rem; }
+  .uvk-tl { list-style:none; margin:0; padding:0; }
+  .uvk-tl li { display:flex; gap:8px; padding:5px 0; font-size:0.78rem; color:var(--color-text-primary); align-items:baseline; }
+  .uvk-tl .dot { width:9px; height:9px; border-radius:50%; flex:0 0 9px; align-self:center; }
+  .uvk-tl .dot.done { background:var(--color-success); } .uvk-tl .dot.active { background:var(--color-action); }
+  .uvk-tl .dot.past { background:var(--color-background); } .uvk-tl .dot.future { background:var(--color-background); }
+  .uvk-tl .dt { margin-left:auto; color:var(--color-text-secondary); font-size:0.7rem; white-space:nowrap; }
+  .uvk-consent { margin-top:18px; font-size:0.72rem; color:var(--color-text-secondary); border-top:1px dashed
+    var(--color-border); padding-top:10px; }
+  .uvk-invite { background:var(--color-background); border:1px dashed var(--color-border);
+    border-radius:var(--radius-default); padding:14px; margin-top:14px; font-size:0.82rem; color:var(--color-text-primary); }
+  .uvk-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .uvk-tab { background:var(--color-background); color:var(--color-action); border:none;
+    border-radius:var(--radius-full); padding:7px 16px; font-size:0.8rem; font-weight:600; cursor:pointer; }
+  .uvk-tab.on { background:var(--color-background); color:var(--color-action); }
+  .uvk-pane { display:none; } .uvk-pane.on { display:block; }
+  .uvk-risk { font-size:0.95rem; cursor:help; }
+  .uvk-load-flag { font-size:0.68rem; font-weight:600; background:var(--color-background);
+    color:var(--color-text-secondary); border-radius:var(--radius-default); padding:2px 9px; white-space:nowrap; }
+  .uvk-bulk textarea { width:100%; background:var(--color-background); color:var(--color-text-primary);
+    border:1px solid var(--color-border); border-radius:var(--radius-default); padding:10px 12px;
+    font-size:0.84rem; font-family:ui-monospace, monospace; }
+  .uvk-links { margin-top:10px; font-size:0.76rem; color:var(--color-action); max-height:220px; overflow-y:auto; }
+  .uvk-links div { padding:4px 0; border-bottom:1px solid var(--color-border); }
 </style>
 {% endblock %}
 
 {% block uv_content %}
-<h1 class="uv-h1">🎓 Doktorantlar monitoringi</h1>
+<h1 class="uv-h1"> Doktorantlar monitoringi</h1>
 <p class="uv-sub">{{ latin_name }} doktorantlarining himoyaga tayyorgarlik
   ko'rsatkichlari — faqat ochiq metrikalar (matnlar ko'rinmaydi)</p>
 
 <div class="uvk-tabs">
-  <button class="uvk-tab on" data-pane="monitoring">📊 Monitoring</button>
-  <button class="uvk-tab" data-pane="advisors">👔 Rahbarlar yuki</button>
-  <button class="uvk-tab" data-pane="invites">✉️ Takliflar{% if invites %} ({{ invites|length }}){% endif %}</button>
+  <button class="uvk-tab on" data-pane="monitoring"> Monitoring</button>
+  <button class="uvk-tab" data-pane="advisors"> Rahbarlar yuki</button>
+  <button class="uvk-tab" data-pane="invites"> Takliflar{% if invites %} ({{ invites|length }}){% endif %}</button>
 </div>
 
 <div class="uvk-pane on" data-pane="monitoring">
@@ -89,14 +89,14 @@
     <tbody>
       {% for r in rows %}
       <tr class="uvk-row" data-uid="{{ r.user_id }}">
-        <td>{% if r.risk == 'red' %}<span class="uvk-risk" title="{{ r.risk_note }}">🔴</span>
-          {% elif r.risk == 'yellow' %}<span class="uvk-risk" title="{{ r.risk_note }}">🟡</span>{% endif %}</td>
+        <td>{% if r.risk == 'red' %}<span class="uvk-risk" title="{{ r.risk_note }}"></span>
+          {% elif r.risk == 'yellow' %}<span class="uvk-risk" title="{{ r.risk_note }}"></span>{% endif %}</td>
         <td><div class="uvk-name">
           {% if r.photo_url %}<img class="uvk-av" src="{{ r.photo_url }}" alt="">
           {% else %}<span class="uvk-av">{{ (r.name or '?')[0]|upper }}</span>{% endif %}
           {{ r.name }}</div></td>
-        <td><b>{{ r.degree }}</b>{% if r.specialty %} <span style="color:#7cb8ff;font-family:ui-monospace,monospace;">{{ r.specialty }}</span>{% endif %}</td>
-        <td style="color:#94a3b8;">{{ r.advisor }}</td>
+        <td><b>{{ r.degree }}</b>{% if r.specialty %} <span style="color:var(--color-action);font-family:ui-monospace,monospace;">{{ r.specialty }}</span>{% endif %}</td>
+        <td style="color:var(--color-action);">{{ r.advisor }}</td>
         <td class="uvk-pub">
           OAK <b class="{{ 'ok' if r.oak_done >= r.oak_req else 'no' }}">{{ r.oak_done }}/{{ r.oak_req }}</b>
           {% if r.int_req %} · Scopus <b class="{{ 'ok' if r.int_done >= r.int_req else 'no' }}">{{ r.int_done }}/{{ r.int_req }}</b>{% endif %}
@@ -104,7 +104,7 @@
         <td>
           <span style="font-family:ui-monospace,monospace;font-size:0.78rem;">
             {{ '{:,}'.format(r.words).replace(',', ' ') }} / {{ '{:,}'.format(r.word_target).replace(',', ' ') }} ({{ r.word_pct }}%)</span>
-          <div class="uvk-wbar"><i style="width:{{ r.word_pct }}%"></i></div>
+          <div class="uvk-wbar"><i style="width:{{ r.word_pct }}%;"></i></div>
         </td>
         <td class="uvk-days">
           {% if r.defense_date %}{{ r.defense_date }}<br>
@@ -120,27 +120,27 @@
     </tbody>
   </table>
 </div>
-<p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
+<p style="margin-top:10px;font-size:0.72rem;color:var(--color-text-secondary);">
   Ko'rsatkichlar doktorantning platformadagi ochiq faoliyati asosida.
-  🔴 himoya yaqin, nashrlar to'liq emas · 🟡 30+ kun faollik yo'q.
+   himoya yaqin, nashrlar to'liq emas ·  30+ kun faollik yo'q.
   Qator ustiga bosib batafsil ko'ring.</p>
 {% else %}
 <div class="uv-card">
   <div class="uv-empty" style="padding-bottom:0.6rem;">
-    <div style="font-size:2rem;">🎓</div>
+    <div style="font-size:2rem;"></div>
     Hozircha doktorantlaringiz platformada faol emas
   </div>
   <div class="uvk-invite">
     <b>Doktorantlaringizni taklif qiling</b> — quyidagi matnni ularga yuboring
-    (yoki "✉️ Takliflar" bo'limida email bo'yicha shaxsiy havolalar yarating):
-    <div id="uvk-invite-text" style="margin-top:8px;background:rgba(2,6,23,0.5);border-radius:8px;padding:10px 12px;font-size:0.78rem;color:#94a3b8;">
+    (yoki " Takliflar" bo'limida email bo'yicha shaxsiy havolalar yarating):
+    <div id="uvk-invite-text" style="margin-top:8px;background:var(--color-background);border-radius:var(--radius-default);padding:10px 12px;font-size:0.78rem;color:var(--color-action);">
       Universitetingiz sizni olimlar.uz da kuzatadi — profil oching, Akademik
       Reja tuzing va dissertatsiyangizni Konstruktorda yozing:
       https://olimlar.uz/cabinet
     </div>
     <button class="uv-btn ghost" style="margin-top:10px;" onclick="
       navigator.clipboard.writeText(document.getElementById('uvk-invite-text').textContent.trim())
-        .then(function(){ this.textContent='✓ Nusxalandi'; }.bind(this))">📋 Nusxalash</button>
+        .then(function(){ this.textContent=' Nusxalandi'; }.bind(this))"> Nusxalash</button>
   </div>
 </div>
 {% endif %}
@@ -156,18 +156,18 @@
         {% for a in advisors %}
         <tr>
           <td style="font-weight:600;">
-            <a href="/olim/{{ a.full_name|urlencode }}" style="color:#7cb8ff;">{{ a.name }}</a></td>
-          <td style="text-align:center;font-weight:700;">{{ a.active }}</td>
-          <td style="text-align:center;color:#94a3b8;">{{ a.historical }}</td>
-          <td style="text-align:center;color:#94a3b8;">{{ a.last_year or '—' }}</td>
+            <a href="/olim/{{ a.full_name|urlencode }}" style="color:var(--color-action);">{{ a.name }}</a></td>
+          <td style="text-align:center;font-weight:600;">{{ a.active }}</td>
+          <td style="text-align:center;color:var(--color-action);">{{ a.historical }}</td>
+          <td style="text-align:center;color:var(--color-action);">{{ a.last_year or '—' }}</td>
           <td>{% if a.overloaded %}<span class="uvk-load-flag"
-            title="5 tadan ortiq joriy shogird">⚠ Ortiqcha yuklangan</span>{% endif %}</td>
+            title="5 tadan ortiq joriy shogird"> Ortiqcha yuklangan</span>{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  <p style="margin-top:10px;font-size:0.72rem;color:#64748b;">
+  <p style="margin-top:10px;font-size:0.72rem;color:var(--color-text-secondary);">
     Joriy shogirdlar — platformadagi tasdiqlangan rahbar-shogird aloqalari
     (advisor_links); tarixiy — OAK himoyalar bazasidan.</p>
   {% else %}
@@ -178,15 +178,15 @@
 <div class="uvk-pane" data-pane="invites">
   {% if role != 'viewer' %}
   <div class="uv-card uvk-bulk" style="margin-bottom:14px;">
-    <h3 style="font-size:0.92rem;font-weight:800;color:#e2e8f0;margin:0 0 8px;">
-      ✉️ Doktorantlarni taklif qilish</h3>
-    <p style="font-size:0.78rem;color:#8899b4;margin:0 0 8px;">
+    <h3 style="font-size:0.92rem;font-weight:600;color:var(--color-text-primary);margin:0 0 8px;">
+       Doktorantlarni taklif qilish</h3>
+    <p style="font-size:0.78rem;color:var(--color-action);margin:0 0 8px;">
       Har qatorda bitta email (ko'pi bilan 50 ta). Har biriga 7 kunlik shaxsiy
       havola yaratiladi — havolani doktorantga o'zingiz yuborasiz.</p>
     <textarea id="uvk-emails" rows="4" placeholder="doktorant1@misol.uz&#10;doktorant2@misol.uz"></textarea>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
       <button class="uv-btn" id="uvk-bulk-send">Havolalar yaratish</button>
-      <button class="uv-btn ghost" id="uvk-copy-all" style="display:none;">📋 Hammasini nusxalash</button>
+      <button class="uv-btn ghost" id="uvk-copy-all" style="display:none;"> Hammasini nusxalash</button>
       <span id="uvk-bulk-msg" style="font-size:0.8rem;"></span>
     </div>
     <div class="uvk-links" id="uvk-links"></div>
@@ -200,9 +200,9 @@
         {% for i in invites %}
         <tr>
           <td>{{ i.email }}</td>
-          <td style="color:#94a3b8;">{{ i.created_at }}</td>
+          <td style="color:var(--color-action);">{{ i.created_at }}</td>
           <td><span class="uvk-holat {{ i.status_class }}">{{ i.status }}</span></td>
-          <td style="color:#94a3b8;">{{ i.accepted_by or '—' }}</td>
+          <td style="color:var(--color-action);">{{ i.accepted_by or '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -235,9 +235,9 @@ document.querySelectorAll('.uvk-tab').forEach(function (t) {
       body: JSON.stringify({ emails: document.getElementById('uvk-emails').value })
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
-      if (!d.success) { msg.style.color = '#f87171'; msg.textContent = d.error || 'Xatolik'; return; }
+      if (!d.success) { msg.style.color = OlimlarCharts.tokens.error; msg.textContent = d.error || 'Xatolik'; return; }
       lastLinks = d.links;
-      msg.style.color = '#34d399';
+      msg.style.color = OlimlarCharts.tokens.success;
       msg.textContent = d.links.length + ' ta havola yaratildi' +
         (d.invalid && d.invalid.length ? ' (' + d.invalid.length + " ta noto'g'ri email o'tkazildi)" : '');
       document.getElementById('uvk-links').innerHTML = d.links.map(function (l) {
@@ -249,7 +249,7 @@ document.querySelectorAll('.uvk-tab').forEach(function (t) {
   document.getElementById('uvk-copy-all').addEventListener('click', function () {
     var text = lastLinks.map(function (l) { return l.email + ': ' + l.url; }).join('\n');
     navigator.clipboard.writeText(text);
-    this.textContent = '✓ Nusxalandi';
+    this.textContent = ' Nusxalandi';
   });
 })();
 {% endif %}
@@ -259,8 +259,8 @@ document.querySelectorAll('.uvk-tab').forEach(function (t) {
 <div class="uvk-overlay" id="uvk-overlay"></div>
 <div class="uvk-drawer" id="uvk-drawer">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-    <h3 id="uvk-d-name" style="margin:0;font-size:1.05rem;font-weight:800;color:#f1f5f9;"></h3>
-    <button onclick="uvkClose()" style="background:none;border:none;color:#94a3b8;font-size:1.3rem;cursor:pointer;">✕</button>
+    <h3 id="uvk-d-name" style="margin:0;font-size:1.05rem;font-weight:600;color:var(--color-text-primary);"></h3>
+    <button onclick="uvkClose()" style="background:none;border:none;color:var(--color-action);font-size:1.3rem;cursor:pointer;" aria-label="Yopish"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
   </div>
   <div id="uvk-d-body"><div class="uv-empty">Yuklanmoqda…</div></div>
 </div>
@@ -294,16 +294,16 @@ document.querySelectorAll('.uvk-row').forEach(function (tr) {
             '<div class="uv-empty">' + esc(d.error || 'Xatolik') + '</div>'; return;
         }
         var h = ring(d.readiness || 0) +
-          '<p style="text-align:center;color:#8899b4;font-size:0.78rem;margin-top:8px;">Himoyaga tayyorgarlik' +
+          '<p style="text-align:center;color:var(--color-action);font-size:0.78rem;margin-top:8px;">Himoyaga tayyorgarlik' +
           (d.defense_date ? ' · himoya: ' + esc(d.defense_date) : '') + '</p>';
         if (d.sections && d.sections.length) {
           h += '<div class="uvk-sec"><h4>Bo\'limlar bo\'yicha so\'z sanog\'i</h4>' +
             d.sections.map(function (s) {
               return '<div class="uvk-chap"><div class="t"><span>' + esc(s.title) + '</span>' +
                 '<span>' + s.words + ' / ' + s.target + '</span></div>' +
-                '<div class="bar"><i style="width:' + Math.min(s.pct, 100) + '%"></i></div></div>';
+                '<div class="bar"><i style="width:' + Math.min(s.pct, 100) + '%;"></i></div></div>';
             }).join('') +
-            '<p style="font-size:0.72rem;color:#64748b;">Jami: ' + d.total_words + ' / ' +
+            '<p style="font-size:0.72rem;color:var(--color-text-secondary);">Jami: ' + d.total_words + ' / ' +
             d.total_target + ' so\'z (' + d.diss_pct + '%)</p></div>';
         }
         if (d.pub_requirements && d.pub_requirements.length) {
@@ -311,7 +311,7 @@ document.querySelectorAll('.uvk-row').forEach(function (tr) {
             d.pub_requirements.map(function (p) {
               return '<div class="uvk-chap"><div class="t"><span>' + esc(p.label) + '</span>' +
                 '<span>' + p.done + ' / ' + p.required + '</span></div>' +
-                '<div class="bar"><i style="width:' + Math.min(p.pct, 100) + '%"></i></div></div>';
+                '<div class="bar"><i style="width:' + Math.min(p.pct, 100) + '%;"></i></div></div>';
             }).join('') + '</div>';
         }
         if (d.publications && d.publications.length) {
@@ -329,7 +329,7 @@ document.querySelectorAll('.uvk-row').forEach(function (tr) {
                 '<span class="dt">' + esc(t.end) + '</span></li>';
             }).join('') + '</ul></div>';
         }
-        h += '<div class="uvk-consent">ℹ️ Ko\'rsatkichlar doktorantning platformadagi ochiq' +
+        h += '<div class="uvk-consent">ℹ Ko\'rsatkichlar doktorantning platformadagi ochiq' +
           ' faoliyati asosida. Dissertatsiya matni universitetga ko\'rinmaydi.</div>';
         document.getElementById('uvk-d-body').innerHTML = h;
       })

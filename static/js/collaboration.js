@@ -22,15 +22,15 @@
      legenda bilan bir xil — SVG canvas CSS var() ni o'qiy olmaydi.
      Rang yagona ajratuvchi emas: legenda + tugun o'lchami ham ma'no beradi. */
   var EDGE_COLOR = {
-    advisor: '#0c8930',      // --color-success  (ustoz–shogird)
-    opponent: '#af1d1d',     // --color-error    (opponent)
-    institution: '#0056d6'   // --color-action-blue (muassasa)
+    advisor: OlimlarCharts.tokens.series2,      // --color-success  (ustoz–shogird)
+    opponent: OlimlarCharts.tokens.error,     // --color-error    (opponent)
+    institution: OlimlarCharts.tokens.actionBlue   // --color-action-blue (muassasa)
   };
   var ROLE_COLOR = {
-    advisor: '#00429f',      // rahbar — to'q ko'k
-    mixed: '#7a3ea3',        // aralash rol — binafsha
-    student: '#0056d6',      // shogird — action blue
-    opponent: '#ff4203'      // opponent — brend orange
+    advisor: OlimlarCharts.tokens.series5,      // rahbar — to'q ko'k
+    mixed: OlimlarCharts.tokens.series3,        // aralash rol — binafsha
+    student: OlimlarCharts.tokens.actionBlue,      // shogird — action blue
+    opponent: OlimlarCharts.tokens.series4      // opponent — brend orange
   };
   var DEFAULT_Y0 = 2000, DEFAULT_Y1 = 2026;
 
@@ -267,7 +267,7 @@
     var defs = svg.append('defs');
     var glow = defs.append('filter').attr('id', 'cg-glow').attr('x', '-60%').attr('y', '-60%').attr('width', '220%').attr('height', '220%');
     // Tanlangan tugun uchun halqa — oq fonda ko'k, kuchsizroq opacity.
-    glow.append('feDropShadow').attr('dx', 0).attr('dy', 0).attr('stdDeviation', 5).attr('flood-color', '#0056d6').attr('flood-opacity', 0.55);
+    glow.append('feDropShadow').attr('dx', 0).attr('dy', 0).attr('stdDeviation', 5).attr('flood-color', OlimlarCharts.tokens.actionBlue).attr('flood-opacity', 0.55);
 
     var g = svg.append('g');
     var zoom = d3.zoom().scaleExtent([0.15, 5]).on('zoom', function (ev) { g.attr('transform', ev.transform); });
@@ -277,7 +277,7 @@
     // links
     var linkSel = g.append('g').attr('stroke-linecap', 'round').selectAll('line')
       .data(links).enter().append('line')
-      .attr('stroke', function (d) { return EDGE_COLOR[d.type] || '#666666'; })
+      .attr('stroke', function (d) { return EDGE_COLOR[d.type] || OlimlarCharts.tokens.textSecondary; })
       // Oq fonda qirralar to'qroq bo'lishi kerak (avval to'q fon edi).
       .attr('stroke-opacity', function (d) { return d.type === 'institution' ? 0.45 : 0.75; })
       .attr('stroke-width', function (d) { return Math.max(1, Math.min(4, d.weight * 1.2)); })
@@ -296,15 +296,15 @@
       // base circle (role colour)
       grp.append('circle')
         .attr('r', r)
-        .attr('fill', ROLE_COLOR[d.role] || '#0056d6')
+        .attr('fill', ROLE_COLOR[d.role] || OlimlarCharts.tokens.actionBlue)
         // Oq fonda: markaziy tugun ko'k halqa, qolganlari och kulrang chegara.
-        .attr('stroke', d.id === center ? '#0056d6' : '#ffffff')
+        .attr('stroke', d.id === center ? OlimlarCharts.tokens.actionBlue : OlimlarCharts.tokens.white)
         .attr('stroke-width', d.id === center ? 3 : 1.5)
         .style('filter', d.id === center ? 'url(#cg-glow)' : null);
       // initials (revealed if the avatar fails / is missing)
       grp.append('text').attr('class', 'cg-ini')
         .text(initials(d.id)).attr('text-anchor', 'middle').attr('dy', '0.34em')
-        .attr('fill', '#fff').attr('font-weight', 700)
+        .attr('fill', OlimlarCharts.tokens.white).attr('font-weight', 700)
         .attr('font-size', Math.max(9, r * 0.7)).style('pointer-events', 'none');
       // avatar image on top (hidden until it loads successfully)
       if (d.avatar) {
@@ -331,9 +331,9 @@
       .attr('text-anchor', 'middle')
       .attr('dy', function (d) { return nodeRadius(d) + 12; })
       // Oq fon: to'q matn + oq halo (avval och matn + to'q halo edi).
-      .attr('fill', '#0c0f12').attr('font-size', function (d) { return Math.max(9, Math.min(13, nodeRadius(d) * 0.55)); })
+      .attr('fill', OlimlarCharts.tokens.textPrimary).attr('font-size', function (d) { return Math.max(9, Math.min(13, nodeRadius(d) * 0.55)); })
       .style('pointer-events', 'none').style('paint-order', 'stroke')
-      .style('stroke', '#ffffff').style('stroke-width', '3px');
+      .style('stroke', OlimlarCharts.tokens.white).style('stroke-width', '3px');
 
     // simulation
     var sim = d3.forceSimulation(nodes)
