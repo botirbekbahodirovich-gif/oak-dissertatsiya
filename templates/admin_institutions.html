@@ -35,6 +35,17 @@
   .adm-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 1.1rem 0; color: #94a3b8; font-size: 0.86rem; }
   .adm-pager a { color: #60a5fa; text-decoration: none; padding: 6px 12px; border: 1px solid #334155; border-radius: 8px; }
   .adm-pager a.disabled { color: #475569; pointer-events: none; border-color: #1e293b; }
+  .id-section { margin: 1.4rem 0 1.7rem; }
+  .id-section h2 { color:#f1f5f9; font-size:1.1rem; margin:0 0 .45rem; }
+  .id-note { color:#94a3b8; font-size:.82rem; margin:0 0 .8rem; }
+  .id-merge { display:flex; gap:8px; flex-wrap:wrap; align-items:end; padding:.8rem; background:#162032; border:1px solid #334155; border-radius:12px; margin-bottom:.8rem; }
+  .id-merge label { color:#94a3b8; font-size:.72rem; display:grid; gap:4px; }
+  .id-merge input, .id-action input { width:110px; background:#0f1626; border:1px solid #334155; color:#e2e8f0; border-radius:8px; padding:7px 9px; }
+  .id-action input.name { width:min(360px, 100%); }
+  .id-action { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .id-primary { background:#059669; color:white; border:0; border-radius:8px; padding:7px 11px; cursor:pointer; font-weight:700; }
+  .id-secondary { background:#334155; color:#e2e8f0; border:0; border-radius:8px; padding:7px 11px; cursor:pointer; }
+  .id-reason { font-size:.7rem; border-radius:999px; padding:2px 7px; background:rgba(245,158,11,.15); color:#fbbf24; }
   /* log */
   .adm-log-h { margin: 2rem 0 0.8rem; font-size: 1.1rem; font-weight: 800; color: #f1f5f9; }
   .log-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 0.55rem 0.9rem; border-top: 1px solid #334155; font-size: 0.85rem; color: #cbd5e1; }
@@ -67,8 +78,7 @@
   <h1>🏛️ Institutlarni birlashtirish ({{ total }})</h1>
   <a href="/admin/universities" class="adm-btn">← Universitetlar boshqaruvi</a>
 </div>
-<p class="adm-hint">Muassasa nomini tahrirlang. Agar yangi nom mavjud boshqa muassasa nomiga
-  aynan mos kelsa — ikki muassasa avtomatik <b>birlashtiriladi</b> (barcha ma'lumotlar birlashadi).</p>
+<p class="adm-hint">Birlashtirish va yangi OAK nomlarini tasdiqlash yuqoridagi canonical ID bo‘limida bajariladi. Pastdagi eski matn guruhlari faqat solishtirish uchun qoldirilgan.</p>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% for cat, msg in messages %}<div class="adm-flash {{ cat }}">{{ msg }}</div>{% endfor %}
@@ -87,6 +97,113 @@
   {% endfor %}
 </div>
 {% endif %}
+
+{% set coverage = ((identity_stats.linked * 100 / identity_stats.total)|round(1)) if identity_stats.total else 0 %}
+<section class="id-section" id="identity">
+  <h2>Canonical muassasa IDlari</h2>
+  <p class="id-note">Reyting faqat tasdiqlangan IDga bog‘langan himoyalarni bir marta hisoblaydi. OAKdagi asl nom o‘zgarmaydi.</p>
+  <div class="adm-stats">
+    <div class="adm-stat"><div class="n">{{ identity_items|length }}</div><div class="l">Ko‘rsatilgan canonical ID</div></div>
+    <div class="adm-stat"><div class="n">{{ identity_stats.linked }} / {{ identity_stats.total }}</div><div class="l">IDga bog‘langan himoya</div></div>
+    <div class="adm-stat"><div class="n">{{ coverage }}%</div><div class="l">Reyting qamrovi</div></div>
+    <div class="adm-stat"><div class="n">{{ identity_stats.pending }}</div><div class="l">Tekshiruv navbati</div></div>
+  </div>
+
+  <form class="id-merge" method="POST" action="/admin/institutions/identity/merge"
+        onsubmit="return confirm('Manba ID maqsad IDga to‘liq birlashtirilsinmi? OAK matni o‘zgarmaydi.')">
+    {{ csrf_token()|safe }}
+    <label>Birlashtiriladigan ID<input type="number" min="1" name="source_id" required></label>
+    <label>Qoladigan ID<input type="number" min="1" name="target_id" required></label>
+    <button class="id-primary" type="submit">IDlarni birlashtirish</button>
+  </form>
+
+  {% if identity_items %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead><tr><th>ID</th><th>Canonical nom</th><th>Turi / hudud</th><th>Ota tashkilot</th><th style="text-align:right">Alias</th><th style="text-align:right">Himoya</th></tr></thead>
+      <tbody>
+      {% for it in identity_items %}
+        <tr>
+          <td class="num">{{ it.id }}</td>
+          <td class="adm-name">{{ it.name }}</td>
+          <td>{{ it.category }}{% if it.region %} · {{ it.region }}{% endif %}</td>
+          <td>{{ it.parent_name or '—' }}</td>
+          <td class="num">{{ it.alias_count }}</td>
+          <td class="num">{{ it.diss_count }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="adm-table-wrap"><div class="adm-empty">Canonical IDlar hali backfill qilinmagan. Avval xavfsiz dry-run bajariladi.</div></div>
+  {% endif %}
+</section>
+
+{% if identity_events %}
+<section class="id-section" id="identity-history">
+  <h2>So‘nggi ID birlashtirishlar</h2>
+  <div class="adm-table-wrap">
+    {% for ev in identity_events %}
+    <div class="log-row">
+      <span class="log-old">ID {{ ev.source_id }} · {{ ev.source_name }}</span>
+      <span class="log-arrow">→</span>
+      <span class="log-new">ID {{ ev.target_id }} · {{ ev.target_name }}</span>
+      <span class="log-meta">{{ ev.diss_count }} himoya · {{ ev.admin_username }} · {{ ev.created_at }}</span>
+      <form method="POST" action="/admin/institutions/identity/undo/{{ ev.id }}"
+            onsubmit="return confirm('Bu ID birlashtirish bekor qilinsinmi?')">
+        {{ csrf_token()|safe }}
+        <button class="log-undo" type="submit">↩ Bekor qilish</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="id-section" id="identity-review">
+  <h2>Tekshirilishi kerak bo‘lgan nomlar</h2>
+  <p class="id-note">“Bir nechta” yozuvlar va ishonchsiz nomlar admin tasdig‘isiz reytingga kirmaydi.</p>
+  {% if identity_queue %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead><tr><th>OAKdagi asl nom</th><th>Sabab</th><th style="text-align:right">Himoya</th><th>Amal</th></tr></thead>
+      <tbody>
+      {% for qitem in identity_queue %}
+        <tr>
+          <td>{{ qitem.raw_name }}</td>
+          <td><span class="id-reason">{{ 'Bir nechta muassasa' if qitem.reason == 'multiple' else ('Eski xarita tekshiruvi' if qitem.reason == 'legacy_review' else 'Yangi noma’lum nom') }}</span></td>
+          <td class="num">{{ qitem.occurrence_count }}</td>
+          <td>
+            <form class="id-action" method="POST" action="/admin/institutions/identity/resolve">
+              {{ csrf_token()|safe }}
+              <input type="hidden" name="queue_id" value="{{ qitem.id }}">
+              <input type="number" min="1" name="institution_id" placeholder="Canonical ID" value="{{ qitem.suggested_id or '' }}" required>
+              <button class="id-primary" type="submit">Mavjud IDga biriktirish</button>
+            </form>
+            <form class="id-action" method="POST" action="/admin/institutions/identity/create">
+              {{ csrf_token()|safe }}
+              <input type="hidden" name="queue_id" value="{{ qitem.id }}">
+              <input class="name" type="text" name="canonical_name" value="{{ qitem.raw_name }}" required>
+              <select name="category" class="yf-select">
+                <option value="universitet">universitet</option>
+                <option value="institut">institut</option>
+                <option value="akademiya">akademiya</option>
+                <option value="markaz">markaz</option>
+                <option value="boshqa">boshqa</option>
+              </select>
+              <button class="id-secondary" type="submit">Yangi ID yaratish</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="adm-table-wrap"><div class="adm-empty">Tekshiruv navbati bo‘sh.</div></div>
+  {% endif %}
+</section>
 
 <form class="adm-search" method="GET" action="/admin/institutions">
   <input type="text" name="q" value="{{ q }}" placeholder="Nomi bo'yicha qidirish (lotin yoki kirill)…" autocomplete="off">
@@ -123,7 +240,7 @@
         <td class="num">{{ it.variant_count }}</td>
         <td class="num">{{ it.diss_count }}</td>
         <td>
-          <button type="button" class="adm-btn rn-edit" data-name="{{ it.name }}" title="Tahrirlash">✏️</button>
+          <span class="id-reason" title="Canonical ID bo‘limidan boshqariladi">eski guruh</span>
         </td>
       </tr>
       {% endfor %}

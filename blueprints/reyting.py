@@ -49,30 +49,58 @@ def _build_rating():
     from data import get_connection, clean_olim_name
     from institutions import transliterate_display
 
-    imap = {}   # cyrillic variant (trimmed) → org meta
-    rows = []   # (olim, muassasa, daraja, ixtisoslik)
+    imap = {}   # institution_id (preferred) or legacy raw name → org meta
+    rows = []   # (olim, institution key, daraja, ixtisoslik)
     rahbar = {}
     opp = {}
     conn = get_connection()
     try:
         with conn.cursor() as cur:
-            try:
+            cur.execute("""
+                SELECT to_regclass('public.institutions') IS NOT NULL
+                   AND EXISTS (
+                       SELECT 1 FROM information_schema.columns
+                       WHERE table_name = 'dissertations'
+                         AND column_name = 'institution_id')
+            """)
+            identity_mode = bool(cur.fetchone()[0])
+            if identity_mode:
                 cur.execute("""
-                    SELECT TRIM(cyrillic_name), TRIM(COALESCE(canonical_name, cyrillic_name)),
+                    SELECT id, canonical_name, COALESCE(category, 'boshqa'),
+                           COALESCE(region, '')
+                    FROM institutions
+                    WHERE is_active = TRUE AND merged_into_id IS NULL
+                """)
+                for iid, canon, cat, reg in cur.fetchall():
+                    imap[iid] = {'canonical': canon, 'category': cat, 'region': reg}
+                # One dissertation has exactly one ranking institution_id.
+                # Unresolved rows remain outside the ranking until admin review.
+                cur.execute("""
+                    SELECT TRIM(d.olim), d.institution_id,
+                           COALESCE(d.daraja, ''),
+                           TRIM(COALESCE(d.ixtisoslik, ''))
+                    FROM dissertations d
+                    JOIN institutions i ON i.id = d.institution_id
+                    WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+                      AND i.is_active = TRUE AND i.merged_into_id IS NULL
+                """)
+                rows = cur.fetchall()
+            else:
+                cur.execute("""
+                    SELECT TRIM(cyrillic_name),
+                           TRIM(COALESCE(canonical_name, cyrillic_name)),
                            COALESCE(category, 'boshqa'), COALESCE(region, '')
                     FROM institution_map WHERE is_active IS NOT FALSE
                 """)
-                for cyr, canon, cat, reg in cur.fetchall():
-                    imap[cyr] = {'canonical': canon, 'category': cat, 'region': reg}
-            except Exception:
-                imap = {}  # map not populated yet — orgs group by raw muassasa
-            cur.execute("""
-                SELECT TRIM(olim), TRIM(COALESCE(muassasa, '')),
-                       COALESCE(daraja, ''), TRIM(COALESCE(ixtisoslik, ''))
-                FROM dissertations
-                WHERE olim IS NOT NULL AND TRIM(olim) <> ''
-            """)
-            rows = cur.fetchall()
+                for raw, canon, cat, reg in cur.fetchall():
+                    imap[raw] = {'canonical': canon, 'category': cat, 'region': reg}
+                cur.execute("""
+                    SELECT TRIM(olim), TRIM(COALESCE(muassasa, '')),
+                           COALESCE(daraja, ''), TRIM(COALESCE(ixtisoslik, ''))
+                    FROM dissertations
+                    WHERE olim IS NOT NULL AND TRIM(olim) <> ''
+                """)
+                rows = cur.fetchall()
             cur.execute("""
                 SELECT LOWER(TRIM(ilmiy_rahbar)), COUNT(*)
                 FROM dissertations
@@ -95,11 +123,11 @@ def _build_rating():
     finally:
         conn.close()
 
-    def org_meta(muassasa):
-        m = imap.get(muassasa)
+    def org_meta(institution_key):
+        m = imap.get(institution_key)
         if m:
             return m
-        canon = muassasa or 'Noma’lum muassasa'
+        canon = institution_key or 'Noma’lum muassasa'
         return {'canonical': canon, 'category': 'boshqa', 'region': ''}
 
     # ── scholars ──

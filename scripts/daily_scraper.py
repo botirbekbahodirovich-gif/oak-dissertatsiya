@@ -10,6 +10,9 @@ import json
 import psycopg2
 from datetime import datetime
 
+# Script to‘g‘ridan-to‘g‘ri ishga tushirilganda repo-root modullari topilsin.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 try:
     import requests
     from bs4 import BeautifulSoup
@@ -54,12 +57,15 @@ def get_max_oak_id(conn) -> int:
 
 
 def insert_item(conn, item: dict):
+    from institution_identity import resolve_institution
     with conn.cursor() as cur:
+        institution_id = resolve_institution(
+            cur, item.get('muassasa'), source='daily_scraper')
         cur.execute("""
             INSERT INTO dissertations (
                 oak_id, link, olim, daraja, mavzu,
                 ixtisoslik, fan_tarmogi, mavzu_raqami,
-                ilmiy_rahbar, muassasa,
+                ilmiy_rahbar, muassasa, institution_id,
                 ilmiy_kengash_raqami,
                 opponent_1, opponent_2,
                 yetakchi_tashkilot, yonalish,
@@ -68,7 +74,7 @@ def insert_item(conn, item: dict):
             ) VALUES (
                 %(oak_id)s, %(link)s, %(olim)s, %(daraja)s, %(mavzu)s,
                 %(ixtisoslik)s, %(fan_tarmogi)s, %(mavzu_raqami)s,
-                %(ilmiy_rahbar)s, %(muassasa)s,
+                %(ilmiy_rahbar)s, %(muassasa)s, %(institution_id)s,
                 %(ilmiy_kengash_raqami)s,
                 %(opponent_1)s, %(opponent_2)s,
                 %(yetakchi_tashkilot)s, %(yonalish)s,
@@ -76,7 +82,7 @@ def insert_item(conn, item: dict):
                 NOW()
             )
             ON CONFLICT (oak_id) DO NOTHING
-        """, item)
+        """, dict(item, institution_id=institution_id))
     conn.commit()
 
 
