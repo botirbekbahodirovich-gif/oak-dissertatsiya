@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% from "components/page_header.html" import page_header %}
-{% from "components/article_bits.html" import index_badges, access_badge %}
+{% from "components/article_bits.html" import index_badges, access_badge, article_card %}
 
-{% block title %}{{ article.title|truncate(90) }} | Ilmiy maqolalar | Olimlar.uz{% endblock %}
-{% block meta_description %}{{ (article.abstract or article.title)|striptags|truncate(300) }}{% endblock %}
+{% block title %}{{ article.display_title|truncate(90) }} | Ilmiy maqolalar | Olimlar.uz{% endblock %}
+{% block meta_description %}{{ (article.abstract or article.display_title)|striptags|truncate(300) }}{% endblock %}
 {% block og_type %}article{% endblock %}
 
 {% block seo_extra %}
@@ -54,7 +54,10 @@
   </div>
   {% endif %}
 
-  {{ page_header(article.title, '', crumbs=crumb_list) }}
+  {{ page_header(article.display_title, '', crumbs=crumb_list) }}
+  {% if article.has_translated_title %}
+  <p class="mq-detail__original-title" lang="{{ article.language or 'en' }}">Asl nomi: {{ article.title }}</p>
+  {% endif %}
 
   <div class="mq-detail__badges">
     {{ access_badge(article) }}
@@ -87,6 +90,11 @@
         {% if current_user.is_authenticated and current_user.is_admin %}
         <a class="ol-btn ol-btn--secondary" href="/admin/articles/{{ article.id }}/edit">
           <i class="bi bi-pencil" aria-hidden="true"></i>Tahrirlash</a>
+        {% endif %}
+        {% if article.external_url %}
+        <a class="ol-btn ol-btn--tertiary" href="{{ article.external_url }}"
+           rel="nofollow noopener" target="_blank">
+          <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>Jurnal sahifasi</a>
         {% endif %}
       </div>
 
@@ -180,6 +188,18 @@
         </dl>
       </div>
 
+      {% if article.citation_count is not none or article.view_count or article.download_count %}
+      <div class="ol-card">
+        <h2 class="ol-h5 mq-flush-top">Foydalanish ko'rsatkichlari</h2>
+        <dl class="mq-deflist">
+          {% if article.citation_count is not none %}<dt>Iqtiboslar</dt><dd>{{ article.citation_count }}</dd>{% endif %}
+          <dt>Ko'rilgan</dt><dd>{{ article.view_count or 0 }}</dd>
+          {% if article.download_count %}<dt>PDF yuklangan</dt><dd>{{ article.download_count }}</dd>{% endif %}
+          {% if article.citation_count_source %}<dt>Iqtibos manbasi</dt><dd>{{ article.citation_count_source|capitalize }}</dd>{% endif %}
+        </dl>
+      </div>
+      {% endif %}
+
       <div class="ol-card">
         <h2 class="ol-h5 mq-flush-top">Iqtibos</h2>
         {# Minimal mavjud format — to'liq iqtibos generatori keyingi bosqichda. #}
@@ -204,5 +224,15 @@
       {% endif %}
     </aside>
   </div>
+
+  {% if related_articles %}
+  <section class="ol-section mq-related" aria-labelledby="mq-related-title">
+    <h2 id="mq-related-title" class="ol-h3">O'xshash maqolalar</h2>
+    <p class="ol-body ol-muted">Fan yo'nalishi va jurnal ma'lumotiga ko'ra tanlandi.</p>
+    <div class="mq-grid mq-related__grid">
+      {% for related in related_articles %}{{ article_card(related) }}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}

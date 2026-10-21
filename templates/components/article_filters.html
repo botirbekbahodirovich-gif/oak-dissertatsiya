@@ -3,12 +3,44 @@
    brauzerda ham to'liq ishlaydi. Mobil'da panel yig'iladi — ol-filters__toggle
    dizayn tizimining mavjud mexanizmi. #}
 
+{% macro catalog_search() %}
+<form class="ol-filters mq-catalog-search" method="get" action="{{ request.path }}"
+      role="search" aria-label="Maqolalar bo'yicha qidiruv">
+  <div class="mq-search">
+    <div class="ol-field-group">
+      <label class="ol-label" for="mq-catalog-q">Maqola qidirish</label>
+      <input class="ol-field" type="search" id="mq-catalog-q" name="q"
+             value="{{ request.args.get('q', '') }}"
+             placeholder="Maqola nomi, mavzu, muallif, jurnal yoki DOI">
+    </div>
+    <button type="submit" class="ol-btn ol-btn--primary">
+      <i class="bi bi-search" aria-hidden="true"></i>Qidirish</button>
+  </div>
+
+  {# Qidiruv yangilanganda tanlangan fasetlar saqlanadi, sahifa esa 1 ga qaytadi. #}
+  {% for key in ['field', 'year_from', 'year_to', 'lang', 'journal', 'access',
+                 'license', 'version', 'pdf', 'scopus', 'wos', 'doaj',
+                 'sort', 'view'] %}
+    {% if request.args.get(key) %}
+    <input type="hidden" name="{{ key }}" value="{{ request.args.get(key) }}">
+    {% endif %}
+  {% endfor %}
+</form>
+{% endmacro %}
+
 {% macro filter_panel(field_tree, facets, access_types, licenses, version_types,
-                      languages, hide_field=False) %}
-<form class="ol-filters" method="get" action="{{ request.path }}" role="search"
+                      languages, hide_field=False, sidebar=False) %}
+<form class="ol-filters{{ ' mq-filter-sidebar' if sidebar else '' }}" method="get"
+      action="{{ request.path }}" role="search"
       aria-label="Maqolalar bo'yicha qidiruv va filtr">
   {# Filtr o'zgarganda doim 1-sahifadan boshlanadi: `page` ataylab tashlanadi. #}
 
+  {% if sidebar %}
+  <div class="mq-filter-sidebar__heading">
+    <h2>Natijalarni saralash</h2>
+    <a href="{{ request.path }}">Tozalash</a>
+  </div>
+  {% else %}
   <div class="mq-search">
     <div class="ol-field-group">
       <label class="ol-label" for="mq-q">Qidiruv</label>
@@ -19,6 +51,7 @@
     <button type="submit" class="ol-btn ol-btn--primary">
       <i class="bi bi-search" aria-hidden="true"></i>Qidirish</button>
   </div>
+  {% endif %}
 
   <button type="button" class="ol-btn ol-btn--secondary ol-filters__toggle"
           data-mq-filter-toggle aria-expanded="false" aria-controls="mq-filter-body">
@@ -118,11 +151,15 @@
       {# Ko'rinish va tartib tanlovi filtr yuborilganda yo'qolmasin. #}
       <input type="hidden" name="view" value="{{ request.args.get('view', 'karta') }}">
       <input type="hidden" name="sort" value="{{ request.args.get('sort', 'yangi') }}">
+      {% if sidebar and request.args.get('q') %}
+      <input type="hidden" name="q" value="{{ request.args.get('q') }}">
+      {% endif %}
       {% if request.args.get('faqat') %}
       <input type="hidden" name="faqat" value="{{ request.args.get('faqat') }}">
       {% endif %}
       <a class="ol-btn ol-btn--tertiary" href="{{ request.path }}">Tozalash</a>
-      <button type="submit" class="ol-btn ol-btn--primary">Filtrlash</button>
+      <button type="submit" class="ol-btn ol-btn--primary">
+        {{ "Natijalarni ko'rsatish" if sidebar else "Filtrlash" }}</button>
     </div>
   </div>
 </form>
@@ -131,7 +168,7 @@
 {% macro field_options(nodes, selected, depth=0) %}
 {%- for node in nodes -%}
 <option value="{{ node.slug }}" {{ 'selected' if selected == node.slug }}>
-  {{- '— ' * depth }}{{ node.name_uz }}{% if node.code %} ({{ node.code }}){% endif -%}
+  {{- '- ' * depth }}{{ node.name_uz }}{% if node.code %} ({{ node.code }}){% endif -%}
 </option>
 {{ field_options(node.children, selected, depth + 1) }}
 {%- endfor -%}

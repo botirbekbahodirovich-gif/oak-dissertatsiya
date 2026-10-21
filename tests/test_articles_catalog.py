@@ -7,6 +7,7 @@ ustida tekshiriladi. Haqiqiy SQL semantikasi staging'da —
 tests/test_articles_dbgated.py (TEST_DATABASE_URL bilan).
 """
 import contextlib
+import html as html_lib
 import re
 import unittest
 from unittest import mock
@@ -121,10 +122,10 @@ class CatalogRouteTests(ArticlePageTestCase):
 
 
 class SearchAndFilterTests(ArticlePageTestCase):
-    def test_search_covers_title_abstract_keywords_doi_journal_and_authors(self):
+    def test_search_covers_both_titles_abstract_keywords_doi_journal_and_authors(self):
         self.get('/maqolalar?q=talim', fields=[field()])
         search_sql = next(s for s in self.select_sql() if 'ILIKE' in s)
-        for column in ('a.title', 'a.abstract', 'a.keywords', 'a.doi',
+        for column in ('a.title', 'a.title_uz', 'a.abstract', 'a.keywords', 'a.doi',
                        'a.journal_name', 'au.names'):
             self.assertIn(column, search_sql, column)
 
@@ -249,6 +250,24 @@ class ArticleDetailTests(ArticlePageTestCase):
                        'Ilm Sarchashmalari', '2024', '10.1234/abc.2024',
                        'CC BY', 'Ochiq kirish'):
             self.assertIn(needle, html, needle)
+
+    def test_uzbek_title_is_primary_and_original_title_is_preserved(self):
+        html = html_lib.unescape(self._detail(title='Original English title',
+                                              title_uz="Maqolaning o'zbekcha nomi"))
+        self.assertIn("Maqolaning o'zbekcha nomi", html)
+        self.assertIn('Asl nomi: Original English title', html)
+
+    def test_related_public_articles_are_shown_below_the_detail(self):
+        related = article(id=2, slug='yaqin-maqola', title='Yaqin maqola',
+                          title_uz="O'xshash tadqiqot")
+        html = html_lib.unescape(self.html('/maqolalar/ochiq-maqola',
+                                           articles=[article(), related], fields=[field()],
+                                           authors=[author()], links=[link()]))
+        self.assertIn("O'xshash maqolalar", html)
+        self.assertIn("O'xshash tadqiqot", html)
+        related_sql = next(s for s in self.select_sql()
+                           if 'a.id <> %s' in s and 'ORDER BY' in s)
+        self.assertIn(PUBLIC_WHERE, related_sql)
 
     def test_authors_keep_their_order(self):
         html = self._detail()
