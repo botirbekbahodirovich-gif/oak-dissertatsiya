@@ -643,7 +643,7 @@
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
       .then(function () {
         btn.textContent = 'Nusxalandi';
-        setTimeout(function () { btn.textContent = ' Nusxalash'; }, 1500);
+        setTimeout(function () { btn.textContent = 'Nusxalash'; }, 1500);
       })
       .catch(function () { prompt('Nusxalang:', text); });
   };

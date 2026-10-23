@@ -146,7 +146,7 @@
       if (d && d.success && d.url) {
         (navigator.clipboard ? navigator.clipboard.writeText(d.url) : Promise.reject())
           .then(function () {
-            note.textContent = ' Taklif havolasi nusxalandi — uni rahbaringizga yuboring (7 kun amal qiladi): ' + d.url;
+            note.textContent = 'Taklif havolasi nusxalandi — uni rahbaringizga yuboring (7 kun amal qiladi): ' + d.url;
             note.classList.add('ok');
           })
           .catch(function () { prompt('Taklif havolasini nusxalang (7 kun amal qiladi):', d.url); });

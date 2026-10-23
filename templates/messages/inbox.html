@@ -31,7 +31,7 @@
 <div class="container-xl">
   <h1 style="font-size:1.4rem;text-align:center;margin:8px 0 16px;"> Xabarlar</h1>
   <label class="ol-label" for="mx-search"> Ism bo'yicha qidirish</label>
-<input class="mx-search" id="mx-search" type="search" placeholder=" Ism bo'yicha qidirish…">
+<input class="mx-search" id="mx-search" type="search" placeholder="Ism bo'yicha qidirish…">
   <div class="mx-list" id="mx-list">
     {% for c in conversations %}
     <a class="mx-item {{ 'unread' if c.unread }}" href="/messages/{{ c.id }}" data-name="{{ c.other_name | lower }}">

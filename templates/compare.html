@@ -195,7 +195,7 @@ function analyze() {
     body: JSON.stringify({ mavzu: mavzu, keywords: kws, ixtisoslik: ix })
   }).then(function (r) { return r.json(); }).then(function (d) {
     allResults = d.results || []; shownCount = 0;
-    var head = " O'xshash mavzular (" + allResults.length + ' ta topildi)';
+    var head = "O'xshash mavzular (" + allResults.length + ' ta topildi)';
     document.getElementById('results-head').innerHTML = escapeHtml(head) +
       (IS_LOGGED_IN && allResults.length ? '<span class="full-badge">To\'liq natijalar</span>' : '');
     renderResults();
