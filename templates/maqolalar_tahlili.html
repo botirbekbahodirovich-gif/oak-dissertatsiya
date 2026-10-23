@@ -7,7 +7,7 @@
 .mq-wrap { max-width:960px; margin:0 auto; }
 .mq-head { margin-bottom:4px; }
 .mq-sub { color:var(--color-action); margin-bottom:18px; }
-.mq-box { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); padding:18px 20px; }
+.mq-box { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-surface); padding:18px 20px; }
 .mq-search-row { display:flex; gap:10px; }
 .mq-input { flex:1; border:1px solid var(--color-border); border-radius:var(--radius-default); padding:12px 14px;
             font-size:1rem; font-family:inherit; color:var(--color-text-primary); min-width:0; }
@@ -22,7 +22,7 @@
 .mq-btn2:disabled { opacity:0.5; cursor:not-allowed; }
 /* Scope pill'lar */
 .mq-pills { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-.mq-pill { border:1px solid var(--color-border); background:var(--color-background); color:var(--color-action); border-radius:var(--radius-full);
+.mq-pill { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-action); border-radius:var(--radius-full);
            padding:6px 14px; font-size:0.84rem; font-weight:600; cursor:pointer; }
 .mq-pill.on { background:var(--color-background); border-color:var(--color-border); color:var(--color-action); }
 /* Filtrlar qatori */
@@ -55,7 +55,7 @@
 .mq-section { margin-top:22px; }
 
 /* ── Research gap kartasi ── */
-.mq-gap-card { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); padding:18px 20px; }
+.mq-gap-card { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-surface); padding:18px 20px; }
 .mq-gap-grid { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:14px; }
 .mq-gap-stat { font-size:0.9rem; color:var(--color-action); }
 .mq-gap-stat b { display:block; font-size:1.45rem; font-weight:600; color:var(--color-text-primary); }
@@ -73,7 +73,7 @@
 /* ── Yillik dinamika (D3 small multiples) ── */
 .mq-chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 @media (max-width: 700px) { .mq-chart-grid { grid-template-columns:1fr; } }
-.mq-panel { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-background); padding:14px 16px; }
+.mq-panel { border:1px solid var(--color-border); border-radius:var(--radius-card); background:var(--color-surface); padding:14px 16px; }
 .mq-panel-h { font-size:0.88rem; font-weight:600; color:var(--color-text-primary); margin-bottom:4px; display:flex; justify-content:space-between; gap:8px; }
 .mq-panel-h span { color:var(--color-text-secondary); font-weight:600; }
 .mq-panel svg { width:100%; height:auto; display:block; }
@@ -82,7 +82,7 @@
 .mq-grid-line { stroke:var(--color-background); }
 
 /* ── Maqola kartalari ── */
-.mq-item { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-background); margin-bottom:10px; padding:14px 16px; }
+.mq-item { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-surface); margin-bottom:10px; padding:14px 16px; }
 .mq-item-title { font-weight:600; color:var(--color-text-primary); font-size:0.97rem; line-height:1.45; text-decoration:none; display:block; }
 .mq-item-title:hover { color:var(--color-action); }
 .mq-item-authors { color:var(--color-action); font-size:0.84rem; margin-top:6px; }
@@ -91,7 +91,7 @@
           padding:2px 9px; border-radius:var(--radius-default); }
 .mq-tag.oa { background:var(--color-background); color:var(--color-text-secondary); border-color:var(--color-border); font-weight:600; }
 .mq-item-actions { display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
-.mq-act { border:1px solid var(--color-border); background:var(--color-background); color:var(--color-action); border-radius:var(--radius-default);
+.mq-act { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-action); border-radius:var(--radius-default);
           padding:5px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; }
 .mq-act:hover { border-color:var(--color-border); color:var(--color-action); }
 .mq-act.saved { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-secondary); }
@@ -108,7 +108,7 @@
 
 /* ── Konsept teglari ── */
 .mq-chips { display:flex; flex-wrap:wrap; gap:8px; }
-.mq-chip { border:1px solid var(--color-border); background:var(--color-background); color:var(--color-action); border-radius:var(--radius-full);
+.mq-chip { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-action); border-radius:var(--radius-full);
            padding:6px 13px; font-size:0.82rem; font-weight:600; cursor:pointer; }
 .mq-chip:hover { border-color:var(--color-border); color:var(--color-action); }
 .mq-chip .cnt { color:var(--color-action); font-weight:500; }
@@ -117,7 +117,7 @@
 #mq-cite-bg { position:fixed; inset:0; z-index:4100; display:none; align-items:center;
               justify-content:center; background:var(--color-background); padding:16px; }
 #mq-cite-bg.show { display:flex; }
-.mq-cite-modal { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-card); max-width:560px;
+.mq-cite-modal { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); max-width:560px;
                  width:100%; padding:22px; max-height:86vh; overflow-y:auto; }
 .mq-cite-label { font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em;
                  color:var(--color-text-secondary); margin:0 0 6px; }

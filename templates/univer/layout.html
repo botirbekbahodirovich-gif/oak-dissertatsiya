@@ -4,7 +4,7 @@
 {% block extra_head %}
 <style>
   .uv-shell { display:grid; grid-template-columns:250px 1fr; gap:18px; margin-top:10px; }
-  .uv-side { position:sticky; top:80px; align-self:start; background:var(--color-background);
+  .uv-side { position:sticky; top:80px; align-self:start; background:var(--color-surface);
     border:1px solid var(--color-border); border-radius:var(--radius-default); padding:16px 12px;
     backdrop-filter:none; }
   .uv-uni { display:flex; gap:10px; align-items:center; padding:4px 6px 14px;
@@ -32,7 +32,7 @@
   .uv-main { min-width:0; }
   .uv-h1 { font-size:1.3rem; font-weight:600; color:var(--color-text-primary); margin:4px 0 4px; }
   .uv-sub { color:var(--color-action); font-size:0.86rem; margin-bottom:16px; }
-  .uv-card { background:var(--color-background); border:1px solid var(--color-border);
+  .uv-card { background:var(--color-surface); border:1px solid var(--color-border);
     border-radius:var(--radius-card); padding:18px; backdrop-filter:none; }
   .uv-btn { display:inline-flex; align-items:center; gap:6px; background:var(--color-action); color:var(--color-surface);
     font-weight:600; font-size:0.85rem; padding:9px 16px; border-radius:var(--radius-default); border:none;
@@ -41,9 +41,9 @@
   .uv-btn.ghost { background:var(--color-background); color:var(--color-action); }
   .uv-btn.danger { background:var(--color-background); color:var(--color-danger); }
   .uv-table-wrap { border-radius:var(--radius-card); overflow:auto; border:1px solid var(--color-border);
-    background:var(--color-background); }
+    background:var(--color-surface); }
   .uv-table { width:100%; border-collapse:collapse; min-width:640px; }
-  .uv-table th { background:var(--color-background); color:var(--color-action); font-size:0.72rem;
+  .uv-table th { background:var(--color-background-soft); color:var(--color-action); font-size:0.72rem;
     text-transform:uppercase; letter-spacing:0.5px; padding:0.7rem 0.85rem; text-align:left;
     white-space:nowrap; }
   .uv-table td { padding:0.6rem 0.85rem; font-size:0.85rem; color:var(--color-text-primary);

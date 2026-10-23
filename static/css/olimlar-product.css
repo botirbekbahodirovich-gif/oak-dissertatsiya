@@ -146,7 +146,7 @@
 .content-main .up-badge:is(.davlat,.institut,.universitet,.akademiya,.markaz){background:var(--color-background);border-color:var(--color-border);color:var(--color-text-secondary)}
 .content-main .gd-countdown.red{border-color:var(--color-danger);color:var(--color-danger)}
 .content-main .gd-countdown.yellow{border-color:var(--color-warning);color:var(--color-warning-ink)}
-.content-main .gd-countdown.green{border-color:var(--color-success);color:var(--color-success)}
+.content-main .gd-countdown.green{border-color:var(--color-success);color:var(--color-success-ink)}
 @media(max-width:767px){.facet-year-row{flex-wrap:wrap}.facet-year-row input{min-width:0;max-width:100%}}
 #ai-btn{background:var(--color-premium);border-radius:var(--radius-card)}
 #ai-btn:hover{transform:none}

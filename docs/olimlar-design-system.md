@@ -50,15 +50,16 @@ sahifa CSS'ida **xom HEX yozilmaydi** — faqat `var(--color-…)`.
 | `--color-brand-orange` | `#e8631a` | Faqat brend detali: logotipdagi nuqta, brend badge. Tugma foni emas. |
 | `--color-action-blue` | `#0056d6` | Asosiy tugma, link, active tab, focus ring, checkbox. |
 | `--color-action-blue-light` | `#6593dc` | Karta/chip hover chegarasi. |
-| `--color-action-blue-dark` | `#2f6feb` | Ko'k tugmaning bosilgan/hover holati. |
+| `--color-action-blue-dark` | `#0047b3` | Ko'k tugma/linkning hover holati (action'dan to'qroq). |
+| `--color-action-blue-pressed` | `#003a92` | Ko'k tugmaning bosilgan holati. |
 | `--color-text-primary` | `#0c0f12` | Sarlavha, asosiy matn, jadval kataklari. |
-| `--color-text-secondary` | `#57626f` | Label, nav link, ikkilamchi matn. |
-| `--color-text-muted` | `#57626f` | Meta, izoh, sanoq, placeholder. |
+| `--color-text-secondary` | `#3f4a57` | Label, nav link, ikkilamchi matn. |
+| `--color-text-muted` | `#5a6676` | Meta, izoh, sanoq, placeholder (oq, #f4f7fb va soft ustida ≥5:1). |
 | `--color-white` / `--color-surface` | `#ffffff` | Karta yuzasi. |
-| `--color-background` | `#f4f7fb` | Sahifa foni. |
-| `--color-background-soft` | `#f4f7fb` | Jadval sarlavhasi, footer, bo'sh holat. |
+| `--color-background` | `#f4f7fb` | Faqat sahifa foni — kartochka yoki tugma foni emas. |
+| `--color-background-soft` | `#edf1f7` | Jadval sarlavhasi, footer, bo'sh holat. |
 | `--color-border` | `#dce3ec` | Karta, maydon, jadvalning tashqi chegarasi. |
-| `--color-border-subtle` | `#dce3ec` | Ichki qator ajratgichi, grafik grid. |
+| `--color-border-subtle` | `#e8edf3` | Ichki qator ajratgichi, grafik grid. |
 | `--color-orange-soft` | `#fdeee3` | Brend badge foni. |
 | `--color-blue-soft` | `#ebf1f9` | Qator hover, chip, avatar, nav hover. |
 
@@ -66,16 +67,18 @@ sahifa CSS'ida **xom HEX yozilmaydi** — faqat `var(--color-…)`.
 
 | Token | Qiymat | Juftligi |
 | --- | --- | --- |
-| `--color-success` | `#0c8930` | `--color-success-soft` `#f4faf6` |
+| `--color-success` | `#0c8930` (matn: `--color-success-ink` `#0a7a2b`) | `--color-success-soft` `#f4faf6` |
 | `--color-error` | `#af1d1d` | `--color-error-soft` `#fdf4f4` |
-| `--color-notice` | `#c98a16` | `--color-notice-soft` `#fff9e6` |
+| `--color-notice` | `#c98a16` — faqat fill (oq fonda 2.95:1); matn/ikonka: `--color-warning-ink` `#805710` | `--color-notice-soft` `#fff9e6` |
 
 To'yingan rang — matn va ikonka uchun; soft rang — fon uchun. Juftlikni
 aralashtirmang.
 
 ### AI yuzasi
 
-`--color-ai-background: #1f2a44` — AI va premium bloklari, launcher va panel sarlavhasi uchun. Global dark tema emas.
+`--color-premium` (`--color-premium-navy: #1f2a44`) — premium bloklari, AI launcher va panel sarlavhasi.
+`--color-ai-background: #171426` — faqat semantik AI yuzalari uchun zaxira; premium undan foydalanmaydi.
+Barcha matn/fon juftlari `scripts/check_contrast_tokens.py` bilan tekshiriladi (testlarda ham).
 
 ### Rang bilan bog'liq uchta qoida
 
@@ -534,12 +537,11 @@ tuzatish" mumkin emas.
    tugmalari 40px, `.ol-chip` va `.ol-facets__opt` 32px. Ular eski;
    yangi komponentga ko'chirmang.
 5. **`--space-6` (6px)** 4px shkalasiga tushmaydi (4-bo'limga qarang).
-6. **`--color-ai-background`** e'lon qilingan, lekin iste'molchisi yo'q.
+6. **`--color-ai-background`** premium'dan ajratildi (`--color-premium`); hozircha AI-semantik iste'molchisi yo'q.
 7. **Token nomlari** ba'zi hujjatlardagi tavsifiy nomlardan farq qiladi:
    "pale orange" → `--color-orange-soft`, "pale blue" → `--color-blue-soft`.
    Qiymatlar bir xil; **kodda mavjud nom** ishlatiladi.
-8. **`--font-display`** nomiga qaramay sans-serif (Manrope). Serif faqat
-   `--font-serif`.
+8. **`--font-display`** endi `var(--font-serif)`. Manrope olib tashlandi; Source Serif 4 faqat 600.
 9. **Bootstrap 5.3 + Bootstrap Icons** hali CDN'dan yuklanadi; dizayn
    tizimi ular ustiga qo'yiladi va ularni global ravishda qayta yozmaydi.
 

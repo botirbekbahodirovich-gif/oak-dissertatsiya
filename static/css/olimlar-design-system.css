@@ -16,24 +16,32 @@
   --color-brand-orange: #e8631a;
   --color-action-blue: #0056d6;
   --color-action-blue-light: #6593dc;
-  --color-action-blue-dark: #2f6feb;
+  /* Hover/pressed — #0056d6 dan to'qroq (oq matn 8.2:1 / 10.4:1). */
+  --color-action-blue-dark: #0047b3;
+  --color-action-blue-pressed: #003a92;
 
   --color-text-primary: #0c0f12;
-  --color-text-secondary: #57626f;
-  --color-text-muted: #57626f;
+  /* Ierarxiya: primary > secondary > muted. Muted ham oq, #f4f7fb va
+     background-soft ustida ≥4.5:1 (scripts/check_contrast_tokens.py). */
+  --color-text-secondary: #3f4a57;
+  --color-text-muted: #5a6676;
 
   --color-white: #ffffff;
   --color-background: #f4f7fb;
-  --color-background-soft: #f4f7fb;
+  /* Kartochka ichidagi yumshoq yuza (jadval sarlavhasi, hover, empty state) —
+     oq kartochkadan ham, #f4f7fb sahifa fonidan ham ajralib turadi. */
+  --color-background-soft: #edf1f7;
 
   --color-border: #dce3ec;
-  --color-border-subtle: #dce3ec;
+  --color-border-subtle: #e8edf3;
 
   --color-orange-soft: #fdeee3;
   --color-blue-soft: #ebf1f9;
 
   --color-success: #0c8930;
   --color-success-soft: #f4faf6;
+  /* #0c8930 soft fonda 4.3:1 — matn uchun ink varianti (5.2:1). */
+  --color-success-ink: #0a7a2b;
 
   --color-error: #af1d1d;
   --color-error-soft: #fdf4f4;
@@ -41,10 +49,13 @@
   --color-notice: #c98a16;
   --color-notice-soft: #fff9e6;
 
-  /* Navy faqat AI va premium yuzalari uchun. */
-  --color-ai-background: #1f2a44;
+  /* Premium yuzalari (tasdiqlangan navy). AI tokenidan alohida. */
+  --color-premium-navy: #1f2a44;
+  /* Faqat semantik AI yuzalari uchun zaxira — premium uchun ishlatilmaydi. */
+  --color-ai-background: #171426;
 
-  /* H1–H3 va ilmiy sarlavhalar: self-hosted Source Serif 4 600. */
+  /* H1–H3 va ilmiy sarlavhalar: self-hosted Source Serif 4, faqat 600
+     og'irlik ishlatiladi va yuklanadi (font-synthesis o'chirilgan). */
   --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   /* UI, navigatsiya, jadval va boshqaruvlar: Inter. */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -132,6 +143,8 @@
    ataylab bersa, u yuqoriroq spetsifiklik bilan yengadi. */
 h1, h2 { font-family: var(--font-serif); }
 h3 { font-family: var(--font-serif); }
+/* Faqat 600 yuklanadi: sahifa 700/800 so'rasa ham soxta qalinlashtirilmaydi. */
+h1, h2, h3, .ol-hero-title, .ol-h1, .ol-h2 { font-weight: 600; font-synthesis: none; }
 h4, h5, h6 { font-family: var(--font-sans); }
 
 .ol-hero-title,
@@ -222,7 +235,7 @@ h4, h5, h6 { font-family: var(--font-sans); }
 
 .ol-btn--primary { background: var(--color-action-blue); color: var(--color-white); }
 .ol-btn--primary:hover { background: var(--color-action-blue-dark); color: var(--color-white); }
-.ol-btn--primary:active { background: var(--color-action-blue-dark); }
+.ol-btn--primary:active { background: var(--color-action-blue-pressed); }
 
 .ol-btn--secondary {
   background: var(--color-white);
@@ -270,7 +283,7 @@ a.ol-card:hover, .ol-card:has(a):hover { border-color: var(--color-action-blue-l
 .ol-badge--neutral { background: var(--color-background-soft); color: var(--color-text-secondary); }
 .ol-badge--info    { background: var(--color-blue-soft); color: var(--color-action-blue); }
 .ol-badge--brand   { background: var(--color-orange-soft); color: var(--color-brand-orange); }
-.ol-badge--success { background: var(--color-success-soft); color: var(--color-success); }
+.ol-badge--success { background: var(--color-success-soft); color: var(--color-success-ink); }
 .ol-badge--error   { background: var(--color-error-soft); color: var(--color-error); }
 .ol-badge--notice  { background: var(--color-notice-soft); color: #8a5200; }
 
@@ -846,8 +859,9 @@ body.ol-scroll-locked { overflow: hidden; }
   --color-brand-soft: var(--color-orange-soft);
   --color-action: var(--color-action-blue);
   --color-action-hover: var(--color-action-blue-dark);
+  --color-action-pressed: var(--color-action-blue-pressed);
   --color-action-soft: var(--color-blue-soft);
-  --color-premium: var(--color-ai-background);
+  --color-premium: var(--color-premium-navy);
   --color-danger: var(--color-error);
   --color-warning: var(--color-notice);
   --color-surface: var(--color-white);

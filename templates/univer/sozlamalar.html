@@ -3,7 +3,7 @@
 {% block uv_head %}
 <style>
   .uvs-add { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-  .uvs-add input, .uvs-add select { background:var(--color-background); color:var(--color-text-primary);
+  .uvs-add input, .uvs-add select { background:var(--color-surface); color:var(--color-text-primary);
     border:1px solid var(--color-border); border-radius:var(--radius-default); padding:8px 12px; font-size:0.85rem; }
   .uvs-add input[name=ident] { flex:1; min-width:200px; }
   .uvs-role { font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-default); }
@@ -20,7 +20,7 @@
   .uvs-slider { position:absolute; inset:0; background:var(--color-background);
     border-radius:var(--radius-default); transition:0.2s; cursor:pointer; }
   .uvs-slider:before { content:''; position:absolute; width:18px; height:18px; left:3px;
-    top:3px; background:var(--color-background); border-radius:50%; transition:0.2s; }
+    top:3px; background:var(--color-surface); border-radius:50%; transition:0.2s; }
   .uvs-switch input:checked + .uvs-slider { background:var(--color-background); }
   .uvs-switch input:checked + .uvs-slider:before { transform:translateX(20px); }
   .uvs-audit { max-height:340px; overflow-y:auto; }
@@ -103,7 +103,7 @@
           <td>
             {% if s.role != 'owner' %}
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <select data-role-for="{{ s.id }}" style="background:var(--color-background);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:4px 8px;font-size:0.76rem;">
+              <select data-role-for="{{ s.id }}" style="background:var(--color-surface);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:4px 8px;font-size:0.76rem;">
                 <option value="staff" {% if s.role == 'staff' %}selected{% endif %}>Xodim</option>
                 <option value="viewer" {% if s.role == 'viewer' %}selected{% endif %}>Ko'ruvchi</option>
               </select>

@@ -89,26 +89,32 @@ tokens, spelled exactly as below (`var(--color-…)`):
 
 | Token | Value | Use for |
 | --- | --- | --- |
-| `--color-brand-orange` | `#ff4203` | Brand accent only: wordmark dot, brand badge, one accent per view. Never a button fill. |
-| `--color-action-blue` | `#0056d6` | Primary buttons, links, active tab/nav, focus ring, checkbox accent. |
+| `--color-brand-orange` / `--color-brand` | `#e8631a` | Brand accent only: wordmark dot, brand badge, one accent per view. Never a button fill, never small text (3.4:1). |
+| `--color-brand-ink` | `#a9410d` | Brand-coloured **text** (6.1:1 on white). |
+| `--color-action-blue` / `--color-action` | `#0056d6` | Primary buttons, links, active tab/nav, focus ring, checkbox accent. |
 | `--color-action-blue-light` | `#6593dc` | Hover border on cards/chips. |
-| `--color-action-blue-dark` | `#00429f` | Pressed/hover state of blue fills. |
+| `--color-action-blue-dark` / `--color-action-hover` | `#0047b3` | Hover of blue fills and links (darker than action). |
+| `--color-action-blue-pressed` / `--color-action-pressed` | `#003a92` | Pressed/active state of blue fills. |
+| `--color-premium-navy` / `--color-premium` | `#1f2a44` | Premium surfaces, badges, buttons. White text 14.3:1. |
 | `--color-text-primary` | `#0c0f12` | Headings, body, table cells, tooltip surface. |
-| `--color-text-secondary` | `#333333` | Labels, nav links, secondary body. |
-| `--color-text-muted` | `#666666` | Meta, captions, counts, placeholders, axis ticks. |
-| `--color-white` / `--color-background` | `#ffffff` | Page and card surface. |
-| `--color-background-soft` | `#f6f6f6` | Table head, footer, empty state, neutral badge. |
-| `--color-border` | `#e6e6e6` | Every card/field/table outer border. |
-| `--color-border-subtle` | `#ecebe9` | Inner row separators, chart grid lines. |
-| `--color-orange-soft` | `#fff7ef` | Background of brand badge only. |
-| `--color-blue-soft` | `#ebf1f9` | Hover row, chip fill, avatar, nav hover. |
-| `--color-success` | `#0c8930` | Confirmed state text/icon. |
+| `--color-text-secondary` | `#3f4a57` | Labels, nav links, secondary body. |
+| `--color-text-muted` | `#5a6676` | Meta, captions, counts, placeholders, axis ticks. ≥5:1 on white, `#f4f7fb` and soft. |
+| `--color-white` / `--color-surface` | `#ffffff` | **Card** surface: cards, panels, modals, fields, table wraps. |
+| `--color-background` | `#f4f7fb` | **Page** background only. Never a card or a button fill. |
+| `--color-background-soft` | `#edf1f7` | Inside a card: table head, hover, empty state, neutral badge. |
+| `--color-border` | `#dce3ec` | Every card/field/table outer border. |
+| `--color-border-subtle` | `#e8edf3` | Inner row separators, chart grid lines. |
+| `--color-orange-soft` | `#fdeee3` | Background of brand badge only. |
+| `--color-blue-soft` / `--color-action-soft` | `#ebf1f9` | Hover row, chip fill, avatar, nav hover, info badge. |
+| `--color-success` | `#0c8930` | Success fill / icon. White text 4.5:1. |
+| `--color-success-ink` | `#0a7a2b` | Success **text** on `--color-success-soft` (5.2:1). |
 | `--color-success-soft` | `#f4faf6` | Success badge/alert background. |
-| `--color-error` | `#af1d1d` | Error text, danger button, notification dot. |
+| `--color-error` / `--color-danger` | `#af1d1d` | Error text, danger button, notification dot. |
 | `--color-error-soft` | `#fdf4f4` | Error badge/alert background. |
-| `--color-notice` | `#ff9900` | Warning icon, premium star, highlight mark. |
+| `--color-notice` / `--color-warning` | `#c98a16` | Warning **fill** only (2.95:1 on white — not for text or icons). Dark text on it: 6.5:1. |
+| `--color-warning-ink` | `#805710` | Warning text and icons (6.4:1 on white). |
 | `--color-notice-soft` | `#fff9e6` | Warning badge background, search highlight. |
-| `--color-ai-background` | `#171426` | **Reserved.** Semantic AI surfaces only. Currently has zero consumers. Never use it for a page, card, header or "dark mode". |
+| `--color-ai-background` | `#171426` | **Reserved.** Semantic AI surfaces only. Premium uses `--color-premium`. |
 
 Rules:
 
@@ -126,9 +132,9 @@ Rules:
 
 | Token | Value |
 | --- | --- |
-| `--font-serif` | `'Noto Serif', Georgia, 'Times New Roman', serif` |
-| `--font-sans` | `'Inter', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif` |
-| `--font-display` | `'Manrope', 'Inter', system-ui, sans-serif` (a **sans** face despite the name) |
+| `--font-serif` | `'Source Serif 4', Georgia, 'Times New Roman', serif` — self-hosted, **weight 600 only** |
+| `--font-sans` | `'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif` — self-hosted variable 100–900 |
+| `--font-display` | `var(--font-serif)` |
 
 Scale: `--text-hero` 56 · `--text-h1` 48 · `--text-h2` 40 · `--text-h3` 32 ·
 `--text-h4` 24 · `--text-h5` 20 · `--text-body-lg` 20 · `--text-body` 16 ·
@@ -138,7 +144,7 @@ Line height: `--leading-heading` 1.25 · `--leading-body` 1.5 ·
 
 Rules:
 
-1. **H1 and H2 are serif. H3–H6 and all UI text are sans.** This is already
+1. **H1–H3 are serif (Source Serif 4, 600). H4–H6 and all UI text are sans (Inter).** This is already
    enforced element-wide in the CSS; do not override `font-family` on a
    heading to "fix" it.
 2. Exactly **one `<h1>` per page**, produced by the `page_header` macro.
@@ -147,8 +153,10 @@ Rules:
 3. Never set a font size in `px`/`rem` literals in new code. Use the tokens.
 4. Uzbek is the UI language, including `aria-label`, placeholders and empty
    states. Fonts ship latin + cyrillic subsets — OAK data may be Cyrillic.
-5. Fonts are self-hosted in `base.html`. Do not add a Google Fonts or other
-   external font request.
+5. Fonts are self-hosted (Inter in `base.html`, Source Serif 4 600 in the
+   token CSS). Headings use `font-synthesis: none`, so asking for 700/800 on a
+   serif heading renders 600 — do not add weights without adding the file.
+   No Google Fonts or other external font request. Manrope was removed.
 
 ## 7. Grid and spacing
 
@@ -439,6 +447,7 @@ extend them.** New code uses `--color-*` and `.ol-*` only.
 
 Before saying the work is done, verify each line:
 
+- [ ] `python scripts/check_contrast_tokens.py` passes (every token text/background pair ≥ WCAG AA).
 - [ ] No raw HEX/RGB in the diff (`git diff -U0 | grep -nE '#[0-9a-fA-F]{3,8}|rgba?\('`) except inside `OlimlarCharts` usage.
 - [ ] No new `!important`, no `outline: none`, no `prefers-color-scheme: dark`.
 - [ ] Exactly one `<h1>`, produced by `page_header`.
