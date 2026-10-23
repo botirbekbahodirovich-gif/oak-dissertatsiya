@@ -1966,14 +1966,17 @@ def oak_ingest():
                     skip_reasons['duplicate'] = skip_reasons.get('duplicate', 0) + 1
                     continue
 
+                from institution_identity import resolve_institution
+                institution_id = resolve_institution(
+                    cur, muassasa, source='api_oak_ingest')
                 cur.execute(
                     """
                     INSERT INTO dissertations
                         (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
-                         mavzu_raqami, ilmiy_rahbar, muassasa,
+                         mavzu_raqami, ilmiy_rahbar, muassasa, institution_id,
                          ilmiy_kengash_raqami, opponent_1, opponent_2,
                          yetakchi_tashkilot, link)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (oak_id) DO NOTHING
                     """,
                     (
@@ -1986,6 +1989,7 @@ def oak_ingest():
                         str(item.get('Royxat raqami', '') or ''),
                         str(item.get('Ilmiy rahbar', '') or '')[:200],
                         muassasa,
+                        institution_id,
                         str(item.get('IK raqami', '') or ''),
                         str(item.get('Opponent 1', '') or '')[:200],
                         str(item.get('Opponent 2', '') or '')[:200],
@@ -2077,14 +2081,17 @@ def import_oak():
                 cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
                 exists = cur.fetchone() is not None
 
+                from institution_identity import resolve_institution
+                institution_id = resolve_institution(
+                    cur, muassasa, source='api_v1_import_oak')
                 cur.execute(
                     """
                     INSERT INTO dissertations
                         (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
-                         mavzu_raqami, ilmiy_rahbar, muassasa,
+                         mavzu_raqami, ilmiy_rahbar, muassasa, institution_id,
                          ilmiy_kengash_raqami, opponent_1, opponent_2,
                          yetakchi_tashkilot, link)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (oak_id) DO UPDATE SET
                         sana = EXCLUDED.sana,
                         daraja = EXCLUDED.daraja,
@@ -2094,6 +2101,7 @@ def import_oak():
                         mavzu_raqami = EXCLUDED.mavzu_raqami,
                         ilmiy_rahbar = EXCLUDED.ilmiy_rahbar,
                         muassasa = EXCLUDED.muassasa,
+                        institution_id = EXCLUDED.institution_id,
                         ilmiy_kengash_raqami = EXCLUDED.ilmiy_kengash_raqami,
                         opponent_1 = EXCLUDED.opponent_1,
                         opponent_2 = EXCLUDED.opponent_2,
@@ -2111,6 +2119,7 @@ def import_oak():
                         str(item.get('Royxat raqami', '') or ''),
                         str(item.get('Ilmiy rahbar', '') or '')[:200],
                         muassasa,
+                        institution_id,
                         str(item.get('IK raqami', '') or ''),
                         str(item.get('Opponent 1', '') or '')[:200],
                         str(item.get('Opponent 2', '') or '')[:200],
