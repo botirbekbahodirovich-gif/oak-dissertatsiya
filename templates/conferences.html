@@ -106,7 +106,7 @@
 {% block content %}
 <div class="kf-layout">
   <div class="kf-hero">
-    <h1>{{ '🇺🇿 Mahalliy konferensiyalar' if is_local else ' Xalqaro konferensiyalar' }}</h1>
+    <h1>{{ '🇺🇿 Mahalliy konferensiyalar' if is_local else 'Xalqaro konferensiyalar' }}</h1>
     <div class="kf-stats">
       <span><b data-count="{{ stats.total }}">{{ stats.total }}</b> ta konferensiya</span>
       {% if is_local %}<span><b data-count="{{ stats.regions }}">{{ stats.regions }}</b> mintaqa</span>

@@ -55,7 +55,7 @@
         <td>{{ g.deadline or '—' }}
           {% if g.expired %}<br><small style="color:var(--color-text-secondary);">tugagan</small>
           {% elif g.days_remaining is not none %}<br><small style="color:var(--color-action);">{{ g.days_remaining }} kun</small>{% endif %}</td>
-        <td>{{ ' Aktiv' if g.is_active and not g.expired else ('⌛' if g.expired else ' Nofaol') }}</td>
+        <td>{{ 'Aktiv' if g.is_active and not g.expired else ('⌛' if g.expired else 'Nofaol') }}</td>
         <td>{% if g.is_featured %}<span role="img" aria-label="Featured" title="Featured"><i class="bi bi-star-fill" aria-hidden="true"></i></span>{% else %}—{% endif %}</td>
         <td>{{ g.view_count }}</td>
         <td style="white-space:nowrap;">
