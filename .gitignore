@@ -38,3 +38,11 @@ data/rescrape_cache/
 # Ilmiy maqolalar PDF fayllari — runtime yuklamalar, static/ tashqarisida
 # saqlanadi (nginx to'g'ridan-to'g'ri bermasin). Hech qachon commit qilinmaydi.
 storage/
+
+# Lokal/serverdagi runtime va ish qoldiqlari — hech qachon commit qilinmaydi.
+# artifacts/ — skrinshot/brauzer hisobotlari; static/uploads/ — foydalanuvchi
+# yuklamalari; scraper.log — cron logi; *.dump — pg_dump zaxiralari.
+artifacts/
+static/uploads/
+scraper.log
+*.dump
