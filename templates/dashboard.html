@@ -374,7 +374,7 @@
         <div class="dropdown-panel" style="display:none;"><label class="ol-label" for="ol-field-2">Yil</label>
 <input id="ol-field-2" type="text" class="dropdown-search" placeholder="Yil..."><ul class="option-list"></ul></div>
       </div>
-      <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;"> Tozalash</button>
+      <button id="btn-reset" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;"><i class="bi bi-x-lg" aria-hidden="true"></i> Tozalash</button>
     </div>
     <!-- Search stats bar -->
     <div id="search-stats">
@@ -681,7 +681,7 @@
           <td data-col-key="ixti" class="col-ixtisoslik cell-ixtisoslik">${shiftLink}</td>
           <td data-col-key="rahbar" class="cell-rahbar">${supervisorCell(r.Ilmiy_rahbar, r.Ilmiy_rahbar_short, supervisorCount)}${qualityDot}</td>
           <td data-col-key="sana" class="cell-sana" onclick="event.stopPropagation();window.location.href='?search='+encodeURIComponent('${escHtml(r.Sana)}')">${fmtSana(r.Sana)}</td>
-          <td data-col-key="star" class="cell-star ${r.bookmarked ? 'on' : ''}" onclick="event.stopPropagation();toggleBookmark(${num}, this)" title="Saqlash">${r.bookmarked ? '' : ''}</td>
+          <td data-col-key="star" class="cell-star ${r.bookmarked ? 'on' : ''}" onclick="event.stopPropagation();toggleBookmark(${num}, this)" title="Saqlash">${r.bookmarked ? '<i class="bi bi-star-fill" aria-hidden="true"></i>' : '<i class="bi bi-star" aria-hidden="true"></i>'}</td>
         </tr>`);
       rows.push(`<tr id="${rowId}" class="detail-row" style="display:none;">
           <td colspan="8">
@@ -696,7 +696,7 @@
             <div class="detail-actions">
               <a href="/dissertation/${num}" class="btn btn-sm btn-action" onclick="event.stopPropagation()"><i class="bi bi-file-text me-1"></i>Batafsil</a>
               <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openCite(${i})"><i class=\"bi bi-quote\"></i> Iqtibos</button>
-              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();toggleBookmark(${num}, this.closest('tr').previousElementSibling?.querySelector('.cell-star'))">${r.bookmarked ? ' Saqlangan' : ' Saqlash'}</button>
+              <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();toggleBookmark(${num}, this.closest('tr').previousElementSibling?.querySelector('.cell-star'))">${r.bookmarked ? '<i class="bi bi-star-fill" aria-hidden="true"></i> Saqlangan' : '<i class="bi bi-star" aria-hidden="true"></i> Saqlash'}</button>
               ${(r.Link || r.oak_id) ? `<a href="${escHtml(r.Link || 'https://oak.uz/pages/' + r.oak_id)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>OAK saytida ko'rish →</a>` : ''}
             </div>
           </td>
@@ -1443,7 +1443,7 @@
     chips.forEach(c => {
       const el = document.createElement('span');
       el.className = 'facet-chip';
-      el.innerHTML = escHtml(c.label) + ' <button></button>';
+      el.innerHTML = escHtml(c.label) + ' <button aria-label="Filtrni olib tashlash"><i class="bi bi-x-lg" aria-hidden="true"></i></button>';
       el.querySelector('button').addEventListener('click', c.fn);
       host.appendChild(el);
     });
@@ -1515,7 +1515,7 @@
   document.getElementById('copy-link-btn')?.addEventListener('click', function() {
     const url = window.location.href;
     (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
-      .then(() => { this.textContent = ' Nusxalandi'; setTimeout(() => { this.innerHTML = '<i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash'; }, 1600); })
+      .then(() => { this.innerHTML = '<i class="bi bi-check-lg" aria-hidden="true"></i> Nusxalandi'; setTimeout(() => { this.innerHTML = '<i class="bi bi-link-45deg" aria-hidden="true"></i> Havolani nusxalash'; }, 1600); })
       .catch(() => prompt('Havolani nusxalang:', url));
   });
 
@@ -1558,7 +1558,7 @@
       if (!d.success) return;
       if (starEl) {
         starEl.classList.toggle('on', d.bookmarked);
-        starEl.textContent = d.bookmarked ? '' : '';
+        starEl.innerHTML = d.bookmarked ? '<i class="bi bi-star-fill" aria-hidden="true"></i>' : '<i class="bi bi-star" aria-hidden="true"></i>';
       }
       const rec = currentRecords.find(r => r.id === dissId);
       if (rec) rec.bookmarked = d.bookmarked;
@@ -1595,7 +1595,7 @@
   window.copyCite = function(boxId, btn) {
     const text = document.getElementById(boxId).textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
-      .then(() => { btn.textContent = ' Nusxalandi'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash'; }, 1500); })
+      .then(() => { btn.innerHTML = '<i class="bi bi-check-lg" aria-hidden="true"></i> Nusxalandi'; setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard" aria-hidden="true"></i> Nusxalash'; }, 1500); })
       .catch(() => prompt('Nusxalang:', text));
   };
 
@@ -1634,7 +1634,7 @@
     html += '<span class="diss-card-badge" style="background:' + degreeColor + ';">' + degreeText + '</span>';
     html += '<span class="diss-card-date">' + escHtml(fmtSana(d.Sana)) + '</span>';
     html += '</div>';
-    html += '<div class="diss-card-avatar"></div>';
+    html += '<div class="diss-card-avatar"><i class="bi bi-mortarboard" aria-hidden="true"></i></div>';
     html += '<h3 class="diss-card-name">';
     html += olimName
       ? '<a href="/olim/' + encodeURIComponent(olimName) + '">' + escHtml(olimDisp) + '</a>'

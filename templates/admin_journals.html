@@ -101,7 +101,7 @@
       <tr class="adm-jr-row" data-search="{{ (j.name ~ ' ' ~ j.issn)|lower }}">
         <td>{{ j.id }}</td>
         <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:var(--radius-default);object-fit:cover;">{% else %}{% endif %}</td>
-        <td><a href="/journals/{{ j.id }}" style="color:var(--color-action);">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge"></span>{% endif %}
+        <td><a href="/journals/{{ j.id }}" style="color:var(--color-action);">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>{% endif %}
           {% if j.moderation_status == 'pending' %}
           <span style="font-size:0.68rem;font-weight:600;background:var(--color-background);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;white-space:nowrap;">⏳ Moderatsiyada</span>
           {% endif %}

@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% from 'components/research_cards.html' import dissertation_card, grant_card, empty_state %}
-{% block title %}Olimlar.uz — O‘zbekiston ilm-fan xaritasi{% endblock %}
-{% block meta_description %}O‘zbekiston olimlari, dissertatsiyalari va ilmiy tashkilotlari. Ilmiy faoliyatni izlang, grantlarni kuzating va tadqiqot yo‘nalishlarini tahlil qiling.{% endblock %}
-{% block og_title %}Olimlar.uz — O‘zbekiston ilm-fan xaritasi{% endblock %}
+{% block title %}Olimlar.uz — Oʻzbekiston ilm-fan xaritasi{% endblock %}
+{% block meta_description %}Oʻzbekiston olimlari, dissertatsiyalari va ilmiy tashkilotlari. Ilmiy faoliyatni izlang, grantlarni kuzating va tadqiqot yoʻnalishlarini tahlil qiling.{% endblock %}
+{% block og_title %}Olimlar.uz — Oʻzbekiston ilm-fan xaritasi{% endblock %}
 {% block content %}
 {% if current_user.is_authenticated %}
 <div class="ol-home-welcome"><span>Xush kelibsiz, {{ current_user.username }}.</span><a href="/cabinet">Shaxsiy kabinet <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
 {% endif %}
 <section class="ol-discovery" aria-labelledby="discovery-title">
   <div class="ol-discovery__intro">
-    <p class="ol-discovery__eyebrow">O‘zbekiston ilm-fan xaritasi</p>
+    <p class="ol-discovery__eyebrow">Oʻzbekiston ilm-fan xaritasi</p>
     <h1 id="discovery-title">Ilmiy faoliyatni izlang, kuzating va tahlil qiling.</h1>
     <p class="ol-discovery__lead">Olimlar, dissertatsiyalar, universitetlar va ilmiy imkoniyatlar. Tadqiqotingiz uchun kerakli ma’lumotni bir joydan toping.</p>
     <form id="hx-search-form" class="ol-search" action="/dissertatsiyalar" method="get" role="search">
@@ -18,26 +18,26 @@
       <input id="hx-search-input" name="q" type="search" placeholder="Olim, dissertatsiya yoki mavzu qidiring" aria-describedby="home-search-hint" enterkeyhint="search">
       <button class="ol-btn ol-btn--primary" type="submit">Qidirish</button>
     </form>
-    <div class="ol-search-modes" role="group" aria-label="Qidiruv bo‘limi">
-      <button class="ol-search-mode" type="button" data-search-action="/dissertatsiyalar" data-search-hint="Dissertatsiyalar bazasidagi olimlar va mavzular bo‘yicha qidiruv." aria-pressed="true">Dissertatsiyalar</button>
-      <button class="ol-search-mode" type="button" data-search-action="/olimlar" data-search-hint="Olimlar katalogida ism, ixtisoslik yoki muassasa bo‘yicha qidiruv." aria-pressed="false">Olimlar</button>
-      <button class="ol-search-mode" type="button" data-search-action="/universities" data-search-hint="Universitet va ilmiy tashkilot nomi bo‘yicha qidiruv." aria-pressed="false">Universitetlar</button>
-      <button class="ol-search-mode" type="button" data-search-action="/grants" data-search-hint="Grant nomi va kalit so‘zlar bo‘yicha qidiruv." aria-pressed="false">Grantlar</button>
+    <div class="ol-search-modes" role="group" aria-label="Qidiruv boʻlimi">
+      <button class="ol-search-mode" type="button" data-search-action="/dissertatsiyalar" data-search-hint="Dissertatsiyalar bazasidagi olimlar va mavzular boʻyicha qidiruv." aria-pressed="true">Dissertatsiyalar</button>
+      <button class="ol-search-mode" type="button" data-search-action="/olimlar" data-search-hint="Olimlar katalogida ism, ixtisoslik yoki muassasa boʻyicha qidiruv." aria-pressed="false">Olimlar</button>
+      <button class="ol-search-mode" type="button" data-search-action="/universities" data-search-hint="Universitet va ilmiy tashkilot nomi boʻyicha qidiruv." aria-pressed="false">Universitetlar</button>
+      <button class="ol-search-mode" type="button" data-search-action="/grants" data-search-hint="Grant nomi va kalit soʻzlar boʻyicha qidiruv." aria-pressed="false">Grantlar</button>
     </div>
-    <p id="home-search-hint" class="ol-search-hint" aria-live="polite">Dissertatsiyalar bazasidagi olimlar va mavzular bo‘yicha qidiruv.</p>
+    <p id="home-search-hint" class="ol-search-hint" aria-live="polite">Dissertatsiyalar bazasidagi olimlar va mavzular boʻyicha qidiruv.</p>
   </div>
   {% if hstats.values()|sum > 0 %}
-  <div class="ol-overview" aria-label="Platforma ko‘rsatkichlari">
+  <div class="ol-overview" aria-label="Platforma koʻrsatkichlari">
     {% for key,label,href in [('researchers','Olimlar','/olimlar'),('dissertations','Dissertatsiyalar','/dissertatsiyalar'),('universities','Ilmiy muassasalar','/universities'),('grants','Grantlar','/grants')] %}
     <a href="{{ href }}"><strong>{{ '{:,}'.format(hstats.get(key, 0)).replace(',', ' ') }}</strong><span>{{ label }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></span></a>
     {% endfor %}
   </div>
-  {% else %}<p class="ol-search-hint text-center mt-4">Platforma ko‘rsatkichlari hozircha mavjud emas.</p>{% endif %}
+  {% else %}<p class="ol-search-hint text-center mt-4">Platforma koʻrsatkichlari hozircha mavjud emas.</p>{% endif %}
 </section>
 <section class="ol-home-section" aria-labelledby="recent-title">
-  <div class="ol-section-header"><h2 id="recent-title">So‘nggi dissertatsiyalar</h2><a href="/dissertatsiyalar">Barcha dissertatsiyalar <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+  <div class="ol-section-header"><h2 id="recent-title">Soʻnggi dissertatsiyalar</h2><a href="/dissertatsiyalar">Barcha dissertatsiyalar <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
   {% if recent %}<div class="ol-discovery-grid">{% for r in recent[:4] %}{{ dissertation_card(r) }}{% endfor %}</div>
-  {% else %}{{ empty_state('E’lonlar hozircha ko‘rinmayapti', 'Dissertatsiyalar katalogida kerakli mavzuni qidirishingiz mumkin.', '/dissertatsiyalar', 'Katalogni ochish') }}{% endif %}
+  {% else %}{{ empty_state('E’lonlar hozircha koʻrinmayapti', 'Dissertatsiyalar katalogida kerakli mavzuni qidirishingiz mumkin.', '/dissertatsiyalar', 'Katalogni ochish') }}{% endif %}
 </section>
 <section class="ol-home-section" aria-labelledby="scholars-title">
   <div class="ol-section-header"><h2 id="scholars-title">Ilmiy hamjamiyat</h2><a href="/olimlar" data-goal="card_profile_click">Olimlar katalogi <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
@@ -51,32 +51,32 @@
     </article>
     {% endfor %}
   </div>
-  <p class="ol-meta mt-3">Manba: uz.h-index.com{% if top_hindex['date'] %}, {{ top_hindex['date'] }}{% endif %}. <a href="/reyting">To‘liq reyting</a></p>
-  {% else %}{{ empty_state('Olimlarni yo‘nalishingiz bo‘yicha toping', 'Katalogni ixtisoslik, muassasa va hudud bo‘yicha saralang.', '/olimlar', 'Olimlarni izlash') }}{% endif %}
+  <p class="ol-meta mt-3">Manba: uz.h-index.com{% if top_hindex['date'] %}, {{ top_hindex['date'] }}{% endif %}. <a href="/reyting">Toʻliq reyting</a></p>
+  {% else %}{{ empty_state('Olimlarni yoʻnalishingiz boʻyicha toping', 'Katalogni ixtisoslik, muassasa va hudud boʻyicha saralang.', '/olimlar', 'Olimlarni izlash') }}{% endif %}
 </section>
 <section class="ol-home-section" aria-labelledby="institutions-title">
   <div class="ol-section-header"><h2 id="institutions-title">Universitetlar va ilmiy tashkilotlar</h2><a href="/universities">Barcha muassasalar <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
   <div class="ol-home-tools">
-    <a href="/universities"><i class="bi bi-building" aria-hidden="true"></i><h3>Ilmiy muassasalar</h3><p>Universitetlarning olimlari, dissertatsiyalari va ilmiy yo‘nalishlarini ko‘ring.</p></a>
-    <a href="/reyting/tashkilotlar"><i class="bi bi-list-ol" aria-hidden="true"></i><h3>Tashkilotlar reytingi</h3><p>Manbasi va hisoblash usuli ko‘rsatilgan ilmiy ko‘rsatkichlarni solishtiring.</p></a>
-    <a href="/tadqiqot-xaritasi"><i class="bi bi-map" aria-hidden="true"></i><h3>Tadqiqot xaritasi</h3><p>Ilmiy faoliyatning hududlar bo‘yicha taqsimlanishini o‘rganing.</p></a>
+    <a href="/universities"><i class="bi bi-building" aria-hidden="true"></i><h3>Ilmiy muassasalar</h3><p>Universitetlarning olimlari, dissertatsiyalari va ilmiy yoʻnalishlarini koʻring.</p></a>
+    <a href="/reyting/tashkilotlar"><i class="bi bi-list-ol" aria-hidden="true"></i><h3>Tashkilotlar reytingi</h3><p>Manbasi va hisoblash usuli koʻrsatilgan ilmiy koʻrsatkichlarni solishtiring.</p></a>
+    <a href="/tadqiqot-xaritasi"><i class="bi bi-map" aria-hidden="true"></i><h3>Tadqiqot xaritasi</h3><p>Ilmiy faoliyatning hududlar boʻyicha taqsimlanishini oʻrganing.</p></a>
   </div>
 </section>
 <section class="ol-home-section" aria-labelledby="grants-title">
   <div class="ol-section-header"><h2 id="grants-title">Ochiq grant imkoniyatlari</h2><a href="/grants" data-goal="card_grants_click">Barcha grantlar <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
   {% if deadline_grants %}<div class="ol-discovery-grid">{% for g in deadline_grants[:4] %}{{ grant_card(g) }}{% endfor %}</div>
-  {% else %}{{ empty_state('Faol grant muddatlari ko‘rinmayapti', 'Katalogda grant talablari va mavjud imkoniyatlarni tekshiring.', '/grants', 'Grantlar katalogi') }}{% endif %}
+  {% else %}{{ empty_state('Faol grant muddatlari koʻrinmayapti', 'Katalogda grant talablari va mavjud imkoniyatlarni tekshiring.', '/grants', 'Grantlar katalogi') }}{% endif %}
 </section>
 <section class="ol-home-section" aria-labelledby="analysis-title">
   <div class="ol-section-header"><h2 id="analysis-title">Ilm-fan raqamlarda</h2><a href="/stats">Barcha tahlillar <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
   <div class="ol-discovery-grid ol-analysis-preview" data-home-analytics>
-    <div class="ol-chart"><h3 class="ol-chart__title">Dissertatsiyalar yillar bo‘yicha</h3><p class="ol-chart__note">Bazadagi sanasi ko‘rsatilgan himoyalar soni.</p><div id="home-year-chart" aria-live="polite" aria-busy="true"><div class="ol-skeleton"></div><div class="ol-skeleton"></div><p>Ma’lumotlar yuklanmoqda…</p></div></div>
-    <div class="ol-chart"><h3 class="ol-chart__title">Faol ilmiy muassasalar</h3><p class="ol-chart__note">Bazadagi dissertatsiyalar soni bo‘yicha. Sifat reytingi emas.</p><div id="home-institution-chart" aria-live="polite" aria-busy="true"><div class="ol-skeleton"></div><div class="ol-skeleton"></div><p>Ma’lumotlar yuklanmoqda…</p></div></div>
+    <div class="ol-chart"><h3 class="ol-chart__title">Dissertatsiyalar yillar boʻyicha</h3><p class="ol-chart__note">Bazadagi sanasi koʻrsatilgan himoyalar soni.</p><div id="home-year-chart" aria-live="polite" aria-busy="true"><div class="ol-skeleton"></div><div class="ol-skeleton"></div><p>Ma’lumotlar yuklanmoqda…</p></div></div>
+    <div class="ol-chart"><h3 class="ol-chart__title">Faol ilmiy muassasalar</h3><p class="ol-chart__note">Bazadagi dissertatsiyalar soni boʻyicha. Sifat reytingi emas.</p><div id="home-institution-chart" aria-live="polite" aria-busy="true"><div class="ol-skeleton"></div><div class="ol-skeleton"></div><p>Ma’lumotlar yuklanmoqda…</p></div></div>
   </div>
   <div class="ol-home-tools">
-    <a href="/trends"><i class="bi bi-graph-up" aria-hidden="true"></i><h3>Yillar dinamikasi</h3><p>Dissertatsiyalar soni va ilmiy yo‘nalishlarning yillar davomida o‘zgarishi.</p></a>
-    <a href="/stats"><i class="bi bi-bar-chart" aria-hidden="true"></i><h3>Ilmiy statistika</h3><p>Darajalar, ixtisosliklar va muassasalar kesimidagi mavjud ko‘rsatkichlar.</p></a>
-    <a href="/clustering"><i class="bi bi-collection" aria-hidden="true"></i><h3>Mavzular tahlili</h3><p>O‘zaro bog‘liq ilmiy mavzular va tadqiqot yo‘nalishlarini o‘rganing.</p></a>
+    <a href="/trends"><i class="bi bi-graph-up" aria-hidden="true"></i><h3>Yillar dinamikasi</h3><p>Dissertatsiyalar soni va ilmiy yoʻnalishlarning yillar davomida oʻzgarishi.</p></a>
+    <a href="/stats"><i class="bi bi-bar-chart" aria-hidden="true"></i><h3>Ilmiy statistika</h3><p>Darajalar, ixtisosliklar va muassasalar kesimidagi mavjud koʻrsatkichlar.</p></a>
+    <a href="/clustering"><i class="bi bi-collection" aria-hidden="true"></i><h3>Mavzular tahlili</h3><p>Oʻzaro bogʻliq ilmiy mavzular va tadqiqot yoʻnalishlarini oʻrganing.</p></a>
   </div>
 </section>
 {% if upcoming_confs %}
@@ -86,7 +86,7 @@
 </section>
 {% endif %}
 <section class="ol-home-section ol-premium-panel" aria-labelledby="premium-title">
-  <div><h2 id="premium-title">Tadqiqotingiz uchun AI vositalari</h2><p>Mavzu tahlili, dissertatsiya konstruktori va ilmiy ish jarayonini qo‘llab-quvvatlovchi mavjud vositalar.</p></div>
-  <a class="ol-btn ol-btn--primary" href="/premium" data-goal="hero_quick_tahlil">Imkoniyatlarni ko‘rish <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+  <div><h2 id="premium-title">Tadqiqotingiz uchun AI vositalari</h2><p>Mavzu tahlili, dissertatsiya konstruktori va ilmiy ish jarayonini qoʻllab-quvvatlovchi mavjud vositalar.</p></div>
+  <a class="ol-btn ol-btn--primary" href="/premium" data-goal="hero_quick_tahlil">Imkoniyatlarni koʻrish <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
 </section>
 {% endblock %}

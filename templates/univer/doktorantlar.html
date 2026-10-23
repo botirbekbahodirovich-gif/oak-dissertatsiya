@@ -89,8 +89,8 @@
     <tbody>
       {% for r in rows %}
       <tr class="uvk-row" data-uid="{{ r.user_id }}">
-        <td>{% if r.risk == 'red' %}<span class="uvk-risk" title="{{ r.risk_note }}"></span>
-          {% elif r.risk == 'yellow' %}<span class="uvk-risk" title="{{ r.risk_note }}"></span>{% endif %}</td>
+        <td>{% if r.risk == 'red' %}<span class="uvk-risk" title="{{ r.risk_note }}"><i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i></span>
+          {% elif r.risk == 'yellow' %}<span class="uvk-risk" title="{{ r.risk_note }}"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i></span>{% endif %}</td>
         <td><div class="uvk-name">
           {% if r.photo_url %}<img class="uvk-av" src="{{ r.photo_url }}" alt="">
           {% else %}<span class="uvk-av">{{ (r.name or '?')[0]|upper }}</span>{% endif %}
@@ -127,7 +127,7 @@
 {% else %}
 <div class="uv-card">
   <div class="uv-empty" style="padding-bottom:0.6rem;">
-    <div style="font-size:2rem;"></div>
+    <div style="font-size:2rem;"><i class="bi bi-mortarboard" aria-hidden="true"></i></div>
     Hozircha doktorantlaringiz platformada faol emas
   </div>
   <div class="uvk-invite">
@@ -140,7 +140,7 @@
     </div>
     <button class="uv-btn ghost" style="margin-top:10px;" onclick="
       navigator.clipboard.writeText(document.getElementById('uvk-invite-text').textContent.trim())
-        .then(function(){ this.textContent=' Nusxalandi'; }.bind(this))"> Nusxalash</button>
+        .then(function(){ this.textContent='Nusxalandi'; }.bind(this))"> Nusxalash</button>
   </div>
 </div>
 {% endif %}
@@ -249,7 +249,7 @@ document.querySelectorAll('.uvk-tab').forEach(function (t) {
   document.getElementById('uvk-copy-all').addEventListener('click', function () {
     var text = lastLinks.map(function (l) { return l.email + ': ' + l.url; }).join('\n');
     navigator.clipboard.writeText(text);
-    this.textContent = ' Nusxalandi';
+    this.textContent = 'Nusxalandi';
   });
 })();
 {% endif %}

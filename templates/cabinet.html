@@ -183,7 +183,7 @@
                 onmouseover="this.style.background='rgba(239,68,68,0.3)'"
                 onmouseout="this.style.background='rgba(239,68,68,0.15)'"
                 title="Biriktirilgan olim profilini ajratish">
-                 Ajratish
+                <i class="bi bi-x-lg" aria-hidden="true"></i> Ajratish
               </button>
             </div>
             {% else %}
@@ -273,7 +273,7 @@
             {% elif not claimed %}
               <p class="field-empty" style="margin:0;">Hali ma'lumot kiritilmagan — "Dissertatsiyalar" bo'limidan biriktiring yoki "Tahrirlash"da kiriting.</p>
             {% endif %}
-            {% if claimed %}<div class="claimed-list" style="margin-top:10px;">{% for c in claimed %}<span class="claimed-chip"> {{ c }}</span>{% endfor %}</div>{% endif %}
+            {% if claimed %}<div class="claimed-list" style="margin-top:10px;">{% for c in claimed %}<span class="claimed-chip"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ c }}</span>{% endfor %}</div>{% endif %}
           </div>
 
           <!-- Shogirdlar (overview) -->
@@ -449,10 +449,10 @@
       <section class="cab-panel" id="panel-diss">
         <div class="cab-section">
           <h3>Dissertatsiyani biriktirish</h3>
-          <p class="desc">O'z ismingizni qidiring va "Bu men " tugmasini bosing.</p>
+          <p class="desc">O'z ismingizni qidiring va "Bu men" tugmasini bosing.</p>
           {% if claimed %}
           <div><strong style="color:var(--color-action);font-size:0.85rem;">Biriktirilgan:</strong>
-            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip"> {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-default);font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'"> Ajratish</button></span>{% endfor %}</div>
+            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-default);font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'"><i class="bi bi-x-lg" aria-hidden="true"></i> Ajratish</button></span>{% endfor %}</div>
           </div>
           {% endif %}
           <div style="margin-top:14px;">
@@ -512,7 +512,7 @@
             {% for m in maqolalar %}
             <div class="item-card">
               <div class="it-title">{{ m.title }}</div>
-              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.journal_flag == 'trusted' %} {% elif m.journal_flag == 'suspect' %} <span style="color:var(--color-text-secondary);" title="Ehtiyot bo'ling — nashriyot shubhali deb belgilangan"></span>{% elif m.journal_flag == 'unknown' %} <span style="color:var(--color-text-secondary);" title="OAK/Scopus ro'yxatlarida topilmadi"></span>{% endif %}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
+              <div class="it-meta">{% if m.year %}{{ m.year }} · {% endif %}{{ m.journal or '' }}{% if m.journal_flag == 'trusted' %} <i class="bi bi-check-circle" aria-hidden="true"></i>{% elif m.journal_flag == 'suspect' %} <span style="color:var(--color-text-secondary);" title="Ehtiyot bo'ling — nashriyot shubhali deb belgilangan"><i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i></span>{% elif m.journal_flag == 'unknown' %} <span style="color:var(--color-text-secondary);" title="OAK/Scopus ro'yxatlarida topilmadi"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>{% endif %}{% if m.citations %} · {{ m.citations }} sitata{% endif %}</div>
               <div class="it-actions">
                 <button class="it-btn it-edit" onclick='editMaqola({{ m|tojson }})'>Tahrirlash </button>
                 <button class="it-btn it-del" onclick="delItem('maqola', {{ m.id }})">O'chirish </button>
@@ -741,7 +741,7 @@
           <div class="np-card" id="np-univ-privacy" style="display:none;">
             <p class="np-group-title">Maxfiylik</p>
             <div class="np-row">
-              <span class="np-ic"></span>
+              <span class="np-ic"><i class="bi bi-bank" aria-hidden="true"></i></span>
               <div class="np-label"><b>Universitetim faolligimni ko'rmasin</b>
                 <small>Yoqilsa, universitetingizning B2B panelida progress
                 ko'rsatkichlaringiz (so'z soni, nashrlar, muddatlar)
@@ -851,7 +851,7 @@ function saveForm(formId) {
     body[el.getAttribute('data-pf')] = (el.value || '').trim();
   });
   post('/cabinet/api/profile/save', body).then(function (data) {
-    if (data.ok) { toast('Saqlandi ', true); setTimeout(function () { location.reload(); }, 600); }
+    if (data.ok) { toast('Saqlandi', true); setTimeout(function () { location.reload(); }, 600); }
     else { toast(data.error || 'Xatolik yuz berdi', false); }
   }).catch(function () { toast('Tarmoq xatosi', false); });
 }
@@ -871,8 +871,8 @@ function unameCheck() {
     fetch('/api/username/check?slug=' + encodeURIComponent(v))
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (d.available) { st.className = 'uname-status ok'; st.textContent = ' Bu nom bo\'sh'; }
-        else { st.className = 'uname-status bad'; st.textContent = ' ' + (d.error || 'Band'); }
+        if (d.available) { st.className = 'uname-status ok'; st.textContent = 'Bu nom bo\'sh'; }
+        else { st.className = 'uname-status bad'; st.textContent = (d.error || 'Band'); }
       }).catch(function () { st.className = 'uname-status'; st.textContent = ''; });
   }, 350);
 }
@@ -936,7 +936,7 @@ function saveLinksForm() {
     if (savingEl) savingEl.classList.add('on');
     post('/api/v1/notifications/prefs', body).then(function (d) {
       if (savingEl) savingEl.classList.remove('on');
-      if (d.success) { toast('Sozlamalar saqlandi ', true); }
+      if (d.success) { toast('Sozlamalar saqlandi', true); }
       else { toast(d.error || 'Xatolik yuz berdi', false); }
     }).catch(function () {
       if (savingEl) savingEl.classList.remove('on');
@@ -967,7 +967,7 @@ function saveLinksForm() {
   cb.addEventListener('change', function () {
     post('/univer/api/privacy', { hidden: cb.checked }).then(function (d) {
       if (d.success) toast(cb.checked ?
-        "Universitetingiz endi faolligingizni ko'rmaydi " : 'Sozlama saqlandi ', true);
+        "Universitetingiz endi faolligingizni ko'rmaydi" : 'Sozlama saqlandi', true);
       else toast(d.error || 'Xatolik yuz berdi', false);
     }).catch(function () { toast('Tarmoq xatosi', false); });
   });
@@ -1026,7 +1026,7 @@ if (claimSearch) {
           }
           count.appendChild(document.createTextNode(String(it.count || 0) + ' ta dissertatsiya'));
           var claim = document.createElement('button'); claim.className = 'cab-btn';
-          claim.textContent = 'Bu men ';
+          claim.textContent = 'Bu men';
           claim.addEventListener('click', function () { claimName(it.name || ''); });
           info.append(person, topic, count); card.append(info, claim); box.appendChild(card);
         });
@@ -1037,7 +1037,7 @@ if (claimSearch) {
 }
 function claimName(name) {
   post('/cabinet/api/claim', { olim_name: name }).then(function (d) {
-    if (d.ok) { toast('Biriktirildi ', true); setTimeout(function () { location.reload(); }, 700); }
+    if (d.ok) { toast('Biriktirildi', true); setTimeout(function () { location.reload(); }, 700); }
     else toast(d.error || 'Xatolik', false);
   });
 }
@@ -1073,18 +1073,18 @@ function unclaimDissertation(btn, olimName) {
   .then(function (r) { return r.json(); })
   .then(function (data) {
     if (data.success) {
-      btn.textContent = ' Ajratildi';
+      btn.textContent = 'Ajratildi';
       btn.style.borderColor = OlimlarCharts.tokens.success;
       btn.style.color = OlimlarCharts.tokens.success;
       setTimeout(function () { location.reload(); }, 800);
     } else {
       alert(data.error || 'Xatolik yuz berdi');
-      btn.disabled = false; btn.textContent = ' Ajratish';
+      btn.disabled = false; btn.textContent = 'Ajratish';
     }
   })
   .catch(function () {
     alert('Server bilan aloqa xatosi');
-    btn.disabled = false; btn.textContent = ' Ajratish';
+    btn.disabled = false; btn.textContent = 'Ajratish';
   });
 }
 
@@ -1119,7 +1119,7 @@ function saveItem(t) {
   var id = idEl ? idEl.value : '';
   var url = '/cabinet/api/' + APIPATH[t] + '/' + (id ? 'edit/' + id : 'add');
   post(url, body).then(function (d) {
-    if (d.ok) { toast('Saqlandi ', true); setTimeout(function () { location.reload(); }, 600); }
+    if (d.ok) { toast('Saqlandi', true); setTimeout(function () { location.reload(); }, 600); }
     else toast(d.error || 'Xatolik', false);
   });
 }
@@ -1165,9 +1165,9 @@ function editMaqola(o) { fill('maqola', o); }
     flag.value = status || '';
   }
   function rowLabel(r) {
-    if (r.status === 'trusted') return ' ' + r.message;
-    if (r.status === 'suspect') return " Ehtiyot bo'ling — bu nashriyot shubhali deb belgilangan";
-    return " OAK/Scopus ro'yxatlarida tasdiqlanmagan";
+    if (r.status === 'trusted') return r.message;
+    if (r.status === 'suspect') return "Ehtiyot bo'ling — bu nashriyot shubhali deb belgilangan";
+    return "OAK/Scopus ro'yxatlarida tasdiqlanmagan";
   }
   function closeDrop() { drop.classList.remove('open'); drop.innerHTML = ''; }
 
@@ -1255,7 +1255,7 @@ function toggleDegreeFields() {
     }
     listEl.innerHTML = items.map(function (it) {
       return '<div class="np-row" data-id="' + it.id + '">' +
-        '<span class="np-ic"></span>' +
+        '<span class="np-ic"><i class="bi bi-tag" aria-hidden="true"></i></span>' +
         '<div class="np-label"><b>' + esc(it.ixtisoslik) + '</b>' +
           '<small>' + esc(it.ixtisoslik_nomi && it.ixtisoslik_nomi !== it.ixtisoslik ? it.ixtisoslik_nomi : 'Yangi himoyalar haqida xabar') + '</small></div>' +
         '<label class="np-switch" title="Saytda"><input type="checkbox" data-ch="site"' + (it.notify_site ? ' checked' : '') + '><span class="np-slider"></span></label>' +

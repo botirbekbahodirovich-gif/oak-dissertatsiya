@@ -79,11 +79,11 @@
     <div class="rw-pane active" id="rw-pane-1">
       <h2>Qaysi daraja uchun tayyorlanyapsiz?</h2>
       <div class="rw-cards" id="rw-degrees">
-        <div class="rw-card" data-value="magistr"><span class="rw-check"></span>
+        <div class="rw-card" data-value="magistr"><span class="rw-check"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
           <b> Magistrlik</b><small>Magistrlik dissertatsiyasi — 1 maqola, 1 konferensiya tezisi</small></div>
-        <div class="rw-card selected" data-value="phd"><span class="rw-check"></span>
+        <div class="rw-card selected" data-value="phd"><span class="rw-check"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
           <b> PhD</b><small>Falsafa doktori — 3 OAK maqola, 1 xalqaro maqola, 2 tezis</small></div>
-        <div class="rw-card" data-value="dsc"><span class="rw-check"></span>
+        <div class="rw-card" data-value="dsc"><span class="rw-check"><i class="bi bi-check-lg" aria-hidden="true"></i></span>
           <b> DSc</b><small>Fan doktori — 6 OAK maqola, 4 xalqaro maqola, 4 tezis</small></div>
       </div>
     </div>
@@ -155,7 +155,7 @@
       s.classList.toggle('done', i + 1 < n);
     });
     document.getElementById('rw-back').style.visibility = n === 1 ? 'hidden' : 'visible';
-    document.getElementById('rw-next').textContent = n === TOTAL ? ' Rejani yaratish' : 'Keyingi →';
+    document.getElementById('rw-next').textContent = n === TOTAL ? 'Rejani yaratish' : 'Keyingi →';
     if (n === 3 && !document.getElementById('rw-defense').value) {
       document.getElementById('rw-defense').value = defaultDefense();
     }

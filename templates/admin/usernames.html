@@ -45,7 +45,7 @@
                 onsubmit="return confirm('@{{ it.slug }} olib tashlansinmi?')">
             {{ csrf_token()|safe }}
             <input type="hidden" name="slug" value="">
-            <button type="submit" class="btn btn-sm btn-action" aria-label="Yopish"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            <button type="submit" class="btn btn-sm btn-action" aria-label="Username'ni olib tashlash" title="Username'ni olib tashlash"><i class="bi bi-trash" aria-hidden="true"></i></button>
           </form>
           {% endif %}
         </td>

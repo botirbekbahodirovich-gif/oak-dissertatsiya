@@ -136,7 +136,7 @@
 (function () {
   var ALL = [], shown = [], bubbleDrawn = false;
   function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-  function trendIcon(t) { return t === 'growing' ? '' : t === 'declining' ? '' : ''; }
+  function trendIcon(t) { return t === 'growing' ? '<i class="bi bi-graph-up-arrow" aria-hidden="true"></i>' : t === 'declining' ? '<i class="bi bi-graph-down-arrow" aria-hidden="true"></i>' : '<i class="bi bi-arrow-right" aria-hidden="true"></i>'; }
   function degClass(d) { d = (d || '').toUpperCase(); return d.indexOf('DSC') >= 0 ? 'dsc' : d.indexOf('PHD') >= 0 ? 'phd' : 'other'; }
   function degLabel(d) { d = (d || '').toUpperCase(); return d.indexOf('DSC') >= 0 ? 'DSc' : d.indexOf('PHD') >= 0 ? 'PhD' : (d || '—'); }
 

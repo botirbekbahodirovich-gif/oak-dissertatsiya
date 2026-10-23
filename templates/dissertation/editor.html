@@ -163,7 +163,7 @@
       </div>
       <div id="editor-container"></div>
       <div class="ed-status">
-        <span id="save-status"> Yuklandi</span>
+        <span id="save-status"><i class="bi bi-check-lg" aria-hidden="true"></i> Yuklandi</span>
         <span id="word-count">{% if block.word_target %}{{ '{:,}'.format(block.word_count or 0).replace(',', ' ') }} / {{ '{:,}'.format(block.word_target).replace(',', ' ') }} so'z{% else %}{{ block.word_count }} so'z{% endif %}</span>
       </div>
     </main>

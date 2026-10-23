@@ -287,8 +287,8 @@
   function toggleBookmark(id, btn) {
     var arr = getBookmarks();
     var idx = arr.indexOf(id);
-    if (idx === -1) { arr.push(id); btn.classList.add('on'); btn.textContent = ''; btn.title = 'Saqlangan'; }
-    else { arr.splice(idx, 1); btn.classList.remove('on'); btn.textContent = ''; btn.title = 'Saqlash'; }
+    if (idx === -1) { arr.push(id); btn.classList.add('on'); btn.innerHTML = '<i class="bi bi-star-fill" aria-hidden="true"></i>'; btn.title = 'Saqlangan'; }
+    else { arr.splice(idx, 1); btn.classList.remove('on'); btn.innerHTML = '<i class="bi bi-star" aria-hidden="true"></i>'; btn.title = 'Saqlash'; }
     try { localStorage.setItem(BM_KEY, JSON.stringify(arr)); } catch (e) {}
   }
 
@@ -411,7 +411,7 @@
           '</div>' +
           simBadge +
           '<button class="ta-bookmark' + (on ? ' on' : '') + '" data-id="' + s.id + '" ' +
-            'title="' + (on ? 'Saqlangan' : 'Saqlash') + '">' + (on ? '' : '') + '</button>' +
+            'title="' + (on ? 'Saqlangan' : 'Saqlash') + '">' + (on ? '<i class="bi bi-star-fill" aria-hidden="true"></i>' : '<i class="bi bi-star" aria-hidden="true"></i>') + '</button>' +
         '</div>' +
         '<div class="ta-item-more">' +
           (typeof s.sim === 'number' && s.band
@@ -609,7 +609,7 @@
           : " Obuna qo'shildi — yangi himoyalar haqida xabar beramiz (Kabinet → Bildirishnomalar).";
         subBtn.style.display = 'none';
       } else {
-        m.textContent = ' ' + ((d && d.error) || "Xatolik — qayta urinib ko'ring.");
+        m.textContent = ((d && d.error) || "Xatolik — qayta urinib ko'ring.");
         subBtn.disabled = false;
       }
     }).catch(function () { subBtn.disabled = false; });

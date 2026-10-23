@@ -123,7 +123,7 @@
     <div id="results"></div>
     <button class="load-more" id="load-more" style="display:none;" onclick="showMore()">Yana 10 ta ko'rsatish</button>
     <div style="background:var(--color-background-soft);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:20px;margin-top:22px;text-align:center;">
-      <div style="font-size:1.5rem;"></div>
+      <div style="font-size:1.5rem;"><i class="bi bi-book" aria-hidden="true"></i></div>
       <h3 style="color:var(--color-text-primary);font-size:1.05rem;margin:6px 0;">Bu sohada maqola chop etish uchun mos jurnallar</h3>
       <p style="color:var(--color-text-muted);font-size:0.9rem;margin:0 0 12px;">OAK, Scopus va Web of Science indekslangan ilmiy jurnallar bazasidan o'zingizga mos jurnalni toping.</p>
       <a href="/journals" style="display:inline-block;background:var(--color-action-blue);color:var(--color-surface);font-weight:600;padding:9px 22px;border-radius:var(--radius-rounded);text-decoration:none;">Jurnallarni ko'rish →</a>
@@ -146,7 +146,7 @@ function renderChips() {
   var box = document.getElementById('chips');
   box.innerHTML = keywords.map(function (k, i) {
     return '<span class="mt-chip' + (k.primary ? ' primary' : '') + '" onclick="togglePrimary(' + i + ')">' +
-      escapeHtml(k.word) + ' <span class="x" onclick="event.stopPropagation();removeKw(' + i + ')"></span></span>';
+      escapeHtml(k.word) + ' <span class="x" role="button" aria-label="Olib tashlash" onclick="event.stopPropagation();removeKw(' + i + ')"><i class="bi bi-x-lg" aria-hidden="true"></i></span></span>';
   }).join('') + '<span class="mt-chip mt-chip-add" onclick="addKw()">+ qo\'shish</span>';
 }
 function extract(text) {
@@ -244,7 +244,7 @@ function renderResults() {
     var wall =
       '<div class="blur-wall-container"><div class="blurred-results">' + blurred + '</div>' +
       '<div class="lock-overlay"><div class="lock-card">' +
-        '<div style="font-size:3rem;margin-bottom:16px;"></div>' +
+        '<div style="font-size:3rem;margin-bottom:16px;"><i class="bi bi-lock" aria-hidden="true"></i></div>' +
         '<h2>Yana ' + extra + " ta o'xshash mavzu topildi</h2>" +
         '<p class="lc-sub">Barcha natijalarni ko\'rish va AI tahlildan to\'liq foydalanish uchun kabinetingizga kiring</p>' +
         '<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">' +
@@ -292,7 +292,7 @@ function runAI(mavzu, similar) {
       if (analysis) html += '<div class="ai-text">' + escapeHtml(analysis) + '</div>';
       var sugg = (d.suggestions || []).concat(d.angles || []);
       if (sugg.length) {
-        html += '<ul class="ai-sugg">' + sugg.map(function (s) { return '<li><span class="ic"></span><span>' + escapeHtml(s) + '</span></li>'; }).join('') + '</ul>';
+        html += '<ul class="ai-sugg">' + sugg.map(function (s) { return '<li><span class="ic"><i class="bi bi-check-circle" aria-hidden="true"></i></span><span>' + escapeHtml(s) + '</span></li>'; }).join('') + '</ul>';
       }
     } else {
       // freemium: show first ~200 chars, blur the next chunk

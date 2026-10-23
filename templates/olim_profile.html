@@ -238,7 +238,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <div class="op-avatar">
         {% if photo %}<img src="{{ photo }}" alt="{{ olim_name }}" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span hidden aria-hidden="true">{{ olim_name[:1] }}</span>{% else %}<span aria-hidden="true">{{ olim_name[:1] }}</span>{% endif %}
       </div>
-      <span class="op-cam" title="Rasm yuklash (tez orada)"></span>
+      <span class="op-cam" title="Rasm yuklash (tez orada)"><i class="bi bi-camera" aria-hidden="true"></i></span>
       <div><span class="op-works-badge"> Ilmiy ishlar {{ stats.total }}</span></div>
     </div>
 
@@ -318,11 +318,11 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
     <div class="op-side">
       <div class="op-acad">
         {% set scopus = profile.scopus_url if profile else None %}
-        {% if scopus %}<a class="op-soc" href="{{ scopus }}" target="_blank" rel="noopener" title="Scopus" aria-label="Scopus"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
+        {% if scopus %}<a class="op-soc" href="{{ scopus }}" target="_blank" rel="noopener" title="Scopus" aria-label="Scopus"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></span>{% endif %}
         {% set wos = profile.wos_url if profile else None %}
-        {% if wos %}<a class="op-soc" href="{{ wos }}" target="_blank" rel="noopener" title="Web of Science" aria-label="Web of Science"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
+        {% if wos %}<a class="op-soc" href="{{ wos }}" target="_blank" rel="noopener" title="Web of Science" aria-label="Web of Science"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></span>{% endif %}
         {% set scholar = profile.scholar_url if profile else None %}
-        {% if scholar %}<a class="op-soc" href="{{ scholar }}" target="_blank" rel="noopener" title="Google Scholar" aria-label="Google Scholar"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"></span>{% endif %}
+        {% if scholar %}<a class="op-soc" href="{{ scholar }}" target="_blank" rel="noopener" title="Google Scholar" aria-label="Google Scholar"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></span>{% endif %}
         {% set orcid = profile.orcid_url if profile else None %}
         {% if orcid %}<a class="op-soc" href="{{ orcid }}" target="_blank" rel="noopener" title="ORCID"><i class="bi bi-person-badge-fill" style="color:var(--color-text-secondary);"></i></a>{% else %}<span class="op-soc disabled" title="Hali qo'shilmagan"><i class="bi bi-person-badge-fill"></i></span>{% endif %}
       </div>
@@ -414,7 +414,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
 
     <div class="op-sec-title"><i class="bi bi-journal-text" style="color:var(--color-action);"></i>Himoya qilgan dissertatsiyalari <span class="cnt">{{ dissertations|length }}</span></div>
     {% if not dissertations %}
-    <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
+    <div class="op-empty role-empty"><div class="ico"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div>Bu shaxs hali dissertatsiya himoya qilmagan.</div></div>
     {% endif %}
     <div class="diss-columns">
       <div class="diss-col">
@@ -493,7 +493,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
           </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali ilmiy rahbarlik qilmagan.</div></div>
+        <div class="op-empty role-empty"><div class="ico"><i class="bi bi-person-video3" aria-hidden="true"></i></div><div>Bu shaxs hali ilmiy rahbarlik qilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -513,7 +513,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
           </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali magistratura talabasi qo'shmagan.</div>
+        <div class="op-empty role-empty"><div class="ico"><i class="bi bi-mortarboard" aria-hidden="true"></i></div><div>Bu shaxs hali magistratura talabasi qo'shmagan.</div>
         {% if is_owner %}<a href="/cabinet#shogirdlar" class="add-btn">Talaba qo'shish →</a>{% endif %}
         </div>
       {% endif %}
@@ -537,7 +537,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         </div>
       {% endfor %}
     {% else %}
-      <div class="op-empty role-empty"><div class="ico"></div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
+      <div class="op-empty role-empty"><div class="ico"><i class="bi bi-clipboard" aria-hidden="true"></i></div><div>Bu shaxs hali opponentlik qilmagan.</div></div>
     {% endif %}
 
     {{ ad_banner('profile-mid', 'inline') }}
@@ -570,7 +570,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         {% endfor %}
       {% else %}
         <div class="op-empty">
-          <div class="ico"></div>
+          <div class="ico"><i class="bi bi-pencil-square" aria-hidden="true"></i></div>
           <div>Hali maqolalar qo'shilmagan. O'z maqolalaringizni qo'shish uchun kabinetga kiring.</div>
           <a href="/cabinet" class="add-btn">Maqola qo'shish →</a>
         </div>
@@ -590,7 +590,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty"><div class="ico"></div><div>Hali konferensiyalar qo'shilmagan.</div></div>
+        <div class="op-empty"><div class="ico"><i class="bi bi-mic" aria-hidden="true"></i></div><div>Hali konferensiyalar qo'shilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -606,7 +606,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         </div>
         {% endfor %}
       {% else %}
-        <div class="op-empty"><div class="ico"></div><div>Hali ish faoliyati qo'shilmagan.</div></div>
+        <div class="op-empty"><div class="ico"><i class="bi bi-briefcase" aria-hidden="true"></i></div><div>Hali ish faoliyati qo'shilmagan.</div></div>
       {% endif %}
     </div>
 
@@ -619,7 +619,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
         </div>
       {% elif is_owner %}
         <div class="op-empty">
-          <div class="ico"></div>
+          <div class="ico"><i class="bi bi-camera" aria-hidden="true"></i></div>
           <div style="font-size:1.05rem;font-weight:600;color:var(--color-text-primary);margin-bottom:10px;">Faoliyatingizni rasmlar orqali ko'rsating</div>
           <div style="max-width:480px;margin:0 auto;line-height:1.6;">Rasmlar profilingizni jonlantiradi va tashrif buyuruvchilarda ishonch uyg'otadi. Konferensiyalardagi chiqishlaringiz, dars jarayonlari, laboratoriya ishlari, taqdirlash marosimlari — bularning barchasi ilmiy faoliyatingizning jonli hujjati.</div>
           <a href="/cabinet#rasmlar" class="add-btn">Rasm qo'shish →</a>
@@ -647,7 +647,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <div class="gen-stage" id="gen-stage">
         <div class="gen-loading" id="gen-loading"> Shajara daraxtini qurilmoqda...</div>
         <div class="gen-empty" id="gen-empty" style="display:none;">
-          <div style="font-size:2.4rem;margin-bottom:10px;"></div>
+          <div style="font-size:2.4rem;margin-bottom:10px;"><i class="bi bi-diagram-3" aria-hidden="true"></i></div>
           <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
           <div style="color:var(--color-text-secondary);font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
         </div>
@@ -674,12 +674,12 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <h3 class="olz-dual-cta__title">Siz ham o'z profilingizni yarating</h3>
       <div class="olz-dual-cta__grid">
         <div class="olz-dual-cta__card">
-          <div class="olz-dual-cta__icon"></div>
+          <div class="olz-dual-cta__icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></div>
           <h4>PhD/DSc olim bo'lsangiz</h4>
           <p>Ilmiy merosingizni saqlang, shogirdlaringizni ko'rsating, ilmiy shajarangizni tuzing.</p>
         </div>
         <div class="olz-dual-cta__card">
-          <div class="olz-dual-cta__icon"></div>
+          <div class="olz-dual-cta__icon"><i class="bi bi-book" aria-hidden="true"></i></div>
           <h4>Magistratura talabasimisiz?</h4>
           <p>Portfoliongizni hozirdan boshlab yaratib boring — kelajakda katta yordam beradi.</p>
         </div>

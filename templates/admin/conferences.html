@@ -48,18 +48,18 @@
           {% endif %}
           {% if c.organizer %}<br><small style="color:var(--color-action);">{{ c.organizer[:44] }}</small>{% endif %}
           {% if c.canonical_institution %}<br><small style="color:var(--color-action);"> {{ c.canonical_institution[:44] }}</small>{% endif %}</td>
-        <td>{{ '🇺🇿' if c.scope == 'local' else '' }} {{ c.event_type or '—' }}</td>
+        <td>{% if c.scope == 'local' %}<span role="img" aria-label="Mahalliy" title="Mahalliy"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>{% else %}<span role="img" aria-label="Xalqaro" title="Xalqaro"><i class="bi bi-globe2" aria-hidden="true"></i></span>{% endif %} {{ c.event_type or '—' }}</td>
         <td style="white-space:nowrap;">{{ c.start_date or '—' }}
           {% if c.submission_deadline %}<br><small style="color:var(--color-action);">CFP: {{ c.submission_deadline }}</small>{% endif %}</td>
         <td style="font-size:0.82rem;">{{ c.city or c.region or c.country or '—' }}</td>
-        <td>{{ '' if c.is_scopus_indexed else '—' }}</td>
-        <td>{{ '' if c.is_active else '' }}</td>
+        <td>{% if c.is_scopus_indexed %}<span role="img" aria-label="Scopus: ha" title="Scopus: ha"><i class="bi bi-check-lg" aria-hidden="true"></i></span>{% else %}—{% endif %}</td>
+        <td>{% if c.is_active %}<span role="img" aria-label="Faol" title="Faol"><i class="bi bi-circle-fill" aria-hidden="true"></i></span>{% else %}<span role="img" aria-label="Nofaol" title="Nofaol"><i class="bi bi-circle" aria-hidden="true"></i></span>{% endif %}</td>
         <td style="white-space:nowrap;">
           {% if c.moderation_status == 'pending' %}
           <form method="POST" action="/admin/conferences/approve/{{ c.id }}" style="display:inline;">
             {{ csrf_token()|safe }}
             <button type="submit" class="btn btn-sm"
-              style="background:var(--color-background);color:var(--color-text-primary);border-radius:var(--radius-default);"> Tasdiqlash</button>
+              style="background:var(--color-background);color:var(--color-text-primary);border-radius:var(--radius-default);"><i class="bi bi-check-lg" aria-hidden="true"></i> Tasdiqlash</button>
           </form>
           {% endif %}
           <a href="/admin/conferences/edit/{{ c.id }}" class="btn btn-sm btn-action">Tahrirlash</a>

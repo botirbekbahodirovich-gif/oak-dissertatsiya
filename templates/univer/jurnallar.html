@@ -63,7 +63,7 @@
         </td>
         <td style="color:var(--color-action);font-size:0.8rem;">{{ j.issn or '—' }}</td>
         <td>
-          {% if j.oak %}<span class="uvj-b oak"> OAK</span>{% endif %}
+          {% if j.oak %}<span class="uvj-b oak"><i class="bi bi-check-lg" aria-hidden="true"></i> OAK</span>{% endif %}
           {% if j.scopus %}<span class="uvj-b scopus">Scopus</span>{% endif %}
           {% if j.wos %}<span class="uvj-b wos">WoS</span>{% endif %}
           {% if not (j.oak or j.scopus or j.wos) %}<span class="uvj-b none">Tasdiq yo'q</span>{% endif %}

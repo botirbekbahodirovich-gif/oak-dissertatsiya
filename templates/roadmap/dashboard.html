@@ -245,7 +245,7 @@
        onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'"
        onmouseout="this.style.borderColor='rgba(148,163,184,0.14)'">
       <div style="display:flex;justify-content:space-between;gap:10px;font-size:0.88rem;margin-bottom:6px;">
-        <b style="color:var(--color-text-primary);">{{ '' if s.started else '⬜' }} {{ s.title }}</b>
+        <b style="color:var(--color-text-primary);">{% if s.started %}<i class="bi bi-pencil" aria-hidden="true"></i>{% else %}<i class="bi bi-square" aria-hidden="true"></i>{% endif %} {{ s.title }}</b>
         <span style="color:var(--color-action);font-variant-numeric:tabular-nums;">
           {{ '{:,}'.format(s.words).replace(',', ' ') }} / {{ '{:,}'.format(s.target).replace(',', ' ') }} so'z</span>
       </div>
@@ -267,7 +267,7 @@
       {% endfor %}
     </div>
     <div class="rj-diss-cta">
-      <div class="big"></div>
+      <div class="big"><i class="bi bi-pencil" aria-hidden="true"></i></div>
       <p style="color:var(--color-action);max-width:420px;margin:0 auto 14px;font-size:0.9rem;">
         Konstruktorda yozishni boshlang — bob so'z sanog'i va progress shu yerda avtomatik hisoblanadi.</p>
       <a class="rj-btn" href="/workspace" style="text-decoration:none;"> Konstruktorda yozishni boshlash</a>
@@ -289,7 +289,7 @@
           {% else %}{{ ph.label }}{% endif %}
           {% if ph.words is defined %}
           <span class="rj-tl-chip {{ 'started' if ph.started }}">
-            {{ '' if ph.started else '⬜' }} {{ '{:,}'.format(ph.words).replace(',', ' ') }} so'z</span>
+            {% if ph.started %}<i class="bi bi-pencil" aria-hidden="true"></i>{% else %}<i class="bi bi-square" aria-hidden="true"></i>{% endif %} {{ '{:,}'.format(ph.words).replace(',', ' ') }} so'z</span>
           {% endif %}
         </div>
         <div class="rj-tl-track">
@@ -330,7 +330,7 @@
         <div class="meta">{% if m.meeting_date %} {{ m.meeting_date }}{% endif %}{% if m.notes %} · {{ m.notes }}{% endif %}</div>
       </div>
       <button class="rj-btn sm ghost" onclick="rjPost('/api/reja/meeting/{{ m.id }}/toggle')">
-        {{ '↩ Bekor' if m.is_done else ' Bo\'ldi' }}</button>
+        {% if m.is_done %}↩ Bekor{% else %}<i class="bi bi-check-lg" aria-hidden="true"></i> Bo'ldi{% endif %}</button>
       <button class="rj-btn sm red" onclick="rjDel('meeting', {{ m.id }})" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
     </div>
     {% else %}

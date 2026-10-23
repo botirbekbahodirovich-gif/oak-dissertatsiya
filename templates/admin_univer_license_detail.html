@@ -129,7 +129,7 @@ document.getElementById('adm-invite-btn').addEventListener('click', function () 
       if (d.success) {
         var inp = document.getElementById('adm-invite-url');
         inp.style.display = 'block'; inp.value = d.url; inp.select();
-        try { navigator.clipboard.writeText(d.url); btn.textContent = ' Nusxalandi (7 kun amal qiladi)'; } catch (e) {}
+        try { navigator.clipboard.writeText(d.url); btn.textContent = 'Nusxalandi (7 kun amal qiladi)'; } catch (e) {}
       } else { alert(d.error || 'Xatolik'); }
     }).catch(function () { btn.disabled = false; });
 });

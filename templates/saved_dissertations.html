@@ -90,13 +90,13 @@
       </div>
 
       <details class="sd-notes"{% if r.notes %} open{% endif %}>
-        <summary><i class="bi bi-pencil-square"></i> <span class="{{ 'has-note' if r.notes }}">Shaxsiy eslatma{% if r.notes %} {% endif %}</span></summary>
+        <summary><i class="bi bi-pencil-square"></i> <span class="{{ 'has-note' if r.notes }}">Shaxsiy eslatma{% if r.notes %} <i class="bi bi-check-lg" aria-hidden="true"></i>{% endif %}</span></summary>
         <div class="sd-note-box">
           <textarea maxlength="500" placeholder="Bu dissertatsiya haqida o'zingiz uchun eslatma..." oninput="sdCount(this)" data-id="{{ r.id }}">{{ r.notes or '' }}</textarea>
           <div class="sd-note-foot">
             <span class="cnt">{{ (r.notes or '')|length }}/500</span>
             <span>
-              <span class="ok" style="display:none;">Saqlandi </span>
+              <span class="ok" style="display:none;">Saqlandi <i class="bi bi-check-lg" aria-hidden="true"></i></span>
               <button type="button" class="sd-btn sd-btn-primary" onclick="sdSaveNote({{ r.id }}, this)">Eslatmani saqlash</button>
             </span>
           </div>
@@ -116,7 +116,7 @@
 
   {% else %}
   <div class="sd-empty">
-    <div class="em"></div>
+    <div class="em"><i class="bi bi-bookmark" aria-hidden="true"></i></div>
     <h2>Hali saqlangan dissertatsiya yo'q</h2>
     <p>Dissertatsiya sahifasidagi yoki jadvaldagi <b> saqlash</b> tugmasi orqali qiziqarli ishlarni shu yerga to'plang.</p>
     <p><a href="/dashboard">→ Dissertatsiyalar jadvaliga o'tish</a></p>

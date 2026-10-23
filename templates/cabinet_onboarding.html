@@ -152,13 +152,13 @@
     <div class="olz-type-tabs__label">Kim ekaningizni tanlang:</div>
     <div class="olz-type-tabs__buttons">
       <button type="button" class="olz-type-tab" data-type="researcher">
-        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Izlanuvchi</span>
+        <span class="olz-type-tab__icon"><i class="bi bi-mortarboard" aria-hidden="true"></i></span><span class="olz-type-tab__label">Izlanuvchi</span>
       </button>
       <button type="button" class="olz-type-tab" data-type="student">
-        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Talaba</span>
+        <span class="olz-type-tab__icon"><i class="bi bi-book" aria-hidden="true"></i></span><span class="olz-type-tab__label">Talaba</span>
       </button>
       <button type="button" class="olz-type-tab" data-type="regular">
-        <span class="olz-type-tab__icon"></span><span class="olz-type-tab__label">Oddiy</span>
+        <span class="olz-type-tab__icon"><i class="bi bi-person" aria-hidden="true"></i></span><span class="olz-type-tab__label">Oddiy</span>
       </button>
     </div>
     <a href="{{ url_for('home') }}" class="olz-type-tabs__skip"
@@ -203,9 +203,9 @@
       <div class="ob-hint" id="ob-hint" style="display:none;">Ismni to'liqroq kiriting — mos olimlarni ko'rsatamiz.</div>
 
       <div class="ob-linked" id="ob-linked">
-        <h4> Dissertatsiyangiz topildi va biriktirildi</h4>
+        <h4><i class="bi bi-check-lg" aria-hidden="true"></i> Dissertatsiyangiz topildi va biriktirildi</h4>
         <div id="ob-linked-body"></div>
-        <button class="unlink" id="ob-unlink" type="button"> Bu men emasman — ajratish</button>
+        <button class="unlink" id="ob-unlink" type="button"><i class="bi bi-x-lg" aria-hidden="true"></i> Bu men emasman — ajratish</button>
       </div>
     </div>
 
@@ -253,7 +253,7 @@
 
     <div class="ob-actions">
       <a class="ob-skip" href="/cabinet">Hozircha o'tkazib yuborish →</a>
-      <button class="ob-btn" id="ob-finish">Saqlash va davom etish </button>
+      <button class="ob-btn" id="ob-finish">Saqlash va davom etish <i class="bi bi-check-lg" aria-hidden="true"></i></button>
     </div>
   </div>
 </div>
@@ -329,7 +329,7 @@
           var deg = it.daraja === 'PHD' ? '<span class="ob-deg phd">PhD</span>' : (it.daraja === 'DSC' ? '<span class="ob-deg dsc">DSc</span>' : '');
           return '<div class="ob-match"><div style="min-width:0;"><div class="mn">' + esc(it.name) + '</div>' +
                  '<div class="mm">' + deg + esc((it.mavzu || '').slice(0, 70)) + '</div></div>' +
-                 '<button data-i="' + i + '">Ha, bu menman </button></div>';
+                 '<button data-i="' + i + '">Ha, bu menman</button></div>';
         }).join('');
         var btns = box.querySelectorAll('.ob-match button');
         rows.forEach(function (it, i) { btns[i].addEventListener('click', function () { claim(it.name); }); });
@@ -360,7 +360,7 @@
       document.getElementById('ob-linked-body').innerHTML = body || '<div class="row">Profil biriktirildi.</div>';
       document.getElementById('ob-linked').classList.add('show');
       document.getElementById('ob-matches').innerHTML = '';
-      toast('Dissertatsiyangiz biriktirildi ', true);
+      toast('Dissertatsiyangiz biriktirildi', true);
       updateProgress();
     }).catch(function () { toast('Tarmoq xatosi', false); });
   }
@@ -390,7 +390,7 @@
       profile_completed: '1'
     };
     post('/cabinet/api/profile/save', body).then(function (d) {
-      if (d.ok) { toast('Saqlandi ', true); setTimeout(function () { location.href = '/cabinet'; }, 700); }
+      if (d.ok) { toast('Saqlandi', true); setTimeout(function () { location.href = '/cabinet'; }, 700); }
       else { toast(d.error || 'Xatolik', false); btn.disabled = false; }
     }).catch(function () { toast('Tarmoq xatosi', false); btn.disabled = false; });
   });

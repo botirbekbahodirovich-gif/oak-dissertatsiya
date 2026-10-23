@@ -189,7 +189,7 @@
       var dl = new Date(el.getAttribute('data-deadline') + 'T23:59:59');
       var days = Math.floor((dl - now) / 86400000);
       if (days < 0) { el.textContent = 'Muddat tugagan'; el.style.color = 'var(--color-text-secondary)'; return; }
-      el.textContent = '' + (days === 0 ? 'Bugun oxirgi kun!' : days + ' kun qoldi');
+      el.textContent = (days === 0 ? 'Bugun oxirgi kun!' : days + ' kun qoldi');
       el.style.color = days > 7 ? 'var(--color-success)' : (days >= 3 ? 'var(--color-warning-ink)' : 'var(--color-danger)');
     });
     // detal sahifadagi katta countdown (kun/soat/daqiqa)

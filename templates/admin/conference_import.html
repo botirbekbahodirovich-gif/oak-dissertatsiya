@@ -88,7 +88,7 @@
           <td>{{ r.title }}</td>
           <td>{{ r.organizer or '—' }}</td>
           <td style="white-space:nowrap;">{{ r.start_date or '—' }}{% if r.end_date and r.end_date != r.start_date %} – {{ r.end_date }}{% endif %}</td>
-          <td>{{ r.field or '—' }}{% if r.field_id %} <span class="imp-badge imp-ok"></span>{% else %} <span class="imp-badge imp-bad">yangi</span>{% endif %}</td>
+          <td>{{ r.field or '—' }}{% if r.field_id %} <span class="imp-badge imp-ok"><i class="bi bi-check-lg" aria-hidden="true"></i></span>{% else %} <span class="imp-badge imp-bad">yangi</span>{% endif %}</td>
           <td>{{ r.event_type or '—' }}</td>
           <td>{{ r.city or '—' }}{% if r.region %}, {{ r.region }}{% endif %}</td>
         </tr>

@@ -60,7 +60,7 @@
       {% if inv.message %}<div style="color:var(--color-action);font-size:0.82rem;margin-top:3px;">“{{ inv.message }}”</div>{% endif %}
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="dw-btn" style="padding:7px 14px;" onclick="respondInvite({{ inv.link_id }}, 'accept')"> Qabul qilish</button>
+      <button class="dw-btn" style="padding:7px 14px;" onclick="respondInvite({{ inv.link_id }}, 'accept')"><i class="bi bi-check-lg" aria-hidden="true"></i> Qabul qilish</button>
       <button class="dw-btn ghost" style="padding:7px 14px;" onclick="respondInvite({{ inv.link_id }}, 'decline')">Rad etish</button>
     </div>
   </div>

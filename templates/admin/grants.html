@@ -43,7 +43,7 @@
   <table class="table" style="width:100%;">
     <thead><tr>
       <th>ID</th><th>Sarlavha</th><th>Tashkilot</th><th>Mamlakat</th><th>Deadline</th>
-      <th>Holat</th><th>⭐</th><th></th><th></th>
+      <th>Holat</th><th>⭐</th><th aria-label="Ko'rishlar" title="Ko'rishlar"><i class="bi bi-eye" aria-hidden="true"></i></th><th></th>
     </tr></thead>
     <tbody>
       {% for g in items %}
@@ -56,13 +56,13 @@
           {% if g.expired %}<br><small style="color:var(--color-text-secondary);">tugagan</small>
           {% elif g.days_remaining is not none %}<br><small style="color:var(--color-action);">{{ g.days_remaining }} kun</small>{% endif %}</td>
         <td>{{ ' Aktiv' if g.is_active and not g.expired else ('⌛' if g.expired else ' Nofaol') }}</td>
-        <td>{{ '' if g.is_featured else '—' }}</td>
+        <td>{% if g.is_featured %}<span role="img" aria-label="Featured" title="Featured"><i class="bi bi-star-fill" aria-hidden="true"></i></span>{% else %}—{% endif %}</td>
         <td>{{ g.view_count }}</td>
         <td style="white-space:nowrap;">
           <a href="/admin/grants/edit/{{ g.id }}" class="btn btn-sm btn-action">Tahrirlash</a>
           <form method="POST" action="/admin/grants/toggle-featured/{{ g.id }}" style="display:inline;">
             {{ csrf_token()|safe }}
-            <button type="submit" class="btn btn-sm" style="color:var(--color-text-secondary);" title="Featured yoqish/o'chirish" aria-label="O‘chirish"><i class="bi bi-trash" aria-hidden="true"></i></button>
+            <button type="submit" class="btn btn-sm" style="color:var(--color-text-secondary);" title="Featured yoqish/o'chirish" aria-label="Featured yoqish/o'chirish"><i class="bi bi-star" aria-hidden="true"></i></button>
           </form>
           <form method="POST" action="/admin/grants/delete/{{ g.id }}" style="display:inline;"
                 onsubmit="return confirm('Grant nofaol qilinsinmi? (kuzatuvlar tarixi saqlanadi)');">

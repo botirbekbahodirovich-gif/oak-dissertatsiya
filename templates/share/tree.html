@@ -84,7 +84,7 @@
     <div class="sh-stage" id="gen-stage">
       <div class="gen-loading" id="gen-loading"> Shajara daraxti qurilmoqda...</div>
       <div class="gen-empty" id="gen-empty" style="display:none;">
-        <div style="font-size:2.6rem;margin-bottom:10px;"></div>
+        <div style="font-size:2.6rem;margin-bottom:10px;"><i class="bi bi-diagram-3" aria-hidden="true"></i></div>
         <div>Bu olim uchun ilmiy shajara ma'lumotlari topilmadi.</div>
         <div style="color:var(--color-text-secondary);font-size:0.85rem;margin-top:6px;">Ma'lumotlar OAK bazasidagi ilmiy rahbar va shogird bog'lanishlaridan quriladi.</div>
       </div>
@@ -111,7 +111,7 @@
     </div>
   </div>
 </div>
-<div class="sh-toast" id="sh-toast">Havola nusxalandi </div>
+<div class="sh-toast" id="sh-toast">Havola nusxalandi <i class="bi bi-check-lg" aria-hidden="true"></i></div>
 {% endblock %}
 
 {% block scripts %}
@@ -169,7 +169,7 @@
   }
   document.getElementById('sh-cp').addEventListener('click', function () {
     track('copy');
-    var done = function () { showToast('Havola nusxalandi '); };
+    var done = function () { showToast('Havola nusxalandi'); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(PAGE_URL).then(done).catch(function () {
         window.prompt('Havolani nusxalang:', PAGE_URL);

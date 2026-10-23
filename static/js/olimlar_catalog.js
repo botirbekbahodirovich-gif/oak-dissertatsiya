@@ -116,7 +116,7 @@
     els.content.querySelectorAll('[data-more]').forEach(function(button){
       button.addEventListener('click',function(){
         var params=urlParams(false); params.set('key',button.dataset.more); params.set('gpage',button.dataset.page);
-        button.disabled=true; button.textContent='Yuklanmoqda...';
+        button.disabled=true; button.textContent='Yuklanmoqda…';
         fetch('/api/olimlar/group?'+params.toString()).then(function(response){
           if(!response.ok)throw new Error('HTTP '+response.status); return response.json();
         }).then(function(data){

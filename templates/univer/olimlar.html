@@ -84,7 +84,7 @@
     var badges = '';
     if (s.dsc_students) badges += '<span class="oc-b dsc">DSc</span>';
     if (s.phd_students) badges += '<span class="oc-b phd">PhD</span>';
-    if (s.is_claimed) badges += '<span class="oc-b claimed"> Tasdiqlangan</span>';
+    if (s.is_claimed) badges += '<span class="oc-b claimed"><i class="bi bi-check-lg" aria-hidden="true"></i> Tasdiqlangan</span>';
     var spec = s.specialties && s.specialties.length ? ' ' + esc(s.specialties.join(', ')) : '';
     return '<div class="oc-card">' +
       '<div class="oc-card-top">' + avatar(s) + '<div class="oc-card-hd">' +

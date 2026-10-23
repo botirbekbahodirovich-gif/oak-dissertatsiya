@@ -525,7 +525,7 @@
         '<div class="mq-item-actions">' +
           '<button type="button" class="mq-act" data-cite="' + i + '"> Iqtibos</button>' +
           '<button type="button" class="mq-act' + (isSaved ? ' saved' : '') + '" data-save="' + i + '">' +
-            (isSaved ? ' Saqlangan' : ' Saqlash') + '</button>' +
+            (isSaved ? '<i class="bi bi-star-fill" aria-hidden="true"></i> Saqlangan' : '<i class="bi bi-star" aria-hidden="true"></i> Saqlash') + '</button>' +
         '</div>' +
       '</div>';
     });
@@ -642,7 +642,7 @@
     var text = document.getElementById(boxId).textContent;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
       .then(function () {
-        btn.textContent = ' Nusxalandi';
+        btn.textContent = 'Nusxalandi';
         setTimeout(function () { btn.textContent = ' Nusxalash'; }, 1500);
       })
       .catch(function () { prompt('Nusxalang:', text); });
@@ -672,7 +672,7 @@
       if (!d || !d.success) return;
       savedSet[w.id] = d.saved;
       btn.classList.toggle('saved', d.saved);
-      btn.textContent = d.saved ? ' Saqlangan' : ' Saqlash';
+      btn.innerHTML = d.saved ? '<i class="bi bi-star-fill" aria-hidden="true"></i> Saqlangan' : '<i class="bi bi-star" aria-hidden="true"></i> Saqlash';
     }).catch(function () { btn.disabled = false; });
   }
 

@@ -134,7 +134,7 @@
   }
 
   function badgeHtml(b) {
-    if (b === 'oak') return '<span class="jv-badge oak">OAK </span>';
+    if (b === 'oak') return '<span class="jv-badge oak">OAK <i class="bi bi-check-lg" aria-hidden="true"></i></span>';
     if (b.indexOf('scopus') === 0) {
       var q = b.split('_')[1];
       return '<span class="jv-badge scopus">Scopus' + (q ? ' ' + q.toUpperCase() : '') + '</span>';
@@ -163,7 +163,7 @@
       if (r.impact_factor != null) meta.push('<span>IF: <b>' + esc(r.impact_factor) + '</b></span>');
       var badges = r.badges.map(badgeHtml).join('');
       if (r.status === 'suspect') badges += '<span class="jv-badge warn"> Ehtiyot bo\'ling</span>';
-      var icon = r.status === 'trusted' ? ' ' : (r.status === 'suspect' ? ' ' : ' ');
+      var icon = r.status === 'trusted' ? '<i class="bi bi-check-circle" aria-hidden="true"></i> ' : (r.status === 'suspect' ? '<i class="bi bi-exclamation-octagon" aria-hidden="true"></i> ' : '<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> ');
       return '<div class="jv-card ' + r.status + '">' +
         '<div class="jv-card-top">' +
           '<a class="jv-title" href="' + esc(r.url) + '">' + esc(r.title) + '</a>' +
@@ -212,7 +212,7 @@
           var html = esc(w.message);
           if (w.suspect_match) html += '<br><b>' + esc(w.suspect_match) + '</b>';
           return '<div class="jv-warnbox ' + (red ? 'red' : 'amber') + '">' +
-                 (red ? ' ' : ' ') + html + '</div>';
+                 (red ? '<i class="bi bi-exclamation-octagon" aria-hidden="true"></i> ' : '<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> ') + html + '</div>';
         }).join('');
         render();
       })

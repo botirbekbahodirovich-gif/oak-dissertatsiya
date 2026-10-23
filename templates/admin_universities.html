@@ -46,7 +46,7 @@
     <tbody>
       {% for u in items %}
       <tr>
-        <td>{% if u.logo_url %}<img class="adm-logo" src="{{ u.logo_url }}" alt="">{% else %}<div class="adm-noimg"></div>{% endif %}</td>
+        <td>{% if u.logo_url %}<img class="adm-logo" src="{{ u.logo_url }}" alt="">{% else %}<div class="adm-noimg"><i class="bi bi-bank" aria-hidden="true"></i></div>{% endif %}</td>
         <td><a href="/university/{{ u.name|urlencode }}" style="color:var(--color-action);">{{ u.name }}</a></td>
         <td>{% if u.university_type %}<span class="type-badge {{ u.university_type }}">{{ u.type_label }}</span>{% endif %}</td>
         <td style="color:var(--color-action);">{{ u.city }}</td>

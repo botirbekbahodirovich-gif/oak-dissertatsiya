@@ -68,7 +68,7 @@
       <h1>{{ j.name }}</h1>
       {% if j.name_en %}<div class="jd-en">{{ j.name_en }}</div>{% endif %}
       <div class="jd-badges">
-        {% if j.oak_approved %}<span class="jd-badge oak">OAK </span>{% endif %}
+        {% if j.oak_approved %}<span class="jd-badge oak">OAK <i class="bi bi-check-lg" aria-hidden="true"></i></span>{% endif %}
         {% if j.scopus_indexed %}<span class="jd-badge scopus">Scopus</span>{% endif %}
         {% if j.wos_indexed %}<span class="jd-badge wos">WoS</span>{% endif %}
         {% if j.scholar_indexed %}<span class="jd-badge scholar">Google Scholar</span>{% endif %}
@@ -126,7 +126,7 @@
       <tr><td class="lbl">Ko'rib chiqish muddati</td><td class="val">{{ j.review_period or "Ma'lumot yo'q" }}</td></tr>
       {% if j.publish_format %}<tr><td class="lbl">Nashr formati</td><td class="val">{{ j.publish_format }}</td></tr>{% endif %}
     </table>
-    {% if j.oak_approved %}<div style="margin-top:14px;"><span class="jd-oak-ok"> OAK tomonidan tasdiqlangan</span></div>{% endif %}
+    {% if j.oak_approved %}<div style="margin-top:14px;"><span class="jd-oak-ok"><i class="bi bi-check-lg" aria-hidden="true"></i> OAK tomonidan tasdiqlangan</span></div>{% endif %}
   </div>
 
   <!-- E) Mos ixtisosliklar -->

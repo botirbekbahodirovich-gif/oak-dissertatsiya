@@ -78,7 +78,7 @@
 
 {% block content %}
 <div class="rk-wrap">
-  <h1 class="rk-title"><span class="em"></span> H-index reyting</h1>
+  <h1 class="rk-title"><span class="em"><i class="bi bi-trophy" aria-hidden="true"></i></span> H-index reyting</h1>
 
   <div class="rk-source">
     <span>Ma'lumot manbasi: <a href="https://uz.h-index.com" target="_blank" rel="noopener nofollow">{{ source_name }}</a></span>
@@ -196,9 +196,9 @@
 
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
   function medal(rank, i) {
-    if (rank === 1 || (rank == null && i === 0)) return '<span class="medal"></span>';
-    if (rank === 2 || (rank == null && i === 1)) return '<span class="medal"></span>';
-    if (rank === 3 || (rank == null && i === 2)) return '<span class="medal"></span>';
+    if (rank === 1 || (rank == null && i === 0)) return '<span class="medal"><i class="bi bi-1-circle-fill" aria-hidden="true"></i></span>';
+    if (rank === 2 || (rank == null && i === 1)) return '<span class="medal"><i class="bi bi-2-circle-fill" aria-hidden="true"></i></span>';
+    if (rank === 3 || (rank == null && i === 2)) return '<span class="medal"><i class="bi bi-3-circle-fill" aria-hidden="true"></i></span>';
     return '#' + (rank != null ? rank : (i + 1));
   }
   function hcell(v) {
