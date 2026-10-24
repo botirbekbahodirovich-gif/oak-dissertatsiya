@@ -1,55 +1,55 @@
 {% extends "base.html" %}
+{% from "components/page_header.html" import page_header %}
 {# Huquqiy hujjatlar uchun umumiy maket: oq hujjat-karta, raqamlangan bo'limlar,
    print CSS. Har bir sahifa legal_title / legal_updated / legal_body bloklarini
-   to'ldiradi. #}
+   to'ldiradi. base.html allaqachon ol-container beradi — bu yerda faqat
+   o'qish kengligi (72ch atrofida) cheklanadi. #}
 
 {% block extra_head %}
 <style>
-.content-main { padding:0 !important; max-width:none !important; width:100% !important; margin:0 !important; }
-.legal-lite { background:var(--color-background); color:var(--color-text-primary); min-height:70vh; padding:48px 0 72px; }
-.legal-narrow { max-width:860px; margin:0 auto; padding:0 24px; }
-.legal-lite h1 { font-size:1.9rem; font-weight:600; color:var(--color-text-primary); margin:0 0 6px; }
-.legal-updated { color:var(--color-text-secondary); font-size:0.88rem; margin:0 0 26px; }
-.legal-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:36px 40px;
-              box-shadow:none; line-height:1.75; color:var(--color-action); }
-.legal-card h2 { font-size:1.12rem; font-weight:600; color:var(--color-text-primary); margin:28px 0 10px; }
-.legal-card h2:first-child { margin-top:0; }
-.legal-card p { margin:0 0 12px; }
-.legal-card ul, .legal-card ol { margin:6px 0 14px; padding-left:24px; }
-.legal-card li { margin:4px 0; }
-.legal-card strong { color:var(--color-text-primary); }
-.legal-card a { color:var(--color-action); font-weight:600; text-decoration:none; }
-.legal-card a:hover { text-decoration:underline; }
-.legal-placeholder { background:var(--color-notice-soft); border-radius:var(--radius-default); padding:0 4px; font-weight:600; color:var(--color-text-secondary); }
-.legal-contact { background:var(--color-background); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:16px 20px; margin-top:8px; }
-.legal-nav { display:flex; gap:14px; flex-wrap:wrap; margin-top:26px; font-size:0.9rem; }
-.legal-nav a { color:var(--color-action); font-weight:600; text-decoration:none; }
-.legal-nav a:hover { text-decoration:underline; }
-@media (max-width: 639px) { .legal-card { padding:22px 20px; } .legal-lite h1 { font-size:1.45rem; } }
+.lg-page { max-width:860px; margin:0 auto; padding-block:var(--space-32) var(--space-64); }
+.lg-page .ol-page-header__lead { color:var(--color-text-secondary); font-size:var(--text-small); }
+.lg-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card);
+           padding:var(--space-32) var(--space-40); line-height:1.75; color:var(--color-text-primary); }
+.lg-card h2 { font-family:var(--font-sans); font-size:var(--text-h5); font-weight:600; color:var(--color-text-primary);
+              margin:var(--space-32) 0 var(--space-12); }
+.lg-card h2:first-child { margin-top:0; }
+.lg-card p { margin:0 0 var(--space-12); }
+.lg-card ul, .lg-card ol { margin:var(--space-8) 0 var(--space-16); padding-left:var(--space-24); }
+.lg-card li { margin:var(--space-4) 0; }
+.lg-card strong { color:var(--color-text-primary); }
+.lg-card a { color:var(--color-action); font-weight:600; text-decoration:none; }
+.lg-card a:hover { color:var(--color-action-hover); text-decoration:underline; }
+.legal-placeholder { background:var(--color-notice-soft); border-radius:var(--radius-default); padding:0 var(--space-4);
+                     font-weight:600; color:var(--color-warning-ink); }
+.legal-contact { background:var(--color-background-soft); border:1px solid var(--color-border); border-radius:var(--radius-default);
+                 padding:var(--space-16) var(--space-20); margin-top:var(--space-8); }
+.lg-nav { display:flex; gap:var(--space-16); flex-wrap:wrap; margin-top:var(--space-24); font-size:var(--text-small); }
+.lg-nav a { color:var(--color-action); font-weight:600; text-decoration:none; min-height:44px; display:inline-flex; align-items:center; gap:var(--space-8); }
+.lg-nav a:hover { color:var(--color-action-hover); text-decoration:underline; }
+@media (max-width: 649px) { .lg-card { padding:var(--space-20) var(--space-16); } }
 @media print {
-  .ol-header, .ol-footer, .ol-drawer, .legal-nav, #pwa-install-banner { display:none !important; }
-  .legal-lite { background:var(--color-surface); padding:0; }
-  .legal-card { border:none; box-shadow:none; padding:0; }
-  .legal-lite h1 { font-size:1.4rem; }
-  a { color:var(--color-text-primary) !important; text-decoration:none !important; }
+  .ol-header, .ol-footer, .ol-drawer, .lg-nav, .ol-breadcrumb, #pwa-install-banner { display:none; }
+  .lg-page { padding:0; max-width:none; }
+  .lg-card { border:none; padding:0; }
+  .lg-card a { color:var(--color-text-primary); text-decoration:none; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="legal-lite">
-  <div class="legal-narrow">
-    <h1>{% block legal_title %}{% endblock %}</h1>
-    <p class="legal-updated">Oxirgi yangilanish: {% block legal_updated %}2026-yil 17-iyul{% endblock %}</p>
-    <div class="legal-card">
-      {% block legal_body %}{% endblock %}
-    </div>
-    <div class="legal-nav">
-      <a href="/oferta">Ommaviy oferta</a>
-      <a href="/tolovni-qaytarish">To'lovni qaytarish siyosati</a>
-      <a href="/maxfiylik">Maxfiylik siyosati</a>
-      <a href="#" onclick="window.print(); return false;"> Chop etish</a>
-    </div>
-  </div>
+<div class="ol-page lg-page">
+  {# Bloklar bolalar uchun e'lon qilinadi, matni page_header'ga self.*() orqali beriladi. #}
+  {% if false %}{% block legal_title %}{% endblock %}{% block legal_updated %}2026-yil 17-iyul{% endblock %}{% endif %}
+  {{ page_header(self.legal_title()|trim, 'Oxirgi yangilanish: ' ~ (self.legal_updated()|trim), crumbs=[('Bosh sahifa', '/')]) }}
+  <article class="lg-card">
+    {% block legal_body %}{% endblock %}
+  </article>
+  <nav class="lg-nav" aria-label="Huquqiy hujjatlar">
+    <a href="/oferta">Ommaviy oferta</a>
+    <a href="/tolovni-qaytarish">To'lovni qaytarish siyosati</a>
+    <a href="/maxfiylik">Maxfiylik siyosati</a>
+    <a href="#" onclick="window.print(); return false;"><i class="bi bi-printer" aria-hidden="true"></i> Chop etish</a>
+  </nav>
 </div>
 {% endblock %}

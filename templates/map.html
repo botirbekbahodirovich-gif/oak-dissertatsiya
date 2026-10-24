@@ -88,12 +88,13 @@
   /* Ketma-ket (sequential) ko'k shkala — oq fon uchun ochdan to'qqa.
      Avvalgi shkala to'q fonga mo'ljallangan edi va yuqori ikki daraja
      bir xil rangga tushib qolgan edi. */
+  var K = window.OlimlarCharts.tokens;   // CSS tokenlaridan o'qiladi
   var SCALE = {
-    none: "#e6e6e6",   // ma'lumot yo'q — --color-border
-    s1:   "#cfe0f7",   // < 100
-    s2:   "#8fb4e8",   // 100–500
-    s3:   "#3b7fd4",   // 500–2000
-    s4:   "#00429f"    // 2000+ — --color-action-blue-dark
+    none: K.border,           // ma'lumot yo'q
+    s1:   K.blueSoft,         // < 100
+    s2:   K.actionBlueLight,  // 100–500
+    s3:   K.actionBlue,       // 500–2000
+    s4:   K.actionPressed     // 2000+
   };
 
   function colorFor(v) {
@@ -133,7 +134,7 @@
       .data(geo.features)
       .join("path")
       .attr("d", path)
-      .attr("stroke", "#ffffff")
+      .attr("stroke", K.surface)
       .attr("stroke-width", 0.8)
       .attr("fill", function (d) {
         var s = stats[nameOf(d)];
@@ -149,17 +150,17 @@
         var wrap = mapEl.getBoundingClientRect();
         tooltip.style.left = (event.clientX - wrap.left + 14) + "px";
         tooltip.style.top  = (event.clientY - wrap.top + 14) + "px";
-        d3.select(this).attr("stroke", "#6593dc").attr("stroke-width", 2);
+        d3.select(this).attr("stroke", K.actionBlueLight).attr("stroke-width", 2);
       })
       .on("mouseleave", function () {
         tooltip.style.opacity = 0;
-        d3.select(this).attr("stroke", "#ffffff").attr("stroke-width", 0.8);
+        d3.select(this).attr("stroke", K.surface).attr("stroke-width", 0.8);
       })
       .on("click", function (event, d) {
         var s = stats[nameOf(d)];
         if (!s) return;
-        g.selectAll("path").attr("stroke", "#ffffff").attr("stroke-width", 0.8);
-        d3.select(this).attr("stroke", "#6593dc").attr("stroke-width", 2.5);
+        g.selectAll("path").attr("stroke", K.surface).attr("stroke-width", 0.8);
+        d3.select(this).attr("stroke", K.actionBlueLight).attr("stroke-width", 2.5);
 
         document.getElementById("rmap-detail-name").textContent = s.uz_name;
         document.getElementById("rmap-d-researchers").textContent = s.researchers.toLocaleString();
@@ -182,10 +183,10 @@
       .attr("font-size", "10px")
       .attr("font-weight", "600")
       // Och hududlarda oq matn ko'rinmasdi — to'q matn + oq halo.
-      .attr("fill", "#0c0f12")
+      .attr("fill", K.textPrimary)
       .attr("pointer-events", "none")
       .style("paint-order", "stroke")
-      .style("stroke", "#ffffff")
+      .style("stroke", K.surface)
       .style("stroke-width", "3px")
       .text(function (d) {
         var s = stats[nameOf(d)];

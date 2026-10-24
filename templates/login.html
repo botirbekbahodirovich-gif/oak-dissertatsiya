@@ -2,42 +2,29 @@
 {% block title %}Kirish — Olimlar.uz{% endblock %}
 {% block extra_head %}
 <style>
-  /* Auth form — comfortable, responsive input/button sizing (UX regression fix).
-     Sizing is colour-independent, so the dark/light contrast from base.html is
-     untouched; only the low-contrast helper text is brightened below. */
-  .auth-card .form-control {
-    padding:0.72rem 0.95rem;
-    font-size:1rem;            /* 16px — legible and prevents iOS zoom-on-focus */
-    min-height:48px;
-    border-radius:var(--radius-card);
-  }
-  .auth-card .btn-primary {
-    padding:0.8rem 1.1rem;
-    font-size:1.05rem;
-    min-height:50px;          /* ≥44px touch target */
-  }
-  .auth-card .btn-action {
-    padding:0.72rem 1rem;
-    font-size:1rem;
-    min-height:46px;
-  }
-  .auth-card .mb-3 { margin-bottom:1rem !important; }
-  /* Contrast: lift low-contrast helper text to the readable body token.
-     Light-only — ilgari bu yerda [data-bs-theme] bo'yicha ikkita variant bor edi. */
-  .auth-card .auth-hint { color:var(--color-text-secondary); }
-  .auth-card .text-muted { color:var(--color-text-secondary) !important; }  /* beat Bootstrap's !important */
+  .au-page { display:flex; justify-content:center; padding-block:var(--space-48); }
+  .au-card { width:100%; max-width:440px; }
+  .au-card .ol-page-header { margin-bottom:var(--space-24); }
+  .au-card .ol-page-header__title { font-size:var(--text-h3); }
+  .au-form { display:flex; flex-direction:column; gap:var(--space-16); margin-bottom:var(--space-24); }
+  .au-or { display:flex; align-items:center; gap:var(--space-12); color:var(--color-text-muted);
+           font-size:var(--text-small); margin:var(--space-16) 0; }
+  .au-or::before, .au-or::after { content:""; flex:1; height:1px; background:var(--color-border-subtle); }
+  .au-alt { display:flex; flex-direction:column; gap:var(--space-12); }
+  .au-foot { margin-top:var(--space-24); text-align:center; color:var(--color-text-secondary); font-size:var(--text-small); }
+  .au-foot .ol-btn { margin-top:var(--space-8); }
+  .au-alert { margin-bottom:var(--space-16); }
 </style>
 {% endblock %}
 {% block content %}
-  <div class="content-card auth-card" style="max-width:440px;margin:0 auto;">
-    <div class="page-heading">
-      <div>
-        <h1>Kirish</h1>
-        <p>Dissertatsiyalar bazasiga kirish uchun hisobingizga kiring.</p>
-      </div>
+<div class="ol-page au-page">
+  <div class="ol-card au-card">
+    <div class="ol-page-header">
+      <h1 class="ol-page-header__title">Kirish</h1>
+      <p class="ol-page-header__lead">Dissertatsiyalar bazasiga kirish uchun hisobingizga kiring.</p>
     </div>
     {% if registered %}
-      <div class="alert-inline success"><i class="bi bi-check-circle-fill"></i>&nbsp;Ro'yxatdan muvaffaqiyatli o'tdingiz.</div>
+      <p class="ol-badge ol-badge--success au-alert"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Ro'yxatdan muvaffaqiyatli o'tdingiz.</p>
     {% endif %}
     {% set next_url = request.args.get('next', '') %}
     {% if '/analiz' in next_url or '/tahlil' in next_url %}
@@ -50,23 +37,24 @@
       <div class="olz-context-msg"><p>Kirib, o'z ilmiy profilingizni ham yarating.</p></div>
     {% endif %}
     {% if error %}
-      <div class="alert-inline error"><i class="bi bi-exclamation-triangle-fill"></i>&nbsp;{{ error }}</div>
+      <p class="ol-badge ol-badge--error au-alert" role="alert"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> {{ error }}</p>
     {% endif %}
-    <form method="POST" action="/login/password" autocomplete="on" style="margin-bottom:20px;">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="mb-3">
-        <label class="ol-label" for="ol-field-1">Foydalanuvchi nomi</label>
-<input id="ol-field-1" type="text" name="username" class="form-control" placeholder="Foydalanuvchi nomi" autocomplete="username" required>
+    <form method="POST" action="/login/password" autocomplete="on" class="au-form">
+      {{ csrf_token()|safe }}
+      <div class="ol-field-group">
+        <label class="ol-label" for="login-username">Foydalanuvchi nomi</label>
+        <input id="login-username" type="text" name="username" class="ol-field" autocomplete="username" required>
       </div>
-      <div class="mb-3">
-        <label class="ol-label" for="ol-field-2">Parol</label>
-<input id="ol-field-2" type="password" name="password" class="form-control" placeholder="Parol" autocomplete="current-password" required>
+      <div class="ol-field-group">
+        <label class="ol-label" for="login-password">Parol</label>
+        <input id="login-password" type="password" name="password" class="ol-field" autocomplete="current-password" required>
       </div>
-      <button type="submit" class="btn btn-primary w-100"><i class="bi bi-box-arrow-in-right me-1"></i>Kirish</button>
+      <button type="submit" class="ol-btn ol-btn--primary ol-btn--block"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Kirish</button>
     </form>
-    <div class="text-center my-4">
-      <a href="/login/google" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();" style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:var(--color-text-primary);padding:14px 24px;border-radius:var(--radius-default);text-decoration:none;font-weight:600;font-size:1rem;margin:0 0 16px;border:1px solid var(--color-border);">
-        <svg width="20" height="20" viewBox="0 0 24 24">
+    <div class="au-alt">
+      <a href="/login/google" class="ol-btn ol-btn--secondary ol-btn--block" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">
+        {# Google logo: brand-mandated colours (guidelines), not design tokens. #}
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -74,26 +62,17 @@
         </svg>
         Google bilan kirish
       </a>
-      <p class="auth-hint" style="font-size:14px;margin-bottom:16px">— yoki Telegram orqali kiring —</p>
+      <div class="au-or">yoki</div>
       <a href="/login/telegram/start" class="ol-btn ol-btn--secondary ol-btn--block"
         onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">
         <i class="bi bi-telegram" aria-hidden="true"></i>
         Telegram bilan kirish
       </a>
     </div>
-    <div class="mt-4 text-center"><span class="text-muted">Hisobingiz yo'qmi?</span>
-      <div class="mt-2"><a href="/register" class="btn btn-action w-100">Ro'yxatdan o'tish</a></div>
+    <div class="au-foot">
+      <span>Hisobingiz yo'qmi?</span>
+      <a href="/register" class="ol-btn ol-btn--tertiary ol-btn--block">Ro'yxatdan o'tish</a>
     </div>
   </div>
-{% endblock %}
-{% block scripts %}
-<script>
-  document.getElementById('toggle-pw')?.addEventListener('click', function() {
-    const input = document.getElementById('password');
-    const icon = this.querySelector('i');
-    if (input.type === 'password') { input.type = 'text'; icon.className = 'bi bi-eye-slash'; }
-    else { input.type = 'password'; icon.className = 'bi bi-eye'; }
-  });
-
-</script>
+</div>
 {% endblock %}

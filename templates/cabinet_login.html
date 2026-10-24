@@ -3,37 +3,34 @@
 
 {% block extra_head %}
 <style>
-.content-main { padding:0 !important; max-width:none !important; width:100% !important; }
-.cab-auth { min-height:80vh; display:flex; align-items:center; justify-content:center; padding:48px 16px; background:var(--color-surface); }
-.cab-card { width:100%; max-width:480px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:36px 32px; }
-.cab-card h1 { font-size:1.5rem; font-weight:600; color:var(--color-text-primary); margin:0 0 6px; text-align:center; }
-.cab-card .sub { color:var(--color-action); text-align:center; margin:0 0 26px; font-size:0.95rem; }
-.cab-tg { display:flex; justify-content:center; margin-bottom:8px; min-height:48px; }
-.cab-divider { display:flex; align-items:center; gap:12px; color:var(--color-text-secondary); font-size:0.82rem; margin:18px 0; }
-.cab-divider::before, .cab-divider::after { content:""; flex:1; height:1px; background:var(--color-background); }
-.cab-group { margin-bottom:14px; }
-.cab-group label { display:block; font-size:0.8rem; font-weight:600; color:var(--color-action); margin-bottom:6px; }
-.cab-input { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:11px 13px; font-size:0.95rem; }
-.cab-input:focus { outline:2px solid var(--color-action); border-color:var(--color-border); box-shadow:none; }
-.cab-btn { width:100%; background:var(--color-action); color:var(--color-surface); font-weight:600; font-size:1rem; padding:12px; border:none; border-radius:var(--radius-default); cursor:pointer; }
-.cab-btn:hover { background:var(--color-action); }
-.cab-foot { text-align:center; margin-top:18px; color:var(--color-action); font-size:0.9rem; }
-.cab-foot a { color:var(--color-action); }
-.cab-error { background:var(--color-error-soft); border:1px solid var(--color-border); color:var(--color-danger); border-radius:var(--radius-default); padding:10px 14px; font-size:0.88rem; margin-bottom:16px; }
+.au-page { display:flex; justify-content:center; padding-block:var(--space-48); }
+.au-card { width:100%; max-width:480px; }
+.au-card .ol-page-header { margin-bottom:var(--space-24); text-align:center; }
+.au-card .ol-page-header__title { font-size:var(--text-h3); }
+.au-tg { display:flex; justify-content:center; margin-top:var(--space-12); min-height:48px; }
+.au-or { display:flex; align-items:center; gap:var(--space-12); color:var(--color-text-muted);
+         font-size:var(--text-small); margin:var(--space-16) 0; }
+.au-or::before, .au-or::after { content:""; flex:1; height:1px; background:var(--color-border-subtle); }
+.au-form { display:flex; flex-direction:column; gap:var(--space-16); }
+.au-foot { text-align:center; margin-top:var(--space-20); color:var(--color-text-secondary); font-size:var(--text-small); }
+.au-alert { margin-bottom:var(--space-16); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="cab-auth">
-  <div class="cab-card">
-    <h1> Kabinetga kirish</h1>
-    <p class="sub">Ilmiy portfoliyongizni boshqaring</p>
-    {% if error %}<div class="cab-error">{{ error }}</div>{% endif %}
-    {% if request.args.get('error') == 'google' %}<div class="cab-error">Google bilan kirishda xatolik yuz berdi. Qayta urinib ko'ring.</div>{% endif %}
+<div class="ol-page au-page">
+  <div class="ol-card au-card">
+    <div class="ol-page-header">
+      <h1 class="ol-page-header__title">Kabinetga kirish</h1>
+      <p class="ol-page-header__lead">Ilmiy portfoliyongizni boshqaring</p>
+    </div>
+    {% if error %}<p class="ol-badge ol-badge--error au-alert" role="alert">{{ error }}</p>{% endif %}
+    {% if request.args.get('error') == 'google' %}<p class="ol-badge ol-badge--error au-alert" role="alert">Google bilan kirishda xatolik yuz berdi. Qayta urinib ko'ring.</p>{% endif %}
 
     <a href="/auth/google/login{% if request.args.get('next') %}?next={{ request.args.get('next')|urlencode }}{% endif %}"
-      style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:var(--color-text-primary);padding:14px 24px;border-radius:var(--radius-default);text-decoration:none;font-weight:600;font-size:1rem;margin-bottom:12px;border:1px solid var(--color-border);transition:all 0.2s;">
-      <svg width="20" height="20" viewBox="0 0 24 24">
+       class="ol-btn ol-btn--secondary ol-btn--block">
+      {# Google logo: brand-mandated colours (guidelines), not design tokens. #}
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -42,25 +39,23 @@
       Google bilan kirish
     </a>
 
-    <div class="cab-tg" id="tg-login"></div>
-    <div class="cab-divider">yoki</div>
+    <div class="au-tg" id="tg-login"></div>
+    <div class="au-or">yoki</div>
 
-    <form method="post" action="/cabinet/login{% if next %}?next={{ next|urlencode }}{% endif %}">
+    <form method="post" action="/cabinet/login{% if next %}?next={{ next|urlencode }}{% endif %}" class="au-form">
       {{ csrf_token()|safe }}
-      <div class="cab-group">
-        <label>Email</label>
-        <label class="ol-label" for="ol-field-1">email@example.com</label>
-<input id="ol-field-1" class="cab-input" type="email" name="email" placeholder="email@example.com" required>
+      <div class="ol-field-group">
+        <label class="ol-label" for="cab-email">Email</label>
+        <input id="cab-email" class="ol-field" type="email" name="email" placeholder="email@example.com" autocomplete="email" required>
       </div>
-      <div class="cab-group">
-        <label>Parol</label>
-        <label class="ol-label" for="ol-field-2">••••••</label>
-<input id="ol-field-2" class="cab-input" type="password" name="password" placeholder="••••••" required>
+      <div class="ol-field-group">
+        <label class="ol-label" for="cab-password">Parol</label>
+        <input id="cab-password" class="ol-field" type="password" name="password" autocomplete="current-password" required>
       </div>
-      <button class="cab-btn" type="submit">Kirish</button>
+      <button class="ol-btn ol-btn--primary ol-btn--block" type="submit">Kirish</button>
     </form>
 
-    <div class="cab-foot">Hisobingiz yo'qmi? <a href="/cabinet/register">Ro'yxatdan o'ting</a></div>
+    <div class="au-foot">Hisobingiz yo'qmi? <a href="/cabinet/register">Ro'yxatdan o'ting</a></div>
   </div>
 </div>
 {% endblock %}

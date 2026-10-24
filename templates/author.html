@@ -1,21 +1,25 @@
 {% extends "base.html" %}
+{% from "components/page_header.html" import page_header_with_actions %}
 {% block title %}Olim — {{ name }}{% endblock %}
 {% block content %}
-  <div class="page-heading">
-    <div>
-      <h1>Olim: {{ name }}</h1>
-      <p>{{ rows|length }} ta dissertatsiya topildi.</p>
+<div class="ol-page">
+  {% call page_header_with_actions('Olim: ' ~ name, rows|length ~ ' ta dissertatsiya topildi.', crumbs=[('Bosh sahifa', '/')]) %}
+    <a href="/dashboard" class="ol-btn ol-btn--secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Ortga</a>
+  {% endcall %}
+
+  <section class="ol-section" aria-label="Statistika">
+    <div class="ol-stat-grid">
+      <div class="ol-stat"><div class="ol-stat__value">{{ stats.total }}</div><div class="ol-stat__label">Jami</div></div>
+      <div class="ol-stat"><div class="ol-stat__value">{{ stats.phd }}</div><div class="ol-stat__label">PhD</div></div>
+      <div class="ol-stat"><div class="ol-stat__value">{{ stats.dsc }}</div><div class="ol-stat__label">DSc</div></div>
     </div>
-    <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left"></i> Ortga</a>
-  </div>
-  <div class="row g-3 mb-3">
-    <div class="col-12 col-md-4"><div class="content-card stat-card"><div class="text-muted mb-2">Jami</div><div class="h3">{{ stats.total }}</div></div></div>
-    <div class="col-12 col-md-4"><div class="content-card stat-card"><div class="text-muted mb-2">PhD</div><div class="h3">{{ stats.phd }}</div></div></div>
-    <div class="col-12 col-md-4"><div class="content-card stat-card"><div class="text-muted mb-2">DSc</div><div class="h3">{{ stats.dsc }}</div></div></div>
-  </div>
-  <div class="table-panel">
-    <div class="table-scroll table-wrapper">
-      <table class="table table-hover align-middle mb-0 table-sticky">
+  </section>
+
+  <section class="ol-section" aria-labelledby="author-diss">
+    <h2 id="author-diss" class="ol-h4">Dissertatsiyalar</h2>
+    {% if rows %}
+    <div class="ol-table-wrap">
+      <table class="ol-table">
         <thead><tr><th>#</th><th>Sana</th><th>Daraja</th><th>Olim</th><th>Mavzu</th><th>Ixtisoslik</th><th>Muassasa</th><th>Ilmiy rahbar</th><th>Havola</th></tr></thead>
         <tbody>
           {% for row in rows %}
@@ -32,11 +36,15 @@
                 <span class="sup-badge-cell"></span>
                 <script>document.currentScript.previousElementSibling.innerHTML = supervisorBadge({{ row.Ilmiy_rahbar|tojson }}, {{ row.supervisor_count|default(1)|int }});</script>
               </td>
-              <td>{% if row.Link %}<a href="{{ row.Link }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}—{% endif %}</td>
+              <td>{% if row.Link %}<a href="{{ row.Link }}" target="_blank" rel="noopener noreferrer" aria-label="OAK sahifasi"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}—{% endif %}</td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-  </div>
+    {% else %}
+    <div class="ol-empty">Bu olim bo‘yicha dissertatsiya topilmadi. <a href="/dashboard">Dissertatsiyalar ro‘yxatiga qaytish</a></div>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

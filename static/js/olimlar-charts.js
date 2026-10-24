@@ -13,8 +13,18 @@
     textMuted: token('--color-text-muted'), border: token('--color-border'),
     borderSubtle: token('--color-border-subtle'), white: token('--color-white'),
     actionBlue: token('--color-action-blue'), brandOrange: token('--color-brand-orange'),
-    success: token('--color-success'), error: token('--color-error'), notice: token('--color-notice')
+    success: token('--color-success'), error: token('--color-error'), notice: token('--color-notice'),
+    surface: token('--color-surface'), blueSoft: token('--color-blue-soft'),
+    actionBlueLight: token('--color-action-blue-light'), actionPressed: token('--color-action-pressed')
   };
+  /* Token rangidan shaffof variant (Chart.js fill uchun): alpha('#0056d6', .1). */
+  function alpha(hex, a) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) h = h.replace(/./g, function (c) { return c + c; });
+    if (!/^[0-9a-f]{6}$/i.test(h)) return hex;
+    return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' +
+      parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+  }
   // Ordered blue series; category labels and tooltips carry the meaning.
   var CATEGORICAL = [1,2,3,4,5,6].map(function(n){return token('--color-series-'+n);});
 
@@ -83,6 +93,7 @@
   global.OlimlarCharts = {
     tokens: TOKENS,
     palette: palette,
+    alpha: alpha,
     axis: axis,
     applyDefaults: applyDefaults
   };

@@ -124,7 +124,7 @@
           labels: years.map(function (y) { return y.year; }),
           datasets: [{
             data: years.map(function (y) { return y.count; }),
-            borderColor: OlimlarCharts.tokens.series2, backgroundColor: 'rgba(96,165,250,0.18)',
+            borderColor: OlimlarCharts.tokens.series2, backgroundColor: OlimlarCharts.alpha(OlimlarCharts.tokens.series2, 0.18),
             fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2
           }]
         },

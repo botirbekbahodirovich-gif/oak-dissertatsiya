@@ -1,19 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Ro'yxatdan o'tish — Olimlar.uz{% endblock %}
+{% block extra_head %}
+<style>
+  .au-page { display:flex; justify-content:center; padding-block:var(--space-48); }
+  .au-card { width:100%; max-width:440px; text-align:center; }
+  .au-card .ol-page-header { margin-bottom:var(--space-24); }
+  .au-card .ol-page-header__title { font-size:var(--text-h3); }
+  .au-or { display:flex; align-items:center; gap:var(--space-12); color:var(--color-text-muted);
+           font-size:var(--text-small); margin:var(--space-16) 0; }
+  .au-or::before, .au-or::after { content:""; flex:1; height:1px; background:var(--color-border-subtle); }
+  .au-tg { display:flex; justify-content:center; min-height:48px; }
+  .au-status { color:var(--color-error); font-size:var(--text-small); margin-top:var(--space-8); }
+  .au-later { margin-top:var(--space-24); }
+  .au-later a { color:var(--color-text-secondary); font-size:var(--text-small); }
+</style>
+{% endblock %}
 {% block content %}
-  <div class="content-card" style="max-width:440px;margin:0 auto;text-align:center;">
-    <div class="page-heading">
-      <div>
-        <h1>Ro'yxatdan o'tish</h1>
-        <p>Davom etish uchun Telegram yoki Google orqali kiring.</p>
-      </div>
+<div class="ol-page au-page">
+  <div class="ol-card au-card">
+    <div class="ol-page-header">
+      <h1 class="ol-page-header__title">Ro'yxatdan o'tish</h1>
+      <p class="ol-page-header__lead">Davom etish uchun Telegram yoki Google orqali kiring.</p>
     </div>
 
-    <!-- Google bilan kirish -->
-    <a href="/login/google"
-       onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();"
-       style="display:flex;align-items:center;justify-content:center;gap:10px;background:white;color:var(--color-text-primary);padding:14px 24px;border-radius:var(--radius-default);text-decoration:none;font-weight:600;font-size:1rem;margin:0 0 16px;border:1px solid var(--color-border);">
-      <svg width="20" height="20" viewBox="0 0 24 24">
+    <a href="/login/google" class="ol-btn ol-btn--secondary ol-btn--block"
+       onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">
+      {# Google logo: brand-mandated colours (guidelines), not design tokens. #}
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -22,10 +35,9 @@
       Google bilan kirish
     </a>
 
-    <p style="color:var(--color-action);font-size:14px;margin-bottom:16px;">— yoki Telegram orqali kiring —</p>
+    <div class="au-or">yoki Telegram orqali</div>
 
-    <!-- Telegram orqali kirish -->
-    <div id="tg-container" style="display:flex;justify-content:center;">
+    <div id="tg-container" class="au-tg">
       <script async src="https://telegram.org/js/telegram-widget.js?22"
         data-telegram-login="send_kod_bot"
         data-size="large"
@@ -35,22 +47,21 @@
         data-request-access="write">
       </script>
     </div>
-    <p id="tg-status" style="color:var(--color-text-secondary);font-size:13px;margin-top:8px;display:none;"></p>
+    <p id="tg-status" class="au-status" role="alert" hidden></p>
 
-    <!-- Keyinroq (hozircha davom etish) -->
-    <div class="mt-4">
-      <a href="/" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();"
-         style="color:var(--color-text-secondary);font-size:0.85rem;text-decoration:underline;">
-        Keyinroq (hozircha davom etish)
-      </a>
+    <div class="au-later">
+      <a href="/" onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">Keyinroq (hozircha davom etish)</a>
     </div>
   </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
   function onTelegramAuth(user) {
     if (window.releaseGuestFreeze) window.releaseGuestFreeze();
-    document.getElementById('tg-container').innerHTML = '<p style="color:var(--color-action);font-size:14px;">Tekshirilmoqda...</p>';
+    var box = document.getElementById('tg-container');
+    var status = document.getElementById('tg-status');
+    box.innerHTML = '<p class="ol-muted">Tekshirilmoqda…</p>';
     fetch('/login/telegram', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -60,14 +71,14 @@
     .then(d => {
       if (d.success) window.location.href = d.redirect || '/';
       else {
-        document.getElementById('tg-status').textContent = d.error || 'Xatolik';
-        document.getElementById('tg-status').style.display = 'block';
-        document.getElementById('tg-container').innerHTML = '<p style="color:var(--color-action);font-size:13px;">Qayta urinish uchun sahifani yangilang</p>';
+        status.textContent = d.error || 'Xatolik';
+        status.hidden = false;
+        box.innerHTML = '<p class="ol-muted">Qayta urinish uchun sahifani yangilang</p>';
       }
     })
     .catch(() => {
-      document.getElementById('tg-status').textContent = 'Tarmoq xatosi';
-      document.getElementById('tg-status').style.display = 'block';
+      status.textContent = 'Tarmoq xatosi';
+      status.hidden = false;
     });
   }
 </script>

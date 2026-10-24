@@ -117,7 +117,7 @@
         if (!host) return;
         if (!d.success) { host.innerHTML = ''; return; }
         if (!d.collaborators.length) {
-          host.innerHTML = '<p style="color:#94a3b8;font-size:0.83rem;">Hali hamkorlar yo\'q.</p>';
+          host.innerHTML = '<p style="color:var(--color-text-muted);font-size:0.83rem;">Hali hamkorlar yo\'q.</p>';
           return;
         }
         host.innerHTML = d.collaborators.map(function (c) {
@@ -127,14 +127,14 @@
               (c[key] ? 'checked' : '') + (c.status !== 'accepted' ? ' disabled' : '') +
               ' onchange="toggleCollabPerm(' + c.id + ',\'' + key + '\',this.checked)"> ' + label + '</label>';
           };
-          return '<div style="border:1px solid rgba(148,163,184,0.18);border-radius:10px;padding:9px 11px;margin-bottom:8px;">' +
+          return '<div style="border:1px solid var(--color-border);border-radius:var(--radius-card);padding:9px 11px;margin-bottom:8px;">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
             '<b>' + esc(c.username) + '</b>' +
-            '<span style="font-size:0.72rem;color:#94a3b8;">' +
+            '<span style="font-size:0.72rem;color:var(--color-text-muted);">' +
             (c.status === 'accepted' ? '<i class="bi bi-check-lg" aria-hidden="true"></i> qabul qildi' : '<i class="bi bi-hourglass-split" aria-hidden="true"></i> kutilmoqda') + '</span></div>' +
             '<div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;">' +
             perm('can_comment', 'Izoh') + perm('can_edit', 'Tahrir') + perm('can_review_status', 'Baholash') +
-            '<button class="dw-btn ghost" style="padding:3px 10px;font-size:0.74rem;color:#f87171;margin-left:auto;" onclick="removeCollaborator(' + c.id + ')">O\'chirish</button>' +
+            '<button class="dw-btn ghost" style="padding:3px 10px;font-size:0.74rem;color:var(--color-error);margin-left:auto;" onclick="removeCollaborator(' + c.id + ')">O\'chirish</button>' +
             '</div></div>';
         }).join('');
       }).catch(function () {});
@@ -191,8 +191,8 @@
           var p = n.payload || {};
           var markRead = function () { postJSON('/api/diss-notifications/mark-read', { ids: [n.id] }); };
           var accBtn = function (fn, id) {
-            return '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="' + fn + '(' + id + ',\'accept\')"><i class="bi bi-check-lg" aria-hidden="true"></i> Qabul qilish</button> ' +
-              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="' + fn + '(' + id + ',\'decline\')"><i class="bi bi-x-lg" aria-hidden="true"></i> Rad etish</button>';
+            return '<button class="dw-btn" style="border:none;background:var(--color-action);color:var(--color-white);font-weight:600;padding:4px 12px;border-radius:var(--radius-default);cursor:pointer;margin-left:6px;" onclick="' + fn + '(' + id + ',\'accept\')"><i class="bi bi-check-lg" aria-hidden="true"></i> Qabul qilish</button> ' +
+              '<button class="dw-btn ghost" style="background:var(--color-background-soft);border:1px solid var(--color-border);color:inherit;padding:4px 12px;border-radius:var(--radius-default);cursor:pointer;" onclick="' + fn + '(' + id + ',\'decline\')"><i class="bi bi-x-lg" aria-hidden="true"></i> Rad etish</button>';
           };
           // rahbar/shogird taklifi — bevosita tugmalar bilan
           if (n.event_type === 'advisor_invite' && p.link_id) {
@@ -218,7 +218,7 @@
           else if (n.event_type === 'followed_scholar_new_student') { text = esc(p.scholar_name || '') + 'ning yangi shogirdi: ' + esc(p.student_name || '') + (p.mavzu ? ' — ' + esc(p.mavzu) : ''); link = '/olim/' + encodeURIComponent(p.scholar_name || ''); }
           else return;
           banner(n.event_type === 'advisor_reviewed' || n.event_type === 'student_submitted' ? 'warn' : 'info',
-            text + ' <a href="' + link + '" style="color:#4a9eff;font-weight:700;">Ko\'rish →</a>',
+            text + ' <a href="' + link + '" style="color:var(--color-action);font-weight:600;">Ko\'rish →</a>',
             markRead);
         });
       }).catch(function () {});
@@ -555,7 +555,7 @@
     if (sessionWarned) return;
     sessionWarned = true;
     banner('warn', 'Sessiya muddati tugagan — matningiz brauzerda lokal saqlanmoqda. ' +
-      '<a href="/login" target="_blank" style="color:#4a9eff;font-weight:700;">Yangi oynada qayta kiring</a>, ' +
+      '<a href="/login" target="_blank" style="color:var(--color-action);font-weight:600;">Yangi oynada qayta kiring</a>, ' +
       "so'ng bu yerda «Saqlash» tugmasini bosing.");
   }
 
@@ -772,11 +772,11 @@
           var el = document.createElement('div');
           el.className = 'ver-item';
           el.innerHTML = '<b>' + esc(v.created_at) + '</b> · ' + esc(v.saved_by) +
-            '<br><small style="color:#94a3b8;">' + v.save_type + ' · ' + v.word_count + ' so\'z</small>';
+            '<br><small style="color:var(--color-text-muted);">' + v.save_type + ' · ' + v.word_count + ' so\'z</small>';
           el.addEventListener('click', function () { previewVersion(v.id, v.created_at); });
           host.appendChild(el);
         });
-        if (!d.versions || !d.versions.length) host.innerHTML = '<p style="color:#94a3b8;">Versiyalar hali yo\'q.</p>';
+        if (!d.versions || !d.versions.length) host.innerHTML = '<p style="color:var(--color-text-muted);">Versiyalar hali yo\'q.</p>';
       });
   };
   window.closeVersions = function () { document.getElementById('ver-panel').classList.remove('open'); };
@@ -865,10 +865,10 @@
     var initial = (a.author || '?').slice(0, 1).toUpperCase();
     var replies = (a.replies || []).map(function (r) {
       return '<div class="ann-reply"><b>' + esc(r.author) + ':</b> ' + esc(r.body) +
-             ' <small style="color:#64748b;">' + esc(r.created_at) + '</small></div>';
+             ' <small style="color:var(--color-text-muted);">' + esc(r.created_at) + '</small></div>';
     }).join('');
     var badge = a.status === 'orphaned'
-      ? '<span class="ann-type" style="background:rgba(148,163,184,0.2);color:#94a3b8;"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Matn o\'zgargan</span>'
+      ? '<span class="ann-type" style="background:var(--color-background-soft);color:var(--color-text-secondary);"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Matn o\'zgargan</span>'
       : '<span class="ann-type ' + a.type + '">' + esc(a.type_label) + '</span>';
     return '<div class="ann-card ' + (a.status === 'resolved' ? 'resolved' : '') + '" data-ann-id="' + a.id + '">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
@@ -876,14 +876,14 @@
       '<b style="flex:1;">' + esc(a.author) + '</b>' + badge + '</div>' +
       '<div class="ann-anchor">“' + esc((a.anchor_text || '').slice(0, 90)) + '”</div>' +
       '<div>' + esc(a.body) + '</div>' +
-      '<small style="color:#64748b;">' + esc(a.created_at) + '</small>' +
+      '<small style="color:var(--color-text-muted);">' + esc(a.created_at) + '</small>' +
       replies +
       (a.status !== 'resolved'
         ? '<input class="ann-input" placeholder="Javob yozish… (Enter)" data-reply-to="' + a.id + '">' +
           '<div style="display:flex;gap:6px;margin-top:6px;">' +
           '<button class="dw-btn ghost" style="padding:4px 10px;font-size:0.75rem;" data-resolve="' + a.id + '">✓ Hal qilindi</button>' +
           (a.mine && !(a.replies || []).length
-            ? '<button class="dw-btn ghost" style="padding:4px 10px;font-size:0.75rem;color:#f87171;" data-del="' + a.id + '">O\'chirish</button>' : '') +
+            ? '<button class="dw-btn ghost" style="padding:4px 10px;font-size:0.75rem;color:var(--color-error);" data-del="' + a.id + '">O\'chirish</button>' : '') +
           '</div>'
         : (S.role === 'advisor'
             ? '<button class="dw-btn ghost" style="padding:4px 10px;font-size:0.75rem;margin-top:6px;" data-reopen="' + a.id + '">↩️ Qayta ochish</button>' : '')) +
@@ -895,9 +895,9 @@
     if (!host) return;
     var html = '';
     if (d.open.length) html += d.open.map(annCard).join('');
-    if (d.orphaned.length) html += '<p style="color:#94a3b8;font-size:0.75rem;margin:10px 0 6px;">MATNI O\'ZGARGANLAR</p>' + d.orphaned.map(annCard).join('');
-    if (d.resolved.length) html += '<p style="color:#94a3b8;font-size:0.75rem;margin:10px 0 6px;">HAL QILINGANLAR</p>' + d.resolved.map(annCard).join('');
-    host.innerHTML = html || '<p style="color:#94a3b8;font-size:0.83rem;">Hali izohlar yo\'q. Matndan parcha belgilang.</p>';
+    if (d.orphaned.length) html += '<p style="color:var(--color-text-muted);font-size:0.75rem;margin:10px 0 6px;">MATNI O\'ZGARGANLAR</p>' + d.orphaned.map(annCard).join('');
+    if (d.resolved.length) html += '<p style="color:var(--color-text-muted);font-size:0.75rem;margin:10px 0 6px;">HAL QILINGANLAR</p>' + d.resolved.map(annCard).join('');
+    host.innerHTML = html || '<p style="color:var(--color-text-muted);font-size:0.83rem;">Hali izohlar yo\'q. Matndan parcha belgilang.</p>';
     host.querySelectorAll('[data-reply-to]').forEach(function (inp) {
       inp.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' || !inp.value.trim()) return;

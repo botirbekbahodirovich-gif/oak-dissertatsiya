@@ -142,7 +142,7 @@
               <td class="uni" title="{{ u }}"><a href="/university/{{ u|urlencode }}" style="color:var(--color-text-secondary);">{{ u }}</a></td>
               {% for c in t.uni_trend.data[u] %}
               {% set ratio = (c / umax.v) %}
-              <td class="cell" style="background: rgba(59,130,246,{{ 0.08 + ratio * 0.72 }}); color: {{ '#fff' if ratio > 0.5 else 'var(--color-text-secondary)' }};" title="{{ u }} — {{ c }}">{{ c if c else '·' }}</td>
+              <td class="cell" style="background: color-mix(in srgb, var(--color-action) {{ (8 + ratio * 67)|round|int }}%, var(--color-surface)); color: var(--color-text-primary);" title="{{ u }} — {{ c }}">{{ c if c else '·' }}</td>
               {% endfor %}
             </tr>
             {% endfor %}
@@ -205,9 +205,9 @@ var T = {{ t|tojson }};
   new Chart(document.getElementById('c-yearly'), {
     type: 'line',
     data: { labels: ys, datasets: [
-      { label: 'Jami', data: T.yearly.map(function (r) { return r.cnt; }), borderColor: K.actionBlue, backgroundColor: 'rgba(0,86,214,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
-      { label: 'PhD', data: T.yearly.map(function (r) { return r.phd; }), borderColor: K.success, backgroundColor: 'rgba(12,137,48,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
-      { label: 'DSc', data: T.yearly.map(function (r) { return r.dsc; }), borderColor: K.brandOrange, backgroundColor: 'rgba(255,66,3,0.10)', borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 }
+      { label: 'Jami', data: T.yearly.map(function (r) { return r.cnt; }), borderColor: K.actionBlue, backgroundColor: C.alpha(K.actionBlue, 0.10), borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
+      { label: 'PhD', data: T.yearly.map(function (r) { return r.phd; }), borderColor: K.success, backgroundColor: C.alpha(K.success, 0.10), borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 },
+      { label: 'DSc', data: T.yearly.map(function (r) { return r.dsc; }), borderColor: K.brandOrange, backgroundColor: C.alpha(K.brandOrange, 0.10), borderWidth: 2, fill: true, tension: 0.35, pointRadius: 3 }
     ] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: K.textSecondary, boxWidth: 14, padding: 14 } }, tooltip: TT },
@@ -232,7 +232,7 @@ var T = {{ t|tojson }};
   var mlabels = T.monthly.map(function (m) { var p = m.key.split('-'); return UZ_MON[parseInt(p[1], 10)] + " '" + p[0].slice(2); });
   new Chart(document.getElementById('c-monthly'), {
     type: 'bar',
-    data: { labels: mlabels, datasets: [{ label: 'Himoyalar', data: T.monthly.map(function (m) { return m.cnt; }), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 3 }] },
+    data: { labels: mlabels, datasets: [{ label: 'Himoyalar', data: T.monthly.map(function (m) { return m.cnt; }), backgroundColor: C.alpha(K.actionBlue, 0.7), borderRadius: 3 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: TT },
       scales: { x: { grid: { display: false }, ticks: { color: OlimlarCharts.tokens.textSecondary, maxRotation: 60, minRotation: 45, font: { size: 10 } } }, y: { grid: grid, beginAtZero: true } } }
@@ -243,7 +243,7 @@ var T = {{ t|tojson }};
   var femPct = T.gender.map(function (r) { var tt = r.male + r.female; return tt ? Math.round(r.female / tt * 100) : 0; });
   new Chart(document.getElementById('c-gender'), {
     data: { labels: gy, datasets: [
-      { type: 'bar', label: 'Erkak', data: T.gender.map(function (r) { return r.male; }), backgroundColor: 'rgba(0,86,214,0.8)', stack: 'g', borderRadius: 3, yAxisID: 'y' },
+      { type: 'bar', label: 'Erkak', data: T.gender.map(function (r) { return r.male; }), backgroundColor: C.alpha(K.actionBlue, 0.8), stack: 'g', borderRadius: 3, yAxisID: 'y' },
       { type: 'bar', label: 'Ayol', data: T.gender.map(function (r) { return r.female; }), backgroundColor: (OlimlarCharts.tokens.series3 + 'cc'), stack: 'g', borderRadius: 3, yAxisID: 'y' },
       { type: 'line', label: 'Ayollar %', data: femPct, borderColor: OlimlarCharts.tokens.series4, backgroundColor: OlimlarCharts.tokens.series4, borderWidth: 2, tension: 0.35, pointRadius: 3, yAxisID: 'y1' }
     ] },
@@ -268,8 +268,8 @@ var T = {{ t|tojson }};
     });
     svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     svg.innerHTML =
-      '<polyline fill="none" stroke="#0056d6" stroke-width="2" points="' + pts.join(' ') + '"/>' +
-      '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2.5" fill="#0056d6"/>';
+      '<polyline fill="none" stroke="' + K.actionBlue + '" stroke-width="2" points="' + pts.join(' ') + '"/>' +
+      '<circle cx="' + pts[pts.length - 1].split(',')[0] + '" cy="' + pts[pts.length - 1].split(',')[1] + '" r="2.5" fill="' + K.actionBlue + '"/>';
   });
 })();
 </script>

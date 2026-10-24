@@ -75,32 +75,32 @@
     // Qiymatlar olimlar-design-system.css tokenlariga mos (CSS bu yerda
     // satr sifatida quriladi, shuning uchun var() emas, literal qiymatlar).
     var css = '' +
-      '.pw-overlay{position:fixed;inset:0;background:rgba(12,15,18,0.45);z-index:10050;' +
+      '.pw-overlay{position:fixed;inset:0;background:var(--color-overlay);z-index:10050;' +
         'display:flex;align-items:center;justify-content:center;padding:20px;}' +
-      '.pw-modal{background:#ffffff;border:1px solid #e6e6e6;border-radius:8px;max-width:440px;' +
-        'width:100%;padding:28px;position:relative;box-shadow:0 4px 12px rgba(12,15,18,0.08);}' +
-      '.pw-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#666666;' +
+      '.pw-modal{background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;max-width:440px;' +
+        'width:100%;padding:28px;position:relative;box-shadow:var(--shadow-dropdown);}' +
+      '.pw-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--color-text-muted);' +
         'font-size:1.4rem;cursor:pointer;line-height:1;min-width:44px;min-height:44px;}' +
-      '.pw-close:hover{color:#0c0f12;}' +
-      '.pw-icon{font-size:1.75rem;margin-bottom:8px;color:#0056d6;}' +
-      '.pw-title{font-size:1.15rem;font-weight:600;color:#0c0f12;margin:0 0 6px;}' +
-      '.pw-sub{color:#666666;font-size:0.9rem;margin:0 0 14px;}' +
+      '.pw-close:hover{color:var(--color-text-primary);}' +
+      '.pw-icon{font-size:1.75rem;margin-bottom:8px;color:var(--color-action);}' +
+      '.pw-title{font-size:1.15rem;font-weight:600;color:var(--color-text-primary);margin:0 0 6px;}' +
+      '.pw-sub{color:var(--color-text-muted);font-size:0.9rem;margin:0 0 14px;}' +
       '.pw-benefits{margin:0 0 18px;padding:0;list-style:none;}' +
-      '.pw-benefits li{color:#333333;font-size:0.88rem;padding:4px 0 4px 24px;position:relative;}' +
-      '.pw-benefits li:before{content:"\\2713";position:absolute;left:2px;color:#0c8930;font-weight:700;}' +
+      '.pw-benefits li{color:var(--color-text-secondary);font-size:0.88rem;padding:4px 0 4px 24px;position:relative;}' +
+      '.pw-benefits li:before{content:"\\2713";position:absolute;left:2px;color:var(--color-success);font-weight:700;}' +
       '.pw-btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;' +
         'border:1px solid transparent;border-radius:4px;padding:12px 18px;' +
         'font-weight:600;font-size:0.95rem;cursor:pointer;text-align:center;text-decoration:none;' +
         'margin-bottom:10px;transition:background 0.15s,border-color 0.15s;}' +
       '.pw-btn:disabled{opacity:0.55;cursor:not-allowed;}' +
-      '.pw-btn.once{background:#ffffff;color:#333333;border-color:#e6e6e6;}' +
-      '.pw-btn.once:hover{border-color:#0056d6;color:#0056d6;}' +
-      '.pw-btn.prem{background:#0056d6;color:#fff;}' +
-      '.pw-btn.prem:hover{background:#00429f;color:#fff;}' +
-      '.pw-err{display:none;margin-top:8px;background:#fdf4f4;color:#af1d1d;' +
-        'border:1px solid #fdf4f4;border-radius:4px;padding:10px 14px;font-size:0.85rem;}' +
-      '.pw-legal{margin-top:10px;color:#666666;font-size:0.75rem;text-align:center;}' +
-      '.pw-legal a{color:#0056d6;text-decoration:none;}';
+      '.pw-btn.once{background:var(--color-surface);color:var(--color-text-secondary);border-color:var(--color-border);}' +
+      '.pw-btn.once:hover{border-color:var(--color-action);color:var(--color-action);}' +
+      '.pw-btn.prem{background:var(--color-premium);color:var(--color-white);}' +
+      '.pw-btn.prem:hover{background:var(--color-premium);color:var(--color-white);text-decoration:underline;}' +
+      '.pw-err{display:none;margin-top:8px;background:var(--color-error-soft);color:var(--color-error);' +
+        'border:1px solid var(--color-error-soft);border-radius:4px;padding:10px 14px;font-size:0.85rem;}' +
+      '.pw-legal{margin-top:10px;color:var(--color-text-muted);font-size:0.75rem;text-align:center;}' +
+      '.pw-legal a{color:var(--color-action);text-decoration:none;}';
     var el = document.createElement('style');
     el.id = 'pw-styles';
     el.textContent = css;
