@@ -282,7 +282,7 @@ a.ol-card:hover, .ol-card:has(a):hover { border-color: var(--color-action-blue-l
 }
 .ol-badge--neutral { background: var(--color-background-soft); color: var(--color-text-secondary); }
 .ol-badge--info    { background: var(--color-blue-soft); color: var(--color-action-blue); }
-.ol-badge--brand   { background: var(--color-orange-soft); color: var(--color-brand-orange); }
+.ol-badge--brand   { background: var(--color-orange-soft); color: var(--color-brand-ink); }
 .ol-badge--success { background: var(--color-success-soft); color: var(--color-success-ink); }
 .ol-badge--error   { background: var(--color-error-soft); color: var(--color-error); }
 .ol-badge--notice  { background: var(--color-notice-soft); color: #8a5200; }

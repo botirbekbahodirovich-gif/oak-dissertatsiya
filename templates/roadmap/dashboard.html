@@ -14,13 +14,13 @@
 .rj-hero h1 { font-size:1.35rem; margin:0 0 4px; }
 .rj-hero .sub { color:var(--color-action); font-size:0.86rem; }
 .rj-badge { display:inline-block; font-size:0.72rem; font-weight:600; padding:3px 10px;
-  border-radius:var(--radius-default); background:var(--color-background); color:var(--color-action); margin-right:6px; }
+  border-radius:var(--radius-default); background:var(--color-blue-soft); color:var(--color-action); margin-right:6px; }
 .rj-count { text-align:center; padding:10px 18px; border-radius:var(--radius-default);
-  background:var(--color-background); border:1px solid var(--color-border); }
+  background:var(--color-blue-soft); border:1px solid var(--color-border); }
 .rj-count b { display:block; font-size:1.7rem; color:var(--color-action); font-variant-numeric:tabular-nums; }
-.rj-count.warn { background:var(--color-background); border-color:var(--color-border); }
+.rj-count.warn { background:var(--color-notice-soft); border-color:var(--color-border); }
 .rj-count.warn b { color:var(--color-text-secondary); }
-.rj-count.danger { background:var(--color-background); border-color:var(--color-border); }
+.rj-count.danger { background:var(--color-error-soft); border-color:var(--color-border); }
 .rj-count.danger b { color:var(--color-danger); }
 .rj-count span { font-size:0.72rem; color:var(--color-action); font-weight:600; }
 
@@ -47,9 +47,9 @@
 .rj-prow .top b { color:var(--color-text-primary); font-weight:600; }
 .rj-prow .top b { color:var(--color-action); }
 .rj-prow .top span { color:var(--color-action); font-variant-numeric:tabular-nums; }
-.rj-bar { height:8px; border-radius:var(--radius-default); background:var(--color-background); overflow:hidden; }
+.rj-bar { height:8px; border-radius:var(--radius-default); background:var(--color-background-soft); overflow:hidden; }
 .rj-bar i { display:block; height:100%; border-radius:var(--radius-default);
-  background:var(--color-surface); transition:width 0.35s; }
+  background:var(--color-action); transition:width 0.35s; color:var(--color-white); }
 
 /* ro'yxat kartalari */
 .rj-item { display:flex; justify-content:space-between; align-items:center; gap:12px;
@@ -59,15 +59,15 @@
 .rj-item .meta { color:var(--color-action); font-size:0.78rem; margin-top:2px; }
 .rj-item.done .ttl { text-decoration:line-through; opacity:0.6; }
 .rj-chip { font-size:0.7rem; font-weight:600; padding:2px 9px; border-radius:var(--radius-default);
-  background:var(--color-background); color:var(--color-action); }
-.rj-chip.chop_etilgan, .rj-chip.qatnashgan { background:var(--color-background); color:var(--color-text-secondary); }
-.rj-chip.yuborilgan, .rj-chip.qabul { background:var(--color-background); color:var(--color-text-secondary); }
+  background:var(--color-background-soft); color:var(--color-action); }
+.rj-chip.chop_etilgan, .rj-chip.qatnashgan { background:var(--color-success-soft); color:var(--color-text-secondary); }
+.rj-chip.yuborilgan, .rj-chip.qabul { background:var(--color-notice-soft); color:var(--color-text-secondary); }
 .rj-btn { border:none; background:var(--color-action); color:var(--color-surface);
   font-weight:600; padding:8px 16px; border-radius:var(--radius-default); cursor:pointer; font-size:0.84rem; }
-.rj-btn.ghost { background:var(--color-background); color:inherit;
+.rj-btn.ghost { background:var(--color-background-soft); color:inherit;
   border:1px solid var(--color-border); }
 .rj-btn.sm { padding:4px 10px; font-size:0.74rem; }
-.rj-btn.red { background:var(--color-background); color:var(--color-action); border:1px solid var(--color-border); }
+.rj-btn.red { background:var(--color-error-soft); color:var(--color-action); border:1px solid var(--color-border); }
 .rj-empty { text-align:center; color:var(--color-text-secondary); padding:26px 0; font-size:0.88rem; }
 .rj-sec-head { display:flex; justify-content:space-between; align-items:center; gap:10px;
   flex-wrap:wrap; margin-bottom:14px; }
@@ -92,17 +92,17 @@
 @media (max-width: 640px) { .rj-tl-row { grid-template-columns:1fr; gap:4px; } }
 .rj-tl-label { color:var(--color-text-primary); font-weight:600; }
 .rj-tl-label { color:var(--color-action); }
-.rj-tl-track { position:relative; height:22px; border-radius:var(--radius-default); background:var(--color-background); }
+.rj-tl-track { position:relative; height:22px; border-radius:var(--radius-default); background:var(--color-background-soft); }
 .rj-tl-seg { position:absolute; top:0; bottom:0; border-radius:var(--radius-default);
-  background:var(--color-background); border:1px solid var(--color-border); }
-.rj-tl-seg.past { background:var(--color-background); border-color:var(--color-border); }
-.rj-tl-seg.active { background:var(--color-background); border-color:var(--color-border); }
-.rj-tl-seg.done { background:var(--color-background); border-color:var(--color-success); }
+  background:var(--color-blue-soft); border:1px solid var(--color-border); }
+.rj-tl-seg.past { background:var(--color-background-soft); border-color:var(--color-border); }
+.rj-tl-seg.active { background:var(--color-success-soft); border-color:var(--color-border); }
+.rj-tl-seg.done { background:var(--color-success-soft); border-color:var(--color-success); }
 .rj-tl-chip { font-size:0.68rem; font-weight:600; padding:1px 8px; border-radius:var(--radius-default);
-  margin-left:6px; background:var(--color-background); color:var(--color-action); white-space:nowrap; }
-.rj-tl-chip.started { background:var(--color-background); color:var(--color-text-secondary); }
+  margin-left:6px; background:var(--color-background-soft); color:var(--color-action); white-space:nowrap; }
+.rj-tl-chip.started { background:var(--color-success-soft); color:var(--color-text-secondary); }
 .rj-tl-dates { color:var(--color-action); font-size:0.74rem; text-align:right; font-variant-numeric:tabular-nums; }
-.rj-tl-today { position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--color-background); }
+.rj-tl-today { position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--color-notice); color:var(--color-text-primary); }
 
 /* dissertatsiya tab */
 .rj-diss-cta { text-align:center; padding:30px 16px; }
@@ -249,7 +249,7 @@
         <span style="color:var(--color-action);font-variant-numeric:tabular-nums;">
           {{ '{:,}'.format(s.words).replace(',', ' ') }} / {{ '{:,}'.format(s.target).replace(',', ' ') }} so'z</span>
       </div>
-      <div class="rj-bar"><i style="width:{{ s.pct }}%;{% if not s.started %}background:var(--color-background);{% endif %};"></i></div>
+      <div class="rj-bar"><i style="width:{{ s.pct }}%;{% if not s.started %}background:var(--color-background-soft);{% endif %};"></i></div>
     </a>
     {% endfor %}
     <div style="text-align:center;margin-top:16px;">
@@ -366,7 +366,7 @@
         <div class="ttl">{{ c.name }}
           {% if c.catalog_slug %}
           <a href="/konferensiya/{{ c.catalog_slug }}"
-             style="font-size:0.68rem;font-weight:600;padding:2px 8px;border-radius:var(--radius-default);background:var(--color-background);color:var(--color-action);text-decoration:none;vertical-align:middle;white-space:nowrap;"
+             style="font-size:0.68rem;font-weight:600;padding:2px 8px;border-radius:var(--radius-default);background:var(--color-blue-soft);color:var(--color-action);text-decoration:none;vertical-align:middle;white-space:nowrap;"
              title="Konferensiyalar katalogidan qo'shilgan">Manba: Katalog ↗</a>
           {% endif %}</div>
         <div class="meta">{% if c.location %} {{ c.location }} · {% endif %}

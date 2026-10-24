@@ -27,10 +27,9 @@
   .admin-card .card-value { color:var(--oak-text-light); }
   .dot-online {
     width:10px; height:10px; border-radius:50%;
-    background:var(--color-background); display:inline-block;
+    background:var(--color-success); display:inline-block;
     box-shadow:none;
-    animation:pulse 1.8s infinite;
-  }
+    animation:pulse 1.8s infinite; color:var(--color-white); }
   @keyframes pulse {
     0% { box-shadow:none; }
     70% { box-shadow:none; }
@@ -42,8 +41,7 @@
     width:100%;
     min-height:3px;
     border-radius:5px 5px 0 0;
-    background:var(--color-surface);
-  }
+    background:var(--color-action); color:var(--color-white); }
   .mini-bar-label { color:var(--oak-muted); font-size:0.66rem; }
   .admin-section { margin-top:1.5rem; }
   .admin-section h2 {
@@ -54,13 +52,13 @@
   .admin-table { width:100%; margin:0; }
   .admin-table th { background:var(--oak-surface-2); color:var(--oak-muted); font-size:0.72rem; letter-spacing:0.5px; text-transform:uppercase; padding:0.7rem 1rem; }
   .admin-table td { padding:0.65rem 1rem; font-size:0.88rem; border-color:var(--oak-border); }
-  .admin-table tbody tr:hover td { background:var(--color-background); }
+  .admin-table tbody tr:hover td { background:var(--color-blue-soft); }
   .empty-cell { color:var(--oak-muted); text-align:center; padding:1.5rem; }
   .vc-cell { display:flex; align-items:center; gap:10px; min-width:160px; }
   .vc-num { font-weight:600; font-size:1rem; color:var(--oak-text); min-width:42px; }
   .vc-num { color:var(--oak-text-light); }
-  .vc-bar-track { flex:1; height:8px; background:var(--color-background); border-radius:var(--radius-default); overflow:hidden; }
-  .vc-bar { height:100%; border-radius:var(--radius-default); background:var(--color-surface); }
+  .vc-bar-track { flex:1; height:8px; background:var(--color-blue-soft); border-radius:var(--radius-default); overflow:hidden; }
+  .vc-bar { height:100%; border-radius:var(--radius-default); background:var(--color-action); color:var(--color-white); }
   .rank-cell { color:var(--oak-muted); font-weight:600; }
   .admin-table td.ip-mono { font-family:ui-monospace, monospace; color:var(--color-action); }
   .admin-table a { color:var(--color-action); text-decoration:none; }
@@ -87,7 +85,7 @@
   .admin-toggle-btn { display:inline-flex; align-items:center; gap:8px; background:var(--oak-surface);
     border:1px solid var(--oak-border); color:var(--color-text-primary); font-size:1rem; font-weight:600;
     padding:11px 18px; border-radius:var(--radius-default); cursor:pointer; transition:border-color 0.15s, background 0.15s; }
-  .admin-toggle-btn:hover { border-color:var(--color-border); background:var(--color-background); }
+  .admin-toggle-btn:hover { border-color:var(--color-border); background:var(--color-blue-soft); }
   .admin-toggle-btn .ats-caret { font-size:0.8rem; color:var(--oak-muted); transition:transform 0.2s; }
   .admin-toggle-btn.open .ats-caret { transform:rotate(180deg); }
   .admin-collapsible { overflow:hidden; max-height:0; opacity:0;
@@ -170,7 +168,7 @@
       </a>
       {% if u.ip and u.ip != '—' %}
       <button onclick="blockUser('{{ u.ip }}')" title="Foydalanuvchini bloklash"
-        style="margin-top:8px;background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>
+        style="margin-top:8px;background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>
       {% endif %}
     </div>
     {% endfor %}
@@ -246,7 +244,7 @@
           <td style="font-weight:600;">{{ v.total_visits }}</td>
           <td style="font-weight:600;">{{ v.unique_pages }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.visited_at|uztime }}</td>
-          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
         </tr>
         {% else %}
         <tr><td colspan="7" class="empty-cell">Tashriflar yo'q</td></tr>
@@ -286,7 +284,7 @@
           <td style="font-weight:600;">{{ v.unique_pages }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.first_visit }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
-          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Oxirgi IP bo'yicha bloklash" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Oxirgi IP bo'yicha bloklash" style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
         </tr>
         {% else %}
         <tr><td colspan="8" class="empty-cell">Ro'yxatdan o'tgan tashrif yo'q</td></tr>
@@ -322,7 +320,7 @@
           <td style="font-weight:600;">{{ v.unique_pages }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.first_visit }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ v.last_visit }}</td>
-          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
+          <td>{% if v.ip and v.ip != '—' %}<button onclick="blockUser('{{ v.ip }}')" title="Bloklash" style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> Bloklash</button>{% endif %}</td>
         </tr>
         {% else %}
         <tr><td colspan="7" class="empty-cell">Mehmon tashrifi yo'q</td></tr>
@@ -355,7 +353,7 @@
         <option value="guests">Faqat mehmonlarga</option>
         <option value="registered">Faqat ro'yxatdan o'tganlarga</option>
       </select>
-      <button onclick="sendBroadcast()" style="background:var(--color-background);color:white;border:none;padding:8px 20px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Yuborish</button>
+      <button onclick="sendBroadcast()" style="background:var(--color-action);color:var(--color-white);border:none;padding:8px 20px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Yuborish</button>
     </div>
   </div>
 
@@ -373,7 +371,7 @@
           <td>{{ bc.show_to }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{{ bc.created_at|uztime }}</td>
           <td style="color:var(--oak-muted);white-space:nowrap;">{% if bc.expires_at %}{{ bc.expires_at|uztime }}{% else %}Doimiy{% endif %}</td>
-          <td><button onclick="deleteBroadcast({{ bc.id }})" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> O'chirish</button></td>
+          <td><button onclick="deleteBroadcast({{ bc.id }})" style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.7rem;cursor:pointer;"> O'chirish</button></td>
         </tr>
         {% endfor %}
       </tbody>
@@ -410,7 +408,7 @@
               </span>
             {% endif %}
           </td>
-          <td><button onclick="unblockUser('{{ b.ip_address }}')" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.75rem;cursor:pointer;"> Blokdan chiqarish</button></td>
+          <td><button onclick="unblockUser('{{ b.ip_address }}')" style="background:var(--color-success-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:4px 10px;border-radius:var(--radius-default);font-size:0.75rem;cursor:pointer;"> Blokdan chiqarish</button></td>
         </tr>
         {% else %}
         <tr><td colspan="6" class="empty-cell">Hozir hech kim bloklanmagan </td></tr>

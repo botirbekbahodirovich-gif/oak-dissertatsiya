@@ -12,8 +12,8 @@
   .muted { color:var(--oak-muted); }
   .pill { display:inline-block; padding:0.1rem 0.55rem; border-radius:var(--radius-full);
           font-size:0.72rem; font-weight:600; border:1px solid var(--oak-border); }
-  .lvl-exact { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-primary); }
-  .lvl-strong { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-primary); }
+  .lvl-exact { background:var(--color-error); border-color:var(--color-border); color:var(--color-white); }
+  .lvl-strong { background:var(--color-notice); border-color:var(--color-border); color:var(--color-text-primary); }
   .lvl-possible { background:transparent; color:var(--oak-muted); }
   .st-confirmed { color:var(--color-success); border-color:var(--color-success); }
   .st-rejected { color:var(--color-danger); border-color:var(--color-danger); }
@@ -28,7 +28,7 @@
   .dr-prog .value { font-size:1.6rem; font-weight:600; color:var(--oak-text); }
   .bar { height:7px; border-radius:var(--radius-default); background:var(--oak-border);
          overflow:hidden; margin-top:0.45rem; }
-  .bar > i { display:block; height:100%; background:var(--color-background); }
+  .bar > i { display:block; height:100%; background:var(--color-success); color:var(--color-white); }
 
   /* filters */
   .dr-filters { display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center; }
@@ -55,9 +55,9 @@
             font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
   .cmp td { width:42%; word-break:break-word; }
   /* differing fields carry a left rule + tint, not colour alone */
-  tr.f-differs td { background:var(--color-background); }
+  tr.f-differs td { background:var(--color-error-soft); }
   tr.f-differs th { border-left:3px solid var(--color-border); }
-  tr.f-one_sided td { background:var(--color-background); }
+  tr.f-one_sided td { background:var(--color-notice-soft); }
   tr.f-one_sided th { border-left:3px solid var(--color-border); }
   tr.f-minor th { border-left:3px solid var(--color-border); }
   .f-tag { font-size:0.68rem; font-weight:600; text-transform:uppercase;

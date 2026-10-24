@@ -37,8 +37,8 @@
   .data-table td, .data-table th { padding:10px 12px; }
   .data-table tbody tr.data-row:hover  { background:var(--color-background-soft); cursor:pointer; }
   .cell-star { text-align:center; cursor:pointer; font-size:1rem; color:var(--color-text-muted); user-select:none; }
-  .cell-star.on { color:var(--color-notice); }
-  .cell-star:hover { color:var(--color-notice); }
+  .cell-star.on { color:var(--color-warning-ink); }
+  .cell-star:hover { color:var(--color-warning-ink); }
 
   /* resize handle */
   .resize-handle {
@@ -79,7 +79,7 @@
   .cell-rahbar:hover a { color:var(--color-action-blue) !important; text-decoration:underline; }
 
   /* daraja badges */
-  .badge-dsc.badge-role { background:var(--color-brand-orange) !important; color:var(--color-surface) !important; cursor:default !important; }
+  .badge-dsc.badge-role { background:var(--color-brand-ink) !important; color:var(--color-surface) !important; cursor:default !important; }
   .badge-phd.badge-role { background:var(--color-success) !important; color:var(--color-surface) !important; cursor:default !important; }
 
   /* pagination */
@@ -276,7 +276,7 @@
     #year-histogram.mobile-show { display:block; }
   }
   /* cite modal */
-  #cite-modal-bg { display:none; position:fixed; inset:0; background:var(--color-background);
+  #cite-modal-bg { display:none; position:fixed; inset:0; background:var(--color-overlay);
     z-index:1400; align-items:center; justify-content:center; padding:16px; }
   #cite-modal-bg.show { display:flex; }
   .cite-modal { background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default);
@@ -653,7 +653,7 @@
         ? `<a href="/olim/${encodeURIComponent(r.Olim)}" onclick="event.stopPropagation()" title="Olim profili">${term ? highlight(r.Olim_short || r.Olim, term) : olimDisplay}</a>`
         : '<span style="color:var(--color-text-secondary);" title="Bu yozuvda muallif ko\'rsatilmagan">Noma\'lum muallif</span>';
       const qualityDot = r.DataQuality === 'incomplete'
-        ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius:var(--radius-full);background:var(--color-background);margin-left:5px;vertical-align:middle;"></span>'
+        ? '<span title="Ba\'zi maydonlar to\'liq emas" style="display:inline-block;width:7px;height:7px;border-radius:var(--radius-full);background:var(--color-notice);margin-left:5px;vertical-align:middle; color:var(--color-text-primary);"></span>'
         : '';
       const termLower = term.toLowerCase();
       const mavzuFull = r.Mavzu || '';
@@ -969,7 +969,7 @@
   });
 
   function showSkeleton() {
-    const cell = `<td><div style="height:14px;background:var(--color-surface);border-radius:var(--radius-default);animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
+    const cell = `<td><div style="height:14px;background:var(--color-background-soft);border-radius:var(--radius-default);animation:pulse 1.5s infinite;margin:4px 0;"></div></td>`;
     tableBody.innerHTML = Array(8).fill(`<tr>${Array(8).fill(cell).join('')}</tr>`).join('');
   }
   function _searchSpinner(on) {

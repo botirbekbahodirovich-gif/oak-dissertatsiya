@@ -17,7 +17,7 @@
 @media (max-width: 649px) { .crs-hero { padding:var(--space-32) 0; } .crs-hero h1 { font-size:32px; } }
 .crs-hero p { font-size:var(--text-body-lg); color:var(--color-text-muted); max-width:70ch; margin:0 0 var(--space-24); line-height:var(--leading-body); }
 .crs-hero .cta { display:inline-flex; align-items:center; justify-content:center; gap:var(--space-8);
-  min-height:44px; background:var(--color-action-blue); color:var(--color-text-primary); font-weight:600; font-size:var(--text-body);
+  min-height:44px; background:var(--color-action-blue); color:var(--color-white); font-weight:600; font-size:var(--text-body);
   padding:var(--space-12) var(--space-24); border-radius:var(--radius-default); text-decoration:none;
   cursor:pointer; border:none; transition:background 0.15s; }
 .crs-hero .cta:hover { background:var(--color-action-blue-dark); color:var(--color-surface); text-decoration:none; }
@@ -46,7 +46,7 @@
 /* interest tracking row */
 .crs-hot { position:absolute; top:var(--space-16); left:var(--space-16); font-size:var(--text-meta); font-weight:600;
   padding:2px var(--space-8); border-radius:var(--radius-rounded);
-  background:var(--color-orange-soft); color:var(--color-brand-orange); }
+  background:var(--color-orange-soft); color:var(--color-brand-ink); }
 .crs-interest { margin-top:16px; padding-top:16px; border-top:1px solid var(--color-border); }
 .crs-int-btn { width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center;
   gap:var(--space-6); background:var(--color-white); border:1px solid var(--color-border);
@@ -54,7 +54,7 @@
   padding:var(--space-8) var(--space-12); border-radius:var(--radius-default); cursor:pointer;
   transition:background 0.15s, color 0.15s, border-color 0.15s; }
 .crs-int-btn:hover { border-color:var(--color-action-blue); background:var(--color-blue-soft); }
-.crs-int-btn.active { background:var(--color-success-soft); border-color:var(--color-success-soft); color:var(--color-success); }
+.crs-int-btn.active { background:var(--color-success-soft); border-color:var(--color-success-soft); color:var(--color-success-ink); }
 .crs-int-btn:disabled { opacity:0.6; cursor:default; }
 .crs-counts { display:flex; flex-wrap:wrap; gap:4px 8px; margin-top:10px; font-size:0.78rem; color:var(--color-text-muted); font-weight:600; }
 .crs-counts b { color:var(--color-text-primary); }
@@ -175,12 +175,12 @@
   </section>
 
   <!-- LOGIN PROMPT (guests clicking interest) -->
-  <div id="crs-login-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:var(--color-background); align-items:center; justify-content:center; padding:20px;">
+  <div id="crs-login-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:var(--color-overlay); align-items:center; justify-content:center; padding:20px;">
     <div style="background:var(--color-white); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:32px 28px; max-width:380px; width:100%; text-align:center; box-shadow:none;">
       <div style="font-size:1.75rem;margin-bottom:12px;color:var(--color-action-blue);"><i class="bi bi-bell" aria-hidden="true"></i></div>
       <h3 style="color:var(--color-text-primary); font-size:1.15rem; font-weight:600; margin:0 0 10px;">Qiziqish bildirish uchun tizimga kiring</h3>
       <p style="color:var(--color-text-muted); font-size:0.92rem; line-height:1.55; margin:0 0 22px;">Kursga qiziqishingizni bildirish uchun avval hisobingizga kiring.</p>
-      <a href="/login?next=/courses" style="display:inline-block; background:var(--color-action-blue); color:var(--color-text-primary); font-weight:600; padding:12px 28px; border-radius:var(--radius-default); text-decoration:none;">Tizimga kirish →</a>
+      <a href="/login?next=/courses" style="display:inline-block; background:var(--color-action-blue); color:var(--color-white); font-weight:600; padding:12px 28px; border-radius:var(--radius-default); text-decoration:none;">Tizimga kirish →</a>
       <div><button type="button" onclick="document.getElementById('crs-login-modal').style.display='none';" style="margin-top:16px; background:none; border:none; color:var(--color-text-muted); font-size:0.85rem; cursor:pointer;">Yopish</button></div>
     </div>
   </div>

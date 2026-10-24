@@ -36,10 +36,10 @@
   .up-badge { font-size:var(--text-meta); font-weight:600; padding:2px var(--space-8);
     border-radius:var(--radius-rounded); background:var(--color-background-soft);
     border:1px solid var(--color-border); color:var(--color-text-secondary); }
-  .up-badge.davlat, .up-badge.institut { background:var(--color-success-soft); border-color:var(--color-success-soft); color:var(--color-success); }
+  .up-badge.davlat, .up-badge.institut { background:var(--color-success-soft); border-color:var(--color-success-soft); color:var(--color-success-ink); }
   .up-badge.xususiy, .up-badge.universitet { background:var(--color-blue-soft); border-color:var(--color-blue-soft); color:var(--color-action-blue); }
   .up-badge.xalqaro, .up-badge.akademiya { background:var(--color-blue-soft); border-color:var(--color-blue-soft); color:var(--color-action-blue); }
-  .up-badge.markaz { background:var(--color-orange-soft); border-color:var(--color-orange-soft); color:var(--color-brand-orange); }
+  .up-badge.markaz { background:var(--color-orange-soft); border-color:var(--color-orange-soft); color:var(--color-brand-ink); }
   .up-badge.loc { background:var(--color-white); }
   .up-badge.hidx { background:var(--color-notice-soft); border-color:var(--color-notice-soft); color:var(--color-text-secondary); text-decoration:none; }
   .up-badge.hidx:hover { text-decoration:underline; }
@@ -123,7 +123,7 @@
       <h1>{{ uni.latin_name or uni.name }}</h1>
       {% if uni.latin_name and uni.latin_name != uni.name %}<p class="up-subname">{{ uni.name }}</p>{% endif %}
       <div class="up-badges">
-        {% if official %}<span class="up-badge" style="background:var(--color-success-soft);color:var(--color-success);border-color:var(--color-success-soft);" title="Universitet rasmiy boshqaruvidagi profil"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Rasmiy profil</span>{% endif %}
+        {% if official %}<span class="up-badge" style="background:var(--color-success-soft);color:var(--color-success-ink);border-color:var(--color-success-soft);" title="Universitet rasmiy boshqaruvidagi profil"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Rasmiy profil</span>{% endif %}
         {% if uni.im_category %}<span class="up-badge {{ uni.im_category }}">{{ {'universitet':'Universitet','akademiya':'Akademiya','institut':'Institut','markaz':'Markaz'}.get(uni.im_category, uni.im_category) }}</span>{% endif %}
         {% if uni.university_type %}<span class="up-badge {{ uni.university_type }}">{{ uni.type_label }}</span>{% endif %}
         {% if uni.city or uni.region %}<span class="up-badge loc">{{ uni.city or uni.region }}{% if uni.region and uni.region != uni.city and uni.city %}, {{ uni.region }}{% endif %}</span>{% endif %}

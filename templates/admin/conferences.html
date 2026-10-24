@@ -44,7 +44,7 @@
         <td>{{ c.id }}</td>
         <td><a href="/konferensiya/{{ c.slug }}" target="_blank">{{ c.title[:56] }}</a>
           {% if c.moderation_status == 'pending' %}
-          <span style="font-size:0.68rem;font-weight:600;background:var(--color-background);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          <span style="font-size:0.68rem;font-weight:600;background:var(--color-notice-soft);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
           {% endif %}
           {% if c.organizer %}<br><small style="color:var(--color-action);">{{ c.organizer[:44] }}</small>{% endif %}
           {% if c.canonical_institution %}<br><small style="color:var(--color-action);"> {{ c.canonical_institution[:44] }}</small>{% endif %}</td>
@@ -59,7 +59,7 @@
           <form method="POST" action="/admin/conferences/approve/{{ c.id }}" style="display:inline;">
             {{ csrf_token()|safe }}
             <button type="submit" class="btn btn-sm"
-              style="background:var(--color-background);color:var(--color-text-primary);border-radius:var(--radius-default);"><i class="bi bi-check-lg" aria-hidden="true"></i> Tasdiqlash</button>
+              style="background:var(--color-success);color:var(--color-white);border-radius:var(--radius-default);"><i class="bi bi-check-lg" aria-hidden="true"></i> Tasdiqlash</button>
           </form>
           {% endif %}
           <a href="/admin/conferences/edit/{{ c.id }}" class="btn btn-sm btn-action">Tahrirlash</a>

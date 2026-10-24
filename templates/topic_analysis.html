@@ -26,8 +26,8 @@
 @keyframes ta-spin { to { transform:rotate(360deg); } }
 .ta-alert { margin-top:16px; padding:12px 16px; border-radius:var(--radius-default); font-size:0.9rem; display:none; }
 .ta-alert.show { display:block; }
-.ta-alert.err { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-alert.ok { background:var(--color-background); color:var(--color-text-secondary); }
+.ta-alert.err { background:var(--color-error-soft); color:var(--color-text-secondary); }
+.ta-alert.ok { background:var(--color-success-soft); color:var(--color-text-secondary); }
 .ta-result { display:none; margin-top:22px; }
 .ta-result.show { display:block; }
 .ta-card-h { font-size:1.05rem; font-weight:600; color:var(--color-text-primary); margin:0 0 10px; display:flex; align-items:center; gap:8px; }
@@ -43,7 +43,7 @@
 .ta-item { border:1px solid var(--color-border); border-radius:var(--radius-default); background:var(--color-surface); margin-bottom:10px; overflow:hidden; }
 .ta-item-head { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; cursor:pointer; }
 .ta-item-head:hover { background:var(--color-background); }
-.ta-item-num { flex-shrink:0; width:26px; height:26px; border-radius:var(--radius-default); background:var(--color-background);
+.ta-item-num { flex-shrink:0; width:26px; height:26px; border-radius:var(--radius-default); background:var(--color-blue-soft);
                color:var(--color-action); font-weight:600; font-size:0.8rem; display:flex; align-items:center; justify-content:center; }
 .ta-item-body { flex:1; min-width:0; }
 .ta-item-title { font-weight:600; color:var(--color-text-primary); font-size:0.95rem; line-height:1.4; }
@@ -57,9 +57,9 @@
 .ta-empty { color:var(--color-action); font-size:0.9rem; padding:14px 0; }
 /* O'xshashlik foiz belgisi (band bo'yicha rang; matn + foiz — rang yolg'iz emas) */
 .ta-sim-badge { flex-shrink:0; font-size:0.78rem; font-weight:600; padding:3px 8px; border-radius:var(--radius-default); line-height:1.2; }
-.ta-sim-badge.exact { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-sim-badge.strong { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-sim-badge.partial { background:var(--color-background); color:var(--color-action); }
+.ta-sim-badge.exact { background:var(--color-error-soft); color:var(--color-text-secondary); }
+.ta-sim-badge.strong { background:var(--color-notice-soft); color:var(--color-text-secondary); }
+.ta-sim-badge.partial { background:var(--color-blue-soft); color:var(--color-action); }
 
 /* Ixtisoslik statistikasi (Layer 1) */
 .ta-stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -68,14 +68,14 @@
 .ta-stat-h { font-size:0.92rem; font-weight:600; color:var(--color-text-primary); margin-bottom:10px;
              display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .ta-chip { font-size:0.75rem; font-weight:600; padding:3px 9px; border-radius:var(--radius-full); }
-.ta-chip.up { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-chip.flat { background:var(--color-background); color:var(--color-action); }
-.ta-chip.down { background:var(--color-background); color:var(--color-text-secondary); }
+.ta-chip.up { background:var(--color-success-soft); color:var(--color-text-secondary); }
+.ta-chip.flat { background:var(--color-background-soft); color:var(--color-action); }
+.ta-chip.down { background:var(--color-notice-soft); color:var(--color-text-secondary); }
 .ta-chart { display:flex; align-items:flex-end; gap:2px; height:110px; padding-top:14px; }
 .ta-bar { flex:1 1 0; max-width:38px; min-width:8px; display:flex; flex-direction:column;
           align-items:center; justify-content:flex-end; height:100%; position:relative; }
 .ta-bar-v { font-size:0.66rem; font-weight:600; color:var(--color-action); margin-bottom:2px; }
-.ta-bar-fill { width:68%; background:var(--color-background); border-radius:3px 3px 0 0; min-height:2px; }
+.ta-bar-fill { width:68%; background:var(--color-action); border-radius:3px 3px 0 0; min-height:2px; color:var(--color-white); }
 .ta-bar:hover .ta-bar-fill { background:var(--color-action); }
 .ta-chart-x { display:flex; gap:2px; margin-top:4px; }
 .ta-chart-x span { flex:1 1 0; max-width:38px; min-width:8px; text-align:center;
@@ -109,9 +109,9 @@
                font-size:0.9rem; color:var(--color-action); }
 .ta-gap-mini b { color:var(--color-text-primary); }
 .ta-gap-chip { font-size:0.78rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-full); }
-.ta-gap-chip.strong { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-gap-chip.medium { background:var(--color-background); color:var(--color-text-secondary); }
-.ta-gap-chip.low { background:var(--color-background); color:var(--color-text-secondary); }
+.ta-gap-chip.strong { background:var(--color-error-soft); color:var(--color-text-secondary); }
+.ta-gap-chip.medium { background:var(--color-notice-soft); color:var(--color-text-secondary); }
+.ta-gap-chip.low { background:var(--color-success-soft); color:var(--color-text-secondary); }
 @media (max-width: 520px) { .ta-box, .ta-analysis { padding:14px; } }
 </style>
 {% endblock %}

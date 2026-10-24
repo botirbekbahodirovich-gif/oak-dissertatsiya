@@ -29,22 +29,21 @@
 
   /* ── Section 1: mavzu card ── */
   .mavzu-card {
-    background:var(--color-surface);
+    background:var(--color-action);
     border:1px solid var(--color-border); border-radius:var(--radius-card);
-    padding:1.75rem; margin-bottom:1.5rem;
-  }
+    padding:1.75rem; margin-bottom:1.5rem; color:var(--color-white); }
   .mavzu-title { font-size:1.2rem; font-weight:600; color:var(--color-text-primary); line-height:1.55; margin-bottom:1rem; }
   .meta-row { display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; }
-  .badge-phd-lg { background:var(--color-background); color:var(--color-text-secondary); padding:4px 14px; border-radius:var(--radius-default); font-size:0.84rem; font-weight:600; }
+  .badge-phd-lg { background:var(--color-success-soft); color:var(--color-text-secondary); padding:4px 14px; border-radius:var(--radius-default); font-size:0.84rem; font-weight:600; }
   .badge-dsc-lg { background:var(--color-background); color:var(--color-text-secondary); padding:4px 14px; border-radius:var(--radius-default); font-size:0.84rem; font-weight:600; }
-  .meta-chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.8rem; color:var(--oak-muted); background:var(--color-background); border:1px solid var(--color-border); padding:3px 10px; border-radius:var(--radius-default); }
-  .oak-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:6px 14px; border-radius:var(--radius-default); background:var(--color-background); border:1px solid var(--color-border); color:var(--color-action); font-size:0.84rem; font-weight:600; text-decoration:none; transition:background 0.15s; }
-  .oak-btn:hover { background:var(--color-background); color:var(--color-action); text-decoration:none; }
+  .meta-chip { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.8rem; color:var(--oak-muted); background:var(--color-background-soft); border:1px solid var(--color-border); padding:3px 10px; border-radius:var(--radius-default); }
+  .oak-btn { display:inline-flex; align-items:center; gap:0.4rem; padding:6px 14px; border-radius:var(--radius-default); background:var(--color-blue-soft); border:1px solid var(--color-border); color:var(--color-action); font-size:0.84rem; font-weight:600; text-decoration:none; transition:background 0.15s; }
+  .oak-btn:hover { background:var(--color-blue-soft); color:var(--color-action); text-decoration:none; }
   .oak-btn.js-save-btn { cursor:pointer; }
   .oak-btn.js-save-btn:disabled { opacity:0.6; cursor:default; }
   .oak-btn .save-ico { display:inline-flex; align-items:center; }
-  .oak-btn.js-save-btn.saved { background:var(--color-background); border-color:var(--color-border); color:var(--color-action); }
-  .oak-btn.js-save-btn.saved:hover { background:var(--color-background); color:var(--color-action); }
+  .oak-btn.js-save-btn.saved { background:var(--color-notice-soft); border-color:var(--color-border); color:var(--color-action); }
+  .oak-btn.js-save-btn.saved:hover { background:var(--color-notice-soft); color:var(--color-action); }
 
   /* ── Section cards ── */
   .sec-card { background:var(--oak-surface, var(--color-surface)); border:1px solid var(--oak-border, var(--color-border)); border-radius:var(--radius-card); padding:1.25rem; height:100%; }
@@ -58,14 +57,14 @@
 
   /* ── Saturation badge ── */
   .sat-badge { display:inline-flex; align-items:center; gap:0.35rem; padding:3px 12px; border-radius:var(--radius-default); font-size:0.8rem; font-weight:600; }
-  .sat-low { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
-  .sat-medium { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
-  .sat-high { background:var(--color-background); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .sat-low { background:var(--color-success-soft); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .sat-medium { background:var(--color-notice-soft); color:var(--color-text-secondary); border:1px solid var(--color-border); }
+  .sat-high { background:var(--color-error-soft); color:var(--color-text-secondary); border:1px solid var(--color-border); }
   .sat-count { font-size:0.8rem; color:var(--oak-muted); margin-top:4px; }
 
   /* ── Opponents list ── */
   .opp-list { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.25rem; }
-  .opp-item { display:flex; align-items:flex-start; gap:0.6rem; padding:0.6rem 0.75rem; background:var(--color-background); border-radius:var(--radius-default); border:1px solid var(--color-border); }
+  .opp-item { display:flex; align-items:flex-start; gap:0.6rem; padding:0.6rem 0.75rem; background:var(--color-background-soft); border-radius:var(--radius-default); border:1px solid var(--color-border); }
   .opp-num { font-size:0.72rem; font-weight:600; color:var(--oak-muted); min-width:18px; padding-top:2px; }
   .opp-name { font-size:0.9rem; color:var(--color-text-primary); line-height:1.45; }
 
@@ -85,7 +84,7 @@
 </div>
 
 {% if missing_author %}
-<div class="mb-3" style="background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:14px 18px;color:var(--color-text-primary);">
+<div class="mb-3" style="background:var(--color-notice-soft);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:14px 18px;color:var(--color-text-primary);">
    Bu dissertatsiya muallifi haqida ma'lumot mavjud emas. Agar siz muallif bo'lsangiz,
   <a href="/register" style="color:var(--color-text-secondary);font-weight:600;">profilingizni yaratib</a>,
   bu dissertatsiyani o'zingizga biriktirishingiz mumkin.

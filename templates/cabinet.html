@@ -14,7 +14,7 @@
 .cab-nav button.active { background:var(--color-action); color:var(--color-surface); }
 .cab-nav a.cab-nav-link { display:flex; align-items:center; gap:9px; color:var(--color-action); font-size:0.9rem; font-weight:500; padding:10px 12px; border-radius:var(--radius-default); text-decoration:none; }
 .cab-nav a.cab-nav-link:hover { background:var(--color-surface); color:var(--color-text-primary); }
-.cab-nav-badge { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:var(--radius-default); background:var(--color-background); color:var(--color-text-primary); font-size:0.72rem; font-weight:600; display:inline-flex; align-items:center; justify-content:center; }
+.cab-nav-badge { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:var(--radius-default); background:var(--color-action); color:var(--color-white); font-size:0.72rem; font-weight:600; display:inline-flex; align-items:center; justify-content:center; }
 .cab-logout { margin-top:10px; border-top:1px solid var(--color-border); padding-top:10px; }
 .cab-logout a { display:block; color:var(--color-text-secondary); font-size:0.85rem; padding:8px 12px; }
 .cab-main { min-width:0; }
@@ -34,7 +34,7 @@
 .cab-btn { background:var(--color-action); color:var(--color-surface); font-weight:600; padding:10px 22px; border:none; border-radius:var(--radius-default); cursor:pointer; font-size:0.92rem; }
 .cab-btn:hover { background:var(--color-action); }
 .cab-btn-outline { background:transparent; color:var(--color-action); border:1px solid var(--color-border); font-weight:600; padding:9px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.9rem; }
-.cab-btn-outline:hover { background:var(--color-background); }
+.cab-btn-outline:hover { background:var(--color-blue-soft); }
 .cab-btn-red { background:var(--color-danger); color:var(--color-surface); border:none; border-radius:var(--radius-default); padding:6px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; }
 .cab-btn-red:hover { background:var(--color-danger); }
 .cab-link-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
@@ -45,28 +45,28 @@
 .item-card .it-meta { font-size:0.84rem; color:var(--color-action); margin-top:3px; }
 .item-card .it-actions { display:flex; gap:8px; margin-top:10px; }
 .item-card .it-btn { font-size:0.78rem; font-weight:600; padding:5px 12px; border-radius:var(--radius-card); cursor:pointer; border:none; }
-.it-edit { background:var(--color-background); color:var(--color-action); }
-.it-del { background:var(--color-background); color:var(--color-text-secondary); }
+.it-edit { background:var(--color-blue-soft); color:var(--color-action); }
+.it-del { background:var(--color-error-soft); color:var(--color-text-secondary); }
 .item-form { display:none; background:var(--color-surface); border:1px dashed var(--color-border); border-radius:var(--radius-default); padding:16px; margin-bottom:14px; }
 .item-form.open { display:block; }
 .search-results { margin-top:14px; display:flex; flex-direction:column; gap:8px; }
 .sr-card { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px 14px; }
 .sr-mavzu { font-size:0.8rem; color:var(--color-action); margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .sr-deg { font-size:0.68rem; font-weight:600; color:var(--color-text-secondary); padding:1px 8px; border-radius:var(--radius-default); margin-right:8px; }
-.sr-deg.phd { background:var(--color-background); } .sr-deg.dsc { background:var(--color-background); }
+.sr-deg.phd { background:var(--color-success); color:var(--color-white); } .sr-deg.dsc { background:var(--color-brand-ink); color:var(--color-white); }
 .sr-name { font-weight:600; color:var(--color-text-primary); }
 .sr-count { font-size:0.8rem; color:var(--color-action); }
 .sr-claimed { color:var(--color-text-secondary); font-weight:600; font-size:0.85rem; }
 .claimed-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-.claimed-chip { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-full); padding:5px 14px; font-size:0.85rem; }
+.claimed-chip { background:var(--color-success-soft); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-full); padding:5px 14px; font-size:0.85rem; }
 .gallery { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
 .gallery figure { margin:0; position:relative; }
 .gallery img { width:100%; height:130px; object-fit:cover; border-radius:var(--radius-default); border:1px solid var(--color-border); }
 .gallery .gdel { position:absolute; top:6px; right:6px; }
 .cab-toast { position:fixed; top:18px; right:18px; z-index:3000; padding:12px 18px; border-radius:var(--radius-default); font-size:0.9rem; font-weight:600; opacity:0; transform:translateY(-10px); transition:opacity 0.25s, transform 0.25s; }
 .cab-toast.show { opacity:1; transform:translateY(0); }
-.cab-toast.ok { background:var(--color-background); color:var(--color-text-primary); }
-.cab-toast.err { background:var(--color-background); color:var(--color-text-primary); }
+.cab-toast.ok { background:var(--color-success); color:var(--color-white); }
+.cab-toast.err { background:var(--color-error); color:var(--color-white); }
 .cab-hero { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
 .cab-hero-avatar { width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--color-surface); display:grid; place-items:center; font-size:1.8rem; flex-shrink:0; }
 .cab-hero-avatar img { width:100%; height:100%; object-fit:cover; }
@@ -78,24 +78,24 @@
 .field-value { color:var(--color-text-primary); font-size:0.95rem; }
 .field-empty { color:var(--color-text-secondary); font-style:italic; }
 .field-edit-btn { background:none; border:1px solid var(--color-border); color:var(--color-action); padding:4px 12px; border-radius:var(--radius-default); font-size:0.8rem; cursor:pointer; flex-shrink:0; }
-.field-edit-btn:hover { border-color:var(--color-border); background:var(--color-background); }
+.field-edit-btn:hover { border-color:var(--color-border); background:var(--color-blue-soft); }
 .profile-field-edit { padding:12px 0; border-bottom:1px solid var(--color-border); }
 .profile-field-edit input, .profile-field-edit select, .profile-field-edit textarea { width:100%; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); padding:10px 14px; border-radius:var(--radius-default); margin-bottom:8px; font-size:0.92rem; font-family:inherit; }
 .profile-field-edit textarea { min-height:90px; resize:vertical; }
 .field-edit-actions { display:flex; gap:8px; }
 .field-edit-actions button { padding:6px 16px; border-radius:var(--radius-default); font-size:0.85rem; cursor:pointer; border:none; }
-.field-edit-actions .fe-save { background:var(--color-background); color:var(--color-text-primary); font-weight:600; }
+.field-edit-actions .fe-save { background:var(--color-action); color:var(--color-white); font-weight:600; }
 .field-edit-actions .fe-save:hover { background:var(--color-action); }
 .field-edit-actions .fe-cancel { background:var(--color-surface); color:var(--color-action); border:1px solid var(--color-border); }
 /* avatar editor */
 .avatar-edit-section { display:flex; align-items:center; gap:18px; margin-bottom:20px; padding-bottom:18px; border-bottom:1px solid var(--color-border); }
-.current-avatar { width:88px; height:88px; border-radius:50%; overflow:hidden; background:var(--color-surface); display:grid; place-items:center; flex-shrink:0; }
+.current-avatar { width:88px; height:88px; border-radius:50%; overflow:hidden; background:var(--color-action); display:grid; place-items:center; flex-shrink:0; color:var(--color-white); }
 .current-avatar img { width:100%; height:100%; object-fit:cover; }
 .avatar-placeholder { font-size:2.4rem; }
 .avatar-actions { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
 .avatar-upload-btn { background:var(--color-action); color:var(--color-surface); font-weight:600; padding:9px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.88rem; }
 .avatar-upload-btn:hover { background:var(--color-action); }
-.avatar-remove-btn { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-action); padding:7px 16px; border-radius:var(--radius-default); cursor:pointer; font-size:0.85rem; }
+.avatar-remove-btn { background:var(--color-error-soft); border:1px solid var(--color-border); color:var(--color-action); padding:7px 16px; border-radius:var(--radius-default); cursor:pointer; font-size:0.85rem; }
 .avatar-hint { color:var(--color-text-secondary); font-size:0.74rem; }
 @media (max-width: 880px) {
   .cab-wrap { grid-template-columns:1fr; }
@@ -119,7 +119,7 @@
 .np-switch input { opacity:0; width:0; height:0; }
 .np-slider { position:absolute; inset:0; cursor:pointer; background:var(--color-background); border-radius:var(--radius-default); transition:background 0.2s; }
 .np-slider::before { content:""; position:absolute; height:20px; width:20px; left:3px; top:3px; background:var(--color-background); border-radius:50%; transition:transform 0.2s, background 0.2s; }
-.np-switch input:checked + .np-slider { background:var(--color-surface); }
+.np-switch input:checked + .np-slider { background:var(--color-action); color:var(--color-white); }
 .np-switch input:checked + .np-slider::before { transform:translateX(20px); background:var(--color-surface); }
 .np-switch input:focus-visible + .np-slider { outline:2px solid var(--color-border); outline-offset:2px; }
 .np-switch input:disabled + .np-slider { opacity:0.45; cursor:wait; }
@@ -179,7 +179,7 @@
                 Biriktirilgan profil: <strong style="color:var(--color-action);">{{ olim_name }}</strong>
               </span>
               <button onclick="unclaimProfile()"
-                style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.8rem;cursor:pointer;transition:all 0.2s;"
+                style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.8rem;cursor:pointer;transition:all 0.2s;"
                 onmouseover="this.style.background='rgba(239,68,68,0.3)'"
                 onmouseout="this.style.background='rgba(239,68,68,0.15)'"
                 title="Biriktirilgan olim profilini ajratish">
@@ -192,13 +192,13 @@
             <div style="margin-top:10px;">
               {% if profile.orcid_url %}
               <a href="{{ profile.orcid_url }}" target="_blank" rel="noopener"
-                 style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;text-decoration:none;font-weight:600;"
+                 style="display:inline-flex;align-items:center;gap:6px;background:var(--color-success-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;text-decoration:none;font-weight:600;"
                  title="ORCID profili">
                 <i class="bi bi-person-badge-fill"></i> ORCID
               </a>
               {% else %}
               <button onclick="gotoPanel('linklar')"
-                style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background);border:1px dashed var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;cursor:pointer;font-weight:600;"
+                style="display:inline-flex;align-items:center;gap:6px;background:var(--color-success-soft);border:1px dashed var(--color-border);color:var(--color-text-secondary);padding:5px 14px;border-radius:var(--radius-default);font-size:0.82rem;cursor:pointer;font-weight:600;"
                 title="ORCID IDingizni biriktiring">
                 + ORCID IDni biriktirish
               </button>
@@ -220,7 +220,7 @@
             <span> Profil to'ldirilishi</span><b style="color:var(--color-action);">{{ _pct }}%</b>
           </div>
           <div style="height:8px;background:var(--color-surface);border-radius:var(--radius-default);overflow:hidden;">
-            <div style="height:100%;width:{{ _pct }}%;background:var(--color-surface);transition:width 0.35s;"></div>
+            <div style="height:100%;width:{{ _pct }}%;background:var(--color-action);transition:width 0.35s; color:var(--color-white);"></div>
           </div>
           {% if _pct < 100 %}<p class="desc" style="margin:10px 0 0;">Profilingiz to'liq emas — <a href="/cabinet/onboarding" style="color:var(--color-action);">tezkor to'ldirish sahifasi</a>ga o'ting.</p>{% endif %}
         </div>
@@ -280,7 +280,7 @@
           {% if shogirdlar %}
           <div class="cab-section" style="margin-top:14px;background:var(--color-surface);">
             <h3 style="font-size:1rem;"> Shogirdlar <span style="color:var(--color-text-secondary);font-weight:500;">({{ shogirdlar|length }})</span></h3>
-            <div class="claimed-list">{% for s in shogirdlar %}<span class="claimed-chip" style="background:var(--color-background);border-color:var(--color-border);color:var(--color-action);">{{ s.student_name }}{% if s.degree %} · {{ s.degree }}{% endif %}</span>{% endfor %}</div>
+            <div class="claimed-list">{% for s in shogirdlar %}<span class="claimed-chip" style="background:var(--color-blue-soft);border-color:var(--color-border);color:var(--color-action);">{{ s.student_name }}{% if s.degree %} · {{ s.degree }}{% endif %}</span>{% endfor %}</div>
           </div>
           {% endif %}
         </div>
@@ -318,9 +318,9 @@
             .uname-status { font-size:0.84rem; margin-top:8px; min-height:1.1em; }
             .uname-status.ok { color:var(--color-text-secondary); } .uname-status.bad { color:var(--color-text-secondary); }
             .uname-suggestions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-            .uname-chip { background:var(--color-background); color:var(--color-action); border:none; border-radius:var(--radius-full);
+            .uname-chip { background:var(--color-blue-soft); color:var(--color-action); border:none; border-radius:var(--radius-full);
               padding:4px 12px; font-size:0.82rem; font-family:ui-monospace,monospace; cursor:pointer; }
-            .uname-chip:hover { background:var(--color-background); }
+            .uname-chip:hover { background:var(--color-blue-soft); }
           </style>
 
           <!-- Foydalanuvchi turi -->
@@ -452,7 +452,7 @@
           <p class="desc">O'z ismingizni qidiring va "Bu men" tugmasini bosing.</p>
           {% if claimed %}
           <div><strong style="color:var(--color-action);font-size:0.85rem;">Biriktirilgan:</strong>
-            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-default);font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'"><i class="bi bi-x-lg" aria-hidden="true"></i> Ajratish</button></span>{% endfor %}</div>
+            <div class="claimed-list">{% for c in claimed %}<span class="claimed-chip"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ c }}<button type="button" onclick="unclaimDissertation(this, {{ c|tojson }})" title="Dissertatsiyani profildan ajratish" style="background:var(--color-error-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:3px 10px;border-radius:var(--radius-default);font-size:0.72rem;cursor:pointer;margin-left:8px;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'"><i class="bi bi-x-lg" aria-hidden="true"></i> Ajratish</button></span>{% endfor %}</div>
           </div>
           {% endif %}
           <div style="margin-top:14px;">

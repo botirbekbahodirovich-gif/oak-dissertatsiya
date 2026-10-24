@@ -27,7 +27,7 @@
 .ai-card h3 { font-size:1.1rem; font-weight:600; color:var(--color-text-primary); margin:0 0 12px; }
 .uniq { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
 .uniq-num { font-size:2.6rem; font-weight:600; line-height:1; }
-.uniq-num.low { color:var(--color-error); } .uniq-num.mid { color:var(--color-notice); } .uniq-num.high { color:var(--color-success); }
+.uniq-num.low { color:var(--color-error); } .uniq-num.mid { color:var(--color-warning-ink); } .uniq-num.high { color:var(--color-success); }
 .uniq-lbl { color:var(--color-text-secondary); font-size:0.95rem; }
 .ai-text { color:var(--color-text-secondary); line-height:1.65; white-space:pre-wrap; }
 .ai-sugg { list-style:none; padding:0; margin:14px 0 0; }
@@ -49,7 +49,7 @@
 .b-phd { background:var(--color-success); } .b-dsc { background:var(--color-brand-orange); } .b-other { background:var(--color-text-muted); }
 .match-badge { background:var(--color-blue-soft); color:var(--color-action-blue); font-weight:600; font-size:var(--text-meta); padding:2px var(--space-8); border-radius:var(--radius-rounded); }
 /* Skeleton — light fonda och kulrang pulsatsiya (avval to'q edi). */
-.skel { background:var(--color-surface); background-size:200% 100%; animation:shimmer 1.3s infinite; border-radius:var(--radius-default); height:92px; margin-bottom:var(--space-12); }
+.skel { background:var(--color-action); background-size:200% 100%; animation:shimmer 1.3s infinite; border-radius:var(--radius-default); height:92px; margin-bottom:var(--space-12); color:var(--color-white); }
 @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
 .load-more { display:block; margin:8px auto 0; background:var(--color-background-soft); border:1px solid var(--color-border); color:var(--color-action-blue); font-weight:600; padding:10px 22px; border-radius:var(--radius-default); cursor:pointer; }
 .load-more:hover { background:var(--color-border); }
@@ -59,7 +59,7 @@
 .freemium-bar { background:var(--color-blue-soft); border:1px solid var(--color-action-blue-light); border-radius:var(--radius-default); padding:12px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .freemium-bar span { color:var(--color-action-blue); font-size:0.9rem; }
 .freemium-bar a { color:var(--color-action-blue); font-weight:600; font-size:0.85rem; text-decoration:none; }
-.full-badge { background:var(--color-success-soft); color:var(--color-success); font-weight:600; font-size:var(--text-meta); padding:2px var(--space-12); border-radius:var(--radius-rounded); margin-left:var(--space-8); }
+.full-badge { background:var(--color-success-soft); color:var(--color-success-ink); font-weight:600; font-size:var(--text-meta); padding:2px var(--space-12); border-radius:var(--radius-rounded); margin-left:var(--space-8); }
 .blur-wall-container { position:relative; margin-top:var(--space-16); min-height:300px; }
 .blurred-results { filter:blur(6px); -webkit-filter:blur(6px); pointer-events:none; user-select:none; opacity:0.4; }
 /* Light fon: to'q radial gradient o'rniga oq parda — karta matni qora qoladi. */

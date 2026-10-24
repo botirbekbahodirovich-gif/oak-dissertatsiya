@@ -11,9 +11,9 @@
 .th-head { background:var(--color-background-soft); }
 .th-retention { display:flex; gap:8px; align-items:center; padding:7px 14px;
   border-left:1px solid var(--color-border); border-right:1px solid var(--color-border);
-  background:var(--color-background); color:var(--color-text-secondary); font-size:0.76rem; line-height:1.35; }
+  background:var(--color-notice-soft); color:var(--color-text-secondary); font-size:0.76rem; line-height:1.35; }
 .th-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center;
-  justify-content:center; font-weight:600; background:var(--color-surface); color:var(--color-text-primary); }
+  justify-content:center; font-weight:600; background:var(--color-action); color:var(--color-white); }
 .th-msgs { flex:1; overflow-y:auto; padding:14px; border-left:1px solid var(--color-border);
   border-right:1px solid var(--color-border); background:var(--color-surface); }
 .th-msgs { background:var(--color-background); }
@@ -22,12 +22,12 @@
 .th-msg.mine { flex-direction:row-reverse; }
 .th-bubble { max-width:72%; padding:8px 13px; border-radius:var(--radius-default); font-size:0.88rem;
   line-height:1.45; word-wrap:break-word; white-space:pre-wrap;
-  background:var(--color-background); }
-.th-msg.mine .th-bubble { background:var(--color-surface); color:var(--color-text-primary); }
+  background:var(--color-background-soft); }
+.th-msg.mine .th-bubble { background:var(--color-action); color:var(--color-white); }
 .th-time { color:var(--color-text-secondary); font-size:0.66rem; margin-top:3px; }
 .th-msg.mine .th-time { color:var(--color-text-secondary); }
 .th-img { max-width:240px; max-height:220px; border-radius:var(--radius-default); cursor:pointer; display:block; }
-.th-file { display:flex; align-items:center; gap:8px; background:var(--color-background);
+.th-file { display:flex; align-items:center; gap:8px; background:var(--color-background-soft);
   border-radius:var(--radius-default); padding:7px 10px; color:inherit; text-decoration:none; font-size:0.8rem; }
 .th-input { display:flex; gap:8px; align-items:flex-end; padding:10px;
   border:1px solid var(--color-border); border-radius:0 0 14px 14px;
@@ -36,11 +36,11 @@
 .th-input textarea { flex:1; border:1px solid var(--color-border); border-radius:var(--radius-default);
   padding:9px 12px; background:transparent; color:inherit; resize:none; max-height:120px;
   font-size:0.9rem; }
-.th-send { border:none; background:var(--color-surface); color:var(--color-text-primary);
+.th-send { border:none; background:var(--color-action); color:var(--color-white);
   border-radius:var(--radius-default); padding:9px 16px; font-weight:600; cursor:pointer; }
 .th-attach { border:1px solid var(--color-border); background:transparent; color:inherit;
   border-radius:var(--radius-default); padding:9px 12px; cursor:pointer; }
-#lightbox { display:none; position:fixed; inset:0; background:var(--color-background); z-index:1400;
+#lightbox { display:none; position:fixed; inset:0; background:var(--color-overlay); z-index:1400;
   align-items:center; justify-content:center; cursor:zoom-out; }
 #lightbox.show { display:flex; }
 #lightbox img { max-width:92vw; max-height:92vh; border-radius:var(--radius-card); }

@@ -68,7 +68,7 @@
   color:var(--color-surface); font-weight:600; padding:12px; border-radius:var(--radius-default); text-decoration:none; font-size:0.95rem; }
 .gd-side .track-btn { border:1px solid var(--color-border); background:transparent; color:inherit;
   font-weight:600; padding:10px; border-radius:var(--radius-default); cursor:pointer; font-size:0.88rem; }
-.gd-side .track-btn.tracked { background:var(--color-background); color:var(--color-action); border-color:var(--color-border); }
+.gd-side .track-btn.tracked { background:var(--color-success-soft); color:var(--color-action); border-color:var(--color-border); }
 .gd-side select { border:1px solid var(--color-border); border-radius:var(--radius-default); padding:8px; background:transparent;
   color:inherit; font-size:0.85rem; }
 .gd-side select option { color:var(--color-text-primary); }
@@ -113,7 +113,7 @@
     <div style="color:var(--color-action);font-size:0.85rem;"> Deadline: <b style="color:inherit;">{{ g.deadline_uz }}</b></div>
   </div>
   {% elif g.expired %}
-  <div class="gd-countdown"><span class="gd-chip" style="background:var(--color-background);">⌛ Muddat tugagan — {{ g.deadline_uz }}</span></div>
+  <div class="gd-countdown"><span class="gd-chip" style="background:var(--color-background-soft);">⌛ Muddat tugagan — {{ g.deadline_uz }}</span></div>
   {% endif %}
 
   <div class="gd-layout">

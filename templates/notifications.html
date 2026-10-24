@@ -13,11 +13,11 @@
 <div class="d-flex flex-column gap-2">
   {% for n in notifications %}
   <div class="content-card" style="padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-    <div style="width:40px;height:40px;border-radius:50%;background:var(--color-background);display:grid;place-items:center;flex-shrink:0;">
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--color-blue-soft);display:grid;place-items:center;flex-shrink:0;">
       <i class="bi bi-file-earmark-plus" style="color:var(--color-action);font-size:1.1rem;"></i>
     </div>
     <div style="flex:1;min-width:0;">
-      <span style="display:inline-block;background:var(--color-background);color:var(--color-action);border-radius:var(--radius-default);padding:2px 10px;font-size:0.72rem;font-weight:600;margin-bottom:5px;"> Dissertatsiyalar bazasi</span>
+      <span style="display:inline-block;background:var(--color-blue-soft);color:var(--color-action);border-radius:var(--radius-default);padding:2px 10px;font-size:0.72rem;font-weight:600;margin-bottom:5px;"> Dissertatsiyalar bazasi</span>
       <div style="font-size:0.95rem;color:var(--color-text-primary);">{{ n.message }}</div>
       <div style="font-size:0.78rem;color:var(--oak-muted);margin-top:3px;">{{ n.created_at }}</div>
     </div>

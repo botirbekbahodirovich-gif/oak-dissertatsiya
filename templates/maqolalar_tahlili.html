@@ -16,22 +16,22 @@
           border-radius:var(--radius-default); font-size:0.95rem; font-weight:600; cursor:pointer; transition:opacity 0.15s; white-space:nowrap; }
 .mq-btn:hover { opacity:0.92; }
 .mq-btn:disabled { opacity:0.55; cursor:not-allowed; }
-.mq-btn2 { background:var(--color-background); color:var(--color-text-primary); border:1px solid var(--color-border); padding:8px 16px;
+.mq-btn2 { background:var(--color-background-soft); color:var(--color-text-primary); border:1px solid var(--color-border); padding:8px 16px;
            border-radius:var(--radius-default); font-size:0.88rem; font-weight:600; cursor:pointer; }
-.mq-btn2:hover { background:var(--color-surface); }
+.mq-btn2:hover { background:var(--color-background-soft); }
 .mq-btn2:disabled { opacity:0.5; cursor:not-allowed; }
 /* Scope pill'lar */
 .mq-pills { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
 .mq-pill { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-action); border-radius:var(--radius-full);
            padding:6px 14px; font-size:0.84rem; font-weight:600; cursor:pointer; }
-.mq-pill.on { background:var(--color-background); border-color:var(--color-border); color:var(--color-action); }
+.mq-pill.on { background:var(--color-blue-soft); border-color:var(--color-border); color:var(--color-action); }
 /* Filtrlar qatori */
 .mq-filters { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; align-items:center; }
 .mq-filters label { font-size:0.8rem; color:var(--color-text-secondary); display:flex; align-items:center; gap:6px; }
 .mq-num { width:86px; border:1px solid var(--color-border); border-radius:var(--radius-default); padding:6px 8px;
           font-size:0.85rem; font-family:inherit; color:var(--color-text-primary); }
 .mq-num:focus { outline:2px solid var(--color-action); border-color:var(--color-border); }
-.mq-concept-chip { display:none; align-items:center; gap:6px; background:var(--color-background);
+.mq-concept-chip { display:none; align-items:center; gap:6px; background:var(--color-blue-soft);
                    color:var(--color-text-secondary); border:1px solid var(--color-border); border-radius:var(--radius-full);
                    padding:5px 12px; font-size:0.82rem; font-weight:600; }
 .mq-concept-chip.show { display:inline-flex; }
@@ -45,8 +45,8 @@
 @keyframes mq-spin { to { transform:rotate(360deg); } }
 .mq-alert { margin-top:16px; padding:12px 16px; border-radius:var(--radius-default); font-size:0.9rem; display:none; }
 .mq-alert.show { display:block; }
-.mq-alert.err { background:var(--color-background); color:var(--color-text-secondary); }
-.mq-alert.ok { background:var(--color-background); color:var(--color-text-secondary); }
+.mq-alert.err { background:var(--color-error-soft); color:var(--color-text-secondary); }
+.mq-alert.ok { background:var(--color-success-soft); color:var(--color-text-secondary); }
 
 .mq-result { display:none; margin-top:22px; }
 .mq-result.show { display:block; }
@@ -59,12 +59,12 @@
 .mq-gap-grid { display:flex; gap:24px; flex-wrap:wrap; margin-bottom:14px; }
 .mq-gap-stat { font-size:0.9rem; color:var(--color-action); }
 .mq-gap-stat b { display:block; font-size:1.45rem; font-weight:600; color:var(--color-text-primary); }
-.mq-gap-bar { height:12px; border-radius:var(--radius-default); background:var(--color-background); overflow:hidden; }
+.mq-gap-bar { height:12px; border-radius:var(--radius-default); background:var(--color-background-soft); overflow:hidden; }
 .mq-gap-fill { height:100%; border-radius:var(--radius-default); min-width:6px; transition:width 0.4s ease; }
 /* Status ranglari — yorliq matni bilan birga (rang yolg'iz emas) */
-.mq-gap-fill.strong { background:var(--color-background); }
-.mq-gap-fill.medium { background:var(--color-background); }
-.mq-gap-fill.low { background:var(--color-background); }
+.mq-gap-fill.strong { background:var(--color-error); color:var(--color-white); }
+.mq-gap-fill.medium { background:var(--color-notice); color:var(--color-text-primary); }
+.mq-gap-fill.low { background:var(--color-success); color:var(--color-white); }
 .mq-gap-label { margin-top:10px; font-size:0.9rem; font-weight:600; }
 .mq-gap-label.strong { color:var(--color-text-secondary); }
 .mq-gap-label.medium { color:var(--color-text-secondary); }
@@ -89,12 +89,12 @@
 .mq-item-meta { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
 .mq-tag { font-size:0.76rem; color:var(--color-action); background:var(--color-background); border:1px solid var(--color-border);
           padding:2px 9px; border-radius:var(--radius-default); }
-.mq-tag.oa { background:var(--color-background); color:var(--color-text-secondary); border-color:var(--color-border); font-weight:600; }
+.mq-tag.oa { background:var(--color-success-soft); color:var(--color-text-secondary); border-color:var(--color-border); font-weight:600; }
 .mq-item-actions { display:flex; gap:8px; margin-top:11px; flex-wrap:wrap; }
 .mq-act { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-action); border-radius:var(--radius-default);
           padding:5px 12px; font-size:0.8rem; font-weight:600; cursor:pointer; }
 .mq-act:hover { border-color:var(--color-border); color:var(--color-action); }
-.mq-act.saved { background:var(--color-background); border-color:var(--color-border); color:var(--color-text-secondary); }
+.mq-act.saved { background:var(--color-notice-soft); border-color:var(--color-border); color:var(--color-text-secondary); }
 .mq-empty { color:var(--color-action); font-size:0.92rem; padding:22px 0; text-align:center; }
 .mq-pager { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:16px; }
 .mq-pager .mq-page-info { color:var(--color-text-secondary); font-size:0.85rem; }
@@ -103,8 +103,8 @@
 .mq-jrow { margin-bottom:10px; }
 .mq-jrow-top { display:flex; justify-content:space-between; gap:10px; font-size:0.85rem; color:var(--color-text-primary); margin-bottom:4px; }
 .mq-jrow-top .cnt { color:var(--color-text-secondary); flex-shrink:0; }
-.mq-jbar { height:10px; border-radius:var(--radius-default); background:var(--color-background); overflow:hidden; }
-.mq-jbar-fill { height:100%; border-radius:var(--radius-default); background:var(--color-background); min-width:4px; }
+.mq-jbar { height:10px; border-radius:var(--radius-default); background:var(--color-background-soft); overflow:hidden; }
+.mq-jbar-fill { height:100%; border-radius:var(--radius-default); background:var(--color-action); min-width:4px; color:var(--color-white); }
 
 /* ── Konsept teglari ── */
 .mq-chips { display:flex; flex-wrap:wrap; gap:8px; }
@@ -115,7 +115,7 @@
 
 /* ── Iqtibos modali ── */
 #mq-cite-bg { position:fixed; inset:0; z-index:4100; display:none; align-items:center;
-              justify-content:center; background:var(--color-background); padding:16px; }
+              justify-content:center; background:var(--color-overlay); padding:16px; }
 #mq-cite-bg.show { display:flex; }
 .mq-cite-modal { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); max-width:560px;
                  width:100%; padding:22px; max-height:86vh; overflow-y:auto; }

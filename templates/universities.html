@@ -17,16 +17,16 @@
   @media (max-width: 600px) { .uni-grid { grid-template-columns:1fr; } }
   .uni-card { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:20px; text-decoration:none; display:flex; flex-direction:column; gap:10px; transition:transform 0.15s, border-color 0.15s; }
   .uni-card:hover { transform:translateY(-3px); border-color:var(--color-border); }
-  .uni-logo { width:56px; height:56px; border-radius:var(--radius-default); background:var(--color-surface); display:grid; place-items:center; font-size:1.6rem; overflow:hidden; }
+  .uni-logo { width:56px; height:56px; border-radius:var(--radius-default); background:var(--color-action); display:grid; place-items:center; font-size:1.6rem; overflow:hidden; color:var(--color-white); }
   .uni-logo img { width:100%; height:100%; object-fit:cover; }
   .uni-name { color:var(--color-text-primary); font-weight:600; font-size:1rem; line-height:1.3; }
   .uni-sub { color:var(--color-text-secondary); font-size:0.78rem; margin-top:-4px; }
   .uni-badges { display:flex; gap:6px; flex-wrap:wrap; }
   .uni-badge { font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-default); color:var(--color-surface); }
-  .uni-badge.universitet { background:var(--color-background); }
-  .uni-badge.akademiya { background:var(--color-background); }
-  .uni-badge.institut { background:var(--color-background); }
-  .uni-badge.markaz { background:var(--color-background); }
+  .uni-badge.universitet { background:var(--color-action); color:var(--color-white); }
+  .uni-badge.akademiya { background:var(--color-action); color:var(--color-white); }
+  .uni-badge.institut { background:var(--color-success); color:var(--color-white); }
+  .uni-badge.markaz { background:var(--color-brand-ink); color:var(--color-white); }
   .uni-badge.type { background:var(--color-background); }
   .uni-badge.city { background:var(--color-background); color:var(--color-text-primary); }
   .uni-counts { display:flex; gap:14px; color:var(--color-action); font-size:0.82rem; margin-top:auto; flex-wrap:wrap; }

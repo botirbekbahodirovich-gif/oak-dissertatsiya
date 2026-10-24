@@ -9,23 +9,23 @@
 .dw-card { background:var(--color-surface); }
 .dw-card h3 { font-size:1rem; margin:0; line-height:1.4; }
 .dw-badge { display:inline-block; font-size:0.72rem; font-weight:600; padding:3px 10px;
-  border-radius:var(--radius-default); background:var(--color-background); color:var(--color-action); margin-right:6px; }
-.dw-badge.st { background:var(--color-background); color:var(--color-action); }
-.dw-progress { height:7px; border-radius:var(--radius-default); background:var(--color-background); overflow:hidden; }
-.dw-progress i { display:block; height:100%; background:var(--color-surface); border-radius:var(--radius-default); }
+  border-radius:var(--radius-default); background:var(--color-blue-soft); color:var(--color-action); margin-right:6px; }
+.dw-badge.st { background:var(--color-background-soft); color:var(--color-action); }
+.dw-progress { height:7px; border-radius:var(--radius-default); background:var(--color-background-soft); overflow:hidden; }
+.dw-progress i { display:block; height:100%; background:var(--color-action); border-radius:var(--radius-default); color:var(--color-white); }
 .dw-meta { color:var(--color-action); font-size:0.8rem; }
-.dw-open { margin-top:auto; text-align:center; background:var(--color-surface);
-  color:var(--color-text-primary); font-weight:600; padding:9px; border-radius:var(--radius-default); text-decoration:none; }
+.dw-open { margin-top:auto; text-align:center; background:var(--color-action);
+  color:var(--color-white); font-weight:600; padding:9px; border-radius:var(--radius-default); text-decoration:none; }
 .dw-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px;
   flex-wrap:wrap; margin:22px 0 14px; }
 .dw-title-row h2 { font-size:1.1rem; margin:0; }
 .dw-btn { border:none; background:var(--color-action); color:var(--color-surface);
   font-weight:600; padding:9px 18px; border-radius:var(--radius-default); cursor:pointer; font-size:0.88rem; }
-.dw-btn.ghost { background:var(--color-background); color:inherit; border:1px solid var(--color-border); }
-.dw-invite { border:1px solid var(--color-border); background:var(--color-background);
+.dw-btn.ghost { background:var(--color-background-soft); color:inherit; border:1px solid var(--color-border); }
+.dw-invite { border:1px solid var(--color-border); background:var(--color-notice-soft);
   border-radius:var(--radius-default); padding:12px 16px; margin-bottom:10px; display:flex;
   justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.9rem; }
-.dw-modal-bg { display:none; position:fixed; inset:0; background:var(--color-background); z-index:1200;
+.dw-modal-bg { display:none; position:fixed; inset:0; background:var(--color-overlay); z-index:1200;
   align-items:center; justify-content:center; padding:16px; }
 .dw-modal-bg.show { display:flex; }
 .dw-modal { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card);
@@ -108,7 +108,7 @@
       <div>
         <span class="dw-badge">{{ p.degree_label }}</span>
         <span class="dw-badge st">{{ p.status_label }}</span>
-        {% if p.status == 'in_review' %}<span class="dw-badge" style="background:var(--color-background);color:var(--color-text-secondary);">⏳ Ko'rib chiqish kutilmoqda</span>{% endif %}
+        {% if p.status == 'in_review' %}<span class="dw-badge" style="background:var(--color-notice-soft);color:var(--color-text-secondary);">⏳ Ko'rib chiqish kutilmoqda</span>{% endif %}
       </div>
       <h3>{{ p.title }}</h3>
       <div class="dw-meta">Jarayon: {{ p.approved_blocks }}/{{ p.total_blocks }} ({{ p.progress }}%)</div>
@@ -131,9 +131,9 @@
       <div>
         <span class="dw-badge">{{ p.degree_label }}</span>
         <span class="dw-badge st">{{ p.status_label }}</span>
-        {% if p.can_edit %}<span class="dw-badge" style="background:var(--color-background);color:var(--color-text-secondary);"> Tahrir</span>
-        {% elif p.can_comment %}<span class="dw-badge" style="background:var(--color-background);color:var(--color-action);"> Izoh</span>{% endif %}
-        {% if p.can_review_status %}<span class="dw-badge" style="background:var(--color-background);color:var(--color-text-secondary);"> Baholash</span>{% endif %}
+        {% if p.can_edit %}<span class="dw-badge" style="background:var(--color-success-soft);color:var(--color-text-secondary);"> Tahrir</span>
+        {% elif p.can_comment %}<span class="dw-badge" style="background:var(--color-blue-soft);color:var(--color-action);"> Izoh</span>{% endif %}
+        {% if p.can_review_status %}<span class="dw-badge" style="background:var(--color-notice-soft);color:var(--color-text-secondary);"> Baholash</span>{% endif %}
       </div>
       <h3>{{ p.title }}</h3>
       <div class="dw-meta"> Muallif: <b>{{ p.owner_name }}</b></div>

@@ -12,14 +12,14 @@
 .rw-steps { display:flex; align-items:center; justify-content:center; gap:0; margin:22px 0 28px; }
 .rw-step { display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; }
 .rw-circle { width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
-  font-weight:600; font-size:1rem; background:var(--color-background); color:var(--color-action);
+  font-weight:600; font-size:1rem; background:var(--color-background-soft); color:var(--color-action);
   border:2px solid var(--color-border); transition:all 0.25s; }
 .rw-step.active .rw-circle { background:var(--color-action); color:var(--color-surface);
   border-color:transparent; box-shadow:none; }
-.rw-step.done .rw-circle { background:var(--color-background); color:var(--color-success); border-color:var(--color-border); }
+.rw-step.done .rw-circle { background:var(--color-success-soft); color:var(--color-success-ink); border-color:var(--color-border); }
 .rw-step span { font-size:0.75rem; color:var(--color-action); font-weight:600; }
 .rw-step.active span { color:var(--color-text-primary); }
-.rw-line { flex:0 0 60px; height:2px; background:var(--color-background); margin-bottom:22px; }
+.rw-line { flex:0 0 60px; height:2px; background:var(--color-background-soft); margin-bottom:22px; }
 
 .rw-panel { border:1px solid var(--color-border); border-radius:var(--radius-card); padding:24px;
   background:var(--color-surface); backdrop-filter:none; }
@@ -34,7 +34,7 @@
 .rw-card { border:2px solid var(--color-border); border-radius:var(--radius-card); padding:16px;
   cursor:pointer; transition:all 0.2s; position:relative; }
 .rw-card:hover { border-color:var(--color-border); }
-.rw-card.selected { border-color:var(--color-border); background:var(--color-background); }
+.rw-card.selected { border-color:var(--color-border); background:var(--color-blue-soft); }
 .rw-card b { display:block; font-size:1rem; margin-bottom:4px; }
 .rw-card small { color:var(--color-action); font-size:0.78rem; line-height:1.4; display:block; }
 .rw-card .rw-check { position:absolute; top:10px; right:12px; color:var(--color-action);
@@ -53,7 +53,7 @@
 .rw-btn { border:none; background:var(--color-action); color:var(--color-surface);
   font-weight:600; padding:11px 26px; border-radius:var(--radius-default); cursor:pointer; font-size:0.92rem; }
 .rw-btn:disabled { opacity:0.5; cursor:not-allowed; }
-.rw-btn.ghost { background:var(--color-background); color:inherit;
+.rw-btn.ghost { background:var(--color-background-soft); color:inherit;
   border:1px solid var(--color-border); }
 .rw-error { color:var(--color-danger); font-size:0.85rem; margin-top:10px; display:none; }
 </style>

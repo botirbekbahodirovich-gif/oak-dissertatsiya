@@ -7,8 +7,8 @@
   .adm-head h1 { margin:0; font-size:1.45rem; font-weight:600; color:var(--color-text-primary); }
   .adm-hint { color:var(--color-action); font-size:0.86rem; margin:0 0 1rem; max-width:60ch; }
   .adm-flash { border-radius:var(--radius-default); padding:11px 16px; font-size:0.9rem; margin-bottom:16px; }
-  .adm-flash.success { background:var(--color-background); border:1px solid var(--color-success); color:var(--color-success); }
-  .adm-flash.error { background:var(--color-background); border:1px solid var(--color-danger); color:var(--color-danger); }
+  .adm-flash.success { background:var(--color-success-soft); border:1px solid var(--color-success); color:var(--color-success-ink); }
+  .adm-flash.error { background:var(--color-error-soft); border:1px solid var(--color-danger); color:var(--color-danger); }
   .adm-search { display:flex; gap:8px; margin-bottom:1rem; flex-wrap:wrap; }
   .adm-search input { flex:1; min-width:220px; background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:10px 14px; font-size:0.9rem; }
   .adm-search select { background:var(--color-surface); border:1px solid var(--color-border); color:var(--color-text-primary); border-radius:var(--radius-default); padding:10px 12px; font-size:0.86rem; }
@@ -19,7 +19,7 @@
   .adm-stat .n { font-size:1.25rem; font-weight:600; color:var(--color-text-primary); line-height:1.15; }
   .adm-stat .l { font-size:0.72rem; color:var(--color-action); text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; }
   .adm-cats { display:flex; gap:8px; flex-wrap:wrap; margin:-0.3rem 0 1.1rem; }
-  .adm-cat-chip { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-action); border-radius:var(--radius-full); padding:4px 12px; font-size:0.78rem; }
+  .adm-cat-chip { background:var(--color-blue-soft); border:1px solid var(--color-border); color:var(--color-action); border-radius:var(--radius-full); padding:4px 12px; font-size:0.78rem; }
   .adm-cat-chip b { color:var(--color-text-primary); }
   .adm-table-wrap { border-radius:var(--radius-card); overflow-x:auto; border:1px solid var(--color-border); background:var(--color-surface); }
   .adm-table { width:100%; margin:0; border-collapse:collapse; }
@@ -29,8 +29,8 @@
   .adm-table td.num { font-weight:600; text-align:right; font-variant-numeric:tabular-nums; }
   .adm-name a { color:var(--color-action); text-decoration:none; }
   .adm-name a:hover { text-decoration:underline; }
-  .adm-btn { font-size:0.95rem; padding:5px 11px; border-radius:var(--radius-default); text-decoration:none; border:none; cursor:pointer; line-height:1; background:var(--color-background); color:var(--color-action); }
-  .adm-btn:hover { background:var(--color-background); }
+  .adm-btn { font-size:0.95rem; padding:5px 11px; border-radius:var(--radius-default); text-decoration:none; border:none; cursor:pointer; line-height:1; background:var(--color-blue-soft); color:var(--color-action); }
+  .adm-btn:hover { background:var(--color-blue-soft); }
   .adm-empty { padding:2.5rem; text-align:center; color:var(--color-action); }
   .adm-pager { display:flex; align-items:center; justify-content:center; gap:14px; margin:1.1rem 0; color:var(--color-action); font-size:0.86rem; }
   .adm-pager a { color:var(--color-action); text-decoration:none; padding:6px 12px; border:1px solid var(--color-border); border-radius:var(--radius-default); }
@@ -52,10 +52,10 @@
   .log-row:first-child { border-top:none; }
   .log-arrow { color:var(--color-text-secondary); }
   .log-old { color:var(--color-text-secondary); } .log-new { color:var(--color-text-secondary); }
-  .log-badge { font-size:0.68rem; font-weight:600; padding:2px 8px; border-radius:var(--radius-default); background:var(--color-background); color:var(--color-action); }
+  .log-badge { font-size:0.68rem; font-weight:600; padding:2px 8px; border-radius:var(--radius-default); background:var(--color-blue-soft); color:var(--color-action); }
   .log-meta { color:var(--color-text-secondary); margin-left:auto; white-space:nowrap; }
-  .log-undo { background:var(--color-background); color:var(--color-text-secondary); border:none; cursor:pointer; font-size:0.8rem; padding:5px 10px; border-radius:var(--radius-default); }
-  .log-undo:hover { background:var(--color-background); }
+  .log-undo { background:var(--color-error-soft); color:var(--color-text-secondary); border:none; cursor:pointer; font-size:0.8rem; padding:5px 10px; border-radius:var(--radius-default); }
+  .log-undo:hover { background:var(--color-error-soft); }
   /* modal */
   .rn-overlay { position:fixed; inset:0; background:var(--color-overlay); display:none; align-items:center; justify-content:center; z-index:3000; padding:1rem; }
   .rn-overlay.open { display:flex; }

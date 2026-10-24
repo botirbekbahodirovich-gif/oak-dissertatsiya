@@ -4,17 +4,17 @@
 <style>
   .uvk-row { cursor:pointer; }
   .uvk-name { display:flex; align-items:center; gap:9px; font-weight:600; }
-  .uvk-av { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--color-background);
-    color:var(--color-text-primary); display:grid; place-items:center; font-size:0.8rem; font-weight:600; flex:0 0 30px; }
+  .uvk-av { width:30px; height:30px; border-radius:50%; object-fit:cover; background:var(--color-action);
+    color:var(--color-white); display:grid; place-items:center; font-size:0.8rem; font-weight:600; flex:0 0 30px; }
   .uvk-pub { font-family:ui-monospace, monospace; font-size:0.78rem; white-space:nowrap; }
   .uvk-pub b.ok { color:var(--color-text-secondary); } .uvk-pub b.no { color:var(--color-text-secondary); }
-  .uvk-wbar { width:110px; height:8px; background:var(--color-background); border-radius:var(--radius-default);
+  .uvk-wbar { width:110px; height:8px; background:var(--color-background-soft); border-radius:var(--radius-default);
     overflow:hidden; margin-top:4px; }
-  .uvk-wbar i { display:block; height:100%; background:var(--color-surface); }
+  .uvk-wbar i { display:block; height:100%; background:var(--color-action); color:var(--color-white); }
   .uvk-holat { font-size:0.7rem; font-weight:600; padding:3px 10px; border-radius:var(--radius-default); white-space:nowrap; }
-  .uvk-holat.active { background:var(--color-background); color:var(--color-action); }
-  .uvk-holat.good { background:var(--color-background); color:var(--color-text-secondary); }
-  .uvk-holat.muted { background:var(--color-background); color:var(--color-action); }
+  .uvk-holat.active { background:var(--color-blue-soft); color:var(--color-action); }
+  .uvk-holat.good { background:var(--color-success-soft); color:var(--color-text-secondary); }
+  .uvk-holat.muted { background:var(--color-background-soft); color:var(--color-action); }
   .uvk-days { font-size:0.74rem; color:var(--color-action); }
   .uvk-days b.soon { color:var(--color-warning-ink); } .uvk-days b.past { color:var(--color-text-secondary); }
   /* drawer */
@@ -35,9 +35,9 @@
   .uvk-chap { margin-bottom:9px; font-size:0.8rem; color:var(--color-text-primary); }
   .uvk-chap .t { display:flex; justify-content:space-between; gap:8px; }
   .uvk-chap .t span:last-child { color:var(--color-action); font-family:ui-monospace, monospace; white-space:nowrap; }
-  .uvk-chap .bar { height:7px; background:var(--color-background); border-radius:var(--radius-default);
+  .uvk-chap .bar { height:7px; background:var(--color-background-soft); border-radius:var(--radius-default);
     overflow:hidden; margin-top:3px; }
-  .uvk-chap .bar i { display:block; height:100%; background:var(--color-surface); }
+  .uvk-chap .bar i { display:block; height:100%; background:var(--color-action); color:var(--color-white); }
   .uvk-publi { padding:8px 0; border-bottom:1px solid var(--color-border); font-size:0.8rem; }
   .uvk-publi b { color:var(--color-text-primary); display:block; }
   .uvk-publi span { color:var(--color-action); font-size:0.72rem; }
@@ -45,19 +45,19 @@
   .uvk-tl li { display:flex; gap:8px; padding:5px 0; font-size:0.78rem; color:var(--color-text-primary); align-items:baseline; }
   .uvk-tl .dot { width:9px; height:9px; border-radius:50%; flex:0 0 9px; align-self:center; }
   .uvk-tl .dot.done { background:var(--color-success); } .uvk-tl .dot.active { background:var(--color-action); }
-  .uvk-tl .dot.past { background:var(--color-background); } .uvk-tl .dot.future { background:var(--color-background); }
+  .uvk-tl .dot.past { background:var(--color-error); color:var(--color-white); } .uvk-tl .dot.future { background:var(--color-background); }
   .uvk-tl .dt { margin-left:auto; color:var(--color-text-secondary); font-size:0.7rem; white-space:nowrap; }
   .uvk-consent { margin-top:18px; font-size:0.72rem; color:var(--color-text-secondary); border-top:1px dashed
     var(--color-border); padding-top:10px; }
   .uvk-invite { background:var(--color-surface); border:1px dashed var(--color-border);
     border-radius:var(--radius-default); padding:14px; margin-top:14px; font-size:0.82rem; color:var(--color-text-primary); }
   .uvk-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
-  .uvk-tab { background:var(--color-background); color:var(--color-action); border:none;
+  .uvk-tab { background:var(--color-background-soft); color:var(--color-action); border:none;
     border-radius:var(--radius-full); padding:7px 16px; font-size:0.8rem; font-weight:600; cursor:pointer; }
-  .uvk-tab.on { background:var(--color-background); color:var(--color-action); }
+  .uvk-tab.on { background:var(--color-blue-soft); color:var(--color-action); }
   .uvk-pane { display:none; } .uvk-pane.on { display:block; }
   .uvk-risk { font-size:0.95rem; cursor:help; }
-  .uvk-load-flag { font-size:0.68rem; font-weight:600; background:var(--color-background);
+  .uvk-load-flag { font-size:0.68rem; font-weight:600; background:var(--color-error-soft);
     color:var(--color-text-secondary); border-radius:var(--radius-default); padding:2px 9px; white-space:nowrap; }
   .uvk-bulk textarea { width:100%; background:var(--color-surface); color:var(--color-text-primary);
     border:1px solid var(--color-border); border-radius:var(--radius-default); padding:10px 12px;
@@ -133,7 +133,7 @@
   <div class="uvk-invite">
     <b>Doktorantlaringizni taklif qiling</b> — quyidagi matnni ularga yuboring
     (yoki " Takliflar" bo'limida email bo'yicha shaxsiy havolalar yarating):
-    <div id="uvk-invite-text" style="margin-top:8px;background:var(--color-background);border-radius:var(--radius-default);padding:10px 12px;font-size:0.78rem;color:var(--color-action);">
+    <div id="uvk-invite-text" style="margin-top:8px;background:var(--color-background-soft);border-radius:var(--radius-default);padding:10px 12px;font-size:0.78rem;color:var(--color-action);">
       Universitetingiz sizni olimlar.uz da kuzatadi — profil oching, Akademik
       Reja tuzing va dissertatsiyangizni Konstruktorda yozing:
       https://olimlar.uz/cabinet

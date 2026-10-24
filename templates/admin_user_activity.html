@@ -8,8 +8,8 @@
   .ua-head { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
   .ua-id { font-size:1.6rem; font-weight:600; color:var(--color-text-primary); word-break:break-all; }
   .ua-badge { font-size:0.78rem; font-weight:600; padding:4px 14px; border-radius:var(--radius-default); }
-  .ua-badge.reg { background:var(--color-background); color:var(--color-text-secondary); }
-  .ua-badge.guest { background:var(--color-background); color:var(--color-action); }
+  .ua-badge.reg { background:var(--color-success-soft); color:var(--color-text-secondary); }
+  .ua-badge.guest { background:var(--color-background-soft); color:var(--color-action); }
   .ua-sub { color:var(--color-action); font-size:0.9rem; margin-bottom:24px; }
   .ua-sub a { color:var(--color-action); text-decoration:none; }
 
@@ -32,8 +32,8 @@
 
   .freq-row { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
   .freq-label { min-width:200px; max-width:200px; color:var(--color-text-primary); font-size:0.82rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .freq-track { flex:1; height:14px; background:var(--color-background); border-radius:var(--radius-default); overflow:hidden; }
-  .freq-bar { height:100%; border-radius:var(--radius-default); background:var(--color-surface); }
+  .freq-track { flex:1; height:14px; background:var(--color-blue-soft); border-radius:var(--radius-default); overflow:hidden; }
+  .freq-bar { height:100%; border-radius:var(--radius-default); background:var(--color-action); color:var(--color-white); }
   .freq-count { min-width:40px; text-align:right; color:var(--color-action); font-size:0.8rem; font-weight:600; }
 
   .hour-grid { display:flex; flex-wrap:wrap; gap:4px; }
@@ -64,14 +64,14 @@
 <!--  Block controls -->
 <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:16px 20px;margin:16px 0;">
   {% if current_block %}
-  <div style="background:var(--color-background);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:12px 16px;color:var(--color-text-secondary);">
+  <div style="background:var(--color-error-soft);border:1px solid var(--color-border);border-radius:var(--radius-default);padding:12px 16px;color:var(--color-text-secondary);">
      Bu foydalanuvchi bloklangan.
     {% if current_block.reason %} Sabab: {{ current_block.reason }}.{% endif %}
     Tugash:
     {% if current_block.is_permanent %}<strong>Doimiy</strong>{% else %}<strong>{{ current_block.blocked_until|uztime }}</strong>{% endif %}
   </div>
   <div style="margin-top:12px;">
-    <button onclick="unblockUser('{{ block_ip }}')" style="background:var(--color-background);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:8px 16px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Blokdan chiqarish</button>
+    <button onclick="unblockUser('{{ block_ip }}')" style="background:var(--color-success-soft);border:1px solid var(--color-border);color:var(--color-text-secondary);padding:8px 16px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Blokdan chiqarish</button>
   </div>
   {% else %}
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -84,8 +84,8 @@
       <option value="permanent">Doimiy</option>
     </select>
     <label class="ol-label" for="blockReason">Sabab</label>
-<input type="text" id="blockReason" placeholder="Sabab..." style="background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text-primary);border-radius:var(--radius-default);padding:8px;flex:1;min-width:160px;">
-    <button onclick="blockThisUser()" style="background:var(--color-background);color:white;border:none;padding:8px 16px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Bloklash</button>
+<input type="text" id="blockReason" placeholder="Sabab..." style="background:var(--color-error);border:1px solid var(--color-border);color:var(--color-white);border-radius:var(--radius-default);padding:8px;flex:1;min-width:160px;">
+    <button onclick="blockThisUser()" style="background:var(--color-error);color:var(--color-white);border:none;padding:8px 16px;border-radius:var(--radius-default);font-weight:600;cursor:pointer;"> Bloklash</button>
   </div>
   {% endif %}
 

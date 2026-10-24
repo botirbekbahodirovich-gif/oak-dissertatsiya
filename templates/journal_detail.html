@@ -16,18 +16,18 @@
   .jd-wrap { max-width:920px; margin:0 auto; padding:8px 16px 48px; }
   .jd-back { display:inline-block; color:var(--color-action); text-decoration:none; font-size:0.88rem; margin-bottom:16px; }
   .jd-header { background:var(--color-surface); border-radius:var(--radius-default); padding:28px; color:var(--color-text-primary); display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:22px; }
-  .jd-logo { width:90px; height:90px; border-radius:50%; background:var(--color-background); display:grid; place-items:center; font-size:2.6rem; overflow:hidden; border:3px solid var(--color-border); flex-shrink:0; }
+  .jd-logo { width:90px; height:90px; border-radius:50%; background:var(--color-background-soft); display:grid; place-items:center; font-size:2.6rem; overflow:hidden; border:3px solid var(--color-border); flex-shrink:0; }
   .jd-logo img { width:100%; height:100%; object-fit:cover; }
   .jd-htext h1 { font-size:1.45rem; font-weight:600; margin:0 0 4px; }
   .jd-en { opacity:0.9; font-style:italic; margin-bottom:10px; }
   .jd-badges { display:flex; gap:8px; flex-wrap:wrap; }
   .jd-badge { font-size:0.74rem; font-weight:600; padding:4px 12px; border-radius:var(--radius-default); color:var(--color-surface); text-decoration:none; }
-  .jd-badge.oak { background:var(--color-background); }
-  .jd-badge.scopus  { background:var(--color-background); }
-  .jd-badge.wos     { background:var(--color-background); color:var(--color-text-primary); }
+  .jd-badge.oak { background:var(--color-success); color:var(--color-white); }
+  .jd-badge.scopus  { background:var(--color-brand-ink); color:var(--color-white); }
+  .jd-badge.wos     { background:var(--color-notice); color:var(--color-text-primary); }
   .jd-badge.scholar { background:var(--color-background); }
-  .jd-badge.code { background:var(--color-background); }
-  .jd-warn { background:var(--color-background); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:14px 18px; margin-bottom:22px; font-weight:600; }
+  .jd-badge.code { background:var(--color-background-soft); }
+  .jd-warn { background:var(--color-error-soft); border:1px solid var(--color-border); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:14px 18px; margin-bottom:22px; font-weight:600; }
   .jd-section { background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:22px; margin-bottom:18px; }
   .jd-section h2 { font-size:1.1rem; font-weight:600; color:var(--color-text-primary); margin:0 0 14px; }
   .jd-table { width:100%; border-collapse:collapse; }
@@ -40,7 +40,7 @@
   .jd-checklist li { padding:6px 0; color:var(--color-text-primary); font-size:0.9rem; }
   .jd-checklist li::before { content:' '; }
   .jd-fee-free { color:var(--color-text-secondary); font-weight:600; } .jd-fee-paid { color:var(--color-text-secondary); font-weight:600; }
-  .jd-oak-ok { display:inline-flex; align-items:center; gap:6px; background:var(--color-background); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:6px 14px; font-weight:600; font-size:0.82rem; }
+  .jd-oak-ok { display:inline-flex; align-items:center; gap:6px; background:var(--color-success-soft); color:var(--color-text-secondary); border-radius:var(--radius-default); padding:6px 14px; font-weight:600; font-size:0.82rem; }
   .jd-codes { display:flex; flex-direction:column; gap:8px; }
   .jd-code-row { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-default); padding:10px 14px; text-decoration:none; }
   .jd-code-row .c { color:var(--color-action); font-weight:600; } .jd-code-row .n { color:var(--color-text-primary); font-size:0.86rem; }
@@ -48,11 +48,11 @@
   .jd-similar { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
   @media (max-width: 600px) { .jd-similar { grid-template-columns:1fr; } .jd-table td.lbl { width:140px; } }
   .jd-sim-card { display:flex; align-items:center; gap:10px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-card); padding:12px; text-decoration:none; }
-  .jd-sim-logo { width:40px; height:40px; border-radius:50%; background:var(--color-surface); display:grid; place-items:center; overflow:hidden; flex-shrink:0; }
+  .jd-sim-logo { width:40px; height:40px; border-radius:50%; background:var(--color-action); display:grid; place-items:center; overflow:hidden; flex-shrink:0; color:var(--color-white); }
   .jd-sim-logo img { width:100%; height:100%; object-fit:cover; }
   .jd-sim-card .nm { color:var(--color-text-primary); font-weight:600; font-size:0.86rem; }
   .jd-sim-card .cd { color:var(--color-action); font-size:0.74rem; }
-  .jd-admin { display:inline-block; background:var(--color-background); color:var(--color-text-primary); font-weight:600; padding:9px 20px; border-radius:var(--radius-default); text-decoration:none; }
+  .jd-admin { display:inline-block; background:var(--color-action); color:var(--color-white); font-weight:600; padding:9px 20px; border-radius:var(--radius-default); text-decoration:none; }
   .jd-empty { color:var(--color-text-secondary); font-style:italic; }
 </style>
 {% endblock %}

@@ -3,10 +3,10 @@
 {% block uv_head %}
 <style>
   .uvc-badge { font-size:0.68rem; font-weight:600; padding:2px 9px; border-radius:var(--radius-default); white-space:nowrap; }
-  .uvc-badge.pending { background:var(--color-background); color:var(--color-warning-ink); }
-  .uvc-badge.off { background:var(--color-background); color:var(--color-action); }
-  .uvc-badge.on { background:var(--color-background); color:var(--color-action); }
-  .uvc-badge.ext { background:var(--color-background); color:var(--color-text-secondary); }
+  .uvc-badge.pending { background:var(--color-notice-soft); color:var(--color-warning-ink); }
+  .uvc-badge.off { background:var(--color-background-soft); color:var(--color-action); }
+  .uvc-badge.on { background:var(--color-success-soft); color:var(--color-action); }
+  .uvc-badge.ext { background:var(--color-background-soft); color:var(--color-text-secondary); }
   .uvc-form { display:none; margin-bottom:16px; }
   .uvc-form.open { display:block; }
   .uvc-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px; }
@@ -15,8 +15,8 @@
     padding:8px 12px; font-size:0.85rem; }
   .uvc-form textarea { margin-top:8px; }
   .uvc-msg { display:none; margin-top:10px; font-size:0.84rem; border-radius:var(--radius-default); padding:9px 14px; }
-  .uvc-msg.ok { background:var(--color-background); color:var(--color-text-secondary); display:block; }
-  .uvc-msg.err { background:var(--color-background); color:var(--color-text-secondary); display:block; }
+  .uvc-msg.ok { background:var(--color-success-soft); color:var(--color-text-secondary); display:block; }
+  .uvc-msg.err { background:var(--color-error-soft); color:var(--color-text-secondary); display:block; }
 </style>
 {% endblock %}
 
