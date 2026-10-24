@@ -29,7 +29,7 @@
     <a href="/admin/conferences{% if moderation != 'pending' %}?moderation=pending{% endif %}"
        class="btn {{ 'btn-primary' if moderation == 'pending' else 'btn-action' }}"
        style="{% if pending_count %}border-color:var(--color-border);color:{{ '#fff' if moderation == 'pending' else '#fbbf24' }};{% endif %};">
-      ⏳ Moderatsiyada{% if pending_count %} ({{ pending_count }}){% endif %}</a>
+      <i class="bi bi-hourglass-split" aria-hidden="true"></i> Moderatsiyada{% if pending_count %} ({{ pending_count }}){% endif %}</a>
   </form>
 
   <div style="overflow-x:auto;">
@@ -44,7 +44,7 @@
         <td>{{ c.id }}</td>
         <td><a href="/konferensiya/{{ c.slug }}" target="_blank">{{ c.title[:56] }}</a>
           {% if c.moderation_status == 'pending' %}
-          <span style="font-size:0.68rem;font-weight:600;background:var(--color-notice-soft);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;margin-left:4px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          <span style="font-size:0.68rem;font-weight:600;background:var(--color-notice-soft);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;margin-left:4px;white-space:nowrap;"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Moderatsiyada</span>
           {% endif %}
           {% if c.organizer %}<br><small style="color:var(--color-action);">{{ c.organizer[:44] }}</small>{% endif %}
           {% if c.canonical_institution %}<br><small style="color:var(--color-action);"> {{ c.canonical_institution[:44] }}</small>{% endif %}</td>

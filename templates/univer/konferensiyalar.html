@@ -79,7 +79,7 @@
         <td style="color:var(--color-action);font-size:0.8rem;">{{ (c.field or '—')[:34] }}</td>
         <td style="text-align:center;font-weight:600;" title="Ixtisoslik obunachilariga yuborilgan bildirishnomalar">{{ c.notified }}</td>
         <td>
-          {% if c.moderation_status == 'pending' %}<span class="uvc-badge pending">⏳ Moderatsiyada</span>
+          {% if c.moderation_status == 'pending' %}<span class="uvc-badge pending"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Moderatsiyada</span>
           {% elif c.is_active %}<span class="uvc-badge on">Faol</span>
           {% else %}<span class="uvc-badge off">Yashirilgan</span>{% endif %}
         </td>

@@ -102,7 +102,7 @@
 {%- endif -%}
 {%- endmacro -%}
 {%- macro flag(country) -%}
-{%- if country == 'UZ' -%}🇺🇿{% elif country == 'RU' -%}🇷🇺{% elif country == 'US' -%}🇺🇸{% elif country == 'KZ' -%}🇰🇿{% elif country == 'TJ' -%}🇹🇯{% elif country == 'KG' -%}🇰🇬{% elif country == 'TR' -%}🇹🇷{% elif country == 'KR' -%}🇰🇷{% elif country == 'DE' -%}🇩🇪{% elif country == 'GB' -%}🇬🇧{% elif country and country != 'XX' -%}{%- endif -%}
+{%- if country and country != 'XX' -%}<span class="ol-meta" title="Mamlakat">{{ country }}</span>{%- endif -%}
 {%- endmacro -%}
 <div class="page-heading">
   <div>
@@ -214,7 +214,7 @@
     <div class="card-sub">Jami hisoblar soni</div>
   </div>
   <div class="admin-card">
-    <div class="card-label">🆕 Bugungi yangi ro'yxatdan o'tganlar</div>
+    <div class="card-label">Bugungi yangi ro'yxatdan o'tganlar</div>
     <div class="card-value">{{ new_today_count }} <span style="font-size:1rem;color:var(--oak-muted);">kishi</span></div>
     <div class="card-sub">Bugun ochilgan hisoblar</div>
   </div>

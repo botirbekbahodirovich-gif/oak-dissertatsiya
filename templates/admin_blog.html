@@ -55,7 +55,7 @@
         <td>{% if n.category %}<span class="cat-chip">{{ n.category_label }}</span>{% endif %}</td>
         <td style="font-weight:600;">{{ n.views }}</td>
         <td style="white-space:nowrap;color:var(--color-action);">{{ n.created_at }}</td>
-        <td>{% if n.is_published %}<span class="pub-badge pub-on"> Chop etilgan</span>{% else %}<span class="pub-badge pub-off">⏸ Qoralama</span>{% endif %}</td>
+        <td>{% if n.is_published %}<span class="pub-badge pub-on"><i class="bi bi-check-circle" aria-hidden="true"></i> Chop etilgan</span>{% else %}<span class="pub-badge pub-off"><i class="bi bi-pause-circle" aria-hidden="true"></i> Qoralama</span>{% endif %}</td>
         <td>
           <div class="adm-actions">
             <a href="/blog/{{ n.slug }}" target="_blank" rel="noopener" class="adm-btn adm-view" title="Ko'rish" aria-label="Ko'rish"><i class="bi bi-eye" aria-hidden="true"></i></a>

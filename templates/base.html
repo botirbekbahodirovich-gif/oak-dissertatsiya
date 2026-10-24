@@ -1261,7 +1261,7 @@ function submitSurvey() {
     return;
   }
   const btn = document.getElementById('surveySubmitBtn');
-  btn.textContent = '⏳ Yuborilmoqda...';
+  btn.textContent = 'Yuborilmoqda…';
   btn.disabled = true;
   fetch('/api/survey/submit', {
     method: 'POST',
@@ -1616,7 +1616,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var notes = (res[0] && res[0].notifications) || [];
     var reminders = ((res[1] && res[1].reminders) || []).map(function (g) {
       return { id: g.id, kind: 'grant', level: 'warning',
-               title: '⏳ Grant muddati yaqinlashmoqda',
+               title: 'Grant muddati yaqinlashmoqda',
                message: g.message, url: '/grants/' + g.id };
     });
     // Deadline reminders are time-critical — surface them first.

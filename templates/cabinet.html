@@ -667,7 +667,7 @@
             ('scopus_url','','Scopus','https://www.scopus.com/authid/...'),
             ('wos_url','','Web of Science','https://www.webofscience.com/...'),
             ('scholar_url','','Google Scholar profil havolasi','https://scholar.google.com/citations?user=...'),
-            ('orcid_url','🆔','ORCID','https://orcid.org/0000-...'),
+            ('orcid_url','','ORCID','https://orcid.org/0000-...'),
             ('website_url','','Shaxsiy veb-sayt','https://...'),
             ('telegram_url','','Telegram','https://t.me/...')
           ] %}
@@ -701,7 +701,7 @@
             ('himoya_elon','',"Himoya e'lonlari","Sizning ixtisosligingizga mos yangi dissertatsiya himoyalari"),
             ('jurnal','','Jurnallar',"Siz o'qiydigan sohadagi yangi jurnal sonlari"),
             ('yangilik','','Yangiliklar',"Olimlar.uz ma'muriyatidan umumiy e'lonlar"),
-            ('deadline','⏰','Muhim muddatlar','Ariza topshirish, maqola yuborish muddatlari')
+            ('deadline','','Muhim muddatlar','Ariza topshirish, maqola yuborish muddatlari')
           ] %}
           {% set _channel_prefs = [
             ('telegram_notify','','Telegram orqali xabar olish','Telegram botimiz orqali tezkor bildirishnomalar'),
@@ -1064,7 +1064,7 @@ function unclaimProfile() {
 function unclaimDissertation(btn, olimName) {
   if (!confirm("'" + olimName + "' nomli dissertatsiyani profilingizdan ajratmoqchimisiz?\n\nBu amalni bekor qilib bo'lmaydi.")) return;
   btn.disabled = true;
-  btn.textContent = '⏳...';
+  btn.textContent = '…';
   fetch('/cabinet/api/unclaim', {
     method: 'POST',
     headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),

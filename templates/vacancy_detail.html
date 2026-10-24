@@ -48,7 +48,7 @@
     <div class="vd-top">
       <span class="vd-badge {{ item.vacancy_type }}">{{ item.type_label }}</span>
       {% if item.deadline %}
-      <span class="vd-deadline" id="vd-deadline" data-deadline="{{ item.deadline }}">⏰ {{ item.deadline }}</span>
+      <span class="vd-deadline" id="vd-deadline" data-deadline="{{ item.deadline }}"><i class="bi bi-clock" aria-hidden="true"></i> {{ item.deadline }}</span>
       {% endif %}
     </div>
 

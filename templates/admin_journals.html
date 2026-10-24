@@ -103,7 +103,7 @@
         <td>{% if j.logo_url %}<img src="{{ j.logo_url }}" style="width:34px;height:34px;border-radius:var(--radius-default);object-fit:cover;">{% else %}{% endif %}</td>
         <td><a href="/journals/{{ j.id }}" style="color:var(--color-action);">{{ j.name[:50] }}{% if j.name|length > 50 %}…{% endif %}</a>{% if j.is_predatory %} <span class="pred-badge"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span>{% endif %}
           {% if j.moderation_status == 'pending' %}
-          <span style="font-size:0.68rem;font-weight:600;background:var(--color-notice-soft);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;white-space:nowrap;">⏳ Moderatsiyada</span>
+          <span style="font-size:0.68rem;font-weight:600;background:var(--color-notice-soft);color:var(--color-text-secondary);border-radius:var(--radius-default);padding:2px 8px;white-space:nowrap;"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Moderatsiyada</span>
           {% endif %}
           {% if j.canonical_institution %}<br><small style="color:var(--color-action);"> {{ j.canonical_institution[:44] }}</small>{% endif %}</td>
         <td style="font-size:0.78rem;color:var(--color-action);">{{ j.issn or '—' }}</td>

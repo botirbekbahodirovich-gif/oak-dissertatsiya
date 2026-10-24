@@ -131,7 +131,7 @@
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
             '<b>' + esc(c.username) + '</b>' +
             '<span style="font-size:0.72rem;color:#94a3b8;">' +
-            (c.status === 'accepted' ? '✓ qabul qildi' : '⏳ kutilmoqda') + '</span></div>' +
+            (c.status === 'accepted' ? '<i class="bi bi-check-lg" aria-hidden="true"></i> qabul qildi' : '<i class="bi bi-hourglass-split" aria-hidden="true"></i> kutilmoqda') + '</span></div>' +
             '<div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;">' +
             perm('can_comment', 'Izoh') + perm('can_edit', 'Tahrir') + perm('can_review_status', 'Baholash') +
             '<button class="dw-btn ghost" style="padding:3px 10px;font-size:0.74rem;color:#f87171;margin-left:auto;" onclick="removeCollaborator(' + c.id + ')">O\'chirish</button>' +
@@ -191,31 +191,31 @@
           var p = n.payload || {};
           var markRead = function () { postJSON('/api/diss-notifications/mark-read', { ids: [n.id] }); };
           var accBtn = function (fn, id) {
-            return '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="' + fn + '(' + id + ',\'accept\')">✅ Qabul qilish</button> ' +
-              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="' + fn + '(' + id + ',\'decline\')">❌ Rad etish</button>';
+            return '<button class="dw-btn" style="border:none;background:linear-gradient(135deg,#3b82f6,#7c5cfc);color:#fff;font-weight:700;padding:4px 12px;border-radius:8px;cursor:pointer;margin-left:6px;" onclick="' + fn + '(' + id + ',\'accept\')"><i class="bi bi-check-lg" aria-hidden="true"></i> Qabul qilish</button> ' +
+              '<button class="dw-btn ghost" style="background:rgba(148,163,184,0.15);border:1px solid rgba(148,163,184,0.25);color:inherit;padding:4px 12px;border-radius:8px;cursor:pointer;" onclick="' + fn + '(' + id + ',\'decline\')"><i class="bi bi-x-lg" aria-hidden="true"></i> Rad etish</button>';
           };
           // rahbar/shogird taklifi — bevosita tugmalar bilan
           if (n.event_type === 'advisor_invite' && p.link_id) {
-            banner('info', '👥 <b>' + esc(p.from || '') + '</b> sizni hamkorlikka taklif qilmoqda. ' +
+            banner('info', '<b>' + esc(p.from || '') + '</b> sizni hamkorlikka taklif qilmoqda. ' +
               accBtn('respondInvite', p.link_id), markRead);
             return;
           }
           // qo'shimcha hamkor taklifi — bevosita tugmalar bilan
           if (n.event_type === 'collaborator_invite' && p.collab_id) {
-            banner('info', '🤝 <b>' + esc(p.from || '') + '</b> sizni "' + esc(p.diss_title || 'loyiha') +
+            banner('info', '<b>' + esc(p.from || '') + '</b> sizni "' + esc(p.diss_title || 'loyiha') +
               '" ga hamkor qilib taklif qilmoqda. ' + accBtn('respondCollaborator', p.collab_id), markRead);
             return;
           }
           var link = n.dissertation_id ? '/workspace/' + n.dissertation_id + '/first' : '/workspace';
           var text = '';
-          if (n.event_type === 'advisor_reviewed') text = '📋 ' + (p.message || "Rahbaringiz ishingizni ko'rib chiqdi");
-          else if (n.event_type === 'student_submitted') text = '✅ Shogirdingiz tuzatishlarni kiritdi va qayta ko\'rib chiqish uchun yubordi.';
-          else if (n.event_type === 'advisor_invite') { text = '👥 ' + esc(p.from || '') + ' sizga hamkorlik taklifi yubordi.'; link = '/workspace'; }
-          else if (n.event_type === 'invite_accepted') text = '🤝 ' + esc(p.by || '') + ' taklifingizni qabul qildi.';
-          else if (n.event_type === 'annotation_added') text = '💬 “' + esc(p.block_title || '') + '” qismiga yangi izoh qo\'shildi.';
-          else if (n.event_type === 'status_changed') text = '🏷️ “' + esc(p.block_title || '') + '” holati: ' + esc(p.label || '');
-          else if (n.event_type === 'new_message') { text = '✉️ ' + esc(p.from || 'Yangi') + ': ' + esc(p.snippet || 'xabar'); link = p.conversation_id ? '/messages/' + p.conversation_id : '/messages'; }
-          else if (n.event_type === 'followed_scholar_new_student') { text = '👥 ' + esc(p.scholar_name || '') + 'ning yangi shogirdi: ' + esc(p.student_name || '') + (p.mavzu ? ' — ' + esc(p.mavzu) : ''); link = '/olim/' + encodeURIComponent(p.scholar_name || ''); }
+          if (n.event_type === 'advisor_reviewed') text = (p.message || "Rahbaringiz ishingizni ko'rib chiqdi");
+          else if (n.event_type === 'student_submitted') text = 'Shogirdingiz tuzatishlarni kiritdi va qayta ko\'rib chiqish uchun yubordi.';
+          else if (n.event_type === 'advisor_invite') { text = esc(p.from || '') + ' sizga hamkorlik taklifi yubordi.'; link = '/workspace'; }
+          else if (n.event_type === 'invite_accepted') text = esc(p.by || '') + ' taklifingizni qabul qildi.';
+          else if (n.event_type === 'annotation_added') text = '“' + esc(p.block_title || '') + '” qismiga yangi izoh qo\'shildi.';
+          else if (n.event_type === 'status_changed') text = '“' + esc(p.block_title || '') + '” holati: ' + esc(p.label || '');
+          else if (n.event_type === 'new_message') { text = esc(p.from || 'Yangi') + ': ' + esc(p.snippet || 'xabar'); link = p.conversation_id ? '/messages/' + p.conversation_id : '/messages'; }
+          else if (n.event_type === 'followed_scholar_new_student') { text = esc(p.scholar_name || '') + 'ning yangi shogirdi: ' + esc(p.student_name || '') + (p.mavzu ? ' — ' + esc(p.mavzu) : ''); link = '/olim/' + encodeURIComponent(p.scholar_name || ''); }
           else return;
           banner(n.event_type === 'advisor_reviewed' || n.event_type === 'student_submitted' ? 'warn' : 'info',
             text + ' <a href="' + link + '" style="color:#4a9eff;font-weight:700;">Ko\'rish →</a>',
@@ -264,11 +264,11 @@
           (n.open_annotations_count ? '<span class="toc-count">' + n.open_annotations_count + '</span>' : '') +
           (S.role === 'owner'
             ? '<span class="toc-actions">' +
-              '<button title="Nomini o\'zgartirish" data-act="rename">✏️</button>' +
+              '<button title="Nomini o\'zgartirish" aria-label="Nomini o\'zgartirish" data-act="rename"><i class="bi bi-pencil" aria-hidden="true"></i></button>' +
               '<button title="' + (special ? 'Raqamlansin' : 'Raqamlanmasin (Kirish, Xulosa kabi)') +
-                '" data-act="toggle-num">' + (special ? '🔢' : '🚫') + '</button>' +
-              (n.depth < 3 ? '<button title="Ichki qism" data-act="child">➕</button>' : '') +
-              '<button title="O\'chirish" data-act="del">🗑️</button></span>'
+                '" data-act="toggle-num">' + (special ? '<i class="bi bi-123" aria-hidden="true"></i>' : '<i class="bi bi-slash-circle" aria-hidden="true"></i>') + '</button>' +
+              (n.depth < 3 ? '<button title="Ichki qism" aria-label="Ichki qism" data-act="child"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>' : '') +
+              '<button title="O\'chirish" aria-label="O\'chirish" data-act="del"><i class="bi bi-trash" aria-hidden="true"></i></button></span>'
             : '');
         row.addEventListener('click', function (e) {
           var act = e.target.getAttribute && e.target.getAttribute('data-act');
@@ -545,18 +545,18 @@
   function warnSaveFailed() {
     if (failWarned) return;
     failWarned = true;
-    banner('warn', '⚠️ Server bilan aloqa uzildi — matningiz brauzerda lokal ' +
-      'saqlanmoqda. Internet tiklangach 💾 Saqlash tugmasini bosing.');
+    banner('warn', 'Server bilan aloqa uzildi — matningiz brauzerda lokal ' +
+      'saqlanmoqda. Internet tiklangach «Saqlash» tugmasini bosing.');
   }
   var sessionWarned = false;
   function sessionExpired() {
     saveDraft();
-    setStatus('error', '⚠ Saqlanmadi — sessiya tugagan');
+    setStatus('error', 'Saqlanmadi — sessiya tugagan');
     if (sessionWarned) return;
     sessionWarned = true;
-    banner('warn', '⚠️ Sessiya muddati tugagan — matningiz brauzerda lokal saqlanmoqda. ' +
+    banner('warn', 'Sessiya muddati tugagan — matningiz brauzerda lokal saqlanmoqda. ' +
       '<a href="/login" target="_blank" style="color:#4a9eff;font-weight:700;">Yangi oynada qayta kiring</a>, ' +
-      "so'ng bu yerda 💾 Saqlash tugmasini bosing.");
+      "so'ng bu yerda «Saqlash» tugmasini bosing.");
   }
 
   /* Saqlash — Promise qaytaradi (true=saqlandi/o'zgarmagan, false=muvaffaqiyatsiz).
@@ -586,8 +586,8 @@
           return true;                                 // dirty saqlanadi, keyin yoziladi
         }
         if (d._status === 409) {
-          banner('warn', '⚠️ ' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
-          setStatus('error', '⚠ Saqlanmadi — qism qulflangan');
+          banner('warn', '' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
+          setStatus('error', 'Saqlanmadi — qism qulflangan');
           return false;
         }
         if (d._nonjson) {                              // JSON o'rniga sahifa keldi
@@ -613,13 +613,13 @@
         saving = false;
         saveDraft();                                   // lokal nusxa kafolatlanadi
         if (attempt < 3) {
-          setStatus('error', '⚠ Saqlanmadi — qayta urinilmoqda (' + attempt + '/3)');
+          setStatus('error', 'Saqlanmadi — qayta urinilmoqda (' + attempt + '/3)');
           return new Promise(function (res) {
             setTimeout(function () { res(persist(saveType, attempt + 1)); },
                        1000 * Math.pow(2, attempt));   // 2s, 4s
           });
         }
-        setStatus('error', '⚠ Saqlanmadi — matn lokal nusxada');
+        setStatus('error', 'Saqlanmadi — matn lokal nusxada');
         warnSaveFailed();
         return false;
       });
@@ -632,7 +632,7 @@
     persist('manual').then(function () { cb(); });
   }
 
-  // qo'lda "💾 Saqlash" — debounce'ni chetlab, darhol yozadi (rate-limitsiz)
+  // qo'lda "Saqlash" — debounce'ni chetlab, darhol yozadi (rate-limitsiz)
   window.forceSave = function () {
     clearTimeout(typingTimer);
     persist('manual');
@@ -672,9 +672,9 @@
     quill.update('silent');
     if (!imgWarned) {
       imgWarned = true;
-      banner('warn', '⚠️ ' + (msg ||
+      banner('warn', '' + (msg ||
         "Qo'yilgan rasmni serverga yuklab bo'lmadi, shu sabab u matnga qo'shilmadi. " +
-        'Faqat JPG/PNG/WEBP (5MB gacha) qabul qilinadi — rasmni panel ustidagi 🖼 tugmasi orqali yuklang.'));
+        'Faqat JPG/PNG/WEBP (5MB gacha) qabul qilinadi — rasmni panel ustidagi rasm tugmasi orqali yuklang.'));
     }
   }
   var imgUploading = false;
@@ -722,7 +722,7 @@
     setInterval(function () { if (dirty && !saving) persist('autosave'); }, 30000);
     // edit lock: ochilganda + 60s heartbeat, yopilganda beacon bilan unlock
     postJSON('/api/blocks/' + currentBlockId + '/lock', {}).then(function (d) {
-      if (d._status === 409) banner('warn', '⚠️ ' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
+      if (d._status === 409) banner('warn', '' + (d.error || 'Bu qismni boshqa foydalanuvchi tahrirlamoqda'));
     });
     setInterval(function () { postJSON('/api/blocks/' + currentBlockId + '/lock', {}); }, 60000);
     // sahifadan chiqishda: saqlanmagan bo'lsa AVVAL beacon bilan saqlaymiz,
@@ -868,7 +868,7 @@
              ' <small style="color:#64748b;">' + esc(r.created_at) + '</small></div>';
     }).join('');
     var badge = a.status === 'orphaned'
-      ? '<span class="ann-type" style="background:rgba(148,163,184,0.2);color:#94a3b8;">⚠️ Matn o\'zgargan</span>'
+      ? '<span class="ann-type" style="background:rgba(148,163,184,0.2);color:#94a3b8;"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Matn o\'zgargan</span>'
       : '<span class="ann-type ' + a.type + '">' + esc(a.type_label) + '</span>';
     return '<div class="ann-card ' + (a.status === 'resolved' ? 'resolved' : '') + '" data-ann-id="' + a.id + '">' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
@@ -995,7 +995,7 @@
     if (!confirm("Ish rahbaringizga ko'rib chiqish uchun yuborilsinmi?")) return;
     postJSON('/api/dissertation/' + S.dissId + '/submit-for-review', {})
       .then(function (d) {
-        if (d.success) banner('info', "📤 Ish rahbaringizga yuborildi. Javobini shu yerda ko'rasiz.");
+        if (d.success) banner('info', "Ish rahbaringizga yuborildi. Javobini shu yerda ko'rasiz.");
         else alert(d.error || 'Xatolik');
       });
   };
@@ -1003,7 +1003,7 @@
     if (!confirm('Ko\'rib chiqish yakunlanib, shogirdga jamlangan xabar yuborilsinmi?')) return;
     postJSON('/api/dissertation/' + S.dissId + '/finish-review', {})
       .then(function (d) {
-        if (d.success) banner('info', '✅ Ko\'rib chiqish yakunlandi — shogirdga xabar yuborildi.');
+        if (d.success) banner('info', 'Ko\'rib chiqish yakunlandi — shogirdga xabar yuborildi.');
         else alert(d.error || 'Xatolik');
       });
   };

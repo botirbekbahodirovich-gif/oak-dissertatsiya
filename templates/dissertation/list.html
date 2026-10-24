@@ -108,7 +108,7 @@
       <div>
         <span class="dw-badge">{{ p.degree_label }}</span>
         <span class="dw-badge st">{{ p.status_label }}</span>
-        {% if p.status == 'in_review' %}<span class="dw-badge" style="background:var(--color-notice-soft);color:var(--color-text-secondary);">⏳ Ko'rib chiqish kutilmoqda</span>{% endif %}
+        {% if p.status == 'in_review' %}<span class="dw-badge" style="background:var(--color-notice-soft);color:var(--color-text-secondary);"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Ko'rib chiqish kutilmoqda</span>{% endif %}
       </div>
       <h3>{{ p.title }}</h3>
       <div class="dw-meta">Jarayon: {{ p.approved_blocks }}/{{ p.total_blocks }} ({{ p.progress }}%)</div>

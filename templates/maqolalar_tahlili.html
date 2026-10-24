@@ -147,7 +147,7 @@
 
     <div class="mq-pills" role="group" aria-label="Qamrov">
       <button type="button" class="mq-pill on" id="mq-pill-all">Hammasi</button>
-      <button type="button" class="mq-pill" id="mq-pill-uz">🇺🇿 Faqat O'zbekiston</button>
+      <button type="button" class="mq-pill" id="mq-pill-uz">Faqat O'zbekiston</button>
       <button type="button" class="mq-pill" id="mq-pill-oa"> Ochiq kirish</button>
     </div>
 
@@ -165,7 +165,7 @@
       {% if not current_user.is_authenticated %}
          Qidiruv uchun <a href="/login">tizimga kiring</a> — bepul.
       {% elif is_premium %}
-        ⭐ Premium — cheksiz qidiruv
+        <i class="bi bi-star-fill" aria-hidden="true"></i> Premium — cheksiz qidiruv
       {% else %}
          Bugun qoldi: <b id="mq-left">{{ searches_left }}</b> / {{ free_daily_limit }} bepul qidiruv
         · <a href="/premium">Premium — cheksiz</a>
@@ -183,7 +183,7 @@
       <div class="mq-gap-card">
         <div class="mq-gap-grid">
           <div class="mq-gap-stat"> Global<b id="mq-gap-global">—</b></div>
-          <div class="mq-gap-stat">🇺🇿 O'zbekiston<b id="mq-gap-uz">—</b></div>
+          <div class="mq-gap-stat">O'zbekiston<b id="mq-gap-uz">—</b></div>
         </div>
         <div class="mq-gap-bar"><div id="mq-gap-fill" class="mq-gap-fill low" style="width:0%;"></div></div>
         <div id="mq-gap-label" class="mq-gap-label low"></div>
@@ -199,7 +199,7 @@
           <div id="mq-chart-global"></div>
         </div>
         <div class="mq-panel">
-          <div class="mq-panel-h">🇺🇿 O'zbekiston <span id="mq-chart-utotal"></span></div>
+          <div class="mq-panel-h">O'zbekiston <span id="mq-chart-utotal"></span></div>
           <div id="mq-chart-uz"></div>
         </div>
       </div>
@@ -249,7 +249,7 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="/static/js/paywall.js?v=20260717"></script>
+<script src="/static/js/paywall.js?v=20261024"></script>
 <script>
 (function () {
   var LOGGED_IN = window.OAK_LOGGED_IN === true;

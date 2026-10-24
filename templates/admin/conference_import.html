@@ -34,7 +34,7 @@
       <b>O'tkazish sanasi</b>, <b>Yo'nalishi</b>, <b>Anjuman shakli</b>, <b>O'tkazish joyi</b>.
       Sarlavha qatori avtomatik topiladi.
     </p>
-    <p><a href="/admin/conferences/template" class="btn btn-action">⬇ Bo'sh shablonni yuklab olish</a></p>
+    <p><a href="/admin/conferences/template" class="btn btn-action"><i class="bi bi-download" aria-hidden="true"></i> Bo'sh shablonni yuklab olish</a></p>
     <form method="POST" enctype="multipart/form-data" action="/admin/conferences/import">
       {{ csrf_token()|safe }}
       <input type="hidden" name="action" value="preview">

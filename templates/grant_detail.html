@@ -113,7 +113,7 @@
     <div style="color:var(--color-action);font-size:0.85rem;"> Deadline: <b style="color:inherit;">{{ g.deadline_uz }}</b></div>
   </div>
   {% elif g.expired %}
-  <div class="gd-countdown"><span class="gd-chip" style="background:var(--color-background-soft);">⌛ Muddat tugagan — {{ g.deadline_uz }}</span></div>
+  <div class="gd-countdown"><span class="gd-chip" style="background:var(--color-background-soft);"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i> Muddat tugagan — {{ g.deadline_uz }}</span></div>
   {% endif %}
 
   <div class="gd-layout">
@@ -193,7 +193,7 @@
         <b style="font-size:0.8rem;color:var(--color-action);">O'XSHASH GRANTLAR</b>
         {% for r in related %}
         <a href="/grants/{{ r.slug }}">{{ r.country_flag }} {{ r.display_title }}<br>
-          <small>{% if r.days_remaining is not none and r.days_remaining >= 0 %}⏰ {{ r.days_remaining }} kun qoldi{% else %}{{ r.organization }}{% endif %}</small></a>
+          <small>{% if r.days_remaining is not none and r.days_remaining >= 0 %}<i class="bi bi-clock" aria-hidden="true"></i> {{ r.days_remaining }} kun qoldi{% else %}{{ r.organization }}{% endif %}</small></a>
         {% endfor %}
       </div>
       {% endif %}
@@ -204,5 +204,5 @@
 
 {% block scripts %}
 <script>window.GR_STATE = { loggedIn: {{ 'true' if current_user.is_authenticated else 'false' }}, detailGrantId: {{ g.id }} };</script>
-<script src="{{ url_for('static', filename='js/grants.js') }}"></script>
+<script src="{{ url_for('static', filename='js/grants.js') }}?v=20261024"></script>
 {% endblock %}

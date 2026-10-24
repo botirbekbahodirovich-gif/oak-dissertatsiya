@@ -126,7 +126,7 @@
       <div class="jr-stats2">
         {% if j.impact_factor %}<span>IF: {{ j.impact_factor }}</span>{% endif %}
         {% if j.publish_fee %}<span>{{ j.publish_fee }}</span>{% endif %}
-        {% if j.review_period %}<span>⏱ {{ j.review_period }}</span>{% endif %}
+        {% if j.review_period %}<span><i class="bi bi-stopwatch" aria-hidden="true"></i> {{ j.review_period }}</span>{% endif %}
         {% if j.frequency %}<span>{{ j.frequency }}</span>{% endif %}
       </div>
       <div class="jr-foot"><a href="/journals/{{ j.id }}">Batafsil →</a></div>

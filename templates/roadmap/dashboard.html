@@ -301,7 +301,7 @@
       {% endfor %}
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;color:var(--color-text-secondary);font-size:0.74rem;">
         <span> boshlangan/bajarilgan</span><span> rejadagi</span>
-        <span>⬜ boshlanmagan</span><span style="color:var(--color-text-secondary);">│ bugun</span>
+        <span><i class="bi bi-square" aria-hidden="true"></i> boshlanmagan</span><span style="color:var(--color-text-secondary);">│ bugun</span>
       </div>
     {% else %}
     <div class="rj-empty">Jadval uchun boshlanish va himoya sanalari kerak.</div>
@@ -371,7 +371,7 @@
           {% endif %}</div>
         <div class="meta">{% if c.location %} {{ c.location }} · {% endif %}
           {% if c.event_date %} {{ c.event_date }}{% endif %}
-          {% if c.deadline %} · ⏰ tezis: {{ c.deadline }}{% endif %}
+          {% if c.deadline %} · <i class="bi bi-clock" aria-hidden="true"></i> tezis: {{ c.deadline }}{% endif %}
           {% if c.url %} · <a href="{{ c.url }}" target="_blank" rel="noopener">sayt ↗</a>{% endif %}</div>
       </div>
       <select class="rj-select" style="width:auto;margin:0;" onchange="rjConfStatus({{ c.id }}, this.value)">

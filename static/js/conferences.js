@@ -37,14 +37,14 @@
     if (d == null) return '';
     if (d === 0) return '<span class="kf-chip r">Bugun</span>';
     var cls = d > 14 ? 'g' : (d >= 7 ? 'y' : 'r');
-    return '<span class="kf-chip ' + cls + '">⏰ ' + d + ' kun qoldi</span>';
+    return '<span class="kf-chip ' + cls + '"><i class="bi bi-clock" aria-hidden="true"></i> ' + d + ' kun qoldi</span>';
   }
   function cfpChip(c) {
     if (!c.submission_deadline) return '';
     var d = c.submission_days;
-    if (d == null || d < 0) return '<span class="kf-chip gray">📝 CFP yopilgan</span>';
+    if (d == null || d < 0) return '<span class="kf-chip gray"><i class="bi bi-pencil-square" aria-hidden="true"></i> CFP yopilgan</span>';
     var cls = d > 14 ? 'g' : (d >= 7 ? 'y' : 'r');
-    return '<span class="kf-chip ' + cls + '">📝 Maqola: ' + d + ' kun</span>';
+    return '<span class="kf-chip ' + cls + '"><i class="bi bi-pencil-square" aria-hidden="true"></i> Maqola: ' + d + ' kun</span>';
   }
 
   function card(c) {
@@ -65,14 +65,14 @@
     var place = [c.city, CFG.scope === 'local' ? c.region : c.country]
       .filter(function (x, i, a) { return x && a.indexOf(x) === i; }).join(', ');
     var meta = [];
-    if (when) meta.push('📅 ' + esc(when) +
+    if (when) meta.push('<i class="bi bi-calendar" aria-hidden="true"></i> ' + esc(when) +
       (c.is_multiday ? ' <span style="color:var(--color-text-secondary);">(ko‘p kunlik)</span>' : ''));
-    if (place) meta.push('📍 ' + esc(place));
+    if (place) meta.push('<i class="bi bi-geo-alt" aria-hidden="true"></i> ' + esc(place));
 
     return '<div class="kf-card' + (c.expired ? ' expired' : '') + '">' + star +
       '<div class="kf-card-title"><a href="/konferensiya/' + esc(c.slug) + '">' +
         esc(c.title) + '</a></div>' +
-      (c.organizer ? '<div class="kf-org">🏛️ ' + esc(c.organizer) + '</div>' : '') +
+      (c.organizer ? '<div class="kf-org"><i class="bi bi-bank" aria-hidden="true"></i> ' + esc(c.organizer) + '</div>' : '') +
       (badges.length ? '<div class="kf-badges">' + badges.join('') + '</div>' : '') +
       (meta.length ? '<div class="kf-meta"><span>' + meta.join('</span><span>') + '</span></div>' : '') +
       '<div class="kf-foot"><span>' + daysChip(c) + ' ' + cfpChip(c) + '</span>' +

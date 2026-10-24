@@ -204,7 +204,7 @@
   </div>
   {% else %}
   <div class="gr-empty"><div class="ic"><i class="bi bi-inbox" aria-hidden="true"></i></div>
-    <p>Hali birorta grant kuzatilmayapti. <a href="/grants" style="color:var(--color-action-blue);">Grantlarni ko'ring</a> va ⭐ tugmasini bosing.</p></div>
+    <p>Hali birorta grant kuzatilmayapti. <a href="/grants" style="color:var(--color-action-blue);">Grantlarni ko'ring</a> va <i class="bi bi-star" aria-hidden="true"></i> tugmasini bosing.</p></div>
   {% endif %}
 
   {% else %}
@@ -243,7 +243,7 @@
     </div>
     <select id="f-sort" title="Tartiblash">
       <option value="deadline">Deadline yaqin</option>
-      <option value="new">🆕 Yangi qo'shilgan</option>
+      <option value="new">Yangi qo'shilgan</option>
       <option value="popular">Ko'p ko'rilgan</option>
       <option value="stipend">Stipendiya miqdori</option>
     </select>
@@ -292,5 +292,5 @@ window.GR_STATE = {
   my: {{ 'true' if my else 'false' }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/grants.js') }}"></script>
+<script src="{{ url_for('static', filename='js/grants.js') }}?v=20261024"></script>
 {% endblock %}

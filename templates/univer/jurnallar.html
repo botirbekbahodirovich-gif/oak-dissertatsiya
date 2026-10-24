@@ -71,7 +71,7 @@
         <td style="text-align:center;font-weight:600;"
             title="Roadmap nashrlarida shu jurnal ko'rsatilgan soni (faqat son)">{{ j.cited }}</td>
         <td>
-          {% if j.moderation_status == 'pending' %}<span class="uvj-b pending">⏳ Moderatsiyada</span>
+          {% if j.moderation_status == 'pending' %}<span class="uvj-b pending"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Moderatsiyada</span>
           {% elif j.is_active %}<span style="color:var(--color-text-secondary);font-size:0.78rem;">Faol</span>
           {% else %}<span style="color:var(--color-action);font-size:0.78rem;">Nofaol</span>{% endif %}
         </td>

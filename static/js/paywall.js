@@ -119,7 +119,7 @@
     overlay.innerHTML =
       '<div class="pw-modal" role="dialog" aria-modal="true" aria-label="Premium">' +
         '<button type="button" class="pw-close" aria-label="Yopish">×</button>' +
-        '<div class="pw-icon">🔓</div>' +
+        '<div class="pw-icon"><i class="bi bi-unlock" aria-hidden="true"></i></div>' +
         '<h3 class="pw-title">' + esc(opts.feature_name || 'Premium imkoniyat') + '</h3>' +
         '<p class="pw-sub">Bepul limit tugadi. Davom etish uchun tanlang:</p>' +
         (benefits ? '<ul class="pw-benefits">' + benefits + '</ul>' : '') +
@@ -128,7 +128,7 @@
               esc(opts.one_time_product) + '">Bir martalik — ' +
               fmt(opts.one_time_price || '') + ' so\'m</button>'
           : '') +
-        '<a class="pw-btn prem" href="/premium">⭐ Premium — 29 000 so\'m/oy</a>' +
+        '<a class="pw-btn prem" href="/premium"><i class="bi bi-star-fill" aria-hidden="true"></i> Premium — 29 000 so\'m/oy</a>' +
         '<div class="pw-err"></div>' +
         '<div class="pw-legal">To\'lov ATMOS orqali (UzCard/Humo) · ' +
           '<a href="/oferta">Oferta</a> · <a href="/tolovni-qaytarish">Qaytarish</a></div>' +

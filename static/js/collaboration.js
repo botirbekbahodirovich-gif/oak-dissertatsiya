@@ -8,9 +8,9 @@
  *   /api/collaboration/search?q=<term>  → [{name, connections}]
  *
  * Edge types → colours:
- *   advisor      = 🟢 ustoz–shogird
- *   opponent     = 🔴 opponent
- *   institution  = 🔵 muassasa (same institution)
+ *   advisor      = ustoz–shogird
+ *   opponent     = opponent
+ *   institution  = muassasa (same institution)
  *
  * Usage:  CollabGraph.mount({ svg, stage, search, ... })
  * ============================================================ */
@@ -451,9 +451,9 @@
       (meta.length ? '<div class="ip-meta">' + meta.join('<br>') + '</div>' : '') +
       '<div class="ip-stats">' + stats.join(' · ') + '</div>' +
       '<div class="ip-actions">' +
-        '<a class="ip-btn cg-recenter">🔄 Shu olimni markazga qo\'yish</a>' +
-        '<a class="ip-btn ghost" href="/olim/' + enc + '">👤 Profilni ko\'rish →</a>' +
-        '<a class="ip-btn ghost" href="/genealogy/' + enc + '">🌳 Shajarani ko\'rish →</a>' +
+        '<a class="ip-btn cg-recenter"><i class="bi bi-bullseye" aria-hidden="true"></i> Shu olimni markazga qo\'yish</a>' +
+        '<a class="ip-btn ghost" href="/olim/' + enc + '"><i class="bi bi-person" aria-hidden="true"></i> Profilni ko\'rish →</a>' +
+        '<a class="ip-btn ghost" href="/genealogy/' + enc + '"><i class="bi bi-diagram-3" aria-hidden="true"></i> Shajarani ko\'rish →</a>' +
       '</div>';
     var self = this;
     panel.querySelector('.ip-close').addEventListener('click', function () { self._closeInfo(); self.selected = null; if (self._clearHighlight) self._clearHighlight(); });

@@ -75,7 +75,7 @@
       <div class="vac-card-top">
         <span class="vac-badge {{ v.vacancy_type }}">{{ v.type_label }}</span>
         {% if v.deadline %}
-        <span class="vac-deadline" data-deadline="{{ v.deadline }}">⏰ {{ v.deadline }}</span>
+        <span class="vac-deadline" data-deadline="{{ v.deadline }}"><i class="bi bi-clock" aria-hidden="true"></i> {{ v.deadline }}</span>
         {% endif %}
       </div>
       <h3 class="vac-title">{{ v.title }}</h3>

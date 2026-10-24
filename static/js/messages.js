@@ -72,7 +72,7 @@
       inner = '<img class="th-img" src="' + esc(m.attachment_url) + '" alt="" ' +
               'onclick="showLightbox(\'' + esc(m.attachment_url) + '\')">';
     } else if (m.attachment_url) {
-      var icon = m.attachment_type === 'pdf' ? '📕' : m.attachment_type === 'docx' ? '📘' : '📦';
+      var icon = m.attachment_type === 'pdf' ? '<i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>' : m.attachment_type === 'docx' ? '<i class="bi bi-file-earmark-word" aria-hidden="true"></i>' : '<i class="bi bi-file-earmark-zip" aria-hidden="true"></i>';
       inner = '<a class="th-file" href="' + esc(m.attachment_url) + '" download>' + icon +
               ' <span>' + esc(m.attachment_name) + '<br><small>' + fmtSize(m.attachment_size) + '</small></span></a>';
     } else {

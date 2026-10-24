@@ -106,7 +106,7 @@
 {% block content %}
 <div class="kf-layout">
   <div class="kf-hero">
-    <h1>{{ '🇺🇿 Mahalliy konferensiyalar' if is_local else 'Xalqaro konferensiyalar' }}</h1>
+    <h1>{{ 'Mahalliy konferensiyalar' if is_local else 'Xalqaro konferensiyalar' }}</h1>
     <div class="kf-stats">
       <span><b data-count="{{ stats.total }}">{{ stats.total }}</b> ta konferensiya</span>
       {% if is_local %}<span><b data-count="{{ stats.regions }}">{{ stats.regions }}</b> mintaqa</span>
@@ -135,7 +135,7 @@
     {% if is_authenticated %}
     <div class="kf-fgroup">
       <div class="kf-saved-row">
-        <button class="kf-toggle" id="kf-saved">⭐ Saqlanganlar</button>
+        <button class="kf-toggle" id="kf-saved"><i class="bi bi-star" aria-hidden="true"></i> Saqlanganlar</button>
       </div>
     </div>
     {% endif %}
@@ -182,5 +182,5 @@ window.KF_CFG = {
   months: {{ months | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/conferences.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/conferences.js') }}?v=20261024"></script>
 {% endblock %}

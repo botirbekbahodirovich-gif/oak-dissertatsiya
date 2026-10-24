@@ -157,7 +157,7 @@
         grp.append('circle').attr('class', 'gn-av')
           .attr('cx', -d.w / 2 + 20).attr('cy', 0).attr('r', 13);
         grp.append('text').attr('class', 'gn-emoji')
-          .attr('x', -d.w / 2 + 20).attr('y', 5).attr('text-anchor', 'middle').text('🎓');
+          .attr('x', -d.w / 2 + 20).attr('y', 5).attr('text-anchor', 'middle').text(((d.name || '?').trim().charAt(0) || '?').toUpperCase());
         // name
         grp.append('text').attr('class', 'gn-name')
           .attr('x', -d.w / 2 + 40).attr('y', d.degree ? -2 : 4)

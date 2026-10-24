@@ -39,8 +39,8 @@
     <div class="ph-stat prem">
       <div class="l">Premium holati</div>
       <div class="v">
-        {% if premium_until %}⭐ {{ premium_until.strftime('%Y-%m-%d') }} gacha
-        {% elif is_premium %}⭐ Faol
+        {% if premium_until %}<i class="bi bi-star-fill" aria-hidden="true"></i> {{ premium_until.strftime('%Y-%m-%d') }} gacha
+        {% elif is_premium %}<i class="bi bi-star-fill" aria-hidden="true"></i> Faol
         {% else %}— <a href="/premium" style="color:var(--color-action);font-size:0.85rem;">Ulash</a>{% endif %}
       </div>
     </div>
@@ -77,7 +77,7 @@
   </div>
 
   <div class="ph-cta">
-    <a href="/premium">⭐ Premium imkoniyatlarini ko'rish →</a>
+    <a href="/premium"><i class="bi bi-star" aria-hidden="true"></i> Premium imkoniyatlarini ko'rish →</a>
   </div>
 </div>
 {% endblock %}

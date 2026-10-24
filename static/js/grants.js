@@ -115,18 +115,18 @@
       deadlineHtml = '<div class="gr-deadline-txt"><span style="color:var(--color-text-secondary);">Doimiy ochiq</span></div>';
     }
     var badge = g.expired ? '<span class="gr-badge expired-badge">Muddat tugagan</span>'
-      : (g.is_featured ? '<span class="gr-badge">🌟 Tavsiya</span>' : '');
+      : (g.is_featured ? '<span class="gr-badge"><i class="bi bi-star-fill" aria-hidden="true"></i> Tavsiya</span>' : '');
     var meta1 = '<span>' + esc(g.country_flag) + ' ' + esc(g.country) + '</span>' +
-      (g.levels_uz && g.levels_uz.length ? '<span>🎓 ' + esc(g.levels_uz.join(', ')) + '</span>' : '') +
+      (g.levels_uz && g.levels_uz.length ? '<span><i class="bi bi-mortarboard" aria-hidden="true"></i> ' + esc(g.levels_uz.join(', ')) + '</span>' : '') +
       (g.funding_label ? '<span>' + esc(g.funding_label) + '</span>' : '');
-    var meta2 = (g.stipend_amount ? '<span>💰 ' + esc(g.stipend_amount) + '</span>' : '') +
-      (g.duration ? '<span>📅 ' + esc(g.duration) + '</span>' : '');
+    var meta2 = (g.stipend_amount ? '<span><i class="bi bi-cash-coin" aria-hidden="true"></i> ' + esc(g.stipend_amount) + '</span>' : '') +
+      (g.duration ? '<span><i class="bi bi-calendar" aria-hidden="true"></i> ' + esc(g.duration) + '</span>' : '');
     var tracked = !!g.track_status;
     return '<div class="gr-card' + (urgent ? ' urgent' : '') + (g.expired ? ' expired' : '') + '" data-grant-id="' + g.id + '">' +
       '<div class="gr-cover"' + (coverUrl ? ' data-cover="' + esc(coverUrl) + '"' : '') + '>' + badge + '</div>' +
       '<div class="gr-body">' +
-      '<div class="gr-org">🏛️ ' + esc(g.organization || '—') + '</div>' +
-      '<div class="gr-title-l"><a href="/grants/' + encodeURIComponent(g.slug) + '">📌 ' + esc(g.display_title || g.title) + '</a></div>' +
+      '<div class="gr-org"><i class="bi bi-bank" aria-hidden="true"></i> ' + esc(g.organization || '—') + '</div>' +
+      '<div class="gr-title-l"><a href="/grants/' + encodeURIComponent(g.slug) + '">' + esc(g.display_title || g.title) + '</a></div>' +
       '<div class="gr-meta">' + meta1 + '</div>' +
       (meta2 ? '<div class="gr-meta">' + meta2 + '</div>' : '') +
       '<div class="gr-deadline">' + deadlineHtml + '</div>' +
@@ -253,12 +253,12 @@
         box.style.cssText = 'border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);' +
           'border-radius:14px;padding:14px 18px;margin:14px 0;text-align:left;';
         var rows = alerts.slice(0, 4).map(function (a) {
-          var dot = a.days_remaining <= 3 ? '🔴' : '🟡';
+          var dot = a.days_remaining <= 3 ? '<i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>' : '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>';
           return '<div style="margin:5px 0;">' + dot + ' <a href="/grants/' + encodeURIComponent(a.slug) +
             '" style="color:inherit;font-weight:700;">' + esc(a.title) + '</a> — ' +
             a.days_remaining + ' kun qoldi</div>';
         }).join('');
-        box.innerHTML = '<b>⚠️ Muhim: grant muddatlari yaqinlashmoqda!</b>' + rows +
+        box.innerHTML = '<b><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Muhim: grant muddatlari yaqinlashmoqda!</b>' + rows +
           '<div style="margin-top:8px;display:flex;gap:8px;">' +
           '<button class="gr-toggle" onclick="sessionStorage.setItem(\'gr-alerts-dismissed\',\'1\');this.closest(\'div\').parentElement.remove()">Tushunarli</button>' +
           '<a class="gr-toggle active" href="/grants?my=1" style="text-decoration:none;">Grantlarimni ko\'rish</a></div>';
