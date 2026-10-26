@@ -868,6 +868,11 @@ app.register_blueprint(articles_bp)
 app.register_blueprint(article_import_bp)
 app.register_blueprint(article_discovery_bp)
 
+# Staging-only test sign-in. Registers nothing unless STAGING_TEST_LOGIN=1 and
+# the database name carries a staging marker (see staging_login.py).
+from staging_login import register_staging_login
+register_staging_login(app)
+
 # ATMOS callback server-to-server keladi va imzo + pay/get bilan himoyalangan.
 csrf.exempt(app.view_functions['payments.atmos_callback'])
 

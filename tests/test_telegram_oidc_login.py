@@ -338,11 +338,12 @@ class TelegramOIDCRouteTests(unittest.TestCase):
             "/login/telegram/callback?state=wrong&code=abc").get_data(as_text=True)
         self.assertNotIn(TEST_CLIENT_SECRET, error_html)
 
-    def test_password_and_google_login_unchanged(self):
+    def test_google_login_unchanged_and_no_password_form(self):
         response = self.client.get("/login")
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn('action="/login/password"', html)
+        self.assertNotIn('/login/password', html)
+        self.assertNotIn('type="password"', html)
         self.assertIn('href="/login/google"', html)
 
 
