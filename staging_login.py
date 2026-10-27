@@ -9,7 +9,10 @@ this gives testers three synthetic accounts (user / premium / admin, all
   staging marker (``staging`` / ``stage`` / ``stg``) — a leaked flag on a
   production database does nothing;
 * every request must come straight from loopback (reach it through
-  ``ssh -L``) and must not carry ``CF-Connecting-IP``;
+  ``ssh -L``): the TCP peer address as seen *before* ProxyFix (which trusts
+  X-Forwarded-For) must be loopback, and no proxy header may be present;
+* every request re-checks ``current_database()`` on the live connection, so a
+  mismatch between ``DATABASE_URL`` and the database actually used fails closed;
 * only the three fixed ``@test.invalid`` accounts can be signed in to, never
   a real user;
 * every use is written to the application log.
@@ -52,18 +55,49 @@ def staging_login_enabled(environ):
     return bool(STAGING_MARKER.search(_database_name(environ.get('DATABASE_URL'))))
 
 
+_PROXY_HEADERS = ('X-Forwarded-For', 'X-Real-IP', 'Forwarded', 'CF-Connecting-IP')
+
+
+def _peer_address():
+    """TCP peer address. ProxyFix rewrites REMOTE_ADDR from X-Forwarded-For, so a
+    client could spoof loopback; its original value is kept under
+    ``werkzeug.proxy_fix.orig``."""
+    orig = request.environ.get('werkzeug.proxy_fix.orig') or {}
+    return orig.get('REMOTE_ADDR') or request.environ.get('REMOTE_ADDR') or ''
+
+
 def _is_loopback_direct():
-    if request.headers.get('CF-Connecting-IP'):
+    if any(request.headers.get(h) for h in _PROXY_HEADERS):
         return False
     try:
-        return ipaddress.ip_address(request.remote_addr or '').is_loopback
+        return ipaddress.ip_address(_peer_address()).is_loopback
     except ValueError:
         return False
 
 
+def _current_database():
+    """Name of the database the application is really connected to."""
+    from data import get_connection
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT current_database()')
+            return cur.fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _connected_to_staging():
+    try:
+        name = _current_database()
+    except Exception:
+        return False
+    return bool(STAGING_MARKER.search(name or ''))
+
+
 @staging_login_bp.before_request
-def _loopback_only():
-    if not _is_loopback_direct():
+def _guard():
+    if not _is_loopback_direct() or not _connected_to_staging():
         abort(404)
 
 
@@ -114,7 +148,7 @@ def sign_in(role):
     login_user(User(user_id, username, email, is_admin))
     current_app.logger.warning(
         'STAGING TEST LOGIN role=%s user_id=%s remote=%s ua=%r',
-        role, user_id, request.remote_addr, (request.user_agent.string or '')[:120])
+        role, user_id, _peer_address(), (request.user_agent.string or '')[:120])
     return redirect('/')
 
 

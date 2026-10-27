@@ -50,26 +50,50 @@ class RegistrationGateTests(unittest.TestCase):
 
 class RequestGuardTests(unittest.TestCase):
     def setUp(self):
+        from werkzeug.middleware.proxy_fix import ProxyFix
         self.app = Flask(__name__)
         self.app.secret_key = "x"
+        # Same ProxyFix settings as app.py: it trusts one X-Forwarded-For hop.
+        self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
         staging_login.register_staging_login(
             self.app, {"STAGING_TEST_LOGIN": "1", "DATABASE_URL": STAGING_DB})
+        patcher = patch.object(staging_login, "_current_database",
+                               return_value="olimlar_staging_2610")
+        self.current_db = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def _get(self, remote, headers=None):
-        client = self.app.test_client()
-        return client.get("/_staging/test-login", headers=headers or {},
-                          environ_base={"REMOTE_ADDR": remote})
+        return self.app.test_client().get("/_staging/test-login", headers=headers or {},
+                                          environ_base={"REMOTE_ADDR": remote})
+
+    def test_loopback_peer_is_allowed(self):
+        self.assertEqual(self._get("127.0.0.1").status_code, 200)
 
     def test_non_loopback_is_404(self):
         self.assertEqual(self._get("203.0.113.9").status_code, 404)
 
-    def test_cloudflare_header_is_404_even_from_loopback(self):
-        self.assertEqual(
-            self._get("127.0.0.1", {"CF-Connecting-IP": "203.0.113.9"}).status_code, 404)
+    def test_spoofed_x_forwarded_for_cannot_fake_loopback(self):
+        # ProxyFix would turn request.remote_addr into 127.0.0.1 here.
+        resp = self._get("203.0.113.9", {"X-Forwarded-For": "127.0.0.1"})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_any_proxy_header_is_404_even_from_loopback(self):
+        for header in ("X-Forwarded-For", "X-Real-IP", "Forwarded", "CF-Connecting-IP"):
+            resp = self._get("127.0.0.1", {header: "203.0.113.9"})
+            self.assertEqual(resp.status_code, 404, header)
+
+    def test_database_name_comes_from_live_connection_not_url(self):
+        # DATABASE_URL says staging, but the connection is really production.
+        self.current_db.return_value = "olimlar_db"
+        self.assertEqual(self._get("127.0.0.1").status_code, 404)
+
+    def test_database_check_fails_closed_on_error(self):
+        self.current_db.side_effect = RuntimeError("no database")
+        self.assertEqual(self._get("127.0.0.1").status_code, 404)
 
     def test_unknown_role_is_404(self):
-        client = self.app.test_client()
-        resp = client.post("/_staging/test-login/root", environ_base={"REMOTE_ADDR": "127.0.0.1"})
+        resp = self.app.test_client().post(
+            "/_staging/test-login/root", environ_base={"REMOTE_ADDR": "127.0.0.1"})
         self.assertEqual(resp.status_code, 404)
 
     def test_accounts_are_fixed_test_invalid(self):
@@ -80,12 +104,9 @@ class RequestGuardTests(unittest.TestCase):
 
     def test_loopback_login_is_logged(self):
         import flask_login
-        lm = flask_login.LoginManager(self.app)
+        flask_login.LoginManager(self.app)
         with patch.object(staging_login, "_ensure_account",
-                          return_value=(7, "test_admin", "test_admin@test.invalid", True)), \
-             patch("app.User", create=True) as user_cls, \
-             patch("flask_login.login_user") as login_user, \
-             self.assertLogs(self.app.logger, level="WARNING") as logs:
+                          return_value=(7, "test_admin", "test_admin@test.invalid", True)),              patch("app.User", create=True),              patch("flask_login.login_user") as login_user,              self.assertLogs(self.app.logger, level="WARNING") as logs:
             self.app.config["WTF_CSRF_ENABLED"] = False
             resp = self.app.test_client().post(
                 "/_staging/test-login/admin", environ_base={"REMOTE_ADDR": "127.0.0.1"})
