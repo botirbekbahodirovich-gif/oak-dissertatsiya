@@ -311,7 +311,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
       <button onclick="startConversation({{ message_target_id }})"
               style="margin-top:10px;border:none;background:var(--color-action);color:var(--color-white);font-weight:600;padding:8px 18px;border-radius:var(--radius-default);cursor:pointer;font-size:0.86rem;">
          Xabar yuborish</button>
-      <script src="/static/js/messages.js?v=20261024" defer></script>
+      <script src="/static/js/messages.js?v={{ STATIC_VERSION }}" defer></script>
       {% endif %}
     </div>
 
@@ -700,7 +700,7 @@ function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="/static/js/genealogy_tree.js"></script>
+<script src="/static/js/genealogy_tree.js?v={{ STATIC_VERSION }}"></script>
 <script>
 (function () {
   // tabs

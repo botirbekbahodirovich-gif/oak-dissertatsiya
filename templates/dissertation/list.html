@@ -228,7 +228,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dissertation.js') }}?v={{ diss_js_v }}"></script>
+<script src="{{ url_for('static', filename='js/dissertation.js') }}?v={{ STATIC_VERSION }}"></script>
 <script>
 /* /rahbar profilidan kelgan taklif: ?invite=<username>&role=advisor → modal prefill */
 (function () {

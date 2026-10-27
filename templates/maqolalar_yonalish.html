@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block extra_head %}
-<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+<link href="/static/css/maqolalar.css?v={{ STATIC_VERSION }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -99,5 +99,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/maqolalar.js?v=20260807" defer></script>
+<script src="/static/js/maqolalar.js?v={{ STATIC_VERSION }}" defer></script>
 {% endblock %}

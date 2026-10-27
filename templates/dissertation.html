@@ -260,5 +260,5 @@
 {% endblock %}
 {% block scripts %}
 <script>window.SAVED_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};</script>
-<script src="/static/js/saved.js"></script>
+<script src="/static/js/saved.js?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

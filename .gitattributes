@@ -29,3 +29,8 @@ static/vendor/** -text
 # keyin hash o'zgaradi va tasdiqlangan review yozuvlari "boshqa revizya"
 # bo'lib qoladi. Shuning uchun -text: hech qanday konvertatsiya yo'q.
 data/oak/source/** -text
+
+# STATIC_VERSION (utils/static_version.py): `git archive` replaces $Format:%H$ in
+# BUILD_VERSION with the commit SHA, so a tree deployed from an archive (no .git)
+# still knows which commit it was built from. Templates add it to CSS/JS URLs.
+BUILD_VERSION export-subst

@@ -21,8 +21,8 @@
 {% block canonical %}https://olimlar.uz/maqolalar/{{ article.slug }}{% endblock %}
 
 {% block extra_head %}
-<link href="/static/css/maqolalar.css?v={{ asset_version }}" rel="stylesheet">
-<link href="/static/css/maqolalar_viewer.css?v={{ asset_version }}" rel="stylesheet">
+<link href="/static/css/maqolalar.css?v={{ STATIC_VERSION }}" rel="stylesheet">
+<link href="/static/css/maqolalar_viewer.css?v={{ STATIC_VERSION }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -210,5 +210,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script type="module" src="/static/js/maqolalar_viewer.js?v={{ asset_version }}"></script>
+<script type="module" src="/static/js/maqolalar_viewer.js?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

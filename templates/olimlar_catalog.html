@@ -4,7 +4,7 @@
 {% block meta_description %}O'zbekiston ilmiy rahbarlari, PhD va DSc olimlari katalogi. Olimlarni toping va shogirdlar sonini ko'ring.{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/olimlar_catalog.css?v=4">
+<link rel="stylesheet" href="/static/css/olimlar_catalog.css?v={{ STATIC_VERSION }}">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"CollectionPage","name":"O'zbekiston olimlari katalogi","url":"https://olimlar.uz/olimlar"}
 </script>
@@ -163,5 +163,5 @@
 
 {% block scripts %}
 <script>window.OC_AUTH = {{ 'true' if current_user.is_authenticated else 'false' }};</script>
-<script src="/static/js/olimlar_catalog.js?v=3" defer></script>
+<script src="/static/js/olimlar_catalog.js?v={{ STATIC_VERSION }}" defer></script>
 {% endblock %}

@@ -5,7 +5,7 @@
 {% block seo_extra %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 
 {% block extra_head %}
-<link href="/static/css/maqolalar.css?v={{ asset_version }}" rel="stylesheet">
+<link href="/static/css/maqolalar.css?v={{ STATIC_VERSION }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -528,13 +528,13 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/maqolalar.js?v={{ asset_version }}" defer></script>
+<script src="/static/js/maqolalar.js?v={{ STATIC_VERSION }}" defer></script>
 {# DOI autofill faqat admin formasida kerak — katalog sahifalariga
    yuborilmaydi. Provayder sozlanmagan bo'lsa panel buni ochiq aytadi. #}
-<script src="/static/js/maqolalar_metadata.js?v={{ asset_version }}"
+<script src="/static/js/maqolalar_metadata.js?v={{ STATIC_VERSION }}"
         defer
         data-providers="{{ metadata_providers|tojson|forceescape }}"></script>
 {% if edit_mode and article and article.doi %}
-<script src="/static/js/article_metadata_sync.js?v={{ asset_version }}" defer></script>
+<script src="/static/js/article_metadata_sync.js?v={{ STATIC_VERSION }}" defer></script>
 {% endif %}
 {% endblock %}

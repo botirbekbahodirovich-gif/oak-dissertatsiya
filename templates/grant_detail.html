@@ -204,5 +204,5 @@
 
 {% block scripts %}
 <script>window.GR_STATE = { loggedIn: {{ 'true' if current_user.is_authenticated else 'false' }}, detailGrantId: {{ g.id }} };</script>
-<script src="{{ url_for('static', filename='js/grants.js') }}?v=20261024"></script>
+<script src="{{ url_for('static', filename='js/grants.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

@@ -299,6 +299,19 @@ def inject_env_flags():
     return dict(is_production=IS_PRODUCTION, app_env=APP_ENV)
 
 
+# Build commit SHA, appended as ?v= to every local CSS/JS URL so a deploy
+# invalidates nginx's 7-day /static/ cache (utils/static_version.py).
+from utils.static_version import describe_static_version
+STATIC_VERSION, _static_version_source = describe_static_version(
+    os.path.dirname(os.path.abspath(__file__)))
+app.logger.info("STATIC_VERSION=%s (source: %s)", STATIC_VERSION, _static_version_source)
+
+
+@app.context_processor
+def inject_static_version():
+    return dict(STATIC_VERSION=STATIC_VERSION)
+
+
 @app.context_processor
 def inject_navigation():
     """Yagona navigatsiya konfiguratsiyasi — header, mobil drawer va footer

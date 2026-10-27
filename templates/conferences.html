@@ -182,5 +182,5 @@ window.KF_CFG = {
   months: {{ months | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/conferences.js') }}?v=20261024"></script>
+<script src="{{ url_for('static', filename='js/conferences.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

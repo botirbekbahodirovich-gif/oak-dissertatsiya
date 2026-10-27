@@ -80,5 +80,5 @@ window.MSG_STATE = {
   initialMessages: {{ messages | tojson }}
 };
 </script>
-<script src="{{ url_for('static', filename='js/messages.js') }}?v=20261024"></script>
+<script src="{{ url_for('static', filename='js/messages.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

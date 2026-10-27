@@ -390,5 +390,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/roadmap.js') }}"></script>
+<script src="{{ url_for('static', filename='js/roadmap.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}
