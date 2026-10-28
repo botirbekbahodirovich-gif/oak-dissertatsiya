@@ -135,3 +135,49 @@ def test_falls_back_to_gemini_with_db_context(monkeypatch):
     text, used = ai_assistant.answer('tibbiyot')
     assert text == 'Gemini javobi' and got['providers'] == ['gemini']
     assert '"total_count": 7' in got['user'] and used[0]['fallback'] is True
+
+
+def test_suggestion_cache_key_only_for_known_buttons():
+    k = ai_assistant.suggestion_cache_key
+    assert k('PhD statistikasi') == k('  phd   STATISTIKASI ') is not None
+    assert k('PhD statistikasi haqida') is None and k('salom') is None and k('') is None
+
+
+def test_template_buttons_match_suggestion_prompts():
+    import pathlib
+    import re
+    html = (pathlib.Path(__file__).resolve().parents[1] / 'templates' / 'base.html').read_text(encoding='utf-8')
+    buttons = re.findall(r'<button class="ai-suggestion-btn">([^<]+)</button>', html)
+    assert buttons and set(buttons) == set(ai_assistant.SUGGESTION_PROMPTS)
+
+
+def _capture_sql(monkeypatch):
+    seen = []
+
+    def fake_query(sql, params):
+        seen.append(sql)
+        return [{'n': 3}] if 'COUNT(*) AS n' in sql else [{'key': 'X', 'count': 3}]
+    monkeypatch.setattr(ai_assistant, '_query', fake_query)
+    return seen
+
+
+def test_muassasa_groups_by_canonical_in_identity_mode(monkeypatch):
+    seen = _capture_sql(monkeypatch)
+    monkeypatch.setattr(ai_assistant, 'institution_mode', lambda: 'identity')
+    out = ai_assistant.dissertation_stats({'group_by': 'muassasa', 'query': 'тиббиёт'})
+    assert out['institution_mode'] == 'identity'
+    assert 'canonical_name' in seen[1] and 'merged_into_id' in seen[1] and 'org_key AS key' in seen[1]
+
+
+def test_muassasa_groups_by_text_in_text_mode(monkeypatch):
+    seen = _capture_sql(monkeypatch)
+    monkeypatch.setattr(ai_assistant, 'institution_mode', lambda: 'text')
+    out = ai_assistant.dissertation_stats({'group_by': 'muassasa'})
+    assert out['institution_mode'] == 'text' and 'institutions' not in seen[1]
+
+
+def test_other_groupings_never_touch_institutions(monkeypatch):
+    seen = _capture_sql(monkeypatch)
+    monkeypatch.setattr(ai_assistant, 'institution_mode', lambda: 1 / 0)  # chaqirilmasligi kerak
+    out = ai_assistant.dissertation_stats({'group_by': 'yil'})
+    assert 'institution_mode' not in out and 'institutions' not in seen[1]

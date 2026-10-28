@@ -18,6 +18,25 @@ from utils.transliterate import get_search_variants, kiril_to_lotin, lotin_to_ki
 logger = logging.getLogger(__name__)
 
 FEATURE = 'ai_yordamchi'
+
+# Chat panelidagi tayyor tugmalar (templates/base.html .ai-suggestion-btn). Faqat shu
+# savollarning javobi keshlanadi — ixtiyoriy matn bilan keshni to'ldirib bo'lmaydi.
+SUGGESTION_PROMPTS = (
+    'Eng faol ilmiy rahbarlar',
+    'PhD statistikasi',
+    'Mavzu tavsiya et',
+    'Tibbiyot dissertatsiyalari',
+)
+SUGGESTION_CACHE_TTL = 3600
+
+
+def suggestion_cache_key(message):
+    """Tayyor tugma savoli bo'lsa kesh kaliti, aks holda None."""
+    norm = ' '.join((message or '').split()).casefold()
+    for s in SUGGESTION_PROMPTS:
+        if norm == s.casefold():
+            return 'ai_chat_suggestion:' + s.casefold().replace(' ', '_')
+    return None
 MAX_TOOL_ROUNDS = 4
 MAX_PATTERNS = 16
 MAX_ROWS = 10
@@ -159,18 +178,62 @@ def search_dissertations(args):
             'rows': [{k: (v or '').strip() if isinstance(v, str) else v for k, v in r.items()} for r in rows]}
 
 
+_ORG_MODE_TTL = 600
+_org_mode_cache = {'mode': None, 'at': 0.0}
+
+# identity rejimida muassasa kaliti: birlashtirilgan bo'lsa ota yozuv, aks holda o'zi;
+# bog'lanmagan yozuv — OAK matni (reyting ham bularni tashlab yubormaydi).
+_IDENTITY_SOURCE = """(
+    SELECT d.*, COALESCE(mi.canonical_name, i.canonical_name, TRIM(d.muassasa)) AS org_key
+    FROM dissertations d
+    LEFT JOIN institutions i ON i.id = d.institution_id
+    LEFT JOIN institutions mi ON mi.id = i.merged_into_id
+) AS dissertations"""
+
+
+def institution_mode():
+    """'identity' yoki 'text' — reyting bilan bir xil qoida (blueprints/reyting.py:
+    kanonik institution_id bilan qamrov >= _IDENTITY_MIN_COVERAGE). 10 daqiqa keshlanadi."""
+    now = time.monotonic()
+    if _org_mode_cache['mode'] and now - _org_mode_cache['at'] < _ORG_MODE_TTL:
+        return _org_mode_cache['mode']
+    mode = 'text'
+    try:
+        from blueprints.reyting import _IDENTITY_MIN_COVERAGE, _identity_coverage
+        from data import get_connection
+        conn = get_connection()
+        try:
+            with conn.cursor() as cur:
+                coverage = _identity_coverage(cur)
+        finally:
+            conn.close()
+        if coverage is not None and coverage >= _IDENTITY_MIN_COVERAGE:
+            mode = 'identity'
+    except Exception:
+        logger.exception("ai_assistant: muassasa rejimini aniqlab bo'lmadi, 'text' ishlatiladi")
+    _org_mode_cache.update(mode=mode, at=now)
+    return mode
+
+
 def dissertation_stats(args):
     where, params, terms = build_where(args)
-    expr = _GROUPS.get(args.get('group_by'), _GROUPS['yil'])
+    group_by = args.get('group_by') if args.get('group_by') in _GROUPS else 'yil'
+    expr, source, org_mode = _GROUPS[group_by], 'dissertations', None
+    if group_by == 'muassasa':
+        org_mode = institution_mode()
+        if org_mode == 'identity':
+            expr, source = 'org_key', _IDENTITY_SOURCE
     top = min(int(args.get('top') or 10), 15)
     total = _query(f"SELECT COUNT(*) AS n FROM dissertations WHERE {where}", params)[0]['n']
-    order = 'key DESC' if args.get('group_by') == 'yil' else 'count DESC, key'
+    order = 'key DESC' if group_by == 'yil' else 'count DESC, key'
     groups = _query(
-        f"SELECT {expr} AS key, COUNT(*) AS count FROM dissertations WHERE {where} "
+        f"SELECT {expr} AS key, COUNT(*) AS count FROM {source} WHERE {where} "
         f"AND NULLIF(TRIM(COALESCE({expr}, '')), '') IS NOT NULL "
         f"GROUP BY 1 ORDER BY {order} LIMIT %s", params + [top])
-    return {'total_count': total, 'group_by': args.get('group_by'),
-            'searched_forms': terms, 'groups': groups}
+    out = {'total_count': total, 'group_by': group_by, 'searched_forms': terms, 'groups': groups}
+    if org_mode:
+        out['institution_mode'] = org_mode
+    return out
 
 
 _HANDLERS = {'search_dissertations': search_dissertations, 'dissertation_stats': dissertation_stats}

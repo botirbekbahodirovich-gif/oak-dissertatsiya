@@ -1689,15 +1689,24 @@ def chat():
 
         # Niyatni model aniqlaydi: umumiy savolga o'zi javob beradi, bazaga oid
         # savolda qidiruv/statistika toollarini chaqiradi (services/ai_assistant.py).
-        from services.ai_assistant import answer
+        from services.ai_assistant import SUGGESTION_CACHE_TTL, answer, suggestion_cache_key
         from services.ai_client import AIError
         from utils.chat_markdown import render_chat_markdown
+        # Tayyor tugma savollari: 1 soat davomida bir xil javob, AI qayta chaqirilmaydi.
+        key = suggestion_cache_key(message)
+        if key:
+            cached = cache.get(key)
+            if cached:
+                return jsonify({"response": cached, "cached": True})
         try:
             text, _tools_used = answer(message)
         except AIError as e:
             return jsonify({"response": html_module.escape(e.user_message)}), 503
         safe_answer = render_chat_markdown(text)  # escape avval, keyin oq ro'yxat teglar
-        return jsonify({"response": f'<div class="ai-md">{safe_answer}</div>'})
+        response_html = f'<div class="ai-md">{safe_answer}</div>'
+        if key:
+            cache.set(key, response_html, timeout=SUGGESTION_CACHE_TTL)
+        return jsonify({"response": response_html})
     
     except Exception:
         log_exception(current_app.logger, "AI yordamchi (/api/chat) bajarilmadi")
