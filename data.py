@@ -1692,14 +1692,18 @@ def chat():
         from services.ai_assistant import SUGGESTION_CACHE_TTL, answer, suggestion_cache_key
         from services.ai_client import AIError
         from utils.chat_markdown import render_chat_markdown
+        # History brauzerdan keladi — ishonchsiz; services.ai_assistant uni tozalaydi va
+        # faqat ma'lumot sifatida modelga beradi. Hech qanday ruxsat qarori unga tayanmaydi.
+        history = data.get('history') if isinstance(data.get('history'), list) else []
         # Tayyor tugma savollari: 1 soat davomida bir xil javob, AI qayta chaqirilmaydi.
-        key = suggestion_cache_key(message)
+        # Kontekstli (historyli) savol keshlanmaydi — javob oldingi suhbatga bog'liq.
+        key = None if history else suggestion_cache_key(message)
         if key:
             cached = cache.get(key)
             if cached:
                 return jsonify({"response": cached, "cached": True})
         try:
-            text, _tools_used = answer(message)
+            text, _tools_used = answer(message, history)
         except AIError as e:
             return jsonify({"response": html_module.escape(e.user_message)}), 503
         safe_answer = render_chat_markdown(text)  # escape avval, keyin oq ro'yxat teglar

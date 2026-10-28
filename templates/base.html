@@ -908,19 +908,34 @@
     return div;
   }
 
+  // Suhbat xotirasi: faqat shu sahifa xotirasida, oxirgi 6 ta xabar. Server uni
+  // ishonchsiz ma'lumot deb qabul qiladi (services/ai_assistant.py sanitize_history).
+  var chatHistory = [];
+  var HISTORY_MAX = 6;
+  function remember(role, content) {
+    chatHistory.push({ role: role, content: content.slice(0, 1000) });
+    if (chatHistory.length > HISTORY_MAX) chatHistory = chatHistory.slice(-HISTORY_MAX);
+  }
+
   function sendMessage(text) {
     if (!text.trim()) return;
     appendMsg(escapeHtml(text), 'ai-msg-user');
     var typing = appendMsg('...', 'ai-typing');
+    var sentHistory = chatHistory.slice();
     fetch('/api/chat', {
       method: 'POST',
       headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({ message: text, history: sentHistory })
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      var data = res.data;
       if (messages.contains(typing)) messages.removeChild(typing);
-      appendMsg(data.response || 'Javob olishda xatolik.', 'ai-msg-bot');
+      var bubble = appendMsg(data.response || 'Javob olishda xatolik.', 'ai-msg-bot');
+      if (res.ok && data.response) {
+        remember('user', text);
+        remember('assistant', (bubble.innerText || '').trim());
+      }
     })
     .catch(function() {
       if (messages.contains(typing)) messages.removeChild(typing);
