@@ -1683,129 +1683,21 @@ def chat():
     """AI chat endpoint that queries dissertations based on user message."""
     try:
         data = request.get_json() or {}
-        message = (data.get('message') or '').strip().lower()
-        
+        message = (data.get('message') or '').strip()[:1000]
         if not message:
             return jsonify({"response": "Iltimos, savolingizni yozing."})
-        
-        # Handle specific queries
-        if 'eng faol rahbar' in message:
-            sql = '''
-                SELECT ilmiy_rahbar, COUNT(*) as count
-                FROM dissertations
-                WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
-                GROUP BY ilmiy_rahbar
-                ORDER BY count DESC LIMIT 5
-            '''
-            conn = get_connection()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-                    results = cur.fetchall()
-                    if results:
-                        html = '<div style="line-height:1.6;"><strong>Eng faol ilmiy rahbarlar:</strong><ol style="margin:8px 0 0 0;">'
-                        for name, count in results:
-                            html += f'<li>{name or "—"} ({count} ta)</li>'
-                        html += '</ol></div>'
-                    else:
-                        html = 'Ilmiy rahbarlar haqida ma\'lumot topilmadi.'
-            finally:
-                conn.close()
-            return jsonify({"response": html})
-        
-        elif 'phd' in message and 'statistik' in message:
-            sql = '''
-                SELECT
-                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'PHD') AS phd_count,
-                    COUNT(*) FILTER (WHERE UPPER(TRIM(daraja)) = 'DSC') AS dsc_count
-                FROM dissertations
-            '''
-            conn = get_connection()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-                    phd, dsc = cur.fetchone()
-                    html = f'''<div style="line-height:1.6;">
-                        <strong>Dissertatsiya statistikasi:</strong>
-                        <div style="margin:8px 0;">PhD: <strong>{phd or 0}</strong> ta</div>
-                        <div>DSc: <strong>{dsc or 0}</strong> ta</div>
-                    </div>'''
-            finally:
-                conn.close()
-            return jsonify({"response": html})
-        
-        elif 'mavzu tavsiya' in message:
-            sql = '''
-                SELECT mavzu FROM dissertations
-                WHERE mavzu IS NOT NULL AND TRIM(mavzu) <> ''
-                ORDER BY RANDOM() LIMIT 5
-            '''
-            conn = get_connection()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-                    topics = [row[0] for row in cur.fetchall()]
-                    if topics:
-                        html = '<div style="line-height:1.6;"><strong>Tavsiya etilgan mavzular:</strong><ul style="margin:8px 0 0 0;">'
-                        for topic in topics:
-                            html += f'<li>{topic}</li>'
-                        html += '</ul></div>'
-                    else:
-                        html = 'Mavzular haqida ma\'lumot topilmadi.'
-            finally:
-                conn.close()
-            return jsonify({"response": html})
-        
-        else:
-            # Search PostgreSQL for relevant dissertations as context for Groq
-            # — lotin va kiril variantlari, foydalanuvchi qaysi alifboda
-            # yozishidan qat'iy nazar bazadagi (kiril) yozuvlarni topsin.
-            search_terms = [f"%{message}%", f"%{latin_to_cyrillic(message)}%"]
-            sql = '''
-                SELECT olim, mavzu, daraja, muassasa, ilmiy_rahbar, ixtisoslik, sana
-                FROM dissertations
-                WHERE
-                    (olim ILIKE %s OR olim ILIKE %s) OR
-                    (mavzu ILIKE %s OR mavzu ILIKE %s) OR
-                    (muassasa ILIKE %s OR muassasa ILIKE %s) OR
-                    (ilmiy_rahbar ILIKE %s OR ilmiy_rahbar ILIKE %s) OR
-                    (ixtisoslik ILIKE %s OR ixtisoslik ILIKE %s)
-                LIMIT 10
-            '''
-            conn = get_connection()
-            try:
-                with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
-                    cur.execute(sql, search_terms * 5)
-                    found_rows = cur.fetchall()
-            finally:
-                conn.close()
 
-            if found_rows:
-                context_lines = [
-                    f"- Olim: {r.get('olim','')}, Mavzu: {r.get('mavzu','')}, "
-                    f"Daraja: {r.get('daraja','')}, Muassasa: {r.get('muassasa','')}, "
-                    f"Ilmiy rahbar: {r.get('ilmiy_rahbar','')}, "
-                    f"Ixtisoslik: {r.get('ixtisoslik','')}, Sana: {r.get('sana','')}"
-                    for r in found_rows
-                ]
-                context = "Topilgan dissertatsiyalar:\n" + "\n".join(context_lines)
-            else:
-                context = "Ushbu so'rov bo'yicha dissertatsiya topilmadi."
-
-            from services.ai_client import AIError, complete
-            try:
-                answer = complete(
-                    'ai_yordamchi',
-                    system=("Sen olimlar.uz platformasining AI yordamchisisan. "
-                            "Faqat berilgan dissertatsiya ma'lumotlariga asoslanib javob ber. "
-                            "Javobni o'zbekcha, qisqa va aniq ber."),
-                    user=message + "\n\n" + context,
-                    tier='fast', max_tokens=1500)
-            except AIError as e:
-                return jsonify({"response": html_module.escape(e.user_message)}), 503
-            from utils.chat_markdown import render_chat_markdown
-            safe_answer = render_chat_markdown(answer)  # escape avval, keyin oq ro'yxat teglar
-            return jsonify({"response": f'<div class="ai-md">{safe_answer}</div>'})
+        # Niyatni model aniqlaydi: umumiy savolga o'zi javob beradi, bazaga oid
+        # savolda qidiruv/statistika toollarini chaqiradi (services/ai_assistant.py).
+        from services.ai_assistant import answer
+        from services.ai_client import AIError
+        from utils.chat_markdown import render_chat_markdown
+        try:
+            text, _tools_used = answer(message)
+        except AIError as e:
+            return jsonify({"response": html_module.escape(e.user_message)}), 503
+        safe_answer = render_chat_markdown(text)  # escape avval, keyin oq ro'yxat teglar
+        return jsonify({"response": f'<div class="ai-md">{safe_answer}</div>'})
     
     except Exception:
         log_exception(current_app.logger, "AI yordamchi (/api/chat) bajarilmadi")
