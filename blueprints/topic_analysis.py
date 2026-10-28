@@ -35,10 +35,6 @@ except Exception:  # pragma: no cover — psycopg2 always present in prod
 
 topic_bp = Blueprint('topic_analysis', __name__, url_prefix='/mavzu')
 
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
-GROQ_MODEL = os.environ.get('GROQ_TOPIC_MODEL', 'llama-3.3-70b-versatile')
-GROQ_TIMEOUT = 15  # soniya — oshsa, faqat o'xshash natijalar qaytadi
-
 FREE_MONTHLY_LIMIT = 1     # bepul tarif: oyiga 1 ta tahlil (kalendar oy)
 PREMIUM_DAILY_LIMIT = 30   # premium: amalda cheksiz; suiiste'molga qarshi qalqon
 FREE_SIMILAR_PREVIEW = 3   # bepul natija: faqat top-3 o'xshash ish + foiz
@@ -400,31 +396,21 @@ def _build_similar_text(similar):
     return "\n".join(lines)
 
 
-def _run_groq(topic, similar, stats_text=''):
-    """Groq AI tahlilini qaytaradi yoki timeout/xatoda None. stats_text —
-    Layer 1 (DB) natijalari, AI xulosani real raqamlarga bog'lash uchun."""
-    if not GROQ_API_KEY:
-        return None
+def _run_ai(topic, similar, stats_text=''):
+    """AI tahlilini qaytaradi; xatoda foydalanuvchiga tushunarli xabar (texnik
+    sabab services.ai_client logida). stats_text — Layer 1 (DB) natijalari,
+    AI xulosani real raqamlarga bog'lash uchun."""
+    from services.ai_client import AIError, complete
+    similar_text = _build_similar_text(similar)
+    user_content = (
+        f"Mening mavzum: {topic}\n\n"
+        f"STATISTIK MA'LUMOT (OAK korpusi):\n{stats_text}\n\n"
+        f"O'xshash dissertatsiyalar:\n{similar_text}")
     try:
-        from groq import Groq
-        client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT)
-        similar_text = _build_similar_text(similar)
-        user_content = (
-            f"Mening mavzum: {topic}\n\n"
-            f"STATISTIK MA'LUMOT (OAK korpusi):\n{stats_text}\n\n"
-            f"O'xshash dissertatsiyalar:\n{similar_text}")
-        resp = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-            max_tokens=1100,
-            temperature=0.4,
-        )
-        return (resp.choices[0].message.content or '').strip() or None
-    except Exception:
-        return None
+        return complete('mavzu_tahlili', system=_SYSTEM_PROMPT, user=user_content,
+                        tier='deep', max_tokens=4000)
+    except AIError as e:
+        return e.user_message
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -526,9 +512,7 @@ def tahlil_run():
         else:
             stats_text = _build_stats_text(specialty, trend, advisors,
                                            institutions, bands)
-            analysis = _run_groq(topic, similar, stats_text)
-            if not analysis:
-                analysis = "AI tahlili vaqtinchalik mavjud emas"
+            analysis = _run_ai(topic, similar, stats_text)
 
         cur.execute(
             "INSERT INTO topic_analysis_log (user_id, topic, result_summary, similar_count) "

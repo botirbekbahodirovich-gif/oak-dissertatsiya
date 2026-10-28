@@ -7,6 +7,9 @@ openpyxl==3.1.2
 python-dotenv==1.1.0
 Flask-WTF==1.2.1
 psycopg2-binary==2.9.6
+# AI: asosiy provayder Anthropic (services/ai_client.py); Gemini requests orqali;
+# groq faqat AI_PROVIDERS ga qo'shilsa ishlatiladigan uchinchi variant.
+anthropic>=0.116.0
 groq
 gunicorn
 # `requests` ilgari faqat requests-oauthlib orqali tranzitiv kelardi. Endi u

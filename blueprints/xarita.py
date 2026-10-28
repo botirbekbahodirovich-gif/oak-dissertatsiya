@@ -96,11 +96,9 @@ def _year(sana):
 
 
 def _ai_tahlil(supervisor, total, ixtisosliklar, shogirdlar):
-    """Groq-written niche analysis (Uzbek). Degrades gracefully without a key."""
-    from data import GROQ_API_KEY
-    if not GROQ_API_KEY:
-        return ("AI tahlil hozircha mavjud emas (Groq API kaliti sozlanmagan). "
-                "Quyidagi ixtisosliklar va mavzular ro'yxatini ko'rib chiqing.")
+    """AI-written niche analysis (Uzbek). On failure returns the user-facing
+    error text; the technical cause is logged by services.ai_client."""
+    from services.ai_client import AIError, complete
     top_specs = ', '.join(f"{i['name']} ({i['count']})"
                           for i in ixtisosliklar[:6]) or "—"
     sample_topics = '\n'.join(f"- {d['mavzu']}"
@@ -117,21 +115,13 @@ def _ai_tahlil(supervisor, total, ixtisosliklar, shogirdlar):
         "4. Qisqa xulosa"
     )
     try:
-        from groq import Groq
-        client = Groq(api_key=GROQ_API_KEY)
-        resp = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": (
-                    "Sen O'zbekiston ilmiy rahbari tahlilchisisan. "
-                    "O'zbek tilida qisqa javob ber (150-200 so'z).")},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=700,
-        )
-        return (resp.choices[0].message.content or "").strip() or "Tahlil olinmadi."
-    except Exception:
-        return "AI xizmati hozirda mavjud emas. Iltimos, keyinroq urinib ko'ring."
+        return complete(
+            'rahbar_xaritasi',
+            system=("Sen O'zbekiston ilmiy rahbari tahlilchisisan. "
+                    "O'zbek tilida qisqa javob ber (150-200 so'z)."),
+            user=user_prompt, tier='fast', max_tokens=1500), True
+    except AIError as e:
+        return e.user_message, False
 
 
 def _build_xarita(supervisor):
@@ -181,6 +171,7 @@ def _build_xarita(supervisor):
     years = sorted(yil_counter)
     years_active = f"{years[0]}–{years[-1]}" if years else '—'
     total = len(shogirdlar)
+    ai_tahlil, ai_ok = _ai_tahlil(supervisor, total, ixtisosliklar, shogirdlar)
 
     result = {
         'ok': True,
@@ -193,10 +184,11 @@ def _build_xarita(supervisor):
         'shogirdlar': shogirdlar,
         'ixtisosliklar': ixtisosliklar,
         'yillar': yillar,
-        'ai_tahlil': _ai_tahlil(supervisor, total, ixtisosliklar, shogirdlar),
+        'ai_tahlil': ai_tahlil,
         'cached': False,
     }
-    if total > 0:
+    # AI xatosi 6 soat keshda qotib qolmasin — keyingi so'rov qayta urinsin.
+    if total > 0 and ai_ok:
         cache.set(key, result, timeout=_CACHE_TTL)
     return result
 

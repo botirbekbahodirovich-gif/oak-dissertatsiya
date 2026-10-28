@@ -1792,35 +1792,23 @@ def chat():
             else:
                 context = "Ushbu so'rov bo'yicha dissertatsiya topilmadi."
 
-            if not GROQ_API_KEY:
-                return jsonify({"response": "Groq API kaliti sozlanmagan."})
-
+            from services.ai_client import AIError, complete
             try:
-                from groq import Groq
-                client = Groq(api_key=GROQ_API_KEY)
-                response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "Sen IlmNet platformasining AI yordamchisisan. "
-                                "Faqat berilgan dissertatsiya malumotlariga asoslanib javob ber. "
-                                "Javobni ozbekcha, qisqa va aniq ber."
-                            )
-                        },
-                        {"role": "user", "content": message + "\n\n" + context}
-                    ],
-                    max_tokens=500
-                )
-                answer = (response.choices[0].message.content or "Javob olinmadi.").strip()
-                safe_answer = html_module.escape(answer).replace("\n", "<br>")
-                return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
-            except Exception:
-                return jsonify({"response": "AI xizmati hozirda mavjud emas. Iltimos, keyinroq urinib ko'ring."})
+                answer = complete(
+                    'ai_yordamchi',
+                    system=("Sen olimlar.uz platformasining AI yordamchisisan. "
+                            "Faqat berilgan dissertatsiya ma'lumotlariga asoslanib javob ber. "
+                            "Javobni o'zbekcha, qisqa va aniq ber."),
+                    user=message + "\n\n" + context,
+                    tier='fast', max_tokens=1500)
+            except AIError as e:
+                return jsonify({"response": html_module.escape(e.user_message)}), 503
+            safe_answer = html_module.escape(answer).replace("\n", "<br>")
+            return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
     
-    except Exception as e:
-        return jsonify({"response": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}), 200
+    except Exception:
+        log_exception(current_app.logger, "AI yordamchi (/api/chat) bajarilmadi")
+        return jsonify({"response": "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."}), 500
 
 
 # ---------------------------------------------------------------------------

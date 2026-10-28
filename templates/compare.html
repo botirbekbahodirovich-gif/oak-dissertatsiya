@@ -283,6 +283,10 @@ function runAI(mavzu, similar) {
     method: 'POST', headers: window.oakCsrfHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ mavzu: mavzu, similar_topics: similar })
   }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.error) {
+      document.getElementById('ai-body').innerHTML = '<div class="empty">' + escapeHtml(d.error) + '</div>';
+      return;
+    }
     var score = d.uniqueness_score || 0;
     var cls = score <= 3 ? 'low' : (score <= 6 ? 'mid' : 'high');
     var lbl = score <= 3 ? "Juda o'xshash mavzular ko'p" : (score <= 6 ? "O'rtacha" : "Noyob mavzu");

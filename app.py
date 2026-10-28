@@ -2700,19 +2700,12 @@ def api_mavzu_tahlili():
 
 @app.route("/api/mavzu-tahlili/ai", methods=["POST"])
 def api_mavzu_tahlili_ai():
-    from data import GROQ_API_KEY
+    from services.ai_client import AIError, complete, extract_json
     body = request.get_json(silent=True) or {}
     mavzu = (body.get("mavzu") or "").strip()
     similar = body.get("similar_topics") or []
     if not mavzu:
         return jsonify({"error": "Mavzu kiritilmagan"}), 400
-    if not GROQ_API_KEY:
-        return jsonify({
-            "uniqueness_score": 5,
-            "analysis": "AI tahlil hozircha mavjud emas (Groq API kaliti sozlanmagan). "
-                        "Quyidagi o'xshash mavzular ro'yxatini ko'rib chiqing.",
-            "suggestions": [], "angles": [],
-        }), 503
     similar_list = "\n".join(f"- {t}" for t in similar[:10])
     user_prompt = (
         f"Taklif qilinayotgan mavzu: {mavzu}\n\n"
@@ -2723,37 +2716,30 @@ def api_mavzu_tahlili_ai():
         "4) O'rganilmagan yondashuvlarni taklif et."
     )
     try:
-        from groq import Groq
-        import json as _json
-        client = Groq(api_key=GROQ_API_KEY)
-        resp = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": (
-                    "You are a dissertation topic analyzer for Uzbekistan. Given a proposed topic, "
+        raw = complete(
+            'mavzu_tahlili_api',
+            system=("You are a dissertation topic analyzer for Uzbekistan. Given a proposed topic, "
                     "analyze it and suggest improvements. Respond in Uzbek. Respond ONLY with a JSON "
                     "object: {\"uniqueness_score\": <1-10 int>, \"analysis\": \"<text>\", "
-                    "\"suggestions\": [\"...\"], \"angles\": [\"...\"]}.")},
-                {"role": "user", "content": user_prompt},
-            ],
-            max_tokens=900,
-            response_format={"type": "json_object"},
-        )
-        raw = (resp.choices[0].message.content or "").strip()
-        data = _json.loads(raw)
-        try:
-            data["uniqueness_score"] = int(data.get("uniqueness_score", 5))
-        except (TypeError, ValueError):
-            data["uniqueness_score"] = 5
-        data.setdefault("analysis", "")
-        data.setdefault("suggestions", [])
-        data.setdefault("angles", [])
-        return jsonify(data)
-    except Exception:
-        log_exception(app.logger, "Groq AI tahlili bajarilmadi")
-        return jsonify({"uniqueness_score": 5,
-                        "analysis": "AI xizmati vaqtincha ishlamayapti.",
-                        "suggestions": [], "angles": []}), 502
+                    "\"suggestions\": [\"...\"], \"angles\": [\"...\"]}."),
+            user=user_prompt, tier='deep', max_tokens=4000, json_mode=True)
+        data = extract_json(raw)
+    except AIError as e:
+        return jsonify({"uniqueness_score": None, "analysis": e.user_message,
+                        "suggestions": [], "angles": [], "error": e.user_message}), 503
+    except ValueError:
+        log_exception(app.logger, "AI mavzu tahlili JSON emas")
+        msg = "AI javobi noto'g'ri formatda keldi. Iltimos, qayta urinib ko'ring."
+        return jsonify({"uniqueness_score": None, "analysis": msg,
+                        "suggestions": [], "angles": [], "error": msg}), 502
+    try:
+        data["uniqueness_score"] = int(data.get("uniqueness_score", 5))
+    except (TypeError, ValueError):
+        data["uniqueness_score"] = 5
+    data.setdefault("analysis", "")
+    data.setdefault("suggestions", [])
+    data.setdefault("angles", [])
+    return jsonify(data)
 
 
 @app.route("/api/notifications/count")
