@@ -25,6 +25,9 @@ from dataclasses import dataclass, field
 from institution_identity import classify_institution_name, normalize_institution_identity
 
 SOURCE = 'legacy_merge'
+# Spellings of the Academy of Sciences as a parent ("FA ... instituti").
+_ACADEMY_KEYS = ('ozbekiston respublikasi fanlar akademiyasi', 'ozbekiston fanlar akademiyasi',
+                 'ozr fanlar akademiyasi', 'fanlar akademiyasi', 'ozr fa')
 CSV_HEADER = ['eski_guruh', 'variantlar', 'dissertatsiyalar', 'taklif_id',
               'parent_id', 'kategoriya', 'qoida', 'muammo']
 
@@ -33,6 +36,7 @@ CSV_HEADER = ['eski_guruh', 'variantlar', 'dissertatsiyalar', 'taklif_id',
 class Plan:
     institutions: dict = field(default_factory=dict)  # key -> {name, category, region, parent, existing_id}
     aliases: dict = field(default_factory=dict)       # alias key -> {raw, target, alias_type}
+    links: dict = field(default_factory=dict)         # raw -> primary target key (every variant)
     co_links: dict = field(default_factory=dict)      # raw -> [co target keys]
     queue: list = field(default_factory=list)         # (raw, key, reason, source, suggested key)
     rows: list = field(default_factory=list)          # CSV rows
@@ -66,6 +70,9 @@ def build_plan(map_rows, diss_counts, existing_institutions=(), existing_aliases
             groups[(canonical or raw).strip()].append((raw, category, region))
 
     def add_alias(raw, target, alias_type, problems):
+        # The admin's per-variant decision always links that variant's
+        # defences; only the reusable key-level alias can conflict.
+        plan.links[raw] = target
         key = normalize_institution_identity(raw)
         if not key:
             return
@@ -146,11 +153,12 @@ def build_plan(map_rows, diss_counts, existing_institutions=(), existing_aliases
                 plan.co_links[raw] = targets[1:]
 
     # Parents: only link to an organisation that already has (or gets) an ID.
+    academy = next((resolve_key(k) for k in _ACADEMY_KEYS if resolve_key(k)), None)
     for row in plan.rows:
         parent = row['parent']
         if not parent:
             continue
-        target = resolve_key(parent)
+        target = resolve_key(parent) or (academy if parent in _ACADEMY_KEYS else None)
         if target and target != row['targets'][0]:
             plan.institutions[row['targets'][0]]['parent'] = target
             row['parent'] = target
@@ -180,7 +188,7 @@ def build_plan(map_rows, diss_counts, existing_institutions=(), existing_aliases
         plan.stats['unmapped_names'] += 1
         plan.stats['unmapped_diss'] += n
 
-    linked = {a['raw'] for a in plan.aliases.values()}
+    linked = set(plan.links)
     plan.stats['institutions_new'] = sum(1 for i in plan.institutions.values() if not i['existing_id'])
     plan.stats['aliases'] = len(plan.aliases)
     plan.stats['co_link_names'] = len(plan.co_links)
@@ -238,7 +246,7 @@ def read_inputs(cur):
 
 def apply_plan(cur, plan, *, admin_username='backfill'):
     """Write the plan in the caller's transaction. Needs migration 021."""
-    from psycopg2.extras import Json
+    from psycopg2.extras import Json, execute_values
     from institution_identity import queue_resolution
     from institutions import transliterate_display
 
@@ -288,13 +296,23 @@ def apply_plan(cur, plan, *, admin_username='backfill'):
             ON CONFLICT DO NOTHING
         """, (target_id, alias['raw'], key, alias['alias_type'], SOURCE))
         written['aliases_inserted'] += cur.rowcount
+    link_rows = [(raw, resolve(target)) for raw, target in plan.links.items()]
+    link_rows = [(raw, iid) for raw, iid in link_rows if iid]
+    if link_rows:  # one statement, so rowcount covers every link
+        execute_values(cur, """
+            UPDATE dissertations d SET institution_id = v.iid
+            FROM (VALUES %s) AS v(raw, iid)
+            WHERE d.institution_id IS NULL AND TRIM(d.muassasa) = v.raw
+        """, link_rows, template='(%s, %s::bigint)', page_size=len(link_rows))
+    written['dissertations_linked'] = cur.rowcount if link_rows else 0
+    # earlier approved aliases (scraper/admin) that the plan did not name
     cur.execute("""
         UPDATE dissertations d SET institution_id = a.institution_id
         FROM institution_aliases a
         WHERE d.institution_id IS NULL AND TRIM(d.muassasa) = a.raw_name
           AND a.review_status = 'approved'
     """)
-    written['dissertations_linked'] = cur.rowcount
+    written['dissertations_linked_by_alias'] = cur.rowcount
     for raw, targets in plan.co_links.items():
         for target in targets:
             co_id = resolve(target)

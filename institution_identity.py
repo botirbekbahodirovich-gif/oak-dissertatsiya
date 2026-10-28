@@ -48,7 +48,10 @@ def _org_groups(latin: str) -> list[str]:
         if i % 2 and not buffer:
             continue  # separator right after a finished name
         buffer += piece
-        if i % 2 == 0 and _ORG_WORD.search(piece):
+        # a full name ENDS with its org word: "… universiteti Biofizika" is
+        # the start of "… universiteti Biofizika va biokimyo instituti"
+        words = re.findall(r"[0-9a-z'&]+", piece)
+        if i % 2 == 0 and words and _ORG_WORD.fullmatch(words[-1]):
             groups.append(buffer)
             buffer = ""
     if buffer.strip() and groups:

@@ -46,7 +46,9 @@ class ClassifyTests(unittest.TestCase):
 
     def test_official_names_with_va_or_hamda_stay_single(self):
         for name in ('Iqtisodiyot va pedagogika universiteti',
-                     'Fan hamda texnologiyalar universiteti'):
+                     'Fan hamda texnologiyalar universiteti',
+                     'Ўзбекистон Миллий университети Биофизика ва биокимё институти',
+                     'Тошкент давлат техника университети «Фан ва тараққиёт» ДУК'):
             self.assertEqual(classify_institution_name(name)['kind'], 'single', name)
 
 
@@ -101,6 +103,21 @@ class PlanTests(unittest.TestCase):
         plan = _plan([(UZMU, None, 'universitet', None)], existing_institutions=[(7, N(UZMU))])
         self.assertEqual(plan_csv_rows(plan)[0][3], '7')
         self.assertEqual(plan.stats['institutions_new'], 0)
+
+    def test_same_key_variant_in_another_group_still_links_its_defences(self):
+        twin = 'Мирзо Улуғбек номидаги Ўзбекистон Миллий университети'
+        plan = _plan([(twin, None, 'universitet', None),
+                      ('Мирзо Улуғбек номидаги Оʻзбекистон Миллий университети', 'НУУз', 'universitet', None),
+                      ('НУУз', None, 'universitet', None)],
+                     {twin: 5, 'Мирзо Улуғбек номидаги Оʻзбекистон Миллий университети': 3})
+        self.assertEqual(plan.links['Мирзо Улуғбек номидаги Оʻзбекистон Миллий университети'], N('НУУз'))
+        self.assertEqual(plan.stats['diss_linkable'], 8)
+        self.assertEqual([q[2] for q in plan.queue], ['legacy_review'])
+
+    def test_short_academy_parent_resolves_to_full_academy(self):
+        child = 'ЎзР ФА Математика институти'
+        plan = _plan([(FA, None, 'akademiya', None), (child, None, 'institut', None)])
+        self.assertEqual(plan.institutions[N(child)]['parent'], N(FA))
 
     def test_csv_header(self):
         self.assertEqual(CSV_HEADER, ['eski_guruh', 'variantlar', 'dissertatsiyalar', 'taklif_id',
