@@ -238,11 +238,26 @@ def _log(entry):
 
 # ── ochiq API ────────────────────────────────────────────────────────────────
 
-def complete(feature, system, user, tier='fast', max_tokens=2000, json_mode=False):
-    """Matn javobini qaytaradi; barcha provayderlar xato bersa `AIError` ko'taradi."""
+def log_attempt(feature, tier, provider, model, started, result=None, error=None):
+    """Bitta provayder urinishini journal + ai_request_log ga yozadi (tool-use tsikli uchun ham)."""
+    _log({
+        'feature': feature, 'tier': tier, 'provider': provider, 'model': model,
+        'input_tokens': result and result['input_tokens'],
+        'output_tokens': result and result['output_tokens'],
+        'cache_read_tokens': result and result['cache_read'],
+        'cache_write_tokens': result and result['cache_write'],
+        'cost_usd': _cost(model, result),
+        'latency_ms': int((time.monotonic() - started) * 1000),
+        'ok': error is None, 'error': error and error[:500],
+    })
+
+
+def complete(feature, system, user, tier='fast', max_tokens=2000, json_mode=False, providers=None):
+    """Matn javobini qaytaradi; barcha provayderlar xato bersa `AIError` ko'taradi.
+    `providers` berilsa faqat shular (sozlangan tartibda) ishlatiladi."""
     if tier not in TIERS:
         raise ValueError(f"tier: {tier}")
-    providers = configured_providers()
+    providers = [p for p in configured_providers() if providers is None or p in providers]
     if not providers:
         logger.error('AI_REQUEST feature=%s: hech bir provayder kaliti sozlanmagan', feature)
         raise AIError('AI kalitlari sozlanmagan', USER_MESSAGE_NOT_CONFIGURED)
@@ -258,16 +273,7 @@ def complete(feature, system, user, tier='fast', max_tokens=2000, json_mode=Fals
             err = str(e)
         except Exception as e:  # SDK yo'q, kutilmagan javob shakli va h.k.
             err = f"{type(e).__name__}: {e}"
-        _log({
-            'feature': feature, 'tier': tier, 'provider': provider, 'model': model,
-            'input_tokens': result and result['input_tokens'],
-            'output_tokens': result and result['output_tokens'],
-            'cache_read_tokens': result and result['cache_read'],
-            'cache_write_tokens': result and result['cache_write'],
-            'cost_usd': _cost(model, result),
-            'latency_ms': int((time.monotonic() - started) * 1000),
-            'ok': result is not None, 'error': err and err[:500],
-        })
+        log_attempt(feature, tier, provider, model, started, result, err)
         if result is not None:
             return result['text']
         errors.append(f"{provider}/{model}: {err}")
