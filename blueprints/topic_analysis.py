@@ -408,9 +408,9 @@ def _run_ai(topic, similar, stats_text=''):
         f"O'xshash dissertatsiyalar:\n{similar_text}")
     try:
         return complete('mavzu_tahlili', system=_SYSTEM_PROMPT, user=user_content,
-                        tier='deep', max_tokens=4000)
+                        tier='deep', max_tokens=4000), True
     except AIError as e:
-        return e.user_message
+        return e.user_message, False
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -462,6 +462,8 @@ def tahlil_run():
                 }), 429
         else:
             if _used_this_month(cur, user_id) >= FREE_MONTHLY_LIMIT:
+                # AI xato bersa shu nuqtaga qaytib kredit yechilmagan holga keladi.
+                cur.execute("SAVEPOINT credit_charge")
                 credit_used = consume_credit(user_id, 'topic_analysis_credit', cur)
                 if not credit_used:
                     return jsonify({
@@ -506,13 +508,18 @@ def tahlil_run():
                 trend, advisors, institutions = None, [], []
 
         # Layer 2 (AI): faqat to'liq (premium/kredit) rejimda — bepul
-        # qisqartirilgan natijada Groq chaqirilmaydi (xarajat nazorati).
+        # qisqartirilgan natijada AI chaqirilmaydi (xarajat nazorati).
+        ai_failed = False
         if locked:
             analysis = None
         else:
             stats_text = _build_stats_text(specialty, trend, advisors,
                                            institutions, bands)
-            analysis = _run_ai(topic, similar, stats_text)
+            analysis, ai_ok = _run_ai(topic, similar, stats_text)
+            ai_failed = not ai_ok
+            if ai_failed and credit_used:
+                cur.execute("ROLLBACK TO SAVEPOINT credit_charge")
+                credit_used = False
 
         cur.execute(
             "INSERT INTO topic_analysis_log (user_id, topic, result_summary, similar_count) "
@@ -556,10 +563,13 @@ def tahlil_run():
             'is_premium': premium,
             'credit_used': credit_used,
             'credits_left': credits_left,
+            'ai_error': ai_failed,
             'paywall': _PAYWALL_INFO if locked else None,
             'checked_at': created_at.isoformat() if created_at else None,
         })
     except Exception:
+        from flask import current_app
+        current_app.logger.exception("Mavzu tahlili (/mavzu/tahlil) bajarilmadi")
         try:
             conn.rollback()
         except Exception:

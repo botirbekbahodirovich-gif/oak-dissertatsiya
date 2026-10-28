@@ -528,7 +528,9 @@
       resultEl.classList.add('show');
       prependHistory(topic, d.similar_count || 0);
       loadMaqolalar(topic);
-      if (d.credit_used) {
+      if (d.ai_error) {
+        showAlert(' AI xulosa olinmadi — o\'xshash ishlar va statistika ko\'rsatildi. Kredit yechilmadi, birozdan so\'ng qayta urinib ko\'ring.', false);
+      } else if (d.credit_used) {
         showAlert(' Tahlil tayyor (1 kredit ishlatildi' +
           (typeof d.credits_left === 'number' ? ', qoldi: ' + d.credits_left + ' ta' : '') + ').', true);
       } else if (d.locked) {
