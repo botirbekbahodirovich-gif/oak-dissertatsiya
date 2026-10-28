@@ -360,3 +360,63 @@ def test_script_mix_measured_and_logged_not_rewritten(monkeypatch, caplog):
     assert any('AI_SCRIPT_MIX' in r.getMessage() for r in caplog.records)
     # qidirilgan so'z (blockchain) aralashma deb hisoblanmaydi
     assert ai_assistant.script_mix(q, 'Базада blockchain бўйича 4 та иш бор', ['blockchain']) == 0.0
+
+
+# ── birinchi so'z: kirill savolga lotin bilan boshlangan javob ─────────────────
+
+CYR_Q = 'Блокчейн бўйича нечта диссертация бор?'
+
+
+def test_first_word_known_latin_is_fixed_rest_untouched(caplog):
+    import logging
+    caplog.set_level(logging.WARNING, logger='services.ai_assistant')
+    text, flag = ai_assistant.fix_first_word(CYR_Q, 'Bazada блокчейн бўйича 4 та. Bazada qolgan qism.')
+    assert text == 'Базада блокчейн бўйича 4 та. Bazada qolgan qism.'
+    assert flag == {'word': 'Bazada', 'fixed': True}
+    assert any('AI_SCRIPT_FIRSTWORD' in r.getMessage() and '"fixed": true' in r.getMessage()
+               for r in caplog.records)
+
+
+def test_first_word_keeps_markdown_prefix_and_case():
+    assert ai_assistant.fix_first_word(CYR_Q, '**Jami** 4 та')[0] == '**Жами** 4 та'
+    assert ai_assistant.fix_first_word(CYR_Q, '- bazada 4 та')[0] == '- базада 4 та'
+    assert ai_assistant.fix_first_word(CYR_Q, "Yo'q, топилмади")[0] == 'Йўқ, топилмади'
+
+
+def test_first_word_unknown_latin_logged_not_changed(caplog):
+    import logging
+    caplog.set_level(logging.WARNING, logger='services.ai_assistant')
+    text, flag = ai_assistant.fix_first_word(CYR_Q, 'Ushbu мавзуда 4 та иш бор')
+    assert text == 'Ushbu мавзуда 4 та иш бор' and flag == {'word': 'Ushbu', 'fixed': False}
+    assert any('AI_SCRIPT_FIRSTWORD' in r.getMessage() for r in caplog.records)
+
+
+def test_first_word_no_flag_for_cyrillic_terms_or_latin_question(caplog):
+    import logging
+    caplog.set_level(logging.WARNING, logger='services.ai_assistant')
+    assert ai_assistant.fix_first_word(CYR_Q, 'Базада 4 та') == ('Базада 4 та', None)
+    assert ai_assistant.fix_first_word(CYR_Q, '**PhD** даражасида 4 та') == ('**PhD** даражасида 4 та', None)
+    assert ai_assistant.fix_first_word("Blokcheyn bo'yicha?", 'Bazada 4 ta') == ('Bazada 4 ta', None)
+    assert not any('AI_SCRIPT_FIRSTWORD' in r.getMessage() for r in caplog.records)
+
+
+def test_answer_pipeline_applies_first_word_fix(monkeypatch):
+    monkeypatch.setitem(ai_assistant._HANDLERS, 'search_dissertations', lambda a: {'total_count': 4})
+    _install_fake(monkeypatch, [
+        _resp('tool_use', NS(type='tool_use', id='t', name='search_dissertations', input={'query': 'блокчейн'})),
+        _resp('end_turn', NS(type='text', text='Bazada 4 та диссертация топилди.'))])
+    text, _ = ai_assistant.answer(CYR_Q)
+    assert text.startswith('Базада 4 та диссертация топилди.')
+
+
+def test_cyrillic_instruction_has_example_openings():
+    s = ai_assistant.script_instruction(CYR_Q)
+    assert '«Базада 4 та диссертация топилди…»' in s and 'Bazada' in s
+
+
+def test_discipline_groups_search_all_columns_topics_only_title():
+    n = ai_assistant.normalize_tool_args
+    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'any'
+    assert n({'query': 'kimyo'})['field'] == 'any'
+    assert n({'query': 'blockchain', 'field': 'any'})['field'] == 'mavzu'
+    assert 'тиббий' in n({'query': 'tibbiyot'})['variants']

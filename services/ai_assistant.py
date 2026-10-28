@@ -151,15 +151,19 @@ def expand_terms(query, variants=()):
 # tanloviga bog'liq bo'lmasligi kerak (Haiku 5.5 da temperature sozlab bo'lmaydi).
 # Lug'atdagi mavzu → faqat lug'at guruhi (mavzu ustunida); umumiy so'zlar → mavzu
 # qidiruvi yo'q; qolganlari → takrorsiz, deterministik tartibda.
+# (qidiruv ustuni, shakllar). Soha/fan nomlari ('any') odatda ixtisoslik va muassasa
+# nomida bo'ladi — faqat mavzuda qidirilsa son keskin kamayadi (tibbiyot: 89 vs ~2 600).
+# Texnologiya/mavzu atamalari ('mavzu') esa dissertatsiya nomida qidiriladi.
 SYNONYM_GROUPS = (
-    ('blokcheyn', 'блокчейн', 'blockchain', 'distributed ledger', 'taqsimlangan reestr',
-     'тақсимланган реестр', 'распределенный реестр'),
-    ("sun'iy intellekt", 'сунъий интеллект', 'artificial intelligence', 'искусственный интеллект'),
-    ('tibbiyot', 'тиббиёт', 'медицин', 'medicine'),
-    ('kimyo', 'кимё', 'химия', 'chemistry'),
-    ('pedagogika', 'педагогика', 'pedagogy'),
-    ('raqamli iqtisodiyot', 'рақамли иқтисодиёт', 'цифровая экономика', 'digital economy'),
-    ('suv tejovchi', 'сув тежовчи', 'водосберегающ', 'water saving'),
+    ('mavzu', ('blokcheyn', 'блокчейн', 'blockchain', 'distributed ledger', 'taqsimlangan reestr',
+               'тақсимланган реестр', 'распределенный реестр')),
+    ('mavzu', ("sun'iy intellekt", 'сунъий интеллект', 'artificial intelligence',
+               'искусственный интеллект')),
+    ('mavzu', ('raqamli iqtisodiyot', 'рақамли иқтисодиёт', 'цифровая экономика', 'digital economy')),
+    ('mavzu', ('suv tejovchi', 'сув тежовчи', 'водосберегающ', 'water saving')),
+    ('any', ('tibbiyot', 'тиббиёт', 'тиббий', 'медицин', 'medicine')),
+    ('any', ('kimyo', 'кимё', 'химия', 'chemistry')),
+    ('any', ('pedagogika', 'педагогика', 'pedagogy')),
 )
 GENERIC_WORDS = frozenset({
     'phd', 'dsc', 'statistika', 'statistikasi', 'statistik', 'dissertatsiya', 'dissertatsiyalar',
@@ -186,11 +190,11 @@ def _synonym_group(terms):
         k = _norm_key(term)
         if not k:
             continue
-        for group in SYNONYM_GROUPS:
+        for field, group in SYNONYM_GROUPS:
             for member in group:
                 m = _norm_key(member)
                 if k == m or (len(m) >= 5 and k.startswith(m)):
-                    return group
+                    return field, group
     return None
 
 
@@ -203,9 +207,10 @@ def normalize_tool_args(args):
         a.pop('query', None)
         a.pop('variants', None)
         return a
-    group = _synonym_group([query, *variants])
-    if group:
-        a.update(query=group[0], variants=sorted(group[1:], key=_norm_key), field='mavzu')
+    hit = _synonym_group([query, *variants])
+    if hit:
+        field, group = hit
+        a.update(query=group[0], variants=sorted(group[1:], key=_norm_key), field=field)
         return a
     seen, clean = {_norm_key(query)}, []
     for v in variants:
@@ -261,6 +266,35 @@ def script_mix(question, text, allowed=()):
         return 0.0
     latin = [w for w in words if w.isascii() and w.lower() not in skip]
     return round(len(latin) / len(words), 3)
+
+
+# Kirill javob baribir lotin so'z bilan boshlansa — faqat shu ro'yxatdagi so'z o'giriladi.
+FIRSTWORD_FIXES = {
+    'bazada': 'базада', 'bazadagi': 'базадаги', 'jami': 'жами', 'topildi': 'топилди',
+    'umumiy': 'умумий', 'ha': 'ҳа', "yo'q": 'йўқ', 'salom': 'салом', 'assalomu': 'ассалому',
+    'men': 'мен', 'hozir': 'ҳозир', 'afsuski': 'афсуски', 'natija': 'натижа',
+}
+_FIRSTWORD_RE = re.compile(r"^([\s*_#>\-\"«„“(]*)([A-Za-z][A-Za-z'‘’ʻʼ]*)")
+
+
+def fix_first_word(question, text):
+    """(matn, belgi) — kirill savolga javob lotin so'z bilan boshlansa AI_SCRIPT_FIRSTWORD
+    logiga yoziladi; so'z FIRSTWORD_FIXES da bo'lsa faqat o'sha so'z kirillga o'giriladi."""
+    if detect_script(question) != 'kirill':
+        return text, None
+    m = _FIRSTWORD_RE.match(text or '')
+    if not m or m.group(2).lower() in _ALLOWED_LATIN:
+        return text, None
+    word = m.group(2)
+    key = re.sub(r"[‘’ʻʼ]", "'", word.lower())
+    fixed = FIRSTWORD_FIXES.get(key)
+    if fixed:
+        fixed = fixed[0].upper() + fixed[1:] if word[0].isupper() else fixed
+        text = m.group(1) + fixed + text[m.end():]
+    logger.warning('AI_SCRIPT_FIRSTWORD %s', json.dumps(
+        {'feature': FEATURE, 'word': word, 'fixed': bool(fixed), 'replacement': fixed},
+        ensure_ascii=False))
+    return text, {'word': word, 'fixed': bool(fixed)}
 
 
 def _log_script_mix(question, text, allowed):
@@ -461,7 +495,9 @@ def detect_script(text):
 def script_instruction(text):
     if detect_script(text) == 'kirill':
         return ("Javobni birinchi so'zdan oxirigacha o'zbek KIRILL alifbosida yoz. Lotin harfli so'z "
-                "faqat atama yoki nom bo'lsa (PhD, DSc, blockchain) qolishi mumkin.")
+                "faqat atama yoki nom bo'lsa (PhD, DSc, blockchain) qolishi mumkin.\n"
+                "Javob boshi namunalari: «Базада 4 та диссертация топилди…», «Жами 24 593 та PhD "
+                "диссертация бор…». «Bazada», «Jami» kabi lotin so'z bilan boshlama.")
     return ("Javobni birinchi so'zdan oxirigacha o'zbek LOTIN alifbosida yoz. Istisno: bazadan olingan "
             "ism, mavzu va muassasa nomlarini aynan bazadagidek (kirillda bo'lsa kirillda, o'sha tartibda) "
             "keltir — ularni transliteratsiya qilma va tartibini o'zgartirma.")
@@ -545,6 +581,7 @@ def _answer_with_tools(message, history=()):
 def _finish(message, text, tools_used):
     """Alifbo aralashmasini o'lchaydi (log) va "Qidirildi:" qatorini server o'zi qo'shadi."""
     words = searched_words(tools_used)
+    text, _ = fix_first_word(message, text)
     _log_script_mix(message, text, words)
     if not words:
         return text
