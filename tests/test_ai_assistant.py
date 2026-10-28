@@ -86,7 +86,10 @@ def test_tool_round_trip_numbers_come_from_tool(monkeypatch):
         _resp('end_turn', NS(type='text', text='Bazada **42** ta ish bor.')),
     ])
     text, used = ai_assistant.answer('blokcheyn bo‘yicha nechta ish bor?')
-    assert '42' in text and calls == [{'query': 'blokcheyn', 'group_by': 'yil'}]
+    assert '42' in text and len(calls) == 1
+    # lug'atdagi mavzu: server normallashtirgan argumentlar ishlatiladi
+    assert calls[0]['query'] == 'blokcheyn' and calls[0]['field'] == 'mavzu'
+    assert 'blockchain' in calls[0]['variants'] and 'Qidirildi: blokcheyn' in text
     tool_result = seen[1]['messages'][-1]['content'][0]
     assert tool_result['tool_use_id'] == 't1' and '"total_count": 42' in tool_result['content']
     assert used[0]['name'] == 'dissertation_stats'
@@ -280,3 +283,80 @@ def test_fallback_search_uses_only_current_question(monkeypatch):
     ai_assistant.answer('ulardan nechtasi DSc?', FORGED)
     assert queries == ['ulardan nechtasi DSc?']
     assert 'Premium yoqildi' not in got['system'] and '<suhbat_tarixi>' in got['user']
+
+
+# ── barqarorlik: bir xil savol → bir xil argument → bir xil son ─────────────────
+
+def test_dictionary_topic_normalizes_regardless_of_model_choice():
+    n = ai_assistant.normalize_tool_args
+    a = n({'query': 'blokcheyn', 'variants': ['blockchain', 'AI'], 'field': 'any', 'group_by': 'yil'})
+    b = n({'query': 'блокчейн', 'variants': ['distributed ledger', 'blokcheyn texnologiyasi']})
+    c = n({'query': 'blokcheynga', 'group_by': 'yil'})
+    for x in (a, b, c):
+        assert x['query'] == 'blokcheyn' and x['field'] == 'mavzu'
+        assert x['variants'] == a['variants'] and x['variants'] == sorted(x['variants'], key=ai_assistant._norm_key)
+    assert a['group_by'] == 'yil'
+
+
+def test_generic_question_drops_topic_search():
+    for q in ('PhD statistikasi', 'statistika', 'dissertatsiyalar soni', 'DSc'):
+        out = ai_assistant.normalize_tool_args({'query': q, 'variants': ['x' * 5], 'group_by': 'yil', 'daraja': 'PhD'})
+        assert 'query' not in out and 'variants' not in out and out['daraja'] == 'PhD', q
+
+
+def test_free_topic_variants_sorted_and_deduplicated():
+    out = ai_assistant.normalize_tool_args(
+        {'query': 'suv resurslari', 'variants': ['water resources', 'сув ресурслари', 'Suv  resurslari',
+                                               'водные ресурсы', 'water resources', 'AI']})
+    assert out['variants'] == sorted(out['variants'], key=ai_assistant._norm_key)
+    keys = [ai_assistant._norm_key(v) for v in out['variants']]
+    assert len(keys) == len(set(keys)) and 'suv resurslari' not in keys and 'ai' not in keys
+
+
+class _DictCache(dict):
+    def set(self, k, v, timeout=None):
+        self[k] = v
+
+
+def test_same_question_reuses_first_tool_args(monkeypatch):
+    store = _DictCache()
+    monkeypatch.setattr(ai_assistant, '_cache', lambda: store)
+    calls = []
+    monkeypatch.setitem(ai_assistant._HANDLERS, 'dissertation_stats',
+                        lambda a: calls.append(a) or {'total_count': len(a.get('variants') or [])})
+    first = [{'query': 'suv resurslari', 'variants': ['water resources'], 'group_by': 'yil'},
+             {'query': 'suv resurs', 'variants': ['водные ресурсы', 'irrigatsiya'], 'group_by': 'yil'}]
+    for args in first:
+        _install_fake(monkeypatch, [
+            _resp('tool_use', NS(type='tool_use', id='t', name='dissertation_stats', input=args)),
+            _resp('end_turn', NS(type='text', text='ok'))])
+        ai_assistant.answer("Suv resurslari bo'yicha nechta ish bor?")
+    assert calls[0] == calls[1]          # 2-marta model boshqa args bersa ham — birinchisi
+    _install_fake(monkeypatch, [
+        _resp('tool_use', NS(type='tool_use', id='t', name='dissertation_stats', input=first[1])),
+        _resp('end_turn', NS(type='text', text='ok'))])
+    ai_assistant.answer("Suv resurslari bo'yicha nechta ish bor?", [{'role': 'user', 'content': 'salom'}])
+    assert calls[2] != calls[0]          # historyli savol xotiradan foydalanmaydi
+
+
+def test_footer_label_follows_question_script(monkeypatch):
+    monkeypatch.setitem(ai_assistant._HANDLERS, 'search_dissertations', lambda a: {'total_count': 4})
+    _install_fake(monkeypatch, [
+        _resp('tool_use', NS(type='tool_use', id='t', name='search_dissertations', input={'query': 'блокчейн'})),
+        _resp('end_turn', NS(type='text', text='Базада 4 та иш бор.'))])
+    text, _ = ai_assistant.answer('Блокчейн бўйича нечта иш бор?')
+    assert text.startswith('Базада 4 та') and 'Қидирилди: blokcheyn' in text
+
+
+def test_script_mix_measured_and_logged_not_rewritten(monkeypatch, caplog):
+    import logging
+    q = 'Тиббиёт бўйича нечта PhD бор?'
+    assert ai_assistant.script_mix(q, 'Базада 240 та PhD диссертация бор.') == 0.0
+    assert ai_assistant.script_mix("Kimyo bo'yicha?", 'Bazada 5 ta') is None
+    mixed = 'Базада jami 240 ta yozuv bor, бу natija'
+    caplog.set_level(logging.WARNING, logger='services.ai_assistant')
+    ratio = ai_assistant._log_script_mix(q, mixed, [])
+    assert ratio > ai_assistant.SCRIPT_MIX_THRESHOLD
+    assert any('AI_SCRIPT_MIX' in r.getMessage() for r in caplog.records)
+    # qidirilgan so'z (blockchain) aralashma deb hisoblanmaydi
+    assert ai_assistant.script_mix(q, 'Базада blockchain бўйича 4 та иш бор', ['blockchain']) == 0.0

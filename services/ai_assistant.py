@@ -8,8 +8,10 @@
 - Anthropic (tool use) ishlamasa: so'rov bo'yicha bitta qidiruv bajarilib, natija kontekst
   sifatida zaxira provayderga (Gemini) beriladi — raqamlar baribir bazadan.
 """
+import hashlib
 import json
 import logging
+import re
 import time
 
 from services import ai_client
@@ -75,6 +77,9 @@ bo'lsa (lotin yoki kirill), butun javobni o'sha alifboda yoz — bir javobda ara
 bazadagi ism va nomlarni o'zgartirmasdan keltir. \
 "Foydalanuvchi so'radi..." kabi uchinchi shaxsda gapirma, so'rovni qayta aytib berma.
 - Qisqa yoz: 2–5 jumla yoki 3–7 bandli ro'yxat. Oddiy Markdown: **qalin**, ro'yxat. Jadval ishlatma.
+- Qaysi so'z va shakllar bo'yicha qidirilganini javobda sanab o'tma — server buni oxiriga o'zi qo'shadi.
+- "PhD statistikasi", "nechta dissertatsiya bor" kabi umumiy savolda mavzu qidirma: query bo'sh \
+qoldir va faqat dissertation_stats chaqir (daraja/yil filtrlari bilan).
 - Ism va mavzularni bazadagi yozuvida (kirill bo'lsa kirillda) keltir."""
 
 _FIELDS = {
@@ -139,6 +144,133 @@ def expand_terms(query, variants=()):
             if len(v) >= 2 and v not in out:
                 out.append(v)
     return out[:MAX_PATTERNS]
+
+
+# ── barqarorlik: tool argumentlarini serverda normallashtirish ─────────────────
+# Bir xil savolga bir xil son chiqishi uchun qidiruv shakllari modelning tasodifiy
+# tanloviga bog'liq bo'lmasligi kerak (Haiku 5.5 da temperature sozlab bo'lmaydi).
+# Lug'atdagi mavzu → faqat lug'at guruhi (mavzu ustunida); umumiy so'zlar → mavzu
+# qidiruvi yo'q; qolganlari → takrorsiz, deterministik tartibda.
+SYNONYM_GROUPS = (
+    ('blokcheyn', 'блокчейн', 'blockchain', 'distributed ledger', 'taqsimlangan reestr',
+     'тақсимланган реестр', 'распределенный реестр'),
+    ("sun'iy intellekt", 'сунъий интеллект', 'artificial intelligence', 'искусственный интеллект'),
+    ('tibbiyot', 'тиббиёт', 'медицин', 'medicine'),
+    ('kimyo', 'кимё', 'химия', 'chemistry'),
+    ('pedagogika', 'педагогика', 'pedagogy'),
+    ('raqamli iqtisodiyot', 'рақамли иқтисодиёт', 'цифровая экономика', 'digital economy'),
+    ('suv tejovchi', 'сув тежовчи', 'водосберегающ', 'water saving'),
+)
+GENERIC_WORDS = frozenset({
+    'phd', 'dsc', 'statistika', 'statistikasi', 'statistik', 'dissertatsiya', 'dissertatsiyalar',
+    'dissertatsiyasi', 'dissertatsiyalari', 'ilmiy', 'ish', 'ishlar', 'himoya', 'soni', 'nechta',
+    'jami', 'umumiy', 'baza', 'bazada',
+})
+ARGS_MEMO_TTL = 24 * 3600
+
+
+def _norm_key(text):
+    """Taqqoslash kaliti: kichik harf, kirill→lotin, tutuq belgilari bir xil, faqat harf/raqam."""
+    t = kiril_to_lotin(' '.join((text or '').split())) or ''
+    t = re.sub(r"[‘’ʻʼ`´']", "'", t.lower())
+    return ' '.join(re.sub(r"[^\w' ]+", ' ', t).split())
+
+
+def _is_generic(text):
+    words = _norm_key(text).replace("'", '').split()
+    return bool(words) and all(w in GENERIC_WORDS for w in words)
+
+
+def _synonym_group(terms):
+    for term in terms:
+        k = _norm_key(term)
+        if not k:
+            continue
+        for group in SYNONYM_GROUPS:
+            for member in group:
+                m = _norm_key(member)
+                if k == m or (len(m) >= 5 and k.startswith(m)):
+                    return group
+    return None
+
+
+def normalize_tool_args(args):
+    """Model bergan tool argumentlarini deterministik shaklga keltiradi."""
+    a = dict(args or {})
+    query = ' '.join((a.get('query') or '').split())
+    variants = [' '.join(v.split()) for v in (a.get('variants') or []) if isinstance(v, str)]
+    if not query or _is_generic(query):
+        a.pop('query', None)
+        a.pop('variants', None)
+        return a
+    group = _synonym_group([query, *variants])
+    if group:
+        a.update(query=group[0], variants=sorted(group[1:], key=_norm_key), field='mavzu')
+        return a
+    seen, clean = {_norm_key(query)}, []
+    for v in variants:
+        k = _norm_key(v)
+        if len(v) >= MIN_VARIANT_LEN and k and k not in seen and not _is_generic(v):
+            seen.add(k)
+            clean.append(v)
+    a['query'] = query
+    a['variants'] = sorted(clean, key=_norm_key)[:8]
+    if not a['variants']:
+        a.pop('variants')
+    return a
+
+
+def searched_words(tools_used):
+    """Javob oxiridagi "Qidirildi:" qatori uchun — normallashtirilgan so'zlar, takrorsiz."""
+    out = []
+    for u in tools_used:
+        for w in [u['input'].get('query'), *(u['input'].get('variants') or [])]:
+            if w and w not in out:
+                out.append(w)
+    return out
+
+
+def _cache():
+    try:
+        from extensions import cache
+        cache.get('ai_args:probe')  # app konteksti yo'q bo'lsa shu yerda xato beradi
+        return cache
+    except Exception:
+        return None
+
+
+def _args_memo_key(message, history):
+    if history:
+        return None  # kontekstli savol — argumentlar oldingi suhbatga bog'liq
+    return 'ai_args:' + hashlib.sha1(_norm_key(message).encode('utf-8')).hexdigest()
+
+
+# ── javob alifbosi aralashmasini o'lchash (faqat log) ──────────────────────────
+SCRIPT_MIX_THRESHOLD = 0.10
+_ALLOWED_LATIN = frozenset({'phd', 'dsc', 'ai', 'olimlar', 'uz', 'oak'})
+
+
+def script_mix(question, text, allowed=()):
+    """Kirill savolga javobda lotin so'zlar ulushi (atama va qidirilgan so'zlar hisobga olinmaydi).
+    Lotin savol uchun None — u yerda kirill ism/nomlar ruxsat etilgan."""
+    if detect_script(question) != 'kirill':
+        return None
+    skip = _ALLOWED_LATIN | {w.lower() for a in allowed for w in re.findall(r'[A-Za-z]+', a or '')}
+    words = re.findall(r"[^\W\d_]+", text or '')
+    if not words:
+        return 0.0
+    latin = [w for w in words if w.isascii() and w.lower() not in skip]
+    return round(len(latin) / len(words), 3)
+
+
+def _log_script_mix(question, text, allowed):
+    ratio = script_mix(question, text, allowed)
+    if ratio is not None and ratio > SCRIPT_MIX_THRESHOLD:
+        sample = [w for w in re.findall(r'[A-Za-z]+', text) if w.lower() not in _ALLOWED_LATIN][:12]
+        logger.warning('AI_SCRIPT_MIX %s', json.dumps(
+            {'feature': FEATURE, 'latin_ratio': ratio, 'threshold': SCRIPT_MIX_THRESHOLD,
+             'latin_words': sample}, ensure_ascii=False))
+    return ratio
 
 
 def build_where(args):
@@ -349,6 +481,12 @@ def _answer_with_tools(message, history=()):
     messages = [{'role': 'user', 'content': build_user_content(message, history)},
                 {'role': 'system', 'content': script_instruction(message)}]
     tools_used = []
+    # Bir xil savol (historysiz) → birinchi marta tanlangan tool argumentlari qayta
+    # ishlatiladi (umumiy Flask kesh, 24 soat) — shu bilan son o'zgarmaydi.
+    cache, memo_key = _cache(), _args_memo_key(message, history)
+    use_memo = cache is not None and memo_key is not None
+    memo = (cache.get(memo_key) if use_memo else None) or []
+    memo_dirty = False
     for round_no in range(MAX_TOOL_ROUNDS + 1):
         started = time.monotonic()
         last = round_no == MAX_TOOL_ROUNDS
@@ -374,17 +512,45 @@ def _answer_with_tools(message, history=()):
             text = ''.join(b.text for b in resp.content if b.type == 'text').strip()
             if not text:
                 raise ai_client._ProviderError(f"bo'sh javob (stop_reason={resp.stop_reason})")
-            return text, tools_used
+            if use_memo and memo_dirty:
+                try:
+                    cache.set(memo_key, memo, timeout=ARGS_MEMO_TTL)
+                except Exception:
+                    logger.exception('ai_assistant: argument xotirasini saqlab bo\'lmadi')
+            return _finish(message, text, tools_used), tools_used
 
         messages.append({'role': 'assistant', 'content': resp.content})
         results = []
         for call in calls:
-            content, is_error = run_tool(call.name, call.input)
-            tools_used.append({'name': call.name, 'input': call.input})
+            idx = len(tools_used)
+            if idx < len(memo) and memo[idx]['name'] == call.name:
+                args = memo[idx]['input']
+            else:
+                args = normalize_tool_args(call.input)
+                memo = memo[:idx] + [{'name': call.name, 'input': args}]
+                memo_dirty = True
+            content, is_error = run_tool(call.name, args)
+            entry = {'name': call.name, 'input': args, 'model_input': call.input}
+            try:
+                entry['total_count'] = json.loads(content).get('total_count')
+            except ValueError:
+                pass
+            tools_used.append(entry)
             results.append({'type': 'tool_result', 'tool_use_id': call.id,
                             'content': content, 'is_error': is_error})
         messages.append({'role': 'user', 'content': results})
     raise ai_client._ProviderError('tool tsikli chegarasidan oshdi')
+
+
+def _finish(message, text, tools_used):
+    """Alifbo aralashmasini o'lchaydi (log) va "Qidirildi:" qatorini server o'zi qo'shadi."""
+    words = searched_words(tools_used)
+    _log_script_mix(message, text, words)
+    if not words:
+        return text
+    shown = words[:6] + (['…'] if len(words) > 6 else [])
+    label = 'Қидирилди' if detect_script(message) == 'kirill' else 'Qidirildi'
+    return f"{text}\n\n*{label}: {', '.join(shown)}*"
 
 
 def _answer_fallback(message, history=()):
