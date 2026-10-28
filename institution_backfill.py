@@ -69,10 +69,13 @@ def build_plan(map_rows, diss_counts, existing_institutions=(), existing_aliases
         if raw:
             groups[(canonical or raw).strip()].append((raw, category, region))
 
-    def add_alias(raw, target, alias_type, problems):
+    def add_alias(raw, target, alias_type, problems, link=True):
         # The admin's per-variant decision always links that variant's
-        # defences; only the reusable key-level alias can conflict.
-        plan.links[raw] = target
+        # defences; only the reusable key-level alias can conflict. A group's
+        # canonical name is a key alias only: the same text may be a raw
+        # variant the admin put in another group.
+        if link:
+            plan.links[raw] = target
         key = normalize_institution_identity(raw)
         if not key:
             return
@@ -118,7 +121,7 @@ def build_plan(map_rows, diss_counts, existing_institutions=(), existing_aliases
             plan.queue.append((name, key, 'legacy_review', 'category_tie', key))
         row['targets'] = [key]
         row['parent'] = cls['parent']
-        add_alias(name, key, 'canonical', problems)
+        add_alias(name, key, 'canonical', problems, link=False)
         for raw, _, _ in variants:
             same = normalize_institution_identity(raw) == key
             add_alias(raw, key, 'exact' if same else 'legacy_merge', problems)

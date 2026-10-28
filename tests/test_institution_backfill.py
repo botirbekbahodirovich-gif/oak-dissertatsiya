@@ -114,6 +114,16 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(plan.stats['diss_linkable'], 8)
         self.assertEqual([q[2] for q in plan.queue], ['legacy_review'])
 
+    def test_canonical_name_of_one_group_never_steals_another_groups_variant(self):
+        # UzMU's admin put raw R in its group; another group is NAMED R.
+        r = 'Мирзо Улуғбек номидаги Ўзбекистон Миллий университети'
+        plan = _plan([(r, UZMU, 'universitet', None), (UZMU, None, 'universitet', None),
+                      ('ЎзМУ (М. Улуғбек)', r, 'universitet', None)],
+                     {r: 260, UZMU: 5, 'ЎзМУ (М. Улуғбек)': 10})
+        self.assertLess(UZMU, r)  # UzMU group is planned first
+        self.assertEqual(plan.links[r], N(UZMU))
+        self.assertEqual(plan.links['ЎзМУ (М. Улуғбек)'], N(r))
+
     def test_short_academy_parent_resolves_to_full_academy(self):
         child = 'ЎзР ФА Математика институти'
         plan = _plan([(FA, None, 'akademiya', None), (child, None, 'institut', None)])
