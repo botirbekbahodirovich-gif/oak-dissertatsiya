@@ -179,7 +179,7 @@
       var orgLine = s.org
         ? '<div class="ry-sub"><a href="/university/' + encodeURIComponent(s.org) + '"> ' + esc(s.org_latin) +
           (s.org_rank ? ' <span class="ry-chip">reytingda #' + s.org_rank + '</span>' : '') + '</a></div>'
-        : '';
+        : (s.org_latin ? '<div class="ry-sub">' + esc(s.org_latin) + '</div>' : '');
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="ry-rank">' + medal + '</td>' +

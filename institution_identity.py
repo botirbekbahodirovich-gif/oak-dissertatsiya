@@ -31,6 +31,65 @@ def looks_like_multiple_institutions(value: str | None) -> bool:
     return sum(1 for part in parts if _ORG_WORD.search(part)) >= 2
 
 
+_HAMDA = re.compile(r"\bhamda\b")
+_CHILD_MARKER = re.compile(r"\bhuzuridagi\b")
+# "... Fanlar akademiyasi <X> instituti/markazi" (also the "OzR FA" short form)
+_ACADEMY_CHILD = re.compile(
+    r"^(.*?\b(?:fanlar akademiyasi(?:ning)?|ozr fa))\s+(.*\b(?:institut(?:i|ining)?|markaz(?:i|ining)?)\b.*)$")
+_SPLIT_KEEP = re.compile(r"(\s+(?:va|hamda)\s+|\s*[;,]\s*)", re.IGNORECASE)
+
+
+def _org_groups(latin: str) -> list[str]:
+    """Split on va/hamda/,/; but glue fragments without an org word onto the
+    next part, so "Iqtisodiyot va pedagogika universiteti" stays one name."""
+    pieces = _SPLIT_KEEP.split(latin)
+    groups, buffer = [], ""
+    for i, piece in enumerate(pieces):
+        if i % 2 and not buffer:
+            continue  # separator right after a finished name
+        buffer += piece
+        # a full name ENDS with its org word: "… universiteti Biofizika" is
+        # the start of "… universiteti Biofizika va biokimyo instituti"
+        words = re.findall(r"[0-9a-z'&]+", piece)
+        if i % 2 == 0 and words and _ORG_WORD.fullmatch(words[-1]):
+            groups.append(buffer)
+            buffer = ""
+    if buffer.strip() and groups:
+        groups[-1] += buffer
+    keys = [normalize_institution_identity(g) for g in groups]
+    return [k for k in keys if k]
+
+
+def classify_institution_name(value: str | None) -> dict:
+    """Name rule on the normalized Latin text.
+
+    kind='multiple' — two independent organisations ("hamda", or two full
+                      names joined by "va"/","); parts = their keys, first is primary.
+    kind='child'    — one organisation under a parent ("huzuridagi",
+                      "Fanlar akademiyasi ... instituti"); parent = parent key.
+    kind='single'   — everything else.
+    """
+    key = normalize_institution_identity(value)
+    out = {'kind': 'single', 'key': key, 'parent': None, 'parts': [key] if key else []}
+    if not key:
+        return out
+    if _HAMDA.search(key):
+        parts = [p.strip() for p in _HAMDA.split(key) if p.strip()]
+        if len(parts) >= 2 and all(_ORG_WORD.search(p) for p in parts):
+            return dict(out, kind='multiple', parts=parts)
+    marker = _CHILD_MARKER.search(key)
+    if marker:
+        return dict(out, kind='child', parent=key[:marker.start()].strip() or None)
+    academy = _ACADEMY_CHILD.match(key)
+    if academy:
+        return dict(out, kind='child', parent=academy.group(1).strip())
+    latin = transliterate(unicodedata.normalize("NFKC", value or "")).casefold()
+    groups = _org_groups(latin)
+    if len(groups) >= 2:
+        return dict(out, kind='multiple', parts=groups)
+    return out
+
+
 def ensure_identity_schema(cur) -> None:
     """Create the additive identity schema; raw dissertations.muassasa stays intact."""
     cur.execute("""

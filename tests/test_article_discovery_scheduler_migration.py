@@ -26,9 +26,9 @@ class MigrationNumberingTests(unittest.TestCase):
     def test_018_file_exists(self):
         self.assertTrue(os.path.isfile(MIGRATION))
 
-    def test_migrations_remain_sequential_through_020(self):
-        """018 discovery scheduler, 019 maqola tarjimasi va 020 institution
-        identity ketma-ket, navbatdagi 021 raqami esa hali bo'sh."""
+    def test_migrations_remain_sequential_through_021(self):
+        """018 discovery scheduler, 019 maqola tarjimasi, 020 institution
+        identity va 021 institution links ketma-ket, navbatdagi 022 bo'sh."""
         names = [name for name in os.listdir(os.path.join(_REPO_ROOT, 'migrations'))
                  if re.match(r'\d+_', name)]
         numbers = [int(re.match(r'(\d+)_', name).group(1)) for name in names]
@@ -36,7 +36,8 @@ class MigrationNumberingTests(unittest.TestCase):
         self.assertIn(18, numbers)
         self.assertIn(19, numbers)
         self.assertIn('020_institution_identity.sql', names)
-        self.assertNotIn(21, numbers)
+        self.assertIn('021_institution_links.sql', names)
+        self.assertNotIn(22, numbers)
 
     def test_still_no_gaps_across_all_migrations(self):
         numbers = sorted(set(

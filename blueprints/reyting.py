@@ -2,7 +2,9 @@
 
 One public page (/reyting) where organizations and their scholars form a single
 relational chain over the existing linkage:
-    dissertations.muassasa → institution_map.cyrillic_name → canonical org
+    dissertations.institution_id (+ dissertation_institutions co-owners) →
+    institutions, once coverage >= _IDENTITY_MIN_COVERAGE; before that the
+    legacy dissertations.muassasa → institution_map.cyrillic_name chain
 
 The chain property: an organization's score is the SUM of its scholars' scores,
 and every scholar row carries their organization's republic-wide rank — so the
@@ -29,6 +31,11 @@ _CACHE_TTL = 1800  # 30 min
 # score weights
 _W_DSC, _W_PHD, _W_OTHER, _W_RAHBAR, _W_OPP = 50, 30, 20, 8, 2
 
+# Canonical-ID mode only once the backfill links this share of defences;
+# below it the legacy institution_map text chain keeps the ranking complete.
+_IDENTITY_MIN_COVERAGE = 0.95
+_UNKNOWN_ORG = 'Noma’lum'
+
 
 def _classify(daraja):
     up = (daraja or '').upper()
@@ -40,88 +47,133 @@ def _classify(daraja):
     return 'other'
 
 
-def _build_rating():
-    """Aggregate scholars + organizations from the DB. Cached 30 minutes."""
-    from app import cache
-    data = cache.get(_CACHE_KEY)
-    if data:
-        return data
-    from data import get_connection, clean_olim_name
-    from institutions import transliterate_display
+def _identity_coverage(cur):
+    """Share of defences WITH an OAK institution name that have a live
+    canonical institution_id (0..1), or None when the identity schema is
+    absent. Blank muassasa can never be linked by name, so it is not counted."""
+    cur.execute("""
+        SELECT to_regclass('public.institutions') IS NOT NULL
+           AND EXISTS (
+               SELECT 1 FROM information_schema.columns
+               WHERE table_name = 'dissertations'
+                 AND column_name = 'institution_id')
+    """)
+    if not cur.fetchone()[0]:
+        return None
+    cur.execute("""
+        SELECT COUNT(*) FILTER (WHERE i.id IS NOT NULL), COUNT(*)
+        FROM dissertations d
+        LEFT JOIN institutions i ON i.id = d.institution_id
+             AND i.is_active = TRUE AND i.merged_into_id IS NULL
+        WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+          AND NULLIF(TRIM(d.muassasa), '') IS NOT NULL
+    """)
+    linked, total = cur.fetchone()
+    return (linked / total) if total else 0.0
 
-    imap = {}   # institution_id (preferred) or legacy raw name → org meta
-    rows = []   # (olim, institution key, daraja, ixtisoslik)
-    rahbar = {}
-    opp = {}
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT to_regclass('public.institutions') IS NOT NULL
-                   AND EXISTS (
-                       SELECT 1 FROM information_schema.columns
-                       WHERE table_name = 'dissertations'
-                         AND column_name = 'institution_id')
-            """)
-            identity_mode = bool(cur.fetchone()[0])
-            if identity_mode:
-                cur.execute("""
-                    SELECT id, canonical_name, COALESCE(category, 'boshqa'),
-                           COALESCE(region, '')
-                    FROM institutions
-                    WHERE is_active = TRUE AND merged_into_id IS NULL
-                """)
-                for iid, canon, cat, reg in cur.fetchall():
-                    imap[iid] = {'canonical': canon, 'category': cat, 'region': reg}
-                # One dissertation has exactly one ranking institution_id.
-                # Unresolved rows remain outside the ranking until admin review.
-                cur.execute("""
-                    SELECT TRIM(d.olim), d.institution_id,
-                           COALESCE(d.daraja, ''),
-                           TRIM(COALESCE(d.ixtisoslik, ''))
-                    FROM dissertations d
-                    JOIN institutions i ON i.id = d.institution_id
-                    WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
-                      AND i.is_active = TRUE AND i.merged_into_id IS NULL
-                """)
-                rows = cur.fetchall()
-            else:
-                cur.execute("""
-                    SELECT TRIM(cyrillic_name),
-                           TRIM(COALESCE(canonical_name, cyrillic_name)),
-                           COALESCE(category, 'boshqa'), COALESCE(region, '')
-                    FROM institution_map WHERE is_active IS NOT FALSE
-                """)
-                for raw, canon, cat, reg in cur.fetchall():
-                    imap[raw] = {'canonical': canon, 'category': cat, 'region': reg}
-                cur.execute("""
-                    SELECT TRIM(olim), TRIM(COALESCE(muassasa, '')),
-                           COALESCE(daraja, ''), TRIM(COALESCE(ixtisoslik, ''))
-                    FROM dissertations
-                    WHERE olim IS NOT NULL AND TRIM(olim) <> ''
-                """)
-                rows = cur.fetchall()
-            cur.execute("""
-                SELECT LOWER(TRIM(ilmiy_rahbar)), COUNT(*)
+
+def _fetch_rating_inputs(cur, mode=None):
+    """(mode, imap, rows, rahbar, opp). mode None = automatic: 'identity' only
+    when coverage >= _IDENTITY_MIN_COVERAGE, else the legacy 'text' mode.
+    rows: (olim, (primary org key, *co-owner keys), daraja, ixtisoslik)."""
+    if mode is None:
+        coverage = _identity_coverage(cur)
+        mode = ('identity' if coverage is not None
+                and coverage >= _IDENTITY_MIN_COVERAGE else 'text')
+    imap, rows, rahbar, opp = {}, [], {}, {}
+    if mode == 'identity':
+        cur.execute("""
+            SELECT id, canonical_name, COALESCE(category, 'boshqa'),
+                   COALESCE(region, ''), merged_into_id, is_active
+            FROM institutions
+        """)
+        merged = {}
+        for iid, canon, cat, reg, into, active in cur.fetchall():
+            if active and into is None:
+                imap[iid] = {'canonical': canon, 'category': cat, 'region': reg}
+            elif into is not None:
+                merged[iid] = into
+
+        def live(iid, hops=0):
+            # co-owner links are not rewritten by ID merges: follow the chain
+            while iid in merged and hops < 20:
+                iid, hops = merged[iid], hops + 1
+            return iid if iid in imap else None
+
+        co = {}
+        cur.execute("SELECT to_regclass('public.dissertation_institutions') IS NOT NULL")
+        if cur.fetchone()[0]:
+            cur.execute("SELECT dissertation_id, institution_id FROM dissertation_institutions")
+            for did, iid in cur.fetchall():
+                co.setdefault(did, []).append(iid)
+        # Unresolved names stay outside the ranking until admin review; a
+        # blank muassasa keeps the scholar (org "Noma'lum", keys=()) but
+        # credits no organization.
+        cur.execute("""
+            SELECT d.id, TRIM(d.olim), d.institution_id, COALESCE(d.daraja, ''),
+                   TRIM(COALESCE(d.ixtisoslik, '')),
+                   NULLIF(TRIM(d.muassasa), '') IS NULL
+            FROM dissertations d
+            WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+              AND (d.institution_id IS NOT NULL
+                   OR NULLIF(TRIM(d.muassasa), '') IS NULL)
+        """)
+        for did, olim, iid, daraja, code, blank in cur.fetchall():
+            if iid is None and blank:
+                rows.append((olim, (), daraja, code))
+                continue
+            primary = live(iid)
+            if primary is None:
+                continue
+            keys = [primary]
+            for extra in co.get(did, ()):
+                extra = live(extra)
+                if extra is not None and extra not in keys:
+                    keys.append(extra)
+            rows.append((olim, tuple(keys), daraja, code))
+    else:
+        cur.execute("""
+            SELECT TRIM(cyrillic_name),
+                   TRIM(COALESCE(canonical_name, cyrillic_name)),
+                   COALESCE(category, 'boshqa'), COALESCE(region, '')
+            FROM institution_map WHERE is_active IS NOT FALSE
+        """)
+        for raw, canon, cat, reg in cur.fetchall():
+            imap[raw] = {'canonical': canon, 'category': cat, 'region': reg}
+        cur.execute("""
+            SELECT TRIM(olim), TRIM(COALESCE(muassasa, '')),
+                   COALESCE(daraja, ''), TRIM(COALESCE(ixtisoslik, ''))
+            FROM dissertations
+            WHERE olim IS NOT NULL AND TRIM(olim) <> ''
+        """)
+        rows = [(olim, (muassasa,), daraja, code)
+                for olim, muassasa, daraja, code in cur.fetchall()]
+    cur.execute("""
+        SELECT LOWER(TRIM(ilmiy_rahbar)), COUNT(*)
+        FROM dissertations
+        WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+        GROUP BY 1
+    """)
+    rahbar = {k: v for k, v in cur.fetchall()}
+    for col in ('opponent_1', 'opponent_2', 'opponent_3'):
+        try:
+            cur.execute(f"""
+                SELECT LOWER(TRIM({col})), COUNT(*)
                 FROM dissertations
-                WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
+                WHERE {col} IS NOT NULL AND TRIM({col}) <> ''
                 GROUP BY 1
             """)
-            rahbar = {k: v for k, v in cur.fetchall()}
-            for col in ('opponent_1', 'opponent_2', 'opponent_3'):
-                try:
-                    cur.execute(f"""
-                        SELECT LOWER(TRIM({col})), COUNT(*)
-                        FROM dissertations
-                        WHERE {col} IS NOT NULL AND TRIM({col}) <> ''
-                        GROUP BY 1
-                    """)
-                    for k, v in cur.fetchall():
-                        opp[k] = opp.get(k, 0) + v
-                except Exception:
-                    pass  # column may not exist on a fresh DB
-    finally:
-        conn.close()
+            for k, v in cur.fetchall():
+                opp[k] = opp.get(k, 0) + v
+        except Exception:
+            cur.connection.rollback()  # column may not exist on a fresh DB
+    return mode, imap, rows, rahbar, opp
+
+
+def _aggregate_rating(imap, rows, rahbar, opp):
+    """Scholar + organization tables from _fetch_rating_inputs() output."""
+    from data import clean_olim_name
+    from institutions import transliterate_display
 
     def org_meta(institution_key):
         m = imap.get(institution_key)
@@ -132,18 +184,20 @@ def _build_rating():
 
     # ── scholars ──
     scholars = {}  # key = lower(cleaned name)
-    for olim, muassasa, daraja, code in rows:
+    for olim, keys, daraja, code in rows:
         name = clean_olim_name(olim)
         key = name.lower()
         s = scholars.get(key)
         if not s:
             s = scholars[key] = {'name': name, 'dsc': 0, 'phd': 0, 'other': 0,
-                                 'codes': set(), 'org_votes': {}}
+                                 'codes': set(), 'org_votes': {}, 'co_orgs': set()}
         s[_classify(daraja)] += 1
         if code:
             s['codes'].add(code)
-        if muassasa:
-            s['org_votes'][muassasa] = s['org_votes'].get(muassasa, 0) + 1
+        if keys and keys[0]:
+            s['org_votes'][keys[0]] = s['org_votes'].get(keys[0], 0) + 1
+        for extra in keys[1:]:
+            s['co_orgs'].add(org_meta(extra)['canonical'])
 
     for key, s in scholars.items():
         # primary org = the variant this scholar defended at most often
@@ -160,25 +214,31 @@ def _build_rating():
 
     # ── organizations (chain: score = Σ member scholar scores) ──
     orgs = {}  # key = canonical name
-    for olim, muassasa, daraja, code in rows:
-        meta = org_meta(muassasa)
-        o = orgs.get(meta['canonical'])
-        if not o:
-            o = orgs[meta['canonical']] = {
-                'canonical': meta['canonical'], 'category': meta['category'],
-                'region': meta['region'], 'diss': 0, 'dsc': 0, 'phd': 0,
-                'codes': set(), 'scholars': 0, 'score': 0}
-        o['diss'] += 1
-        kind = _classify(daraja)
-        if kind in ('dsc', 'phd'):
-            o[kind] += 1
-        if code:
-            o['codes'].add(code)
+    for olim, keys, daraja, code in rows:
+        # a joint defence ("A hamda B") counts fully for every owner
+        metas = {}
+        for k in keys:
+            m = org_meta(k)
+            metas.setdefault(m['canonical'], m)
+        for canon, meta in metas.items():
+            o = orgs.get(canon)
+            if not o:
+                o = orgs[canon] = {
+                    'canonical': canon, 'category': meta['category'],
+                    'region': meta['region'], 'diss': 0, 'dsc': 0, 'phd': 0,
+                    'codes': set(), 'scholars': 0, 'score': 0}
+            o['diss'] += 1
+            kind = _classify(daraja)
+            if kind in ('dsc', 'phd'):
+                o[kind] += 1
+            if code:
+                o['codes'].add(code)
     for s in scholars.values():
-        o = orgs.get(s['org'])
-        if o:
-            o['scholars'] += 1
-            o['score'] += s['score']
+        for canon in {s['org']} | s.pop('co_orgs'):
+            o = orgs.get(canon)
+            if o:
+                o['scholars'] += 1
+                o['score'] += s['score']
 
     org_list = sorted(orgs.values(), key=lambda o: (-o['score'], o['canonical']))
     for i, o in enumerate(org_list, 1):
@@ -193,12 +253,29 @@ def _build_rating():
         s['rank'] = i
         s['codes'] = sorted(s['codes'])
         s['org_rank'] = org_rank.get(s['org'])
-        s['org_latin'] = org_latin.get(s['org'], s['org'])
+        s['org_latin'] = org_latin.get(s['org'], s['org']) or _UNKNOWN_ORG
 
     regions = sorted({o['region'] for o in org_list if o['region']})
-    data = {'orgs': org_list, 'scholars': sch_list, 'regions': regions,
+    return {'orgs': org_list, 'scholars': sch_list, 'regions': regions,
             'totals': {'orgs': len(org_list), 'scholars': len(sch_list),
                        'dissertations': len(rows)}}
+
+
+def _build_rating():
+    """Aggregate scholars + organizations from the DB. Cached 30 minutes."""
+    from app import cache
+    data = cache.get(_CACHE_KEY)
+    if data:
+        return data
+    from data import get_connection
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            mode, imap, rows, rahbar, opp = _fetch_rating_inputs(cur)
+    finally:
+        conn.close()
+    data = _aggregate_rating(imap, rows, rahbar, opp)
+    data['mode'] = mode
     cache.set(_CACHE_KEY, data, timeout=_CACHE_TTL)
     return data
 
