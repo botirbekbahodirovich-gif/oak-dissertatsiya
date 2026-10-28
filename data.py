@@ -1803,8 +1803,9 @@ def chat():
                     tier='fast', max_tokens=1500)
             except AIError as e:
                 return jsonify({"response": html_module.escape(e.user_message)}), 503
-            safe_answer = html_module.escape(answer).replace("\n", "<br>")
-            return jsonify({"response": f'<div style="line-height:1.6;">{safe_answer}</div>'})
+            from utils.chat_markdown import render_chat_markdown
+            safe_answer = render_chat_markdown(answer)  # escape avval, keyin oq ro'yxat teglar
+            return jsonify({"response": f'<div class="ai-md">{safe_answer}</div>'})
     
     except Exception:
         log_exception(current_app.logger, "AI yordamchi (/api/chat) bajarilmadi")
