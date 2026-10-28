@@ -34,6 +34,7 @@ _W_DSC, _W_PHD, _W_OTHER, _W_RAHBAR, _W_OPP = 50, 30, 20, 8, 2
 # Canonical-ID mode only once the backfill links this share of defences;
 # below it the legacy institution_map text chain keeps the ranking complete.
 _IDENTITY_MIN_COVERAGE = 0.95
+_UNKNOWN_ORG = 'Noma’lum'
 
 
 def _classify(daraja):
@@ -47,8 +48,9 @@ def _classify(daraja):
 
 
 def _identity_coverage(cur):
-    """Share of dissertations with a live canonical institution_id (0..1), or
-    None when the identity schema is absent."""
+    """Share of defences WITH an OAK institution name that have a live
+    canonical institution_id (0..1), or None when the identity schema is
+    absent. Blank muassasa can never be linked by name, so it is not counted."""
     cur.execute("""
         SELECT to_regclass('public.institutions') IS NOT NULL
            AND EXISTS (
@@ -64,6 +66,7 @@ def _identity_coverage(cur):
         LEFT JOIN institutions i ON i.id = d.institution_id
              AND i.is_active = TRUE AND i.merged_into_id IS NULL
         WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
+          AND NULLIF(TRIM(d.muassasa), '') IS NOT NULL
     """)
     linked, total = cur.fetchone()
     return (linked / total) if total else 0.0
@@ -103,15 +106,22 @@ def _fetch_rating_inputs(cur, mode=None):
             cur.execute("SELECT dissertation_id, institution_id FROM dissertation_institutions")
             for did, iid in cur.fetchall():
                 co.setdefault(did, []).append(iid)
-        # Unresolved rows stay outside the ranking until admin review.
+        # Unresolved names stay outside the ranking until admin review; a
+        # blank muassasa keeps the scholar (org "Noma'lum", keys=()) but
+        # credits no organization.
         cur.execute("""
             SELECT d.id, TRIM(d.olim), d.institution_id, COALESCE(d.daraja, ''),
-                   TRIM(COALESCE(d.ixtisoslik, ''))
+                   TRIM(COALESCE(d.ixtisoslik, '')),
+                   NULLIF(TRIM(d.muassasa), '') IS NULL
             FROM dissertations d
             WHERE d.olim IS NOT NULL AND TRIM(d.olim) <> ''
-              AND d.institution_id IS NOT NULL
+              AND (d.institution_id IS NOT NULL
+                   OR NULLIF(TRIM(d.muassasa), '') IS NULL)
         """)
-        for did, olim, iid, daraja, code in cur.fetchall():
+        for did, olim, iid, daraja, code, blank in cur.fetchall():
+            if iid is None and blank:
+                rows.append((olim, (), daraja, code))
+                continue
             primary = live(iid)
             if primary is None:
                 continue
@@ -184,7 +194,7 @@ def _aggregate_rating(imap, rows, rahbar, opp):
         s[_classify(daraja)] += 1
         if code:
             s['codes'].add(code)
-        if keys[0]:
+        if keys and keys[0]:
             s['org_votes'][keys[0]] = s['org_votes'].get(keys[0], 0) + 1
         for extra in keys[1:]:
             s['co_orgs'].add(org_meta(extra)['canonical'])
@@ -243,7 +253,7 @@ def _aggregate_rating(imap, rows, rahbar, opp):
         s['rank'] = i
         s['codes'] = sorted(s['codes'])
         s['org_rank'] = org_rank.get(s['org'])
-        s['org_latin'] = org_latin.get(s['org'], s['org'])
+        s['org_latin'] = org_latin.get(s['org'], s['org']) or _UNKNOWN_ORG
 
     regions = sorted({o['region'] for o in org_list if o['region']})
     return {'orgs': org_list, 'scholars': sch_list, 'regions': regions,

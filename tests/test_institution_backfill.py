@@ -175,6 +175,21 @@ class ReytingJointDefenceTests(unittest.TestCase):
         self.assertEqual((orgs['A']['diss'], orgs['B']['diss']), (1, 1))
         self.assertEqual(data['scholars'][0]['org'], 'A')
 
+    def test_blank_institution_scholar_listed_as_unknown_but_no_org(self):
+        from blueprints.reyting import _aggregate_rating
+        imap = {1: {'canonical': 'A', 'category': 'universitet', 'region': ''}}
+        data = _aggregate_rating(imap, [('Olim Bir', (1,), 'PhD', ''),
+                                        ('Olim Ikki', (), 'DSc', '')], {}, {})
+        self.assertEqual([o['canonical'] for o in data['orgs']], ['A'])
+        unknown = next(s for s in data['scholars'] if s['name'] == 'Olim Ikki')
+        self.assertEqual((unknown['org'], unknown['org_latin'], unknown['org_rank']),
+                         ('', 'Noma’lum', None))
+
+    def test_coverage_ignores_blank_muassasa(self):
+        import inspect
+        from blueprints.reyting import _identity_coverage
+        self.assertIn("NULLIF(TRIM(d.muassasa), '') IS NOT NULL", inspect.getsource(_identity_coverage))
+
 
 if __name__ == '__main__':
     unittest.main()
