@@ -289,22 +289,69 @@ def normalize_tool_args(args):
     return a
 
 
-def searched_words(tools_used):
-    """Javob oxiridagi "Qidirildi:" qatori uchun — normallashtirilgan so'zlar, takrorsiz."""
+_BRANCH_WORDS = frozenset({'fanlari', 'fanlar', 'fanlarining', 'fanlariga', 'fanlarida'})
+
+
+def branch_rule(message):
+    """Savol matnidan: ('fan_tarmoqi', kod) — fan nomidan keyin "fanlari/фанлари" kelsa
+    (daraja tarmog'i: "тиббиёт фанлари доктори"); ('kod', kod) — fan nomi boshqacha tilga
+    olinsa; None — fan yo'q. Model tanlovi serverda shu qoida bilan almashtiriladi."""
+    words = _norm_key(message).split()
+    plain = None
+    for i, w in enumerate(words):
+        if w in _BRANCH_WORDS:
+            for n in (2, 1):  # "qishloq xo'jaligi fanlari" / "kimyo fanlari"
+                code = _discipline_code(' '.join(words[max(0, i - n):i] + ['fanlar']))
+                if code:
+                    return 'fan_tarmoqi', code
+        for n in (2, 1):
+            if plain is None:
+                plain = _discipline_code(' '.join(words[i:i + n]))
+    return ('kod', plain) if plain else None
+
+
+def apply_branch_rule(message, args):
+    rule = branch_rule(message)
+    if not rule:
+        return args
+    a = dict(args)
+    kind, code = rule
+    model_code = a.get('fan_code') or _discipline_code(a.get('fan_tarmoqi') or '')
+    if model_code not in (None, code):
+        return a  # model boshqa fanni so'ragan (masalan, ikkinchi tool chaqiruvi) — tegmaymiz
+    a.pop('fan_code', None)
+    a.pop('fan_tarmoqi', None)
+    if kind == 'fan_tarmoqi':
+        a['fan_tarmoqi'] = DISCIPLINES[code][0]
+    else:
+        a['fan_code'] = code
+    return a
+
+
+def searched_words(tools_used, script='lotin'):
+    """Javob oxiridagi "Qidirildi:" qatori uchun — normallashtirilgan so'zlar, takrorsiz.
+    Kirill savolda yorliqlar va fan nomlari kirillda, kirill shakllar oldinda."""
+    cyr = script == 'kirill'
     out = []
+
+    def add(label):
+        if label and label not in out:
+            out.append(label)
+
     for u in tools_used:
         code = u['input'].get('fan_code')
         if code in DISCIPLINES:
-            label = f"{DISCIPLINES[code][0]} (ixtisoslik kodi {code}.*)"
-            if label not in out:
-                out.append(label)
+            name = DISCIPLINES[code][1] if cyr else DISCIPLINES[code][0]
+            add(f"{name} ({'ихтисослик коди' if cyr else 'ixtisoslik kodi'} {code}.*)")
         if u['input'].get('fan_tarmoqi'):
-            label = f"fan tarmog'i: {u['input']['fan_tarmoqi']}"
-            if label not in out:
-                out.append(label)
-        for w in [u['input'].get('query'), *(u['input'].get('variants') or [])]:
-            if w and w not in out:
-                out.append(w)
+            value = u['input']['fan_tarmoqi']
+            value = (lotin_to_kiril(value) if detect_script(value) == 'lotin' else value) if cyr else value
+            add(f"{'фан тармоғи' if cyr else 'fan tarmog' + chr(39) + 'i'}: {value}")
+        words = [w for w in [u['input'].get('query'), *(u['input'].get('variants') or [])] if w]
+        if cyr:
+            words.sort(key=lambda w: detect_script(w) != 'kirill')  # barqaror: kirillar oldinda
+        for w in words:
+            add(w)
     return out
 
 
@@ -670,7 +717,7 @@ def _answer_with_tools(message, history=()):
             if idx < len(memo) and memo[idx]['name'] == call.name:
                 args = memo[idx]['input']
             else:
-                args = normalize_tool_args(call.input)
+                args = apply_branch_rule(message, normalize_tool_args(call.input))
                 memo = memo[:idx] + [{'name': call.name, 'input': args}]
                 memo_dirty = True
             content, is_error = run_tool(call.name, args)
@@ -688,7 +735,7 @@ def _answer_with_tools(message, history=()):
 
 def _finish(message, text, tools_used):
     """Alifbo aralashmasini o'lchaydi (log) va "Qidirildi:" qatorini server o'zi qo'shadi."""
-    words = searched_words(tools_used)
+    words = searched_words(tools_used, detect_script(message))
     text, _ = fix_first_word(message, text)
     _log_script_mix(message, text, words)
     if not words:

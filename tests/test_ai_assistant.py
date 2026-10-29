@@ -345,7 +345,7 @@ def test_footer_label_follows_question_script(monkeypatch):
         _resp('tool_use', NS(type='tool_use', id='t', name='search_dissertations', input={'query': 'блокчейн'})),
         _resp('end_turn', NS(type='text', text='Базада 4 та иш бор.'))])
     text, _ = ai_assistant.answer('Блокчейн бўйича нечта иш бор?')
-    assert text.startswith('Базада 4 та') and 'Қидирилди: blokcheyn' in text
+    assert text.startswith('Базада 4 та') and 'Қидирилди: блокчейн' in text  # kirill shakl oldinda
 
 
 def test_script_mix_measured_and_logged_not_rewritten(monkeypatch, caplog):
@@ -470,3 +470,40 @@ def test_model_cannot_select_discipline_field_directly():
 def test_footer_names_the_code_for_disciplines():
     used = [{'name': 'dissertation_stats', 'input': ai_assistant.normalize_tool_args({'query': 'кимё'})}]
     assert ai_assistant.searched_words(used) == ['kimyo (ixtisoslik kodi 02.*)']
+
+
+# ── "X fanlari" → fan_tarmoqi, aks holda ixtisoslik kodi (server qoidasi) ──────
+
+def test_branch_rule_from_question_text():
+    r = ai_assistant.branch_rule
+    assert r('Тиббиёт фанлари доктори (DSc) нечта?') == ('fan_tarmoqi', '14')
+    assert r('Kimyo fanlari nomzodlari nechta?') == ('fan_tarmoqi', '02')
+    assert r("Qishloq xo'jaligi fanlari bo'yicha PhD") == ('fan_tarmoqi', '06')
+    assert r('Тиббиёт бўйича DSc нечта?') == ('kod', '14')
+    assert r("Kimyo bo'yicha nechta PhD?") == ('kod', '02')
+    assert r('Salom') is None and r("Blokcheyn bo'yicha nechta?") is None
+
+
+def test_server_overrides_model_choice_both_ways():
+    a = ai_assistant.apply_branch_rule
+    # model kodni tanladi, savol "fanlari" — fan_tarmoqi ga almashtiriladi
+    out = a('Тиббиёт фанлари доктори нечта?', {'fan_code': '14', 'daraja': 'DSc', 'group_by': 'daraja'})
+    assert out == {'fan_tarmoqi': 'tibbiyot', 'daraja': 'DSc', 'group_by': 'daraja'}
+    # model fan_tarmoqi ni tanladi, savolda "fanlari" yo'q — kodga almashtiriladi
+    out = a('Тиббиёт бўйича DSc нечта?', {'fan_tarmoqi': 'тиббиёт', 'daraja': 'DSc'})
+    assert out == {'fan_code': '14', 'daraja': 'DSc'}
+    # model hech birini bermasa ham qoida qo'shiladi; boshqa fanga oid chaqiruvga tegilmaydi
+    assert a("Kimyo bo'yicha nechta PhD?", {'daraja': 'PhD'})['fan_code'] == '02'
+    assert a("Kimyo bo'yicha nechta PhD?", {'fan_code': '14'}) == {'fan_code': '14'}
+    assert a('Salom', {'query': 'x'}) == {'query': 'x'}
+
+
+def test_cyrillic_footer_fully_cyrillic():
+    used = [{'name': 's', 'input': {'fan_code': '14', 'query': "sun'iy intellekt",
+                                    'variants': ['artificial intelligence', 'сунъий интеллект']}},
+            {'name': 's', 'input': {'fan_tarmoqi': 'tibbiyot'}}]
+    words = ai_assistant.searched_words(used, 'kirill')
+    assert words[0] == 'тиббиёт (ихтисослик коди 14.*)'
+    assert 'фан тармоғи: тиббиёт' in words
+    assert words.index('сунъий интеллект') < words.index("sun'iy intellekt")
+    assert ai_assistant.searched_words(used)[0] == 'tibbiyot (ixtisoslik kodi 14.*)'
