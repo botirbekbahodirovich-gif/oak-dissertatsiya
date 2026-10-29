@@ -414,23 +414,38 @@ def test_cyrillic_instruction_has_example_openings():
     assert '«Базада 4 та диссертация топилди…»' in s and 'Bazada' in s
 
 
-def test_discipline_groups_search_all_columns_topics_only_title():
+def test_disciplines_map_to_oak_code_topics_to_title():
     n = ai_assistant.normalize_tool_args
-    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'soha'
-    assert n({'query': 'kimyo'})['field'] == 'soha'
+    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'fan:14'
+    assert n({'query': 'kimyo'})['field'] == 'fan:02'
+    assert n({'query': 'pedagogika fanlari'})['field'] == 'fan:13'
+    assert n({'query': 'tibbiyot sohasida'})['field'] == 'fan:14'
+    assert n({'query': 'сиёсий фанлар'})['field'] == 'fan:23'
     assert n({'query': 'blockchain', 'field': 'any'})['field'] == 'mavzu'
-    assert 'тиббий' in n({'query': 'tibbiyot'})['variants']
+    assert n({'query': 'raqamli iqtisodiyot'})['field'] == 'mavzu'      # mavzu, iqtisodiyot fani emas
+    assert n({'query': 'tibbiyot muassasalarida infeksiya'}).get('field') != 'fan:14'
 
 
-def test_soha_field_searches_subject_columns_not_institution_or_names():
-    where, params, _ = ai_assistant.build_where(ai_assistant.normalize_tool_args({'query': 'tibbiyot'}))
-    for col in ('mavzu', 'fan_tarmoqi', 'ixtisoslik_nomi'):
-        assert f'{col} ILIKE' in where
-    for col in ('muassasa', 'olim', 'ilmiy_rahbar'):
+def test_discipline_priority_code_then_fan_then_title_no_column_union():
+    where, params, terms = ai_assistant.build_where(ai_assistant.normalize_tool_args({'query': 'tibbiyot'}))
+    assert terms == ['kod 14.*'] and where.count('%s') == len(params)
+    assert r'(^|[^0-9])14\.[0-9]{2}\.[0-9]{2}' in params
+    # har shox kod borligi/yo'qligi bo'yicha bir-birini istisno qiladi
+    assert where.count("NOT COALESCE(ixtisoslik, '') ~") == 2
+    for col in ('muassasa', 'olim', 'ilmiy_rahbar', 'ixtisoslik_nomi'):
         assert f'{col} ILIKE' not in where
-    assert where.count('%s') == len(params)
 
 
-def test_model_cannot_select_soha_field_directly():
+def test_fan_tarmoqi_is_separate_filter():
+    where, params, _ = ai_assistant.build_where({'fan_tarmoqi': 'texnika', 'daraja': 'PhD'})
+    assert 'fan_tarmoqi ILIKE' in where and '%техника%' in params and 'ixtisoslik ~' not in where
+
+
+def test_model_cannot_select_discipline_field_directly():
     enum = ai_assistant.TOOLS[0]['input_schema']['properties']['field']['enum']
-    assert 'soha' not in enum
+    assert not any(e.startswith('fan:') for e in enum)
+
+
+def test_footer_names_the_code_for_disciplines():
+    used = [{'name': 'dissertation_stats', 'input': ai_assistant.normalize_tool_args({'query': 'кимё'})}]
+    assert ai_assistant.searched_words(used) == ['kimyo (ixtisoslik kodi 02.*)']

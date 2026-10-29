@@ -86,10 +86,37 @@ _FIELDS = {
     'mavzu': 'mavzu', 'olim': 'olim', 'ilmiy_rahbar': 'ilmiy_rahbar',
     'muassasa': 'muassasa', 'ixtisoslik': 'ixtisoslik',
 }
-# Faqat server ishlatadigan (tool enumida yo'q) ko'p ustunli rejim: fan/soha nomi
-# dissertatsiya nomi, fan tarmog'i va ixtisoslik nomida qidiriladi. Muassasa ataylab
-# yo'q — "ветеринария медицинаси" kabi nomlar tibbiyotga begona ishlarni qo'shardi.
-_MULTI_FIELDS = {'soha': ('mavzu', 'fan_tarmoqi', 'ixtisoslik_nomi')}
+# Fan (soha) OAK ixtisosliklar nomenklaturasi bo'yicha: kodning birinchi ikki raqami.
+# 21/23/24 nomlari bazadagi ixtisoslik_nomi'dan olingan (Ҳарбий тиббиёт, Қуролли Кучлар…;
+# Сиёсий институтлар…; Ислом тарихи, Қуръоншунослик…). Birinchi shakl — "Qidirildi" uchun.
+DISCIPLINES = {
+    '01': ('fizika-matematika', 'физика-математика', 'fizika', 'физика', 'matematika', 'математика'),
+    '02': ('kimyo', 'кимё', 'химия', 'chemistry'),
+    '03': ('biologiya', 'биология', 'biology'),
+    '04': ('geologiya-mineralogiya', 'геология-минералогия', 'geologiya', 'геология'),
+    '05': ('texnika', 'техника', 'engineering'),
+    '06': ("qishloq xo'jaligi", 'қишлоқ хўжалиги', 'сельское хозяйство', 'agriculture'),
+    '07': ('tarix', 'тарих', 'история', 'history'),
+    '08': ('iqtisodiyot', 'иқтисодиёт', 'иқтисод', 'экономика', 'economics'),
+    '09': ('falsafa', 'фалсафа', 'философия', 'philosophy'),
+    '10': ('filologiya', 'филология', 'philology'),
+    '11': ('geografiya', 'география', 'geography'),
+    '12': ('yuridik', 'юридик', 'huquqshunoslik', 'ҳуқуқшунослик', 'юриспруденция', 'law'),
+    '13': ('pedagogika', 'педагогика', 'pedagogy'),
+    '14': ('tibbiyot', 'тиббиёт', 'тиббий', 'медицина', 'medicine'),
+    '15': ('farmatsevtika', 'фармацевтика', 'pharmacy'),
+    '16': ('veterinariya', 'ветеринария', 'veterinary'),
+    '17': ("san'atshunoslik", 'санъатшунослик', 'искусствоведение', 'art history'),
+    '18': ('arxitektura', 'архитектура', 'architecture'),
+    '19': ('psixologiya', 'психология', 'psychology'),
+    '21': ('harbiy', 'ҳарбий', 'военные науки', 'military'),
+    '22': ('sotsiologiya', 'социология', 'сотсиология', 'sociology'),
+    '23': ('siyosiy fanlar', 'сиёсий фанлар', 'siyosatshunoslik', 'сиёсатшунослик', 'политология',
+           'political science'),
+    '24': ('islomshunoslik', 'исломшунослик', 'islamic studies'),
+}
+_HAS_CODE_SQL = r"COALESCE(ixtisoslik, '') ~ '[0-9]{2}\.[0-9]{2}\.[0-9]{2}'"
+_NO_FAN_SQL = "NULLIF(TRIM(COALESCE(fan_tarmoqi, '')), '') IS NULL"
 _YEAR_SQL = "substring(sana from '(19[0-9]{2}|20[0-9]{2})')"
 _GROUPS = {
     'yil': _YEAR_SQL, 'daraja': "UPPER(TRIM(daraja))", 'muassasa': "TRIM(muassasa)",
@@ -104,6 +131,10 @@ _FILTER_PROPS = {
     'field': {'type': 'string', 'enum': ['any', *_FIELDS],
               'description': "Qaysi ustunda qidirish. Odatda 'any'; ism bo'lsa 'olim' yoki 'ilmiy_rahbar'."},
     'daraja': {'type': 'string', 'enum': ['any', 'PhD', 'DSc']},
+    'fan_tarmoqi': {'type': 'string',
+                    'description': ("Daraja tarmog'i — faqat \"X fanlari bo'yicha PhD/DSc\" (qaysi fanlar "
+                                    "bo'yicha daraja berilgan) so'ralganda, masalan 'texnika'. Fan/soha "
+                                    "haqidagi oddiy savolda ishlatma — u query orqali.")},
     'year_from': {'type': 'integer', 'minimum': 1950, 'maximum': 2100},
     'year_to': {'type': 'integer', 'minimum': 1950, 'maximum': 2100},
 }
@@ -155,10 +186,9 @@ def expand_terms(query, variants=()):
 # tanloviga bog'liq bo'lmasligi kerak (Haiku 5.5 da temperature sozlab bo'lmaydi).
 # Lug'atdagi mavzu → faqat lug'at guruhi (mavzu ustunida); umumiy so'zlar → mavzu
 # qidiruvi yo'q; qolganlari → takrorsiz, deterministik tartibda.
-# (qidiruv ustuni, shakllar). Soha/fan nomlari ('soha') fan tarmog'i va ixtisoslik nomida
-# bo'ladi — faqat mavzuda qidirilsa son keskin kamayadi (tibbiyot: 89). Muassasa orqali
-# qidirilmaydi: tibbiyotda u 313 ta begona ishni qo'shardi (veterinariya, pedagogika).
-# Texnologiya/mavzu atamalari ('mavzu') esa dissertatsiya nomida qidiriladi.
+# Mavzu atamalari (dissertatsiya nomida qidiriladi). Fan/soha nomlari bu yerda emas —
+# DISCIPLINES orqali ixtisoslik kodi → fan_tarmoqi → mavzu ustuvorligida aniqlanadi.
+# Mavzu guruhlari birinchi tekshiriladi ("raqamli iqtisodiyot" iqtisodiyot fani emas).
 SYNONYM_GROUPS = (
     ('mavzu', ('blokcheyn', 'блокчейн', 'blockchain', 'distributed ledger', 'taqsimlangan reestr',
                'тақсимланган реестр', 'распределенный реестр')),
@@ -166,14 +196,17 @@ SYNONYM_GROUPS = (
                'искусственный интеллект')),
     ('mavzu', ('raqamli iqtisodiyot', 'рақамли иқтисодиёт', 'цифровая экономика', 'digital economy')),
     ('mavzu', ('suv tejovchi', 'сув тежовчи', 'водосберегающ', 'water saving')),
-    ('soha', ('tibbiyot', 'тиббиёт', 'тиббий', 'медицин', 'medicine')),
-    ('soha', ('kimyo', 'кимё', 'химия', 'chemistry')),
-    ('soha', ('pedagogika', 'педагогика', 'pedagogy')),
+    *((f'fan:{code}', forms) for code, forms in DISCIPLINES.items()),
 )
 GENERIC_WORDS = frozenset({
     'phd', 'dsc', 'statistika', 'statistikasi', 'statistik', 'dissertatsiya', 'dissertatsiyalar',
     'dissertatsiyasi', 'dissertatsiyalari', 'ilmiy', 'ish', 'ishlar', 'himoya', 'soni', 'nechta',
     'jami', 'umumiy', 'baza', 'bazada',
+})
+# Fan nomi yonidagi to'ldiruvchi so'zlar — moslashda tashlanadi ("tibbiyot sohasida" → tibbiyot)
+FIELD_FILLER_WORDS = frozenset({
+    'fan', 'fani', 'fanlar', 'fanlari', 'fanlarida', 'soha', 'sohasi', 'sohasida', 'sohasidagi',
+    "yo'nalishi", "yo'nalishida", "bo'yicha",
 })
 ARGS_MEMO_TTL = 24 * 3600
 
@@ -191,14 +224,19 @@ def _is_generic(text):
 
 
 def _synonym_group(terms):
+    def core(text):
+        return ' '.join(w for w in _norm_key(text).split() if w not in FIELD_FILLER_WORDS)
+
     for term in terms:
-        k = _norm_key(term)
+        k = core(term)
         if not k:
             continue
         for field, group in SYNONYM_GROUPS:
             for member in group:
-                m = _norm_key(member)
-                if k == m or (len(m) >= 5 and k.startswith(m)):
+                m = core(member)  # "siyosiy fanlar" ↔ "сиёсий фанлар бўйича" — ikkalasi bir xil tozalanadi
+                # qo'shimchali shakl ("tibbiyotda") faqat so'zlar soni teng bo'lsa — ko'p so'zli
+                # mavzu savoli ("tibbiyot muassasalarida…") fanga aylanib ketmasin
+                if k == m or (len(m) >= 5 and k.startswith(m) and len(k.split()) == len(m.split())):
                     return field, group
     return None
 
@@ -234,6 +272,12 @@ def searched_words(tools_used):
     """Javob oxiridagi "Qidirildi:" qatori uchun — normallashtirilgan so'zlar, takrorsiz."""
     out = []
     for u in tools_used:
+        field = u['input'].get('field') or ''
+        if field.startswith('fan:') and field[4:] in DISCIPLINES:
+            label = f"{DISCIPLINES[field[4:]][0]} (ixtisoslik kodi {field[4:]}.*)"
+            if label not in out:
+                out.append(label)
+            continue
         for w in [u['input'].get('query'), *(u['input'].get('variants') or [])]:
             if w and w not in out:
                 out.append(w)
@@ -312,22 +356,39 @@ def _log_script_mix(question, text, allowed):
     return ratio
 
 
+def _ilike_any(col, terms, params):
+    params.extend(f'%{t}%' for t in terms)
+    return '(' + ' OR '.join(f"{col} ILIKE %s" for _ in terms) + ')'
+
+
+def _discipline_clause(code, params):
+    """Fan ustuvorlik bilan, ustunlarni birlashtirmasdan: kod bor → faqat kod; kod yo'q →
+    fan_tarmoqi; ikkalasi bo'sh → mavzu. Uch shox bir-birini istisno qiladi."""
+    forms = expand_terms(DISCIPLINES[code][0], DISCIPLINES[code][1:])
+    params.append(rf'(^|[^0-9]){code}\.[0-9]{{2}}\.[0-9]{{2}}')
+    by_code = f"({_HAS_CODE_SQL} AND ixtisoslik ~ %s)"
+    by_fan = f"(NOT {_HAS_CODE_SQL} AND NOT {_NO_FAN_SQL} AND {_ilike_any('fan_tarmoqi', forms, params)})"
+    by_title = f"(NOT {_HAS_CODE_SQL} AND {_NO_FAN_SQL} AND {_ilike_any('mavzu', forms, params)})"
+    return f"({by_code} OR {by_fan} OR {by_title})"
+
+
 def build_where(args):
     """Tool argumentlaridan (WHERE sql, params, ishlatilgan shakllar) quradi. Faqat parametrlar."""
     clauses, params = [], []
-    terms = expand_terms(args.get('query'), args.get('variants'))
-    if terms:
-        field = args.get('field') or 'any'
-        if field in _MULTI_FIELDS:
-            cols = list(_MULTI_FIELDS[field])
-        else:
+    field = args.get('field') or 'any'
+    code = field[4:] if field.startswith('fan:') else None
+    if code in DISCIPLINES:
+        terms = [f'kod {code}.*']
+        clauses.append(_discipline_clause(code, params))
+    else:
+        terms = expand_terms(args.get('query'), args.get('variants'))
+        if terms:
             cols = [_FIELDS[field]] if field in _FIELDS else list(_FIELDS.values())
-        ors = []
-        for col in cols:
-            for t in terms:
-                ors.append(f"{col} ILIKE %s")
-                params.append(f"%{t}%")
-        clauses.append('(' + ' OR '.join(ors) + ')')
+            clauses.append('(' + ' OR '.join(_ilike_any(c, terms, params) for c in cols) + ')')
+    # Daraja tarmog'i — alohida o'lchov ("texnika fanlari bo'yicha PhD")
+    fan_terms = expand_terms(args.get('fan_tarmoqi')) if isinstance(args.get('fan_tarmoqi'), str) else []
+    if fan_terms:
+        clauses.append(_ilike_any('fan_tarmoqi', fan_terms, params))
     daraja = args.get('daraja')
     if daraja in ('PhD', 'DSc'):
         clauses.append("UPPER(TRIM(daraja)) = %s")
