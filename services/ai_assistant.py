@@ -86,6 +86,10 @@ _FIELDS = {
     'mavzu': 'mavzu', 'olim': 'olim', 'ilmiy_rahbar': 'ilmiy_rahbar',
     'muassasa': 'muassasa', 'ixtisoslik': 'ixtisoslik',
 }
+# Faqat server ishlatadigan (tool enumida yo'q) ko'p ustunli rejim: fan/soha nomi
+# dissertatsiya nomi, fan tarmog'i va ixtisoslik nomida qidiriladi. Muassasa ataylab
+# yo'q — "ветеринария медицинаси" kabi nomlar tibbiyotga begona ishlarni qo'shardi.
+_MULTI_FIELDS = {'soha': ('mavzu', 'fan_tarmoqi', 'ixtisoslik_nomi')}
 _YEAR_SQL = "substring(sana from '(19[0-9]{2}|20[0-9]{2})')"
 _GROUPS = {
     'yil': _YEAR_SQL, 'daraja': "UPPER(TRIM(daraja))", 'muassasa': "TRIM(muassasa)",
@@ -151,8 +155,9 @@ def expand_terms(query, variants=()):
 # tanloviga bog'liq bo'lmasligi kerak (Haiku 5.5 da temperature sozlab bo'lmaydi).
 # Lug'atdagi mavzu → faqat lug'at guruhi (mavzu ustunida); umumiy so'zlar → mavzu
 # qidiruvi yo'q; qolganlari → takrorsiz, deterministik tartibda.
-# (qidiruv ustuni, shakllar). Soha/fan nomlari ('any') odatda ixtisoslik va muassasa
-# nomida bo'ladi — faqat mavzuda qidirilsa son keskin kamayadi (tibbiyot: 89 vs ~2 600).
+# (qidiruv ustuni, shakllar). Soha/fan nomlari ('soha') fan tarmog'i va ixtisoslik nomida
+# bo'ladi — faqat mavzuda qidirilsa son keskin kamayadi (tibbiyot: 89). Muassasa orqali
+# qidirilmaydi: tibbiyotda u 313 ta begona ishni qo'shardi (veterinariya, pedagogika).
 # Texnologiya/mavzu atamalari ('mavzu') esa dissertatsiya nomida qidiriladi.
 SYNONYM_GROUPS = (
     ('mavzu', ('blokcheyn', 'блокчейн', 'blockchain', 'distributed ledger', 'taqsimlangan reestr',
@@ -161,9 +166,9 @@ SYNONYM_GROUPS = (
                'искусственный интеллект')),
     ('mavzu', ('raqamli iqtisodiyot', 'рақамли иқтисодиёт', 'цифровая экономика', 'digital economy')),
     ('mavzu', ('suv tejovchi', 'сув тежовчи', 'водосберегающ', 'water saving')),
-    ('any', ('tibbiyot', 'тиббиёт', 'тиббий', 'медицин', 'medicine')),
-    ('any', ('kimyo', 'кимё', 'химия', 'chemistry')),
-    ('any', ('pedagogika', 'педагогика', 'pedagogy')),
+    ('soha', ('tibbiyot', 'тиббиёт', 'тиббий', 'медицин', 'medicine')),
+    ('soha', ('kimyo', 'кимё', 'химия', 'chemistry')),
+    ('soha', ('pedagogika', 'педагогика', 'pedagogy')),
 )
 GENERIC_WORDS = frozenset({
     'phd', 'dsc', 'statistika', 'statistikasi', 'statistik', 'dissertatsiya', 'dissertatsiyalar',
@@ -313,7 +318,10 @@ def build_where(args):
     terms = expand_terms(args.get('query'), args.get('variants'))
     if terms:
         field = args.get('field') or 'any'
-        cols = [_FIELDS[field]] if field in _FIELDS else list(_FIELDS.values())
+        if field in _MULTI_FIELDS:
+            cols = list(_MULTI_FIELDS[field])
+        else:
+            cols = [_FIELDS[field]] if field in _FIELDS else list(_FIELDS.values())
         ors = []
         for col in cols:
             for t in terms:

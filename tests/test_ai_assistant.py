@@ -416,7 +416,21 @@ def test_cyrillic_instruction_has_example_openings():
 
 def test_discipline_groups_search_all_columns_topics_only_title():
     n = ai_assistant.normalize_tool_args
-    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'any'
-    assert n({'query': 'kimyo'})['field'] == 'any'
+    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'soha'
+    assert n({'query': 'kimyo'})['field'] == 'soha'
     assert n({'query': 'blockchain', 'field': 'any'})['field'] == 'mavzu'
     assert 'тиббий' in n({'query': 'tibbiyot'})['variants']
+
+
+def test_soha_field_searches_subject_columns_not_institution_or_names():
+    where, params, _ = ai_assistant.build_where(ai_assistant.normalize_tool_args({'query': 'tibbiyot'}))
+    for col in ('mavzu', 'fan_tarmoqi', 'ixtisoslik_nomi'):
+        assert f'{col} ILIKE' in where
+    for col in ('muassasa', 'olim', 'ilmiy_rahbar'):
+        assert f'{col} ILIKE' not in where
+    assert where.count('%s') == len(params)
+
+
+def test_model_cannot_select_soha_field_directly():
+    enum = ai_assistant.TOOLS[0]['input_schema']['properties']['field']['enum']
+    assert 'soha' not in enum
