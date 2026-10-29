@@ -99,8 +99,8 @@ class DeadPhotoColumnsTests(unittest.TestCase):
         self.assertNotIn('supabase.co', (ROOT / 'app.py').read_text(encoding='utf-8'))
 
     def test_migration_and_rollback_exist(self):
-        up = (ROOT / 'migrations/022_olim_photos.sql').read_text(encoding='utf-8')
-        down = (ROOT / 'migrations/rollback/022_olim_photos.down.sql').read_text(encoding='utf-8')
+        up = (ROOT / 'migrations/023_olim_photos.sql').read_text(encoding='utf-8')
+        down = (ROOT / 'migrations/rollback/023_olim_photos.down.sql').read_text(encoding='utf-8')
         self.assertIn('name_norm TEXT PRIMARY KEY', up)
         self.assertIn('DROP TABLE IF EXISTS olim_photos', down)
 

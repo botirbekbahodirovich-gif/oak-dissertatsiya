@@ -1,4 +1,4 @@
-"""Load the matched archive photos into olim_photos (migration 022).
+"""Load the matched archive photos into olim_photos (migration 023).
 
 Input CSV columns: name_norm, file, match_type, source_file — produced by the
 local matching step (exports/photo_match/, not in git). Every name_norm must
@@ -74,7 +74,7 @@ def main():
                 raise SystemExit(f'Refusing: connected to {db!r}, expected {args.expect_db!r}.')
             cur.execute("SELECT to_regclass('public.olim_photos')")
             if cur.fetchone()[0] is None:
-                raise SystemExit('olim_photos is missing — apply migrations/022_olim_photos.sql first.')
+                raise SystemExit('olim_photos is missing — apply migrations/023_olim_photos.sql first.')
             cur.execute('SELECT COUNT(*) FROM olim_photos')
             before = cur.fetchone()[0]
             if args.apply:

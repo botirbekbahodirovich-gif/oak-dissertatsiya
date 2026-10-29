@@ -26,10 +26,10 @@ class MigrationNumberingTests(unittest.TestCase):
     def test_018_file_exists(self):
         self.assertTrue(os.path.isfile(MIGRATION))
 
-    def test_migrations_remain_sequential_through_022(self):
+    def test_migrations_remain_sequential_through_023(self):
         """018 discovery scheduler, 019 maqola tarjimasi, 020 institution
-        identity, 021 institution links va 022 olim rasmlari ketma-ket,
-        navbatdagi 023 bo'sh."""
+        identity, 021 institution links va 023 olim rasmlari ketma-ket (022
+        muassasa_recovered uchun band), navbatdagi 024 bo'sh."""
         names = [name for name in os.listdir(os.path.join(_REPO_ROOT, 'migrations'))
                  if re.match(r'\d+_', name)]
         numbers = [int(re.match(r'(\d+)_', name).group(1)) for name in names]
@@ -38,15 +38,18 @@ class MigrationNumberingTests(unittest.TestCase):
         self.assertIn(19, numbers)
         self.assertIn('020_institution_identity.sql', names)
         self.assertIn('021_institution_links.sql', names)
-        self.assertIn('022_olim_photos.sql', names)
-        self.assertNotIn(23, numbers)
+        self.assertIn('023_olim_photos.sql', names)
+        self.assertNotIn(24, numbers)
 
     def test_still_no_gaps_across_all_migrations(self):
         numbers = sorted(set(
             int(re.match(r'(\d+)_', name).group(1))
             for name in os.listdir(os.path.join(_REPO_ROOT, 'migrations'))
             if re.match(r'\d+_', name)))
-        self.assertEqual(numbers, list(range(1, max(numbers) + 1)))
+        # 022 is reserved for 022_muassasa_recovered.sql (feat/institution-backfill-v2,
+        # not on main yet); it may be absent until that branch lands.
+        expected = [n for n in range(1, max(numbers) + 1) if n in numbers or n != 22]
+        self.assertEqual(numbers, expected)
 
 
 class MigrationSafetyTests(unittest.TestCase):

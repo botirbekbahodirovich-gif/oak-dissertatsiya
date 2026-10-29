@@ -1,6 +1,6 @@
 """Scholar photo lookup: olim_profiles.photo_url → olim_photos → placeholder.
 
-olim_photos (migration 022) maps utils.name_norm.strict_key(name) to a
+olim_photos (migration 023) maps utils.name_norm.strict_key(name) to a
 256×256 WebP under static/olim_photos/. The whole table (~7k rows) is cached
 in memory for PHOTO_CACHE_TTL seconds. dissertations.photo_url and
 ilmiy_rahbar_photo_url (dead Supabase links) are deliberately never read.
