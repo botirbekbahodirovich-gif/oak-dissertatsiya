@@ -1192,7 +1192,7 @@ _FULL_DISS_COLUMNS = '''
     COALESCE(yetakchi_tashkilot, '') AS "Yetakchi_tashkilot",
     COALESCE(fan_tarmoqi, '') AS "Fan_tarmoqi",
     COALESCE(yonalish, '') AS "Yonalish",
-    COALESCE(photo_url, '') AS "photo_url"
+    NULL AS "photo_url"
 '''
 
 
@@ -1589,7 +1589,11 @@ def _render_olim_profile(term, canonical=None):
     except Exception:
         reputation = None
 
+    from utils.olim_photos import scholar_photo_url
+    olim_photo = scholar_photo_url(term, (profile or {}).get('photo_url'))
+
     return render_template('olim_profile.html', olim_name=term, dissertations=own, is_owner=is_owner,
+                           olim_photo=olim_photo,
                            message_target_id=message_target_id,
                            as_supervisor=as_supervisor, as_opponent=as_opponent,
                            shogirdlar=as_supervisor, opponent_works=as_opponent,

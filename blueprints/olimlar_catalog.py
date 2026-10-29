@@ -5,7 +5,7 @@ uchun mavjud obro' maydonlari keshda saqlanadi, lekin katalog API va UI'ga
 chiqarilmaydi.
 
 Manba jadvallar (hech biri yangi emas, hammasi mavjud):
-  dissertations        — olim, ilmiy_rahbar(+daraja,+photo), daraja, ixtisoslik,
+  dissertations        — olim, ilmiy_rahbar(+daraja), daraja, ixtisoslik,
                          muassasa, sana, opponent_1..3
   institution_map      — TRIM(muassasa)=cyrillic_name → canonical_name, region
   roadmap_publications — nashrlar (plan_id→roadmap_plans.user_id→users.id).
@@ -35,6 +35,7 @@ from flask_login import login_required, current_user
 
 from data import get_connection, clean_olim_name
 from utils.search_helper import matches_query
+from utils.olim_photos import scholar_photo_url
 from utils.olimlar_catalog_quality import (
     canonical_specialty,
     normalize_region,
@@ -152,7 +153,7 @@ def _build_cache():
                 base = _fetchall(cur, f"""
                     SELECT TRIM(d.ilmiy_rahbar) AS name,
                            MAX(d.ilmiy_rahbar_daraja) AS degree,
-                           MAX(d.ilmiy_rahbar_photo_url) AS photo_url,
+                           NULL AS photo_url,
                            COUNT(*) AS total_students,
                            COUNT(*) FILTER (WHERE d.daraja ILIKE ANY(%s)) AS phd_students,
                            COUNT(*) FILTER (WHERE d.daraja ILIKE ANY(%s)) AS dsc_students,
@@ -312,7 +313,7 @@ def _build_cache():
                     pub_map, gs_map = {}, {}
 
                 # 6) Claimed profil + ORCID + Scholar (olim_profiles + cabinet_users)
-                claimed, orcid_set, scholar_url_map = set(), set(), {}
+                claimed, orcid_set, scholar_url_map, own_photo_map = set(), set(), {}, {}
                 try:
                     for (oname,) in _fetchall(cur,
                             "SELECT LOWER(TRIM(olim_name)) FROM olim_profiles "
@@ -324,6 +325,11 @@ def _build_cache():
                             "GROUP BY LOWER(TRIM(olim_name))"):
                         if surl:
                             scholar_url_map[oname] = surl
+                    for oname, ph in _fetchall(cur,
+                            "SELECT LOWER(TRIM(olim_name)), MAX(photo_url) FROM olim_profiles "
+                            "WHERE photo_url IS NOT NULL AND TRIM(photo_url) <> '' "
+                            "GROUP BY LOWER(TRIM(olim_name))"):
+                        own_photo_map[oname] = ph
                 except Exception:
                     pass
                 try:
@@ -343,6 +349,7 @@ def _build_cache():
                     key = s['name'].lower()
                     s['publications_count'] = pub_map.get(key, 0)
                     s['is_claimed'] = key in claimed
+                    s['photo_url'] = scholar_photo_url(s['name'], own_photo_map.get(key)) or ''
                     s['has_orcid'] = key in orcid_set
                     gsu = gs_map.get(key) or scholar_url_map.get(key) or ''
                     s['google_scholar_url'] = gsu

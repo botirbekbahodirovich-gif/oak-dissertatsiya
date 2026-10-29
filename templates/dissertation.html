@@ -120,7 +120,7 @@
       <div class="field">
         <div class="field-lbl"> Olim</div>
         <div class="field-val" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          {{ avatar(row.get('photo_url') if row.get is defined else None, row.Olim or '', 48) }}
+          {{ avatar(olim_photo_url(row.Olim or ''), row.Olim or '', 48) }}
           {% if row.Olim %}<a href="/olim/{{ row.Olim|urlencode }}">{{ row.Olim_short or row.Olim }}</a>
           {% else %}<span style="color:var(--color-action);"> Noma'lum muallif</span>{% endif %}
         </div>
