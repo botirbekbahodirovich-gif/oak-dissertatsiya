@@ -131,6 +131,9 @@ _FILTER_PROPS = {
     'field': {'type': 'string', 'enum': ['any', *_FIELDS],
               'description': "Qaysi ustunda qidirish. Odatda 'any'; ism bo'lsa 'olim' yoki 'ilmiy_rahbar'."},
     'daraja': {'type': 'string', 'enum': ['any', 'PhD', 'DSc']},
+    'soha': {'type': 'string',
+             'description': ("Fan/soha nomi (masalan 'tibbiyot', 'kimyo'). Savolda fan va mavzu birga "
+                             "bo'lsa (\"tibbiyotda sun'iy intellekt\") fanni shu yerga, mavzuni query'ga yoz.")},
     'fan_tarmoqi': {'type': 'string',
                     'description': ("Daraja tarmog'i — faqat \"X fanlari bo'yicha PhD/DSc\" (qaysi fanlar "
                                     "bo'yicha daraja berilgan) so'ralganda, masalan 'texnika'. Fan/soha "
@@ -241,9 +244,21 @@ def _synonym_group(terms):
     return None
 
 
+def _discipline_code(text):
+    hit = _synonym_group([text]) if text else None
+    return hit[0][4:] if hit and hit[0].startswith('fan:') else None
+
+
 def normalize_tool_args(args):
-    """Model bergan tool argumentlarini deterministik shaklga keltiradi."""
+    """Model bergan tool argumentlarini deterministik shaklga keltiradi.
+    Fan (soha) `fan_code` ga ajratiladi — mavzu (query) bilan AND bo'lib birga ishlaydi
+    ("tibbiyotda sun'iy intellekt": fan_code=14 + query=sun'iy intellekt)."""
     a = dict(args or {})
+    soha = a.pop('soha', None)
+    if isinstance(soha, str) and _discipline_code(soha):
+        a['fan_code'] = _discipline_code(soha)
+    if a.get('fan_code') not in DISCIPLINES:
+        a.pop('fan_code', None)
     query = ' '.join((a.get('query') or '').split())
     variants = [' '.join(v.split()) for v in (a.get('variants') or []) if isinstance(v, str)]
     if not query or _is_generic(query):
@@ -251,6 +266,12 @@ def normalize_tool_args(args):
         a.pop('variants', None)
         return a
     hit = _synonym_group([query, *variants])
+    if hit and hit[0].startswith('fan:'):
+        # query'ning o'zi fan nomi — mavzu qidiruvi yo'q, faqat fan
+        a.setdefault('fan_code', hit[0][4:])
+        for k in ('query', 'variants', 'field'):
+            a.pop(k, None)
+        return a
     if hit:
         field, group = hit
         a.update(query=group[0], variants=sorted(group[1:], key=_norm_key), field=field)
@@ -272,12 +293,15 @@ def searched_words(tools_used):
     """Javob oxiridagi "Qidirildi:" qatori uchun — normallashtirilgan so'zlar, takrorsiz."""
     out = []
     for u in tools_used:
-        field = u['input'].get('field') or ''
-        if field.startswith('fan:') and field[4:] in DISCIPLINES:
-            label = f"{DISCIPLINES[field[4:]][0]} (ixtisoslik kodi {field[4:]}.*)"
+        code = u['input'].get('fan_code')
+        if code in DISCIPLINES:
+            label = f"{DISCIPLINES[code][0]} (ixtisoslik kodi {code}.*)"
             if label not in out:
                 out.append(label)
-            continue
+        if u['input'].get('fan_tarmoqi'):
+            label = f"fan tarmog'i: {u['input']['fan_tarmoqi']}"
+            if label not in out:
+                out.append(label)
         for w in [u['input'].get('query'), *(u['input'].get('variants') or [])]:
             if w and w not in out:
                 out.append(w)
@@ -368,23 +392,38 @@ def _discipline_clause(code, params):
     params.append(rf'(^|[^0-9]){code}\.[0-9]{{2}}\.[0-9]{{2}}')
     by_code = f"({_HAS_CODE_SQL} AND ixtisoslik ~ %s)"
     by_fan = f"(NOT {_HAS_CODE_SQL} AND NOT {_NO_FAN_SQL} AND {_ilike_any('fan_tarmoqi', forms, params)})"
-    by_title = f"(NOT {_HAS_CODE_SQL} AND {_NO_FAN_SQL} AND {_ilike_any('mavzu', forms, params)})"
+    # Mavzu fallback'i — butun so'z (+ oddiy qo'shimcha), substring emas: "кимё" ≠ "кимётерапия"
+    params.append(_word_regex(forms))
+    by_title = f"(NOT {_HAS_CODE_SQL} AND {_NO_FAN_SQL} AND mavzu ~* %s)"
     return f"({by_code} OR {by_fan} OR {by_title})"
+
+
+_WORD_CHARS = "A-Za-zА-Яа-яЁёЎўҚқҒғҲҳ'ʻ‘’"
+_UZ_SUFFIXES = ('си', 'ни', 'да', 'дан', 'га', 'нинг', 'лар', 'лари', 'даги',
+                'si', 'ni', 'da', 'dan', 'ga', 'ning', 'lar', 'lari', 'dagi')
+
+
+def _word_regex(forms):
+    """PostgreSQL ~* uchun: shakllardan biri alohida so'z sifatida (ixtiyoriy kelishik
+    qo'shimchasi bilan). Harf sinfi aniq yozilgan — [[:alpha:]] C lokalida kirillni bilmaydi."""
+    alts = '|'.join(re.escape(f) for f in sorted(set(forms), key=len, reverse=True))
+    sufs = '|'.join(_UZ_SUFFIXES)
+    return f"(^|[^{_WORD_CHARS}])({alts})({sufs})?([^{_WORD_CHARS}]|$)"
 
 
 def build_where(args):
     """Tool argumentlaridan (WHERE sql, params, ishlatilgan shakllar) quradi. Faqat parametrlar."""
-    clauses, params = [], []
-    field = args.get('field') or 'any'
-    code = field[4:] if field.startswith('fan:') else None
+    clauses, params, terms = [], [], []
+    code = args.get('fan_code')
     if code in DISCIPLINES:
-        terms = [f'kod {code}.*']
+        terms.append(f'kod {code}.*')
         clauses.append(_discipline_clause(code, params))
-    else:
-        terms = expand_terms(args.get('query'), args.get('variants'))
-        if terms:
-            cols = [_FIELDS[field]] if field in _FIELDS else list(_FIELDS.values())
-            clauses.append('(' + ' OR '.join(_ilike_any(c, terms, params) for c in cols) + ')')
+    topic = expand_terms(args.get('query'), args.get('variants'))
+    if topic:
+        field = args.get('field') or 'any'
+        cols = [_FIELDS[field]] if field in _FIELDS else list(_FIELDS.values())
+        clauses.append('(' + ' OR '.join(_ilike_any(c, topic, params) for c in cols) + ')')
+        terms += topic
     # Daraja tarmog'i — alohida o'lchov ("texnika fanlari bo'yicha PhD")
     fan_terms = expand_terms(args.get('fan_tarmoqi')) if isinstance(args.get('fan_tarmoqi'), str) else []
     if fan_terms:

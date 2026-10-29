@@ -416,14 +416,35 @@ def test_cyrillic_instruction_has_example_openings():
 
 def test_disciplines_map_to_oak_code_topics_to_title():
     n = ai_assistant.normalize_tool_args
-    assert n({'query': 'тиббиёт', 'field': 'mavzu'})['field'] == 'fan:14'
-    assert n({'query': 'kimyo'})['field'] == 'fan:02'
-    assert n({'query': 'pedagogika fanlari'})['field'] == 'fan:13'
-    assert n({'query': 'tibbiyot sohasida'})['field'] == 'fan:14'
-    assert n({'query': 'сиёсий фанлар'})['field'] == 'fan:23'
+    a = n({'query': 'тиббиёт', 'field': 'mavzu'})
+    assert a['fan_code'] == '14' and 'query' not in a and 'field' not in a
+    assert n({'query': 'kimyo'})['fan_code'] == '02'
+    assert n({'query': 'pedagogika fanlari'})['fan_code'] == '13'
+    assert n({'query': 'tibbiyot sohasida'})['fan_code'] == '14'
+    assert n({'query': 'сиёсий фанлар'})['fan_code'] == '23'
     assert n({'query': 'blockchain', 'field': 'any'})['field'] == 'mavzu'
-    assert n({'query': 'raqamli iqtisodiyot'})['field'] == 'mavzu'      # mavzu, iqtisodiyot fani emas
-    assert n({'query': 'tibbiyot muassasalarida infeksiya'}).get('field') != 'fan:14'
+    r = n({'query': 'raqamli iqtisodiyot'})                               # mavzu, iqtisodiyot fani emas
+    assert r['field'] == 'mavzu' and 'fan_code' not in r
+    assert 'fan_code' not in n({'query': 'tibbiyot muassasalarida infeksiya'})
+    assert 'fan_code' not in n({'fan_code': '99', 'query': 'x'})          # noma'lum kod tashlanadi
+
+
+def test_discipline_and_topic_combine_with_and():
+    a = ai_assistant.normalize_tool_args({'soha': 'tibbiyotda', 'query': "sun'iy intellekt"})
+    assert a['fan_code'] == '14' and a['query'] == "sun'iy intellekt" and a['field'] == 'mavzu'
+    where, params, terms = ai_assistant.build_where(a)
+    assert terms[0] == 'kod 14.*' and 'сунъий интеллект' in terms
+    assert ') AND (' in where and 'mavzu ILIKE' in where
+    assert ai_assistant.searched_words([{'name': 'x', 'input': a}])[0] == 'tibbiyot (ixtisoslik kodi 14.*)'
+
+
+def test_title_fallback_matches_whole_words_only():
+    import re
+    pattern = ai_assistant._word_regex(ai_assistant.expand_terms('кимё', ['kimyo']))
+    hit = lambda s: re.search(pattern, s, re.I) is not None
+    assert not hit('Кимётерапиядан сўнг асоратлар') and not hit('kimyoterapiya')
+    assert hit('Кимё фанини ўқитиш') and hit('Мактаб кимёси') and hit('Kimyo darsi') and hit('(кимё)')
+    assert not hit('Кимёвий таркиб')
 
 
 def test_discipline_priority_code_then_fan_then_title_no_column_union():
