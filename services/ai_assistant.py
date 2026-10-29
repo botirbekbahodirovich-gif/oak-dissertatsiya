@@ -77,7 +77,10 @@ bo'lsa (lotin yoki kirill), butun javobni o'sha alifboda yoz — bir javobda ara
 bazadagi ism va nomlarni o'zgartirmasdan keltir. \
 "Foydalanuvchi so'radi..." kabi uchinchi shaxsda gapirma, so'rovni qayta aytib berma.
 - Qisqa yoz: 2–5 jumla yoki 3–7 bandli ro'yxat. Oddiy Markdown: **qalin**, ro'yxat. Jadval ishlatma.
-- Qaysi so'z va shakllar bo'yicha qidirilganini javobda sanab o'tma — server buni oxiriga o'zi qo'shadi.
+- Qidiruv qanday bajarilganini javob matnida tasvirlama: so'z va shakllarni sanama, filtr, ustun, \
+ixtisoslik kodi, fan tarmog'i yoki qamrovni izohlama ("mavzu bo'yicha qidirildi", "kod 14.* bo'yicha", \
+"fan tarmog'i filtri bilan", "barcha maydonlar bo'yicha" kabi). Server buni oxirida "Qidirildi" \
+qatorida o'zi ko'rsatadi. Faqat natijani ayt.
 - "PhD statistikasi", "nechta dissertatsiya bor" kabi umumiy savolda mavzu qidirma: query bo'sh \
 qoldir va faqat dissertation_stats chaqir (daraja/yil filtrlari bilan).
 - Ism va mavzularni bazadagi yozuvida (kirill bo'lsa kirillda) keltir."""

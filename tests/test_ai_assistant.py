@@ -507,3 +507,9 @@ def test_cyrillic_footer_fully_cyrillic():
     assert 'фан тармоғи: тиббиёт' in words
     assert words.index('сунъий интеллект') < words.index("sun'iy intellekt")
     assert ai_assistant.searched_words(used)[0] == 'tibbiyot (ixtisoslik kodi 14.*)'
+
+
+def test_prompt_forbids_describing_filters_in_answer():
+    p = ai_assistant.SYSTEM_PROMPT
+    assert 'Qidiruv qanday bajarilganini javob matnida tasvirlama' in p
+    assert '"Qidirildi"' in p and "fan tarmog'i filtri bilan" in p
