@@ -513,3 +513,42 @@ def test_prompt_forbids_describing_filters_in_answer():
     p = ai_assistant.SYSTEM_PROMPT
     assert 'Qidiruv qanday bajarilganini javob matnida tasvirlama' in p
     assert '"Qidirildi"' in p and "fan tarmog'i filtri bilan" in p
+
+
+def test_research_gaps_tool_is_offered_and_prompted():
+    assert 'research_gaps' in {t['name'] for t in ai_assistant.TOOLS}
+    assert 'cache_control' in ai_assistant.TOOLS[-1]  # kesh prefiksi oxirgi toolda qoladi
+    assert 'research_gaps' in ai_assistant.SYSTEM_PROMPT
+    assert ai_assistant._wants_topic_advice('Mavzu tavsiya et')
+    assert not ai_assistant._wants_topic_advice('PhD statistikasi')
+
+
+def test_research_gaps_parameterised_and_shaped(monkeypatch):
+    calls = []
+
+    def fake_query(sql, params):
+        calls.append((sql, params))
+        if 'MAX(' in sql and 'GROUP BY' not in sql:
+            return [{'y': 2026}]
+        if 'FILTER' in sql and 'GROUP BY' not in sql:
+            return [{'n': 1000, 'r': 600}]
+        if 'GROUP BY' in sql:
+            return [{'kod': '05.30.12', 'nomi': ' Nom ', 'jami': 40, 'songgi': 4, 'oxirgi_yil': 2025}]
+        return [{'kod': '05.30.12', 'mavzu': 'Mavzu A', 'yil': 2025}]
+
+    monkeypatch.setattr(ai_assistant, '_query', fake_query)
+    out = ai_assistant.research_gaps({'query': "x'; DROP", 'min_total': 1, 'top': 99})
+    assert out['songgi_davr'] == '2024–2026' and out['baza_songgi_ulush'] == 0.6
+    g = out['gaps'][0]
+    assert g['songgi_ulush'] == 0.1 and g['nomi'] == 'Nom' and g['oxirgi_mavzular'][0]['mavzu'] == 'Mavzu A'
+    grouped = next(p for s, p in calls if 'GROUP BY' in s)
+    assert grouped[-1] == ai_assistant.GAPS_MAX and 5 in grouped  # chegaralar qisiladi
+    assert all('DROP' not in s for s, _ in calls)
+
+
+def test_fallback_topic_advice_uses_research_gaps(monkeypatch):
+    monkeypatch.setattr(ai_assistant, 'research_gaps', lambda a: {'gaps': []})
+    monkeypatch.setattr(ai_assistant, 'search_dissertations', lambda a: pytest.fail('search emas'))
+    monkeypatch.setattr(ai_client, 'complete', lambda *a, **k: 'tavsiya')
+    text, used = ai_assistant._answer_fallback('Mavzu tavsiya et')
+    assert text == 'tavsiya' and used[0]['name'] == 'research_gaps'

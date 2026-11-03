@@ -43,6 +43,8 @@ MAX_TOOL_ROUNDS = 4
 MAX_PATTERNS = 16
 MAX_ROWS = 10
 MIN_VARIANT_LEN = 4
+GAPS_MAX = 8
+GAPS_RECENT_YEARS = 3
 
 SYSTEM_PROMPT = """Sen olimlar.uz platformasining AI yordamchisisan. Platformada O'zbekiston OAK \
 dissertatsiyalari bazasi bor (mavzu, olim, ilmiy rahbar, muassasa, ixtisoslik, daraja PhD/DSc, sana).
@@ -83,7 +85,16 @@ ixtisoslik kodi, fan tarmog'i yoki qamrovni izohlama ("mavzu bo'yicha qidirildi"
 qatorida o'zi ko'rsatadi. Faqat natijani ayt.
 - "PhD statistikasi", "nechta dissertatsiya bor" kabi umumiy savolda mavzu qidirma: query bo'sh \
 qoldir va faqat dissertation_stats chaqir (daraja/yil filtrlari bilan).
-- Ism va mavzularni bazadagi yozuvida (kirill bo'lsa kirillda) keltir."""
+- Ism va mavzularni bazadagi yozuvida (kirill bo'lsa kirillda) keltir.
+
+Mavzu tavsiyasi ("Mavzu tavsiya et", "qanday mavzu tanlay", "kam o'rganilgan yo'nalish"):
+- Tasodifiy sarlavhalar ro'yxatini berma. research_gaps chaqir (savolda fan yoki mavzu bo'lsa — \
+soha/query bilan). Natija bo'sh bo'lsa, min_total ni kamaytirib qayta chaqir.
+- Natijadan 3–5 ta yo'nalish tanla. Har biri: **ixtisoslik nomi (kod)** — nega kam o'rganilgan \
+(jami N ta, so'nggi davrda M ta, oxirgi himoya yili; bazaning so'nggi davr ulushi bilan solishtir — \
+faqat tool bergan sonlar), so'ng bitta aniq "Taklif:" mavzu g'oyasi. Taklif — sening g'oyang, \
+bazadagi mavzu emas; oxirgi_mavzular'ni aynan takrorlamasin.
+- Oxirida bir jumla: tanlashdan oldin ilmiy rahbar bilan maslahatlashish va mavzuni qidiruvda tekshirish."""
 
 _FIELDS = {
     'mavzu': 'mavzu', 'olim': 'olim', 'ilmiy_rahbar': 'ilmiy_rahbar',
@@ -153,6 +164,17 @@ TOOLS = [
         'input_schema': {'type': 'object', 'properties': {
             **_FILTER_PROPS,
             'limit': {'type': 'integer', 'minimum': 1, 'maximum': MAX_ROWS},
+        }, 'additionalProperties': False},
+    },
+    {
+        'name': 'research_gaps',
+        'description': ("Kam o'rganilgan yo'nalishlarni topadi: kamida min_total ta himoyasi bor (shakllangan), "
+                        "lekin so'nggi 3 yildagi himoyalar ulushi baza o'rtachasidan past ixtisosliklar. Har biri "
+                        "uchun kod, nom, jami, so'nggi 3 yil, oxirgi himoya yili va 2 ta oxirgi mavzu."),
+        'input_schema': {'type': 'object', 'properties': {
+            **{k: _FILTER_PROPS[k] for k in ('query', 'variants', 'soha', 'daraja')},
+            'min_total': {'type': 'integer', 'minimum': 5, 'maximum': 100},
+            'top': {'type': 'integer', 'minimum': 3, 'maximum': GAPS_MAX},
         }, 'additionalProperties': False},
     },
     {
@@ -570,7 +592,56 @@ def dissertation_stats(args):
     return out
 
 
-_HANDLERS = {'search_dissertations': search_dissertations, 'dissertation_stats': dissertation_stats}
+_CODE_SQL = r"substring(ixtisoslik from '[0-9]{2}\.[0-9]{2}\.[0-9]{2}')"
+
+
+def research_gaps(args):
+    """Shakllangan, lekin so'nggi yillarda kam himoya qilinayotgan ixtisosliklar.
+    Kodlarda xatoli yozuvlar ko'p (1 ta himoyali "kod"lar) — min_total ularni tashlaydi.
+    So'nggi davr — bazadagi eng katta yildan GAPS_RECENT_YEARS yil; ulush baza o'rtachasi bilan solishtiriladi."""
+    a = {k: v for k, v in args.items() if k not in ('field',)}
+    where, params, terms = build_where(a)
+    min_total = max(5, min(int(a.get('min_total') or 10), 100))
+    top = max(3, min(int(a.get('top') or GAPS_MAX), GAPS_MAX))
+    ref = _query(f"SELECT MAX({_YEAR_SQL}::int) AS y FROM dissertations WHERE {_YEAR_SQL} IS NOT NULL", [])[0]['y']
+    if not ref:
+        return {'gaps': [], 'note': "yil ma'lumoti yo'q"}
+    since = ref - GAPS_RECENT_YEARS + 1
+    base = _query(
+        f"SELECT COUNT(*) AS n, COUNT(*) FILTER (WHERE {_YEAR_SQL}::int >= %s) AS r "
+        f"FROM dissertations WHERE {where}", [since] + params)[0]
+    if a.get('fan_code') in DISCIPLINES:  # yozuvda ikki kod bo'lsa — boshqa fan kodi guruhga chiqmasin
+        where += f" AND {_CODE_SQL} LIKE %s"
+        params = params + [a['fan_code'] + '.%']
+    gaps = _query(
+        f"SELECT {_CODE_SQL} AS kod, "
+        f"mode() WITHIN GROUP (ORDER BY NULLIF(TRIM(ixtisoslik_nomi), '')) AS nomi, "
+        f"COUNT(*) AS jami, COUNT(*) FILTER (WHERE {_YEAR_SQL}::int >= %s) AS songgi, "
+        f"MAX({_YEAR_SQL}::int) AS oxirgi_yil "
+        f"FROM dissertations WHERE {where} AND {_CODE_SQL} IS NOT NULL "
+        # oxirgi himoya so'nggi davrda — nomenklaturadan chiqarilgan eski kodlar tavsiya qilinmaydi
+        f"GROUP BY 1 HAVING COUNT(*) >= %s AND MAX({_YEAR_SQL}::int) >= %s "
+        f"ORDER BY COUNT(*) FILTER (WHERE {_YEAR_SQL}::int >= %s)::float / COUNT(*), COUNT(*) DESC, 1 "
+        f"LIMIT %s", [since] + params + [min_total, since, since, top])
+    if gaps:
+        codes = [g['kod'] for g in gaps]
+        latest = _query(
+            f"SELECT kod, mavzu, yil FROM (SELECT {_CODE_SQL} AS kod, TRIM(mavzu) AS mavzu, "
+            f"{_YEAR_SQL}::int AS yil, ROW_NUMBER() OVER (PARTITION BY {_CODE_SQL} "
+            f"ORDER BY {_YEAR_SQL} DESC NULLS LAST, id DESC) AS rn FROM dissertations "
+            f"WHERE {_CODE_SQL} = ANY(%s) AND NULLIF(TRIM(mavzu), '') IS NOT NULL) t WHERE rn <= 2",
+            [codes])
+        for g in gaps:
+            g['songgi_ulush'] = round(g['songgi'] / g['jami'], 3) if g['jami'] else 0
+            g['oxirgi_mavzular'] = [{'mavzu': r['mavzu'], 'yil': r['yil']} for r in latest if r['kod'] == g['kod']]
+            g['nomi'] = (g['nomi'] or '').strip()
+    return {'songgi_davr': f'{since}–{ref}', 'baza_jami': base['n'],
+            'baza_songgi_ulush': round(base['r'] / base['n'], 3) if base['n'] else 0,
+            'min_total': min_total, 'searched_forms': terms, 'gaps': gaps}
+
+
+_HANDLERS = {'search_dissertations': search_dissertations, 'dissertation_stats': dissertation_stats,
+             'research_gaps': research_gaps}
 
 
 def run_tool(name, args):
@@ -748,9 +819,24 @@ def _finish(message, text, tools_used):
     return f"{text}\n\n*{label}: {', '.join(shown)}*"
 
 
+def _wants_topic_advice(message):
+    k = _norm_key(message)
+    return 'mavzu tavsiya' in k or "kam o'rganilgan" in k
+
+
 def _answer_fallback(message, history=()):
     """Tool use'siz zaxira: bitta keng qidiruv natijasi kontekst sifatida boshqa provayderga.
     Qidiruv faqat joriy savol bo'yicha — history qidiruv so'ziga aralashmaydi."""
+    if _wants_topic_advice(message):
+        data = research_gaps({})
+        context = json.dumps(data, ensure_ascii=False, default=str)
+        others = [p for p in ai_client.configured_providers() if p != 'anthropic']
+        text = ai_client.complete(
+            FEATURE, system=(SYSTEM_PROMPT + "\n\nTool o'rniga quyidagi research_gaps natijasi berilgan.\n"
+                             + script_instruction(message)),
+            user=f"{build_user_content(message, history)}\n\nresearch_gaps natijasi (JSON):\n{context}",
+            tier='fast', max_tokens=1500, providers=others)
+        return text, [{'name': 'research_gaps', 'input': {}, 'fallback': True}]
     data = search_dissertations({'query': message})
     context = json.dumps(data, ensure_ascii=False, default=str)
     others = [p for p in ai_client.configured_providers() if p != 'anthropic']
