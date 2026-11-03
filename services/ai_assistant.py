@@ -90,6 +90,8 @@ qoldir va faqat dissertation_stats chaqir (daraja/yil filtrlari bilan).
 Mavzu tavsiyasi ("Mavzu tavsiya et", "qanday mavzu tanlay", "kam o'rganilgan yo'nalish"):
 - Tasodifiy sarlavhalar ro'yxatini berma. research_gaps chaqir (savolda fan yoki mavzu bo'lsa — \
 soha/query bilan). Natija bo'sh bo'lsa, min_total ni kamaytirib qayta chaqir.
+- Kirish jumlasi: bazada so'nggi davr (songgi_davr) himoyalari jami ulushi baza_songgi_ulush, quyidagi \
+shakllangan yo'nalishlarda esa bu ulush ancha past. Foizni tool bergan ulushdan ol, o'zing hisoblama.
 - Natijadan 3–5 ta yo'nalish tanla. Har biri: **ixtisoslik nomi (kod)** — nega kam o'rganilgan \
 (jami N ta, so'nggi davrda M ta, oxirgi himoya yili; bazaning so'nggi davr ulushi bilan solishtir — \
 faqat tool bergan sonlar), so'ng bitta aniq "Taklif:" mavzu g'oyasi. Taklif — sening g'oyang, \
