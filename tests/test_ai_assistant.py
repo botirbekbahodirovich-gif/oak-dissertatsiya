@@ -435,7 +435,7 @@ def test_discipline_and_topic_combine_with_and():
     where, params, terms = ai_assistant.build_where(a)
     assert terms[0] == 'kod 14.*' and 'сунъий интеллект' in terms
     assert ') AND (' in where and 'mavzu ILIKE' in where
-    assert ai_assistant.searched_words([{'name': 'x', 'input': a}])[0] == 'tibbiyot (ixtisoslik kodi 14.*)'
+    assert ai_assistant.searched_words([{'name': 'x', 'input': a}])[0] == 'tibbiyot (ixtisoslik kodi 14.xx.xx)'
 
 
 def test_title_fallback_matches_whole_words_only():
@@ -469,7 +469,7 @@ def test_model_cannot_select_discipline_field_directly():
 
 def test_footer_names_the_code_for_disciplines():
     used = [{'name': 'dissertation_stats', 'input': ai_assistant.normalize_tool_args({'query': 'кимё'})}]
-    assert ai_assistant.searched_words(used) == ['kimyo (ixtisoslik kodi 02.*)']
+    assert ai_assistant.searched_words(used) == ['kimyo (ixtisoslik kodi 02.xx.xx)']
 
 
 # ── "X fanlari" → fan_tarmoqi, aks holda ixtisoslik kodi (server qoidasi) ──────
@@ -503,10 +503,10 @@ def test_cyrillic_footer_fully_cyrillic():
                                     'variants': ['artificial intelligence', 'сунъий интеллект']}},
             {'name': 's', 'input': {'fan_tarmoqi': 'tibbiyot'}}]
     words = ai_assistant.searched_words(used, 'kirill')
-    assert words[0] == 'тиббиёт (ихтисослик коди 14.*)'
+    assert words[0] == 'тиббиёт (ихтисослик коди 14.xx.xx)'
     assert 'фан тармоғи: тиббиёт' in words
     assert words.index('сунъий интеллект') < words.index("sun'iy intellekt")
-    assert ai_assistant.searched_words(used)[0] == 'tibbiyot (ixtisoslik kodi 14.*)'
+    assert ai_assistant.searched_words(used)[0] == 'tibbiyot (ixtisoslik kodi 14.xx.xx)'
 
 
 def test_prompt_forbids_describing_filters_in_answer():

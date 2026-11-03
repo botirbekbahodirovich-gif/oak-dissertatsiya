@@ -367,7 +367,7 @@ def searched_words(tools_used, script='lotin'):
         code = u['input'].get('fan_code')
         if code in DISCIPLINES:
             name = DISCIPLINES[code][1] if cyr else DISCIPLINES[code][0]
-            add(f"{name} ({'ихтисослик коди' if cyr else 'ixtisoslik kodi'} {code}.*)")
+            add(f"{name} ({'ихтисослик коди' if cyr else 'ixtisoslik kodi'} {code}.xx.xx)")
         if u['input'].get('fan_tarmoqi'):
             value = u['input']['fan_tarmoqi']
             value = (lotin_to_kiril(value) if detect_script(value) == 'lotin' else value) if cyr else value
