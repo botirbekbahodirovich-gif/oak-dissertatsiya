@@ -65,7 +65,7 @@ It is **idempotent** — re-run any time to pull the latest code and restart.
 ```bash
 systemctl status olimlar          # active (running)
 journalctl -u olimlar -n 50       # app logs
-curl -I http://127.0.0.1:8000/    # backend up
+curl -I -H 'Host: www.olimlar.uz' -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/    # backend up (plain http → 400)
 curl -I https://olimlar.uz/       # 200 after certbot
 ```
 

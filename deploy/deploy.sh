@@ -189,7 +189,9 @@ log "Smoke test"
 sleep 2
 systemctl --no-pager --full status "$SERVICE" | head -8 || true
 for p in / /login /journals /universities; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "http://${BIND}${p}" || echo 000)
+  # Production rejects plain-http requests (security.py); nginx normally adds these.
+  code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 \
+    -H "Host: www.${DOMAIN}" -H 'X-Forwarded-Proto: https' "http://${BIND}${p}" || echo 000)
   echo "  $code  http://${BIND}${p}"
 done
 
