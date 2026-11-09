@@ -1,4 +1,4 @@
-const CACHE_NAME = 'olimlar-v2';
+const CACHE_NAME = 'olimlar-v3';
 const OFFLINE_URL = '/offline';
 
 // Files to cache on install
@@ -11,10 +11,11 @@ const PRECACHE_URLS = [
 
 // Install — cache essential files
 self.addEventListener('install', event => {
+  // Activate immediately, even if precaching fails — a broken old worker
+  // must never outlive a deploy that fixes it.
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
   );
 });
 
@@ -32,8 +33,14 @@ self.addEventListener('fetch', event => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip API calls and admin/cabinet pages
+  // Cross-origin requests (CDN scripts, fonts, icons) go straight to the
+  // network: fetch() from the worker is bound by sw.js's own CSP connect-src,
+  // which does not list the CDNs, so proxying them broke d3, Bootstrap and
+  // bootstrap-icons for every returning visitor.
   const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Skip API calls and admin/cabinet pages
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/admin/') ||
       url.pathname.startsWith('/cabinet/')) return;
