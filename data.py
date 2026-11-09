@@ -164,7 +164,7 @@ def get_supervisor_counts() -> dict:
         finally:
             conn.close()
     except Exception:
-        result = {}
+        return {}  # DB xatosi: bo'sh natijani keshlamaymiz
     cache.set(key, result, timeout=900)
     return result
 
@@ -441,7 +441,7 @@ def split_ixtisoslik(ixtisoslik_str):
 
 
 def _all_individual_ixtisoslik(cache_key):
-    """Set of every individual specialty code across all dissertations."""
+    """Set of every individual specialty code across all dissertations, or None on a DB error."""
     codes = set()
     try:
         conn = get_connection()
@@ -456,7 +456,7 @@ def _all_individual_ixtisoslik(cache_key):
         finally:
             conn.close()
     except Exception:
-        pass
+        return None
     return codes
 
 
@@ -466,7 +466,11 @@ def list_individual_ixtisosliklar():
     cached = cache.get(key)
     if cached is not None:
         return cached
-    result = sorted(_all_individual_ixtisoslik(key))
+    codes = _all_individual_ixtisoslik(key)
+    if codes is None:
+        # bo'sh ro'yxat keshlansa, /filters ham uni 10 daqiqa ushlab qoladi
+        raise RuntimeError("ixtisoslik ro'yxatini o'qib bo'lmadi")
+    result = sorted(codes)
     cache.set(key, result, timeout=600)
     return result
 
@@ -477,7 +481,10 @@ def count_distinct_ixtisosliklar():
     cached = cache.get(key)
     if cached is not None:
         return cached
-    result = len(_all_individual_ixtisoslik(key))
+    codes = _all_individual_ixtisoslik(key)
+    if codes is None:
+        return 0
+    result = len(codes)
     cache.set(key, result, timeout=600)
     return result
 

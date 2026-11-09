@@ -59,5 +59,81 @@ class TrackVisitTests(unittest.TestCase):
         self.assertEqual(conns[0].closed_calls, 1)
 
 
+def _db_down():
+    """Make every get_connection() import site raise, like a dropped DB."""
+    from contextlib import ExitStack
+    stack = ExitStack()
+    for target in ("data.get_connection", "blueprints.advisors.get_connection",
+                   "blueprints.councils.get_connection", "blueprints.ranking.get_connection"):
+        stack.enter_context(patch(target, side_effect=RuntimeError("db down")))
+    return stack
+
+
+class EmptyResultCacheTests(unittest.TestCase):
+    """A DB error must never pin an empty/partial result in flask_cache."""
+
+    def _cases(self):
+        import data
+        from blueprints import advisors, councils, ranking
+        return [
+            ("gender_stats_v1", app_module.compute_gender_stats),
+            ("trends_data_v1", app_module._trends_data),
+            ("clustering_v1", app_module._clustering_build),
+            ("heatmap_data_v1", app_module._compute_heatmap_data),
+            ("university_stats", app_module.get_university_dissertation_stats),
+            ("institution_directory", app_module.get_institution_directory),
+            ("supervisor_counts", data.get_supervisor_counts),
+            ("ixtisoslik_individual_count", data.count_distinct_ixtisosliklar),
+            ("advisor_index", advisors._advisor_index),
+            ("council_index", councils._council_index),
+            ("ranking_latest_scholars_v1", lambda: ranking._latest_snapshot("scholars")),
+            ("ranking_scholars_7_v1", lambda: ranking._scholars_of(7)),
+            ("ranking_institutions_7_v1", lambda: ranking._institutions_of(7)),
+            ("ranking_researchers_scopus_v1", lambda: ranking._ranked_researchers("scopus")),
+            ("ranking_lookup_scholars_v1", lambda: ranking.get_scholar_h_index("Karimov")),
+            ("ranking_lookup_institutions_v1", lambda: ranking.get_institution_h_index("TATU")),
+            ("ranking_top_scholars_v1", ranking.get_top_scholars),
+        ]
+
+    def setUp(self):
+        self.ctx = app_module.app.test_request_context("/")
+        self.ctx.push()
+        app_module.cache.clear()
+
+    def tearDown(self):
+        app_module.cache.clear()
+        self.ctx.pop()
+
+    def test_db_error_results_are_not_cached(self):
+        for key, fn in self._cases():
+            with self.subTest(key=key), _db_down():
+                fn()
+                self.assertIsNone(app_module.cache.get(key))
+
+    def test_ixtisoslik_list_raises_instead_of_caching_empty(self):
+        import data
+        with _db_down():
+            with self.assertRaises(RuntimeError):
+                data.list_individual_ixtisosliklar()
+        self.assertIsNone(app_module.cache.get("ixtisoslik_individual_list"))
+        # /mavzu-tahlili already degrades to an empty dropdown
+        with _db_down():
+            self.assertEqual(app_module._compare_ixtisosliklar(), [])
+
+    def test_ranking_caches_again_once_db_is_back(self):
+        from blueprints import ranking
+        with patch.object(ranking, "_safe_rows", return_value=[]):
+            ranking._latest_snapshot("scholars")
+        self.assertEqual(app_module.cache.get("ranking_latest_scholars_v1"), ())
+
+    def test_genealogy_error_response_is_not_cached(self):
+        client = app_module.app.test_client()
+        with patch.object(app_module, "_genealogy_tree", side_effect=RuntimeError("db down")):
+            self.assertEqual(client.get("/api/genealogy/Karimov").status_code, 500)
+        with patch.object(app_module, "_genealogy_tree",
+                          return_value={"name": "Karimov", "children": []}):
+            self.assertEqual(client.get("/api/genealogy/Karimov").status_code, 200)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -86,10 +86,12 @@ def _council_index():
     cached = cache.get('council_index')
     if cached is not None:
         return cached
+    db_failed = False
     try:
         rows = _fetch_council_rows()
     except Exception:
         rows = []
+        db_failed = True
     councils = []
     for r in rows:
         shifrlar = sorted(r.get('shifrlar') or [])
@@ -110,7 +112,8 @@ def _council_index():
             '_shifr_low': ' '.join(shifrlar).lower(),
         })
     councils.sort(key=lambda c: c['total'], reverse=True)
-    cache.set('council_index', councils, timeout=INDEX_CACHE_TTL)
+    if not db_failed:  # bo'sh ro'yxat 10 daqiqa qotib qolmasin
+        cache.set('council_index', councils, timeout=INDEX_CACHE_TTL)
     return councils
 
 

@@ -102,10 +102,12 @@ def _advisor_index():
     if cached is not None:
         return cached
     advisors, by_slug = [], {}
+    db_failed = False
     try:
         rows = _fetch_advisor_rows()
     except Exception:
         rows = []
+        db_failed = True
     for r in rows:
         name = r['name']
         a = {
@@ -133,7 +135,8 @@ def _advisor_index():
         advisors.append(a)
     advisors.sort(key=lambda a: (a['last_year'], a['total']), reverse=True)
     index = {'advisors': advisors, 'by_slug': by_slug}
-    cache.set('advisor_index', index, timeout=INDEX_CACHE_TTL)
+    if not db_failed:  # bo'sh indeks 10 daqiqa qotib qolmasin
+        cache.set('advisor_index', index, timeout=INDEX_CACHE_TTL)
     return index
 
 

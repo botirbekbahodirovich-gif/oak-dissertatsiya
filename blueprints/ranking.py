@@ -32,6 +32,7 @@ Integratsiya helper'lari (data.py, content.py, app.py chaqiradi):
   get_top_scholars(limit)             — bosh sahifa vidjeti uchun
 """
 import re
+import threading
 
 from flask import (Blueprint, jsonify, request, render_template,
                    redirect, abort, flash)
@@ -243,7 +244,23 @@ def _safe_rows(sql, params=None):
         finally:
             conn.close()
     except Exception:
+        _db_state.failures = _db_failures() + 1
         return []
+
+
+# _safe_rows xatoda [] qaytaradi; keshlovchi funksiyalar shu hisoblagich bilan
+# bo'sh/qisman natijani keshlab qo'ymaslikni biladi.
+_db_state = threading.local()
+
+
+def _db_failures():
+    return getattr(_db_state, 'failures', 0)
+
+
+def _cache_unless_failed(key, value, since):
+    """`since` dan beri DB xatosi bo'lmagan bo'lsagina keshlaymiz."""
+    if _db_failures() == since:
+        cache.set(key, value, timeout=_CACHE_TTL)
 
 
 # ── Snapshot / qatorlarni o'qish (keshli) ───────────────────────────────────
@@ -254,13 +271,14 @@ def _latest_snapshot(kind):
     cached = cache.get(key)
     if cached is not None:
         return cached or None      # bo'sh tuple → None, lekin kesh saqlanadi
+    since = _db_failures()
     table = 'h_index_scholars' if kind == 'scholars' else 'h_index_institutions'
     rows = _safe_rows(
         f"SELECT s.id, s.snapshot_date FROM h_index_snapshots s "
         f"WHERE EXISTS (SELECT 1 FROM {table} t WHERE t.snapshot_id = s.id) "
         f"ORDER BY s.snapshot_date DESC, s.id DESC LIMIT 1")
     result = (rows[0][0], str(rows[0][1])) if rows else ()
-    cache.set(key, result, timeout=_CACHE_TTL)
+    _cache_unless_failed(key, result, since)
     return result or None
 
 
@@ -280,6 +298,7 @@ def _scholars_of(snap_id):
     cached = cache.get(key)
     if cached is not None:
         return cached
+    since = _db_failures()
     rows = _safe_rows(
         "SELECT rank, scholar_name, scholar_name_cyrillic, institution, "
         "h_scopus, h_wos, h_scholar, orcid, olim_match "
@@ -290,7 +309,7 @@ def _scholars_of(snap_id):
         'institution': r[3] or '', 'h_scopus': r[4], 'h_wos': r[5],
         'h_scholar': r[6], 'orcid': r[7] or '', 'olim_match': r[8] or '',
     } for r in rows]
-    cache.set(key, items, timeout=_CACHE_TTL)
+    _cache_unless_failed(key, items, since)
     return items
 
 
@@ -302,6 +321,7 @@ def _ranked_researchers(source):
     cached = cache.get(key)
     if cached is not None:
         return cached
+    since = _db_failures()
     rows = _safe_rows("""
         SELECT m.rank, c.display_name, o.name, m.h_index, p.orcid,
                op.olim_name, p.external_profile_url, p.source_author_id,
@@ -343,7 +363,7 @@ def _ranked_researchers(source):
         'reporting_period': rows[0][9] if rows else '',
         'items': items,
     }
-    cache.set(key, result, timeout=_CACHE_TTL)
+    _cache_unless_failed(key, result, since)
     return result
 
 
@@ -352,6 +372,7 @@ def _institutions_of(snap_id):
     cached = cache.get(key)
     if cached is not None:
         return cached
+    since = _db_failures()
     rows = _safe_rows(
         "SELECT rank, institution_name, category, h_scopus, h_wos, h_scholar, "
         "national_h_index, university_match FROM h_index_institutions "
@@ -362,7 +383,7 @@ def _institutions_of(snap_id):
         'h_scopus': r[3], 'h_wos': r[4], 'h_scholar': r[5],
         'national_h_index': r[6], 'university_match': r[7] or '',
     } for r in rows]
-    cache.set(key, items, timeout=_CACHE_TTL)
+    _cache_unless_failed(key, items, since)
     return items
 
 
@@ -393,6 +414,7 @@ def get_scholar_h_index(olim_name):
         return None
     lookup = cache.get('ranking_lookup_scholars_v1')
     if lookup is None:
+        since = _db_failures()
         snap = _latest_snapshot('scholars')
         lookup = {}
         if snap:
@@ -404,7 +426,7 @@ def get_scholar_h_index(olim_name):
                         'h_wos': s['h_wos'], 'h_scholar': s['h_scholar'],
                         'orcid': s['orcid'], 'snapshot_date': sdate,
                     })
-        cache.set('ranking_lookup_scholars_v1', lookup, timeout=_CACHE_TTL)
+        _cache_unless_failed('ranking_lookup_scholars_v1', lookup, since)
     return lookup.get(term)
 
 
@@ -416,6 +438,7 @@ def get_institution_h_index(*uni_names):
     nom variantini (kanonik, lotin) berish mumkin."""
     entries = cache.get('ranking_lookup_institutions_v1')
     if entries is None:
+        since = _db_failures()
         snap = _latest_snapshot('institutions')
         entries = []
         if snap:
@@ -429,7 +452,7 @@ def get_institution_h_index(*uni_names):
                         'h_scopus': it['h_scopus'], 'h_wos': it['h_wos'],
                         'h_scholar': it['h_scholar'], 'snapshot_date': sdate,
                     }})
-        cache.set('ranking_lookup_institutions_v1', entries, timeout=_CACHE_TTL)
+        _cache_unless_failed('ranking_lookup_institutions_v1', entries, since)
     best, best_ratio = None, 0.0
     for uni_name in uni_names:
         itoks = _inst_tokens(uni_name)
@@ -451,6 +474,7 @@ def get_top_scholars(limit=10):
     """Bosh sahifa vidjeti: eng so'nggi snapshotdan top N olim (rank bo'yicha)."""
     cached = cache.get('ranking_top_scholars_v1')
     if cached is None:
+        since = _db_failures()
         snap = _latest_snapshot('scholars')
         cached = {'date': '', 'items': []}
         if snap:
@@ -459,7 +483,7 @@ def get_top_scholars(limit=10):
         else:
             normalized = _ranked_researchers('scopus')
             cached = {'date': normalized['date'], 'items': normalized['items'][:20]}
-        cache.set('ranking_top_scholars_v1', cached, timeout=_CACHE_TTL)
+        _cache_unless_failed('ranking_top_scholars_v1', cached, since)
     return {'date': cached['date'], 'items': cached['items'][:limit]}
 
 

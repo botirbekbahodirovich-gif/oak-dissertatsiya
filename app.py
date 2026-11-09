@@ -1910,6 +1910,7 @@ def compute_gender_stats():
     gender_by_degree = {"phd_male": 0, "phd_female": 0, "dsc_male": 0, "dsc_female": 0}
     gender_by_year = {}
     name_gender = {}
+    db_failed = False
     try:
         from data import get_connection
         conn = get_connection()
@@ -1940,13 +1941,16 @@ def compute_gender_stats():
             gender_stats[g] = gender_stats.get(g, 0) + 1
     except Exception as e:
         _log_silent(e)
+        db_failed = True
     weekly_years = sorted(gender_by_year.keys())[-12:]
     result = {
         "gender_stats": gender_stats,
         "gender_by_degree": gender_by_degree,
         "gender_by_year": {y: gender_by_year[y] for y in weekly_years},
     }
-    cache.set("gender_stats_v1", result, timeout=1800)
+    # A DB error leaves empty/partial counts — don't pin them for 30 min.
+    if not db_failed:
+        cache.set("gender_stats_v1", result, timeout=1800)
     return result
 
 
@@ -1978,7 +1982,7 @@ def _trends_data():
     gender_year = {}   # year -> {male, female}
     adv_year = {}      # advisor -> {year: cnt}
     adv_students = {}  # advisor -> set(students)
-
+    db_failed = False
     try:
         conn = get_connection()
         try:
@@ -2030,13 +2034,15 @@ def _trends_data():
             conn.close()
     except Exception as e:
         _log_silent(e)
+        db_failed = True
 
     years_all = sorted(yearly.keys())
     if not years_all:
         empty = {"yearly": [], "key_stats": {}, "spec_trend": {"years": [], "codes": [], "data": {}},
                  "growing": [], "declining": [], "uni_trend": {"years": [], "unis": [], "data": {}},
                  "monthly": [], "gender": [], "advisors": {"years": [], "list": []}}
-        cache.set("trends_data_v1", empty, 1800)
+        if not db_failed:
+            cache.set("trends_data_v1", empty, 1800)
         return empty
 
     max_year = years_all[-1]
@@ -2085,7 +2091,8 @@ def _trends_data():
     result = {"yearly": yearly_list, "key_stats": key_stats, "spec_trend": spec_trend,
               "growing": growing, "declining": declining, "uni_trend": uni_trend,
               "monthly": monthly_list, "gender": gender_list, "advisors": advisors}
-    cache.set("trends_data_v1", result, 1800)
+    if not db_failed:
+        cache.set("trends_data_v1", result, 1800)
     return result
 
 
@@ -2409,6 +2416,7 @@ def _clustering_build():
     yre = re.compile(r'(19|20)\d{2}')
     docs = []
     kw_docs = defaultdict(set)
+    db_failed = False
     try:
         conn = get_connection()
         try:
@@ -2432,10 +2440,12 @@ def _clustering_build():
             conn.close()
     except Exception as e:
         _log_silent(e)
+        db_failed = True
 
     if not docs:
         empty = {"clusters": [], "total_clusters": 0, "clustered": 0, "unclustered": 0, "total": 0}
-        cache.set("clustering_v1", empty, 3600)
+        if not db_failed:
+            cache.set("clustering_v1", empty, 3600)
         return empty
 
     sig = {kw for kw, s in kw_docs.items() if len(s) >= 15}
@@ -2505,7 +2515,8 @@ def _clustering_build():
         "clusters": clusters, "total_clusters": len(clusters),
         "clustered": clustered, "unclustered": len(docs) - clustered, "total": len(docs),
     }
-    cache.set("clustering_v1", result, 3600)
+    if not db_failed:
+        cache.set("clustering_v1", result, 3600)
     return result
 
 
@@ -3261,7 +3272,8 @@ def _genealogy_children(name):
 
 
 @app.route('/api/genealogy/<path:name>')
-@cache.cached(timeout=900)
+# The error branch returns (body, 500); without a filter that tuple is cached for 15 min.
+@cache.cached(timeout=900, response_filter=lambda rv: not isinstance(rv, tuple))
 def api_genealogy(name):
     try:
         return jsonify(_genealogy_tree(name))
@@ -4197,6 +4209,7 @@ def _compute_heatmap_data():
                for r in region_names}
     uni_stats = {}
     total = 0
+    db_failed = False
     try:
         from data import get_connection
         conn = get_connection()
@@ -4237,6 +4250,7 @@ def _compute_heatmap_data():
             conn.close()
     except Exception as e:
         _log_silent(e)
+        db_failed = True
 
     region_unis = {r: [] for r in region_names}
     for us in uni_stats.values():
@@ -4258,7 +4272,8 @@ def _compute_heatmap_data():
     out_regions.sort(key=lambda x: -x["total"])
     top_universities = sorted(uni_stats.values(), key=lambda x: -x["count"])[:20]
     result = {"regions": out_regions, "total": total, "top_universities": top_universities}
-    cache.set("heatmap_data_v1", result, timeout=21600)
+    if not db_failed:
+        cache.set("heatmap_data_v1", result, timeout=21600)
     return result
 
 
@@ -4293,9 +4308,11 @@ def _uni_where(term):
             [like, like])
 
 
-@cache.cached(timeout=3600, key_prefix='university_stats')
 def get_university_dissertation_stats():
     """Map university id → {total, olimlar} dissertation counts. Cached 1h."""
+    cached = cache.get('university_stats')
+    if cached is not None:
+        return cached
     from data import get_connection
     stats = {}
     try:
@@ -4319,19 +4336,23 @@ def get_university_dissertation_stats():
         finally:
             conn.close()
     except Exception:
-        stats = {}
+        # don't cache: an empty map would hide every count for an hour
+        return {}
+    cache.set('university_stats', stats, timeout=3600)
     return stats
 
 
 from institutions import INSTITUTION_CATEGORIES, transliterate_display
 
 
-@cache.cached(timeout=1800, key_prefix='institution_directory')
 def get_institution_directory():
     """Every real defence institution from institution_map, grouped by canonical
     name, with dissertation / scholar / specialization counts. Cached 30 min.
     Returns [] until the map is populated (see migrate_institutions.py), so the
     /universities route can fall back to the curated table."""
+    cached = cache.get('institution_directory')
+    if cached is not None:
+        return cached
     from data import get_connection
     out = []
     try:
@@ -4363,7 +4384,9 @@ def get_institution_directory():
         finally:
             conn.close()
     except Exception:
-        out = []
+        # don't cache: [] makes /universities fall back to the curated table
+        return []
+    cache.set('institution_directory', out, timeout=1800)
     return out
 
 
