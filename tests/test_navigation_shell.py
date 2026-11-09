@@ -238,6 +238,18 @@ class HeaderAuthStateTests(unittest.TestCase):
         # ...lekin to'liq ro'yxat yo'qolmasligi kerak.
         self.assertGreaterEqual(len(ADMIN_SERVICES), 15)
 
+    def test_admin_services_include_article_management(self):
+        article_item = next(
+            (item for item in ADMIN_SERVICES if item.href == '/admin/articles'),
+            None,
+        )
+        self.assertIsNotNone(article_item)
+        self.assertIn('PDF', article_item.description)
+
+    def test_admin_services_include_scientific_field_management(self):
+        hrefs = {item.href for item in ADMIN_SERVICES}
+        self.assertIn('/admin/scientific-fields', hrefs)
+
     def test_full_admin_service_list_is_reachable_from_the_admin_hub(self):
         from utils.navigation import ADMIN_HUB
         self.assertEqual(ADMIN_HUB.href, '/admin/analytics')

@@ -37,6 +37,7 @@ def article(**overrides):
     row = {name: None for name in ARTICLE_FIELDS}
     row.update({
         'id': 1, 'title': 'Ochiq maqola', 'slug': 'ochiq-maqola',
+        'title_uz': None,
         'abstract': 'Annotatsiya matni.', 'keywords': 'ta\'lim, raqamlashtirish',
         'language': 'uz', 'publication_year': 2024, 'journal_name': 'Ilm Sarchashmalari',
         'doi': '10.1234/abc.2024', 'pdf_path': '2026/08/a.pdf',
@@ -121,19 +122,23 @@ class FakeCursor:
                             if a.get('journal_name')})
             return [(n, 1) for n in names], [('journal_name',), ('cnt',)]
 
-        if sql.startswith('SELECT a.id, a.title, a.slug'):
+        if sql.startswith('SELECT a.id, a.title, a.title_uz, a.slug'):
             rows = [tuple(a[name] for name in ARTICLE_FIELDS)
                     for a in self.store['articles']]
             return rows, [(name,) for name in ARTICLE_FIELDS]
 
         if sql.startswith('SELECT article_id, author_name'):
+            wanted = set((params or [[]])[0])
             rows = [tuple(a.get(name) for name in AUTHOR_ROW_COLUMNS)
-                    for a in self.store['authors']]
+                    for a in self.store['authors']
+                    if not wanted or a.get('article_id') in wanted]
             return rows, [(name,) for name in AUTHOR_ROW_COLUMNS]
 
         if sql.startswith('SELECT asf.article_id'):
+            wanted = set((params or [[]])[0])
             rows = [tuple(link.get(name) for name in LINK_ROW_COLUMNS)
-                    for link in self.store['links']]
+                    for link in self.store['links']
+                    if not wanted or link.get('article_id') in wanted]
             return rows, [(name,) for name in LINK_ROW_COLUMNS]
 
         if sql.startswith('SELECT f.id, f.parent_id'):

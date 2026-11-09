@@ -32,40 +32,47 @@
 {% endmacro %}
 
 {% macro article_card(article) %}
-<article class="mq-card">
-  <div class="mq-card__badges">
-    {{ access_badge(article) }}
-    {{ index_badges(article) }}
-    <span class="ol-badge ol-badge--neutral">{{ article.language_label }}</span>
+<article class="mq-card mq-result-item">
+  <div class="mq-result-item__content">
+    <div class="mq-card__badges">
+      {{ access_badge(article) }}
+      {{ index_badges(article) }}
+      <span class="ol-badge ol-badge--neutral">{{ article.language_label }}</span>
+    </div>
+
+    <h3 class="mq-card__title">
+      <a href="/maqolalar/{{ article.slug }}">{{ article.display_title }}</a>
+    </h3>
+    {% if article.has_translated_title %}
+    <p class="mq-card__original-title" lang="{{ article.language or 'en' }}">{{ article.title }}</p>
+    {% endif %}
+
+    <p class="mq-card__authors">{{ author_list(article) }}</p>
+    <p class="mq-card__meta">
+      {% if article.journal_name %}<span>{{ article.journal_name }}</span>{% endif %}
+      {% if article.publication_year %}<span>{{ article.publication_year }}</span>{% endif %}
+      {% if article.doi %}
+      <span class="mq-card__doi">DOI: {{ article.doi|replace('https://doi.org/', '') }}</span>
+      {% endif %}
+    </p>
+
+    {% if article.primary_field %}
+    <p class="mq-card__field">
+      <a href="/maqolalar/yonalish/{{ article.primary_field.slug }}">
+        {{ article.primary_field.name_uz }}</a>
+      {% if article.primary_field.code %}<span class="ol-muted">{{ article.primary_field.code }}</span>{% endif %}
+    </p>
+    {% endif %}
+
+    {% if article.abstract %}
+    <p class="mq-card__abstract">{{ article.abstract|truncate(320) }}</p>
+    {% endif %}
   </div>
-
-  <h3 class="mq-card__title">
-    <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
-  </h3>
-
-  <p class="mq-card__authors">{{ author_list(article) }}</p>
-  <p class="mq-card__meta">
-    {%- if article.journal_name %}{{ article.journal_name }}{% endif -%}
-    {%- if article.journal_name and article.publication_year %} &middot; {% endif -%}
-    {%- if article.publication_year %}{{ article.publication_year }}{% endif -%}
-  </p>
-
-  {% if article.primary_field %}
-  <p class="mq-card__field">
-    <a href="/maqolalar/yonalish/{{ article.primary_field.slug }}">
-      {{ article.primary_field.name_uz }}</a>
-    {% if article.primary_field.code %}<span class="ol-muted">{{ article.primary_field.code }}</span>{% endif %}
-  </p>
-  {% endif %}
-
-  {% if article.abstract %}
-  <p class="mq-card__abstract">{{ article.abstract|truncate(220) }}</p>
-  {% endif %}
 
   <div class="mq-card__actions">
     {% if article.can_read_pdf %}
     <a class="ol-btn ol-btn--primary" href="/maqolalar/{{ article.slug }}/oqish">
-      <i class="bi bi-book" aria-hidden="true"></i>O'qish</a>
+      <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>PDFni o'qish</a>
     {% endif %}
     <a class="ol-btn ol-btn--secondary" href="/maqolalar/{{ article.slug }}">Batafsil</a>
   </div>
@@ -93,16 +100,16 @@
       {% for article in articles %}
       <tr>
         <th scope="row" class="mq-table__title">
-          <a href="/maqolalar/{{ article.slug }}">{{ article.title }}</a>
+          <a href="/maqolalar/{{ article.slug }}">{{ article.display_title }}</a>
         </th>
         <td>{{ author_list(article, limit=2) }}</td>
         <td>
           {% if article.primary_field %}
           <a href="/maqolalar/yonalish/{{ article.primary_field.slug }}">{{ article.primary_field.name_uz }}</a>
-          {% else %}&mdash;{% endif %}
+          {% else %}-{% endif %}
         </td>
-        <td>{{ article.journal_name or '—' }}</td>
-        <td>{{ article.publication_year or '—' }}</td>
+        <td>{{ article.journal_name or '-' }}</td>
+        <td>{{ article.publication_year or '-' }}</td>
         <td>{{ article.access_label }}</td>
         <td>{{ index_badges(article) }}</td>
         <td class="mq-table__actions">
@@ -162,7 +169,7 @@
     <div class="mq-viewswitch" role="group" aria-label="Ko'rinish">
       <a class="ol-btn {{ 'ol-btn--primary' if view_mode == 'karta' else 'ol-btn--secondary' }}"
          href="{{ qs(view='karta') }}" {{ 'aria-current=page'|safe if view_mode == 'karta' }}>
-        <i class="bi bi-grid" aria-hidden="true"></i>Karta</a>
+        <i class="bi bi-list-ul" aria-hidden="true"></i>Ro'yxat</a>
       <a class="ol-btn {{ 'ol-btn--primary' if view_mode == 'jadval' else 'ol-btn--secondary' }}"
          href="{{ qs(view='jadval') }}" {{ 'aria-current=page'|safe if view_mode == 'jadval' }}>
         <i class="bi bi-list-ul" aria-hidden="true"></i>Jadval</a>

@@ -80,7 +80,7 @@ _trgm_checked = None           # None — hali tekshirilmagan; bool — natija
 SORT_OPTIONS = {
     'yangi': ("Eng yangi", "a.publication_year DESC NULLS LAST, a.publication_date DESC NULLS LAST, a.id DESC"),
     'eski': ("Eng eski", "a.publication_year ASC NULLS LAST, a.publication_date ASC NULLS LAST, a.id ASC"),
-    'nom': ("Nomi (A-Z)", "LOWER(a.title) ASC"),
+    'nom': ("Nomi (A-Z)", "LOWER(COALESCE(NULLIF(a.title_uz, ''), a.title)) ASC"),
     'korilgan': ("Ko'p ko'rilgan", "a.view_count DESC, a.id DESC"),
     'qoshilgan': ("Yaqinda qo'shilgan", "a.created_at DESC, a.id DESC"),
 }
@@ -164,6 +164,7 @@ def _ensure_schema(cur):
         CREATE TABLE IF NOT EXISTS scientific_articles (
             id                  SERIAL PRIMARY KEY,
             title               TEXT         NOT NULL,
+            title_uz            TEXT,
             slug                VARCHAR(220) NOT NULL UNIQUE,
             abstract            TEXT,
             keywords            TEXT,
@@ -207,6 +208,8 @@ def _ensure_schema(cur):
             created_at          TIMESTAMP    NOT NULL DEFAULT NOW(),
             updated_at          TIMESTAMP    NOT NULL DEFAULT NOW()
         )""")
+    cur.execute("ALTER TABLE scientific_articles "
+                "ADD COLUMN IF NOT EXISTS title_uz TEXT")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_scientific_articles_doi "
                 "ON scientific_articles (doi) WHERE doi IS NOT NULL")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_checksum "
@@ -383,6 +386,9 @@ def _query_string(**overrides):
 def _decorate(article):
     """Har bir maqolaga hosila maydonlarni qo'shadi. Shablon PDF qoidasini
     QAYTA YOZMAYDI — faqat shu yerdagi `can_read_pdf` ni o'qiydi (§23)."""
+    title_uz = (article.get('title_uz') or '').strip()
+    article['display_title'] = title_uz or article.get('title') or ''
+    article['has_translated_title'] = bool(title_uz and title_uz != article.get('title'))
     article['can_read_pdf'] = can_read_pdf(article)
     article['pdf_block_reason'] = pdf_block_reason(article)
     article['access_label'] = ACCESS_TYPES.get(article.get('access_type'), '—')
@@ -433,7 +439,7 @@ def _attach_authors_and_fields(cur, articles):
 
 
 ARTICLE_COLUMNS = """
-    a.id, a.title, a.slug, a.abstract, a.keywords, a.language, a.publication_year,
+    a.id, a.title, a.title_uz, a.slug, a.abstract, a.keywords, a.language, a.publication_year,
     a.publication_date, a.journal_name, a.volume, a.issue, a.pages, a.doi,
     a.external_url, a.pdf_path, a.pdf_original_name, a.pdf_size, a.checksum_sha256,
     a.license_type, a.license_url, a.access_type, a.version_type, a.source_type,
@@ -469,7 +475,7 @@ def _catalog_filters(cur, field_ids=None):
     if query:
         clause, clause_params, _, _ = build_search_clause(
             query,
-            ['a.title', 'a.abstract', 'a.keywords', 'a.doi', 'a.journal_name',
+            ['a.title', 'a.title_uz', 'a.abstract', 'a.keywords', 'a.doi', 'a.journal_name',
              "COALESCE(au.names, '')"],
             use_fuzzy=_fuzzy_available(cur))
         where.append(clause)
@@ -931,6 +937,36 @@ def _primary_field_crumbs(rows_by_id, article):
     return _field_breadcrumb(rows_by_id, row) + [row]
 
 
+def _related_articles(cur, article, limit=4):
+    """Ochiq katalogdan mavzu jihatdan yaqin maqolalarni tanlaydi.
+
+    Avval umumiy OAK yo'nalishlari, keyin bir xil jurnal, so'ng tavsiya belgisi
+    va yangilik hisobga olinadi. Yopiq yoki tekshirilmagan yozuvlar bu blokka
+    hech qachon kirmaydi.
+    """
+    field_ids = [row['id'] for row in article.get('fields', [])]
+    order_parts = []
+    params = [article['id']]
+    if field_ids:
+        order_parts.append("(SELECT COUNT(*) FROM article_scientific_fields rf "
+                           "WHERE rf.article_id = a.id "
+                           "AND rf.scientific_field_id = ANY(%s)) DESC")
+        params.append(field_ids)
+    if article.get('journal_name'):
+        order_parts.append("(LOWER(a.journal_name) = LOWER(%s)) DESC")
+        params.append(article['journal_name'])
+    order_parts.extend(("a.is_featured DESC", "a.citation_count DESC NULLS LAST",
+                        "a.publication_year DESC NULLS LAST", "a.id DESC"))
+    params.append(max(1, min(int(limit), 8)))
+    cur.execute(f"SELECT {ARTICLE_COLUMNS} FROM scientific_articles a "
+                f"WHERE {PUBLIC_WHERE} AND a.id <> %s "
+                f"ORDER BY {', '.join(order_parts)} LIMIT %s", params)
+    rows = [_decorate(row) for row in _dict_rows(cur) if row.get('id') != article['id']]
+    rows = rows[:limit]
+    _attach_authors_and_fields(cur, rows)
+    return rows
+
+
 def _load_article(cur, slug=None, article_id=None, public_only=True):
     where = 'a.slug = %s' if slug else 'a.id = %s'
     params = [slug if slug else article_id]
@@ -956,6 +992,7 @@ def article_detail(slug):
             if article is None:
                 abort(404)
             rows_by_id = {r['id']: r for r in _load_fields(cur, only_active=False)}
+            related_articles = _related_articles(cur, article)
             crumbs = _primary_field_crumbs(rows_by_id, article)
             cur.execute("UPDATE scientific_articles SET view_count = view_count + 1 "
                         "WHERE id = %s", (article['id'],))
@@ -963,7 +1000,8 @@ def article_detail(slug):
     finally:
         conn.close()
     return render_template('maqolalar_detail.html', article=article,
-                           field_crumbs=crumbs, preview=False)
+                           field_crumbs=crumbs, related_articles=related_articles,
+                           preview=False)
 
 
 def _log_missing_pdf(article):
@@ -1136,6 +1174,7 @@ def _form_values():
         })
     return {
         'title': get('title')[:500],
+        'title_uz': get('title_uz')[:500],
         'abstract': get('abstract'),
         'keywords': get('keywords')[:500],
         'language': get('language') or 'uz',
@@ -1451,7 +1490,7 @@ def _delete_stored_pdf(relative_path):
 
 
 ARTICLE_WRITE_COLUMNS = (
-    'title', 'abstract', 'keywords', 'language', 'publication_year',
+    'title', 'title_uz', 'abstract', 'keywords', 'language', 'publication_year',
     'publication_date', 'journal_name', 'volume', 'issue', 'pages', 'doi',
     'external_url', 'license_type', 'license_url', 'access_type', 'version_type',
     'source_type', 'source_name', 'source_url', 'copyright_note', 'permission_note',
@@ -2124,11 +2163,13 @@ def admin_article_preview(article_id):
             if article is None:
                 abort(404)
             rows_by_id = {r['id']: r for r in _load_fields(cur, only_active=False)}
+            related_articles = _related_articles(cur, article)
             crumbs = _primary_field_crumbs(rows_by_id, article)
     finally:
         conn.close()
     return render_template('maqolalar_detail.html', article=article,
-                           field_crumbs=crumbs, preview=True)
+                           field_crumbs=crumbs, related_articles=related_articles,
+                           preview=True)
 
 
 @articles_bp.route('/admin/articles/<int:article_id>/delete', methods=['POST'])

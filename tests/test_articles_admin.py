@@ -181,6 +181,22 @@ class ArticleFormTests(AdminTestCase):
         response = self.post()
         self.assertEqual(response.status_code, 302)
 
+    def test_form_has_a_separate_uzbek_title_field(self):
+        connection = FakeConnection(self.store())
+        with fake_db(connection):
+            html = self.client.get('/admin/articles/1/edit').get_data(as_text=True)
+        self.assertIn('name="title_uz"', html)
+        self.assertIn("Maqolaning o'zbekcha nomi", html)
+
+    def test_uzbek_title_is_written_with_the_article(self):
+        response = self.post(data={'title': 'Original title',
+                                   'title_uz': "O'zbekcha nom"})
+        self.assertEqual(response.status_code, 302)
+        insert = next((sql, params) for sql, params in self.connection.store['sql']
+                      if sql.startswith('INSERT INTO scientific_articles'))
+        self.assertIn('title_uz', insert[0])
+        self.assertIn("O'zbekcha nom", insert[1])
+
     def test_missing_title_is_a_readable_error_not_a_500(self):
         response = self.post(data={'title': ''})
         self.assertEqual(response.status_code, 400)

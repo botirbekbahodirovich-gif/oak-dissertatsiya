@@ -155,10 +155,14 @@ class ImportFlowTests(AdminTestCase):
             item_id = store['items'][0]['id']
             approve_resp = self.client.post(
                 '/admin/articles/imports/%d/items/%d/approve' % (batch_id, item_id),
-                data={}, follow_redirects=False)
+                data={'abstract': "Qo'lda kiritilgan annotatsiya."},
+                follow_redirects=False)
             self.assertEqual(approve_resp.status_code, 302)
             self.assertEqual(len(store['articles']), 1)
             self.assertEqual(store['articles'][0]['doi'], '10.1000/a')
+            self.assertEqual(store['articles'][0]['abstract'],
+                             "Qo'lda kiritilgan annotatsiya.")
+            self.assertIn('/admin/articles/1/edit', approve_resp.headers['Location'])
 
     def test_double_approve_via_http_does_not_duplicate(self):
         store = new_store()
@@ -180,6 +184,15 @@ class ImportFlowTests(AdminTestCase):
 
     def test_item_detail_page_renders(self):
         store = new_store()
+        store['fields'] = [
+            {'id': 1, 'parent_id': None, 'name_uz': 'Fan tarmog\'i',
+             'code': '01.00.00', 'level': 1, 'sort_order': 1, 'is_active': True},
+            {'id': 2, 'parent_id': 1, 'name_uz': 'Ixtisoslik guruhi',
+             'code': '01.01.00', 'level': 2, 'sort_order': 1, 'is_active': True},
+            {'id': 3, 'parent_id': 2, 'name_uz': 'Ichki ixtisoslik',
+             'code': '01.01.01', 'level': 3, 'sort_order': 1, 'is_active': True},
+        ]
+
         connection = FakeImportConnection(store)
         with fake_import_db(connection):
             create_resp = self.client.post(
@@ -195,7 +208,12 @@ class ImportFlowTests(AdminTestCase):
             resp = self.client.get(
                 '/admin/articles/imports/%d/items/%d' % (batch_id, item_id))
         self.assertEqual(resp.status_code, 200)
-        self.assertIn('Sample Title', resp.get_data(as_text=True))
+        html = resp.get_data(as_text=True)
+        self.assertIn('Sample Title', html)
+        self.assertIn('name="abstract"', html)
+        self.assertIn('Asosiy OAK fan yo', html)
+        self.assertIn('01.01.01', html)
+        self.assertIn('Qoralama yaratish va davom etish', html)
 
     def test_retracted_item_requires_explicit_confirmation(self):
         def retracted_fetch(doi, **kwargs):

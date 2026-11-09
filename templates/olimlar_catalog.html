@@ -1,135 +1,167 @@
 {% extends "base.html" %}
-{% block title %}O'zbekiston olimlari katalogi — Olimlar.uz{% endblock %}
-{% block meta_description %}O'zbekiston ilmiy rahbarlari, PhD va DSc olimlari katalogi. Shogirdlar, opponentlik, ilmiy avlodlar va nashrlar bo'yicha reyting.{% endblock %}
+{% block body_class %}oc-page{% endblock %}
+{% block title %}O'zbekiston olimlari katalogi - Olimlar.uz{% endblock %}
+{% block meta_description %}O'zbekiston ilmiy rahbarlari, PhD va DSc olimlari katalogi. Olimlarni toping va shogirdlar sonini ko'ring.{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/olimlar_catalog.css?v=1">
+<link rel="stylesheet" href="/static/css/olimlar_catalog.css?v=4">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","name":"O'zbekiston olimlari katalogi","url":"https://olimlar.uz/olimlar"}
+{"@context":"https://schema.org","@type":"CollectionPage","name":"O'zbekiston olimlari katalogi","url":"https://olimlar.uz/olimlar"}
 </script>
 {% endblock %}
 
 {% block content %}
 <div class="oc" id="oc-root">
-  <!-- HERO -->
-  <section class="oc-hero">
+  <header class="oc-hero">
     <div class="oc-wrap">
       <h1>O'zbekiston olimlari katalogi</h1>
-      <p class="oc-hero-sub">
-        <b id="oc-hero-n">{{ '{:,}'.format(total_scholars).replace(',', ' ') }}</b> ta olim ·
-        {{ total_specialties }} ta ixtisoslik ·
-        {{ '{:,}'.format(total_institutions).replace(',', ' ') }} ta muassasa
-      </p>
+      <div class="oc-summary" aria-label="Katalog statistikasi">
+        <div><strong>{{ '{:,}'.format(total_scholars).replace(',', ' ') }}</strong><span>Jami olimlar</span></div>
+        <div><strong>{{ total_specialties }}</strong><span>Ixtisosliklar</span></div>
+        <div><strong>{{ '{:,}'.format(total_institutions).replace(',', ' ') }}</strong><span>Muassasalar</span></div>
+      </div>
       <div class="oc-search">
-        <input type="search" id="oc-q" placeholder="🔍 Olim ismi, ixtisoslik yoki muassasa bo'yicha qidiring" autocomplete="off">
+        <label for="oc-q">Olim qidirish</label>
+        <div class="oc-search-control">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input type="search" id="oc-q"
+                 placeholder="Ism, ixtisoslik kodi yoki nomi, muassasa"
+                 autocomplete="off" enterkeyhint="search">
+          <span class="oc-search-state" id="oc-search-state" aria-hidden="true"></span>
+        </div>
+      </div>
+      <div class="oc-active-bar" id="oc-active-bar" hidden>
+        <span class="oc-active-title">Faol filtrlar</span>
+        <div class="oc-rchips" id="oc-chips"></div>
+        <button type="button" class="oc-clear-all" id="oc-clear-all">Barchasini tozalash</button>
       </div>
     </div>
-  </section>
+  </header>
 
   <div class="oc-wrap oc-layout">
-    <!-- FILTER SIDEBAR -->
-    <button class="oc-mob-filter" id="oc-mob-filter" type="button">Filtrlar <span id="oc-filter-badge"></span></button>
-    <aside class="oc-sidebar" id="oc-sidebar">
+    <button class="oc-mob-filter" id="oc-mob-filter" type="button"
+            aria-controls="oc-sidebar" aria-expanded="false">
+      <i class="bi bi-sliders2" aria-hidden="true"></i>
+      Filtrlar <span id="oc-filter-badge"></span>
+    </button>
+
+    <aside class="oc-sidebar" id="oc-sidebar" aria-labelledby="oc-filter-title">
       <div class="oc-side-head">
-        <b>Filtrlar</b>
+        <h2 id="oc-filter-title">Filtrlar</h2>
         <button type="button" class="oc-clear" id="oc-clear">Tozalash</button>
-        <button type="button" class="oc-side-close" id="oc-side-close" aria-label="Yopish">✕</button>
-      </div>
-
-      <div class="oc-facet">
-        <div class="oc-facet-t">Ixtisoslik</div>
-        <input type="text" id="oc-ixt-search" class="oc-facet-search" placeholder="Shifr qidirish...">
-        <div class="oc-facet-list" id="oc-facet-ixt">
-          {% for s in facets.specialties[:40] %}
-          <label class="oc-check"><input type="checkbox" name="ixtisoslik" value="{{ s.code }}">
-            <span>{{ s.code }}{% if s.name %} · {{ s.name[:26] }}{% endif %}</span><i>{{ s.count }}</i></label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="oc-facet">
-        <div class="oc-facet-t">Viloyat / Mintaqa</div>
-        <div class="oc-facet-list" id="oc-facet-reg">
-          {% for r in facets.regions[:30] %}
-          <label class="oc-check"><input type="checkbox" name="viloyat" value="{{ r.name }}">
-            <span>{{ r.name }}</span><i>{{ r.count }}</i></label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="oc-facet">
-        <div class="oc-facet-t">Daraja</div>
-        {% for d in facets.degrees %}
-        <label class="oc-check"><input type="radio" name="daraja" value="{{ d.name|lower }}">
-          <span>{{ d.name }}</span><i>{{ d.count }}</i></label>
-        {% endfor %}
-        <label class="oc-check"><input type="radio" name="daraja" value="" checked><span>Barchasi</span></label>
-      </div>
-
-      <div class="oc-facet">
-        <div class="oc-facet-t">Faollik</div>
-        <label class="oc-check"><input type="radio" name="faollik" value="5"><span>Oxirgi 5 yil</span></label>
-        <label class="oc-check"><input type="radio" name="faollik" value="10"><span>Oxirgi 10 yil</span></label>
-        <label class="oc-check"><input type="radio" name="faollik" value="" checked><span>Barchasi</span></label>
-      </div>
-
-      <div class="oc-facet">
-        <label class="oc-check"><input type="checkbox" id="oc-orcid" name="orcid" value="1"><span>ORCID bor</span></label>
-        <label class="oc-check"><input type="checkbox" id="oc-claimed" name="claimed" value="1"><span>Tasdiqlangan profil</span></label>
-      </div>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="oc-main">
-      <!-- results header -->
-      <div class="oc-rhead">
-        <div class="oc-rcount"><b id="oc-total">{{ '{:,}'.format(total_scholars).replace(',', ' ') }}</b> ta olim</div>
-        <div class="oc-rchips" id="oc-chips"></div>
-        <div class="oc-rtools">
-          <select id="oc-sort" class="oc-sort">
-            <option value="students">Shogirdlar soni ↓</option>
-            <option value="opponents">Opponentlik soni ↓</option>
-            <option value="activity">Oxirgi faollik ↓</option>
-            <option value="generations">Ilmiy avlodlar ↓</option>
-            <option value="publications">Nashrlar soni ↓</option>
-            <option value="name">Ism (A-Z)</option>
-          </select>
-          <div class="oc-vtoggle">
-            <button type="button" data-view="grouped" id="oc-v-grouped" title="Guruh ko'rinishi">≡</button>
-            <button type="button" data-view="cards" id="oc-v-cards" title="Karta ko'rinishi">⊞</button>
-          </div>
-          <button type="button" class="oc-copy" id="oc-copy" title="Havolani nusxalash">🔗</button>
-        </div>
-      </div>
-
-      <!-- ratings (collapsible) -->
-      <section class="oc-ratings" id="oc-ratings">
-        <button type="button" class="oc-ratings-head" id="oc-ratings-toggle">
-          <span>🏆 TOP reyting</span><span class="oc-caret">▾</span>
+        <button type="button" class="oc-icon-btn oc-side-close" id="oc-side-close"
+                aria-label="Filtrlarni yopish">
+          <i class="bi bi-x-lg" aria-hidden="true"></i>
         </button>
-        <div class="oc-ratings-body" id="oc-ratings-body">
-          <div class="oc-rtabs">
-            <button type="button" class="oc-rtab active" data-rtab="top_students">Eng ko'p shogird</button>
-            <button type="button" class="oc-rtab" data-rtab="young">Eng faol yosh</button>
-            <button type="button" class="oc-rtab" data-rtab="regions">Viloyat yetakchilari</button>
-          </div>
-          <div class="oc-rtab-body" id="oc-rtab-body"><div class="oc-muted">Yuklanmoqda…</div></div>
+      </div>
+
+      <section class="oc-facet" aria-labelledby="oc-ixt-title">
+        <h3 id="oc-ixt-title">Ixtisoslik</h3>
+        <label for="oc-ixt-search">Kod yoki nom bo'yicha qidirish</label>
+        <input type="search" id="oc-ixt-search" class="oc-facet-search"
+               placeholder="Masalan, 13.00.02">
+        <div class="oc-facet-list" id="oc-facet-ixt">
+          {% for s in facets.specialties %}
+          <label class="oc-check" data-facet="specialty" data-value="{{ s.code }}" title="{{ s.code }}{% if s.name %} - {{ s.name }}{% endif %}">
+            <input type="checkbox" name="ixtisoslik" value="{{ s.code }}">
+            <span><b>{{ s.code }}</b>{% if s.name %}<small>{{ s.name }}</small>{% endif %}</span>
+            <i data-count>{{ s.count }}</i>
+          </label>
+          {% endfor %}
         </div>
       </section>
 
-      <!-- content -->
-      <div id="oc-content"><div class="oc-loading"><span class="oc-spin"></span>Yuklanmoqda…</div></div>
+      <section class="oc-facet" aria-labelledby="oc-inst-title">
+        <h3 id="oc-inst-title">Muassasa</h3>
+        <label for="oc-institution">Muassasa nomini qidiring</label>
+        <input type="search" id="oc-institution" class="oc-facet-search"
+               list="oc-institution-list" placeholder="Muassasa nomi"
+               autocomplete="off">
+        <datalist id="oc-institution-list">
+          {% for institution in facets.institutions %}
+          <option value="{{ institution.name }}" data-name="{{ institution.name }}">{{ institution.count }} ta olim</option>
+          {% endfor %}
+        </datalist>
+      </section>
 
-      <!-- pagination -->
-      <div class="oc-pager" id="oc-pager"></div>
-    </main>
+      <section class="oc-facet" aria-labelledby="oc-region-title">
+        <h3 id="oc-region-title">Viloyat yoki mintaqa</h3>
+        <div class="oc-facet-list oc-facet-list-short" id="oc-facet-reg">
+          {% for r in facets.regions %}
+          <label class="oc-check" data-facet="region" data-value="{{ r.name }}">
+            <input type="checkbox" name="viloyat" value="{{ r.name }}">
+            <span>{{ r.name }}</span><i data-count>{{ r.count }}</i>
+          </label>
+          {% endfor %}
+        </div>
+      </section>
+
+      <fieldset class="oc-facet">
+        <legend>Daraja</legend>
+        <label class="oc-check"><input type="radio" name="daraja" value="" checked><span>Barchasi</span></label>
+        {% for d in facets.degrees %}
+        <label class="oc-check" data-facet="degree" data-value="{{ d.name|lower }}"><input type="radio" name="daraja" value="{{ d.name|lower }}">
+          <span>{{ d.name }}</span><i data-count>{{ d.count }}</i></label>
+        {% endfor %}
+      </fieldset>
+
+      <section class="oc-facet" aria-label="Profil holati">
+        <label class="oc-check" data-facet="claimed" data-value="1">
+          <input type="checkbox" id="oc-claimed" name="claimed" value="1">
+          <span>Tasdiqlangan profil</span><i data-count>{{ facets.claimed_count }}</i>
+        </label>
+      </section>
+
+      <button type="button" class="oc-drawer-apply" id="oc-drawer-apply">Natijalarni ko'rish</button>
+    </aside>
+
+    <section class="oc-main" aria-labelledby="oc-results-title">
+      <div class="oc-rhead">
+        <div class="oc-rcount" id="oc-results-title" role="status" aria-live="polite">
+          <b id="oc-total">{{ '{:,}'.format(total_scholars).replace(',', ' ') }}</b> ta olim
+        </div>
+        <div class="oc-rtools">
+          <label for="oc-sort">Saralash</label>
+          <select id="oc-sort" class="oc-sort">
+            <option value="students">Shogirdlar soni - ko'pdan kamga</option>
+            <option value="name">Ism - A dan Z gacha</option>
+          </select>
+          <div class="oc-vtoggle" aria-label="Natija ko'rinishi">
+            <button type="button" data-view="list" id="oc-v-list" aria-pressed="true"
+                    aria-label="Ro'yxat ko'rinishi">
+              <i class="bi bi-list-ul" aria-hidden="true"></i><span>Ro'yxat</span>
+            </button>
+            <button type="button" data-view="grouped" id="oc-v-grouped" aria-pressed="false"
+                    aria-label="Guruhlangan ko'rinish">
+              <i class="bi bi-collection" aria-hidden="true"></i><span>Guruhlangan</span>
+            </button>
+          </div>
+          <button type="button" class="oc-icon-btn oc-copy" id="oc-copy"
+                  aria-label="Sahifa havolasini nusxalash" title="Havolani nusxalash">
+            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <section class="oc-ranking" id="oc-ranking" aria-labelledby="oc-ranking-title" hidden>
+        <h2 id="oc-ranking-title">Eng ko'p shogirdli olimlar</h2>
+        <div class="oc-ranking-list" id="oc-ranking-list"></div>
+      </section>
+
+      <div id="oc-content" aria-busy="true">
+        <div class="oc-skeleton" aria-label="Natijalar yuklanmoqda">
+          {% for _ in range(4) %}<div class="oc-skeleton-row"></div>{% endfor %}
+        </div>
+      </div>
+      <nav class="oc-pager" id="oc-pager" aria-label="Natijalar sahifalari"></nav>
+    </section>
   </div>
 </div>
 
-<div class="oc-mob-backdrop" id="oc-backdrop"></div>
+<div class="oc-mob-backdrop" id="oc-backdrop" hidden></div>
 {% endblock %}
 
 {% block scripts %}
 <script>window.OC_AUTH = {{ 'true' if current_user.is_authenticated else 'false' }};</script>
-<script src="/static/js/olimlar_catalog.js?v=1" defer></script>
+<script src="/static/js/olimlar_catalog.js?v=3" defer></script>
 {% endblock %}

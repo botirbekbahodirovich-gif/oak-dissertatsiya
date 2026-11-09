@@ -1,9 +1,8 @@
-"""Olimlar katalogi 2.0 (olimlar_catalog_bp).
+"""Olimlar katalogi (olimlar_catalog_bp).
 
-dissertations jadvalidan ilmiy rahbarlar (olimlar) bo'yicha obro' metrikalarini
-hisoblaydigan katalog: shogirdlar (PhD/DSc), opponentlik, ilmiy avlodlar, nashrlar
-(Roadmap Nashrlar'dan), yillik faollik sparkline'i. Guruhlangan (shogird soni
-bo'yicha akkordeon) va kartochka ko'rinishlari.
+Ommaviy katalogning yagona reyting metrikasi shogirdlar soni. Profil sahifasi
+uchun mavjud obro' maydonlari keshda saqlanadi, lekin katalog API va UI'ga
+chiqarilmaydi.
 
 Manba jadvallar (hech biri yangi emas, hammasi mavjud):
   dissertations        — olim, ilmiy_rahbar(+daraja,+photo), daraja, ixtisoslik,
@@ -35,18 +34,31 @@ from flask import (Blueprint, jsonify, request, render_template, abort)
 from flask_login import login_required, current_user
 
 from data import get_connection, clean_olim_name
-from app import csrf
 from utils.search_helper import matches_query
+from utils.olimlar_catalog_quality import (
+    canonical_specialty,
+    normalize_region,
+    normalize_scholar_name,
+    normalize_unicode,
+    scholar_name_issue,
+)
 
 olimlar_catalog_bp = Blueprint('olimlar_catalog', __name__)
 
 _CACHE_TTL = 900          # 15 daqiqa
-_scholars_cache = {'data': None, 'facets': None, 'timestamp': 0}
+_scholars_cache = {'data': None, 'facets': None, 'audit': [], 'timestamp': 0}
 _schema_ready = False
 
-PER_PAGE_CARDS = 24
-PER_PAGE_GROUPS = 20
-GROUP_CARD_CHUNK = 12     # akkordeon ichida bir marta ko'rsatiladigan kartalar
+PER_PAGE_LIST = 24
+GROUP_CARD_CHUNK = 12
+STUDENT_RANGES = (
+    ('51-plus', '51 va undan ko‘p', 51, None),
+    ('21-50', '21-50', 21, 50),
+    ('11-20', '11-20', 11, 20),
+    ('6-10', '6-10', 6, 10),
+    ('1-5', '1-5', 1, 5),
+    ('zero', 'Shogirdi ko‘rsatilmagan yoki 0', None, 0),
+)
 
 # daraja naqshlari (dissertations.daraja — o'zbek/lotin/kirill variantlari)
 _PHD_PATTERNS = ['%PhD%', '%falsafa%', '%фалсафа%']
@@ -128,6 +140,7 @@ def _build_cache():
         return _scholars_cache
 
     scholars = {}
+    audit = []
     try:
         conn = get_connection()
         try:
@@ -149,11 +162,7 @@ def _build_cache():
                            array_agg(DISTINCT COALESCE(im.canonical_name, im.cyrillic_name))
                                FILTER (WHERE im.cyrillic_name IS NOT NULL) AS institutions,
                            array_agg(DISTINCT im.region)
-                               FILTER (WHERE im.region IS NOT NULL AND TRIM(im.region) <> '') AS regions,
-                           array_agg(DISTINCT TRIM(d.ixtisoslik))
-                               FILTER (WHERE d.ixtisoslik IS NOT NULL AND TRIM(d.ixtisoslik) <> '') AS specialties,
-                           array_agg(DISTINCT TRIM(d.ixtisoslik_nomi))
-                               FILTER (WHERE d.ixtisoslik_nomi IS NOT NULL AND TRIM(d.ixtisoslik_nomi) <> '') AS specialty_names
+                               FILTER (WHERE im.region IS NOT NULL AND TRIM(im.region) <> '') AS regions
                     FROM dissertations d
                     LEFT JOIN institution_map im ON TRIM(d.muassasa) = im.cyrillic_name
                     WHERE d.ilmiy_rahbar IS NOT NULL AND TRIM(d.ilmiy_rahbar) <> ''
@@ -161,10 +170,18 @@ def _build_cache():
                     GROUP BY TRIM(d.ilmiy_rahbar)
                 """, (_PHD_PATTERNS, _DSC_PATTERNS))
                 for r in base:
-                    name = r[0]
+                    name = normalize_unicode(r[0])
+                    display = normalize_scholar_name(clean_olim_name(name))
+                    name_problem = scholar_name_issue(display)
+                    if name_problem:
+                        audit.append({
+                            'entity': 'scholar', 'value': name,
+                            'reason': name_problem,
+                        })
+                        continue
                     scholars[name] = {
                         'name': name,
-                        'display': clean_olim_name(name),
+                        'display': display,
                         'degree': (r[1] or '').strip(),
                         'photo_url': r[2] or '',
                         'total_students': r[3] or 0,
@@ -172,10 +189,11 @@ def _build_cache():
                         'dsc_students': r[5] or 0,
                         'first_year': r[6], 'last_year': r[7],
                         'active_years': r[8] or 0,
-                        'institutions': list(r[9] or []),
-                        'regions': list(r[10] or []),
-                        'specialties': list(r[11] or []),
-                        'specialty_names': list(r[12] or []),
+                        'institutions': sorted({normalize_unicode(v) for v in (r[9] or []) if normalize_unicode(v)}),
+                        'regions': sorted({normalize_region(v) for v in (r[10] or []) if normalize_region(v)}),
+                        'specialties': [],
+                        'specialty_names': [],
+                        'specialty_options': [],
                         'yearly': {},
                         'opponent_count': 0,
                         'next_gen_advisors': 0,
@@ -185,6 +203,42 @@ def _build_cache():
                         'has_google_scholar': False,
                         'google_scholar_url': '',
                     }
+
+                # Kod va nom aynan bitta manba qatoridan olinadi.
+                try:
+                    from app import SPECIALTY_NAMES
+                    canonical_names = SPECIALTY_NAMES
+                except Exception:
+                    canonical_names = {}
+                specialty_rows = _fetchall(cur, """
+                    SELECT TRIM(d.ilmiy_rahbar), TRIM(d.ixtisoslik),
+                           TRIM(d.ixtisoslik_nomi), COUNT(*) AS n
+                    FROM dissertations d
+                    WHERE d.ilmiy_rahbar IS NOT NULL AND TRIM(d.ilmiy_rahbar) <> ''
+                      AND d.ixtisoslik IS NOT NULL AND TRIM(d.ixtisoslik) <> ''
+                      AND (d.data_quality = 'complete' OR d.data_quality IS NULL)
+                    GROUP BY TRIM(d.ilmiy_rahbar), TRIM(d.ixtisoslik),
+                             TRIM(d.ixtisoslik_nomi)
+                    ORDER BY n DESC
+                """)
+                seen_specialties = set()
+                for advisor, raw_code, raw_name, _count in specialty_rows:
+                    s = scholars.get(normalize_unicode(advisor))
+                    code, display_name, reasons = canonical_specialty(
+                        raw_code, raw_name, canonical_names
+                    )
+                    for reason in reasons:
+                        audit.append({
+                            'entity': 'specialty', 'scholar': advisor,
+                            'value': f"{raw_code} | {raw_name or ''}",
+                            'reason': reason,
+                        })
+                    if not s or not code or (s['name'], code) in seen_specialties:
+                        continue
+                    seen_specialties.add((s['name'], code))
+                    s['specialties'].append(code)
+                    s['specialty_names'].append(display_name)
+                    s['specialty_options'].append({'code': code, 'name': display_name})
 
                 # 2) Yillik faollik (alohida — sparkline uchun)
                 for name, yr, cnt in _fetchall(cur, f"""
@@ -304,77 +358,84 @@ def _build_cache():
 
     data = list(scholars.values())
     facets = _compute_facets(data)
-    _scholars_cache.update(data=data, facets=facets, timestamp=now)
+    _scholars_cache.update(data=data, facets=facets, audit=audit, timestamp=now)
     return _scholars_cache
 
 
 def _compute_facets(data):
-    """Keshlangan ro'yxatdan facet sanoqlari (specialty / region / degree)."""
-    spec_counts, spec_names, region_counts = {}, {}, {}
-    phd_n = dsc_n = 0
+    """Every count is derived from the same validated scholar dataset."""
+    spec_counts, spec_names = {}, {}
+    region_counts, institution_counts = {}, {}
+    phd_n = dsc_n = claimed_n = orcid_n = 0
     for s in data:
-        for code, nm in zip(s['specialties'], s['specialty_names'] + [''] * len(s['specialties'])):
+        for option in s.get('specialty_options', []):
+            code = option['code']
             if code:
                 spec_counts[code] = spec_counts.get(code, 0) + 1
-                if nm and code not in spec_names:
-                    spec_names[code] = nm
+                if option.get('name'):
+                    spec_names.setdefault(code, option['name'])
         for reg in s['regions']:
             if reg:
                 region_counts[reg] = region_counts.get(reg, 0) + 1
+        for institution in s['institutions']:
+            if institution:
+                institution_counts[institution] = institution_counts.get(institution, 0) + 1
         if s['dsc_students']:
             dsc_n += 1
         if s['phd_students']:
             phd_n += 1
+        claimed_n += int(bool(s['is_claimed']))
+        orcid_n += int(bool(s['has_orcid']))
     specialties = [{'code': c, 'name': spec_names.get(c, ''), 'count': n}
-                   for c, n in sorted(spec_counts.items(), key=lambda x: -x[1])]
+                   for c, n in sorted(spec_counts.items(), key=lambda x: (-x[1], x[0]))]
     regions = [{'name': r, 'count': n}
-               for r, n in sorted(region_counts.items(), key=lambda x: -x[1])]
+               for r, n in sorted(region_counts.items(), key=lambda x: (-x[1], x[0]))]
+    institutions = [{'name': n, 'count': c}
+                    for n, c in sorted(institution_counts.items(), key=lambda x: (-x[1], x[0]))]
     degrees = [{'name': 'DSc', 'count': dsc_n}, {'name': 'PhD', 'count': phd_n}]
-    return {'specialties': specialties, 'regions': regions, 'degrees': degrees}
+    return {
+        'specialties': specialties, 'regions': regions,
+        'institutions': institutions, 'degrees': degrees,
+        'has_orcid': orcid_n > 0, 'claimed_count': claimed_n,
+    }
 
 
 # ── Filtr / saralash / guruhlash (keshlangan ro'yxat ustida) ─────────────────
 
-_SORT_KEYS = {
-    'students': 'total_students', 'opponents': 'opponent_count',
-    'generations': 'next_gen_advisors', 'publications': 'publications_count',
-}
+def _filter_values(args, key):
+    return [normalize_unicode(v) for v in (args.get(key) or '').split(',') if normalize_unicode(v)]
 
 
 def _apply_filters(data, f):
-    q = (f.get('q') or '').strip().lower()
-    ixt = (f.get('ixtisoslik') or '').strip()
-    viloyat = (f.get('viloyat') or '').strip()
-    muassasa = (f.get('muassasa') or '').strip().lower()
-    daraja = (f.get('daraja') or '').strip().lower()
-    faollik = f.get('faollik')
-    only_orcid = f.get('orcid') in ('1', 'true', 'on')
+    q = normalize_unicode(f.get('q')).casefold()
+    specialties = set(_filter_values(f, 'ixtisoslik'))
+    regions = set(_filter_values(f, 'viloyat'))
+    institution = normalize_unicode(f.get('muassasa')).casefold()
+    degree = normalize_unicode(f.get('daraja')).casefold()
     only_claimed = f.get('claimed') in ('1', 'true', 'on')
 
     items = data
     if q:
-        # Kiril<->lotin + fuzzy (harf almashinuvi: Atajanov/Atajonov kabi) —
-        # xotiradagi keshlangan ro'yxat ustida, shuning uchun pg_trgm emas,
-        # utils.search_helper.matches_query (difflib-asosli).
-        items = [s for s in items
-                 if matches_query(q, s['name'], s['display'],
-                                  *s['specialty_names'], *s['institutions'])]
-    if ixt:
-        items = [s for s in items if any(ixt in (c or '') for c in s['specialties'])]
-    if viloyat:
-        items = [s for s in items if viloyat in s['regions']]
-    if muassasa:
-        items = [s for s in items if any(muassasa in (i or '').lower() for i in s['institutions'])]
-    if daraja == 'dsc':
+        items = [
+            s for s in items
+            if matches_query(
+                q, s['name'], s['display'], *s['specialties'],
+                *s['specialty_names'], *s['institutions']
+            )
+        ]
+    if specialties:
+        items = [s for s in items if specialties.intersection(s['specialties'])]
+    if regions:
+        items = [s for s in items if regions.intersection(s['regions'])]
+    if institution:
+        items = [
+            s for s in items
+            if any(institution == normalize_unicode(v).casefold() for v in s['institutions'])
+        ]
+    if degree == 'dsc':
         items = [s for s in items if s['dsc_students'] > 0]
-    elif daraja == 'phd':
+    elif degree == 'phd':
         items = [s for s in items if s['phd_students'] > 0]
-    if faollik in ('5', '10'):
-        import datetime
-        cutoff = datetime.date.today().year - int(faollik)
-        items = [s for s in items if s['last_year'] and int(s['last_year']) >= cutoff]
-    if only_orcid:
-        items = [s for s in items if s['has_orcid']]
     if only_claimed:
         items = [s for s in items if s['is_claimed']]
     return items
@@ -382,53 +443,65 @@ def _apply_filters(data, f):
 
 def _sort_items(items, sort):
     if sort == 'name':
-        return sorted(items, key=lambda s: s['display'].lower())
-    if sort == 'activity':
-        return sorted(items, key=lambda s: (s['last_year'] or '0000', s['total_students']), reverse=True)
-    key = _SORT_KEYS.get(sort, 'total_students')
-    return sorted(items, key=lambda s: (s[key], s['total_students']), reverse=True)
+        return sorted(
+            items,
+            key=lambda s: (normalize_unicode(s['display']).casefold(), -s['total_students'])
+        )
+    return sorted(
+        items,
+        key=lambda s: (-s['total_students'], normalize_unicode(s['display']).casefold())
+    )
 
 
 def _scholar_public(s, follows=None):
-    """Kartochka uchun commonlashtirilgan (og'ir maydonlarsiz) dict."""
+    """Only fields required by the compact catalogue row."""
     return {
-        'name': s['name'], 'display': s['display'], 'degree': s['degree'],
-        'photo_url': s['photo_url'], 'slug': _slugify(s['name']),
-        'total_students': s['total_students'], 'phd_students': s['phd_students'],
-        'dsc_students': s['dsc_students'], 'opponent_count': s['opponent_count'],
-        'next_gen_advisors': s['next_gen_advisors'],
-        'publications_count': s['publications_count'],
-        'institutions': s['institutions'][:2], 'regions': s['regions'][:1],
-        'specialties': s['specialties'][:3],
-        'first_year': s['first_year'], 'last_year': s['last_year'],
-        'is_claimed': s['is_claimed'], 'has_orcid': s['has_orcid'],
-        'has_google_scholar': s['has_google_scholar'],
-        'google_scholar_url': s['google_scholar_url'],
-        'sparkline': s.get('sparkline', ''),
+        'name': s['name'],
+        'display': s['display'],
+        'degree': s['degree'],
+        'photo_url': s['photo_url'],
+        'slug': _slugify(s['name']),
+        'total_students': s['total_students'],
+        'has_phd': bool(s['phd_students']),
+        'has_dsc': bool(s['dsc_students']),
+        'institutions': s['institutions'][:1],
+        'specialties': s.get('specialty_options', [])[:2],
+        'is_claimed': s['is_claimed'],
         'is_following': bool(follows and s['name'].lower() in follows),
     }
 
 
+def _range_for_count(count):
+    for key, label, minimum, maximum in STUDENT_RANGES:
+        if minimum is None and count <= maximum:
+            return key, label
+        if maximum is None and count >= minimum:
+            return key, label
+        if minimum is not None and maximum is not None and minimum <= count <= maximum:
+            return key, label
+    return 'zero', STUDENT_RANGES[-1][1]
+
+
+def _group_members(items, group_key, sort):
+    members = [s for s in items if _range_for_count(s['total_students'])[0] == group_key]
+    return _sort_items(members, 'name' if sort == 'name' else 'students')
+
+
 def _group_items(items, sort, follows):
-    """Saralash kalitiga ko'ra guruhlash (spec 3.2/1.1): guruh kaliti = sort metrikasi."""
-    key = _SORT_KEYS.get(sort, 'total_students')
-    if sort in ('name', 'activity'):
-        key = 'total_students'      # bu saralashlar guruhlashga mos emas — shogird bo'yicha
-    from collections import defaultdict
-    buckets = defaultdict(list)
-    for s in items:
-        buckets[s[key]].append(s)
     groups = []
-    for val in sorted(buckets, reverse=True):
-        members = buckets[val]
+    for key, label, _minimum, _maximum in STUDENT_RANGES:
+        members = _group_members(items, key, sort)
+        if not members:
+            continue
         groups.append({
-            'key': val,
+            'key': key,
+            'label': label,
             'scholar_count': len(members),
             'scholars': [_scholar_public(s, follows) for s in members[:GROUP_CARD_CHUNK]],
             'has_more': len(members) > GROUP_CARD_CHUNK,
             'total_in_group': len(members),
         })
-    return groups, key
+    return groups
 
 
 def _slugify(name):
@@ -462,7 +535,7 @@ def _user_follows():
 def olimlar_page():
     cache = _build_cache()
     total = len(cache['data'])
-    inst_count = len({i for s in cache['data'] for i in s['institutions']})
+    inst_count = len(cache['facets']['institutions'])
     return render_template('olimlar_catalog.html',
                            total_scholars=total,
                            total_specialties=len(cache['facets']['specialties']),
@@ -473,65 +546,74 @@ def olimlar_page():
 @olimlar_catalog_bp.route('/api/olimlar')
 def api_olimlar():
     cache = _build_cache()
-    f = request.args
-    sort = (f.get('sort') or 'students').strip()
+    filters = request.args
+    sort = (filters.get('sort') or 'students').strip()
+    if sort not in ('students', 'name'):
+        sort = 'students'
     page = max(1, request.args.get('page', 1, type=int))
-    view = (f.get('view') or '').strip()
+    view = (filters.get('view') or 'list').strip()
+    if view == 'cards':
+        view = 'list'
+    if view not in ('list', 'grouped'):
+        view = 'list'
 
-    items = _apply_filters(cache['data'], f)
-    items = _sort_items(items, sort)
+    items = _sort_items(_apply_filters(cache['data'], filters), sort)
     total = len(items)
     follows = _user_follows()
+    facets = _compute_facets(items)
+    top = [_scholar_public(s, follows) for s in _sort_items(items, 'students')[:5]]
 
-    # avtomatik ko'rinish: natija ≤ 50 → karta, aks holda guruh (foydalanuvchi bekor qilishi mumkin)
-    if view not in ('grouped', 'cards'):
-        view = 'cards' if total <= 50 else 'grouped'
-
-    facets = _compute_facets(items)      # filtrlangan to'plamdan jonli sanoqlar
-
+    response = {
+        'ok': True,
+        'view': view,
+        'total': total,
+        'sort': sort,
+        'facets': facets,
+        'top': top,
+    }
     if view == 'grouped':
-        groups, gkey = _group_items(items, sort, follows)
-        pages = max(1, (len(groups) + PER_PAGE_GROUPS - 1) // PER_PAGE_GROUPS)
-        page = min(page, pages)
-        start = (page - 1) * PER_PAGE_GROUPS
-        return jsonify({
-            'ok': True, 'view': 'grouped', 'total': total,
-            'group_key': gkey, 'sort': sort,
-            'groups': groups[start:start + PER_PAGE_GROUPS],
-            'page': page, 'pages': pages, 'facets': facets,
+        response.update({
+            'groups': _group_items(items, sort, follows),
+            'page': 1,
+            'pages': 1,
         })
-    else:
-        pages = max(1, (total + PER_PAGE_CARDS - 1) // PER_PAGE_CARDS)
-        page = min(page, pages)
-        start = (page - 1) * PER_PAGE_CARDS
-        scholars = [_scholar_public(s, follows) for s in items[start:start + PER_PAGE_CARDS]]
-        return jsonify({
-            'ok': True, 'view': 'cards', 'total': total, 'sort': sort,
-            'scholars': scholars, 'page': page, 'pages': pages, 'facets': facets,
-        })
+        return jsonify(response)
+
+    pages = max(1, (total + PER_PAGE_LIST - 1) // PER_PAGE_LIST)
+    page = min(page, pages)
+    start = (page - 1) * PER_PAGE_LIST
+    response.update({
+        'scholars': [
+            _scholar_public(s, follows)
+            for s in items[start:start + PER_PAGE_LIST]
+        ],
+        'page': page,
+        'pages': pages,
+    })
+    return jsonify(response)
 
 
 @olimlar_catalog_bp.route('/api/olimlar/group')
 def api_olimlar_group():
-    """Guruh ichida 'Yana N ta' — bitta guruhning kartalarini paginatsiyalaydi."""
+    """Paginate one of the six student-count ranges."""
     cache = _build_cache()
-    f = request.args
-    sort = (f.get('sort') or 'students').strip()
-    try:
-        gkey = int(f.get('key'))
-    except (TypeError, ValueError):
+    filters = request.args
+    sort = (filters.get('sort') or 'students').strip()
+    if sort not in ('students', 'name'):
+        sort = 'students'
+    group_key = (filters.get('key') or '').strip()
+    valid_keys = {row[0] for row in STUDENT_RANGES}
+    if group_key not in valid_keys:
         return jsonify({'ok': False, 'error': 'key'}), 400
-    gpage = max(1, request.args.get('gpage', 1, type=int))
-    items = _sort_items(_apply_filters(cache['data'], f), sort)
-    metric = _SORT_KEYS.get(sort, 'total_students')
-    if sort in ('name', 'activity'):
-        metric = 'total_students'
-    members = [s for s in items if s[metric] == gkey]
+    group_page = max(1, request.args.get('gpage', 1, type=int))
+    items = _apply_filters(cache['data'], filters)
+    members = _group_members(items, group_key, sort)
     follows = _user_follows()
-    start = (gpage - 1) * GROUP_CARD_CHUNK
+    start = (group_page - 1) * GROUP_CARD_CHUNK
     chunk = members[start:start + GROUP_CARD_CHUNK]
     return jsonify({
-        'ok': True, 'scholars': [_scholar_public(s, follows) for s in chunk],
+        'ok': True,
+        'scholars': [_scholar_public(s, follows) for s in chunk],
         'has_more': start + GROUP_CARD_CHUNK < len(members),
         'total_in_group': len(members),
     })
@@ -539,29 +621,13 @@ def api_olimlar_group():
 
 @olimlar_catalog_bp.route('/api/olimlar/ratings')
 def api_olimlar_ratings():
-    """TOP reyting bo'limi (3 tab): eng ko'p shogird / eng faol yosh / viloyat yetakchilari."""
-    cache = _build_cache()
-    data = cache['data']
-    import datetime
-    cutoff = datetime.date.today().year - 5
-    top_students = sorted(data, key=lambda s: s['total_students'], reverse=True)[:10]
-    young = sorted([s for s in data if s['first_year'] and int(s['first_year']) >= cutoff],
-                   key=lambda s: s['total_students'], reverse=True)[:10]
-    by_region = {}
-    for s in sorted(data, key=lambda s: s['total_students'], reverse=True):
-        for reg in s['regions'][:1]:
-            by_region.setdefault(reg, [])
-            if len(by_region[reg]) < 3:
-                by_region[reg].append({'display': s['display'], 'name': s['name'],
-                                       'total_students': s['total_students']})
-    lite = lambda s: {'display': s['display'], 'name': s['name'],
-                      'total_students': s['total_students'], 'degree': s['degree']}
+    """Compatibility endpoint: filtered student ranking, maximum five rows."""
+    items = _sort_items(
+        _apply_filters(_build_cache()['data'], request.args), 'students'
+    )
     return jsonify({
         'ok': True,
-        'top_students': [lite(s) for s in top_students],
-        'young': [lite(s) for s in young],
-        'regions': [{'region': r, 'scholars': v}
-                    for r, v in sorted(by_region.items(), key=lambda x: -len(x[1]))[:8]],
+        'top_students': [_scholar_public(s) for s in items[:5]],
     })
 
 

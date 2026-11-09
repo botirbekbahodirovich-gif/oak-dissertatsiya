@@ -39,9 +39,16 @@
       <legend>1. Asosiy ma'lumotlar</legend>
       <div class="mq-form__grid">
         <div class="ol-field-group mq-form__full">
-          <label class="ol-label" for="f-title">Maqola nomi <abbr title="majburiy">*</abbr></label>
+          <label class="ol-label" for="f-title">Maqolaning asl nomi <abbr title="majburiy">*</abbr></label>
           <input class="ol-field" id="f-title" name="title" required maxlength="500"
-                 value="{{ d.title or '' }}">
+                 value="{{ d.title or '' }}" aria-describedby="f-title-help">
+          <span class="ol-meta" id="f-title-help">Jurnal sahifasidagi rasmiy nomni o'zgartirmasdan kiriting.</span>
+        </div>
+        <div class="ol-field-group mq-form__full">
+          <label class="ol-label" for="f-title-uz">Maqolaning o'zbekcha nomi</label>
+          <input class="ol-field" id="f-title-uz" name="title_uz" maxlength="500"
+                 value="{{ d.title_uz or '' }}" aria-describedby="f-title-uz-help">
+          <span class="ol-meta" id="f-title-uz-help">O'zbek foydalanuvchilari uchun tarjima. Bo'sh qolsa asl nom ko'rsatiladi.</span>
         </div>
         <div class="ol-field-group mq-form__full">
           <label class="ol-label" for="f-abstract">Annotatsiya</label>
@@ -207,20 +214,26 @@
       <div class="mq-form__grid">
         <div class="ol-field-group mq-form__full">
           <label class="ol-label" for="f-primary">Asosiy yo'nalish <abbr title="majburiy">*</abbr></label>
-          <select class="ol-field" id="f-primary" name="primary_field_id" required>
-            <option value="">— tanlang —</option>
+          <select class="ol-field" id="f-primary" name="primary_field_id" required
+                  aria-describedby="f-primary-help">
+            <option value="">Tanlang</option>
             {% for f in field_rows %}
             <option value="{{ f.id }}" {{ 'selected' if primary_id and f.id|string == primary_id|string }}>
-              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+              {{ '- ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
             {% endfor %}
           </select>
+          {% if not field_rows %}
+          <span class="ol-meta" id="f-primary-help">OAK fan yo'nalishlari hali yuklanmagan. <a href="/admin/scientific-fields">Fan yo'nalishlarini boshqarish</a>.</span>
+          {% else %}
+          <span class="ol-meta" id="f-primary-help">Avval fan tarmog'ini, imkon bo'lsa maqolaga mos OAK ixtisosligini tanlang.</span>
+          {% endif %}
         </div>
         <div class="ol-field-group mq-form__full">
           <label class="ol-label" for="f-extra">Qo'shimcha yo'nalishlar (Ctrl bilan bir nechta)</label>
           <select class="ol-field" id="f-extra" name="extra_field_ids" multiple size="8">
             {% for f in field_rows %}
             <option value="{{ f.id }}" {{ 'selected' if f.id|string in extra_ids }}>
-              {{ '— ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
+              {{ '- ' * ((f.level or 1) - 1) }}{{ f.name_uz }}{% if f.code %} ({{ f.code }}){% endif %}</option>
             {% endfor %}
           </select>
         </div>

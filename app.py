@@ -1232,6 +1232,9 @@ def _run_startup_migrations():
             """)
             cur.execute("CREATE INDEX IF NOT EXISTS idx_institution_renames_old "
                         "ON institution_renames (old_name)")
+            # Canonical ID/alias layer. Raw OAK muassasa text stays untouched.
+            from institution_identity import ensure_identity_schema
+            ensure_identity_schema(cur)
             _seed_universities(cur)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS journals (

@@ -194,7 +194,7 @@ def retry_import_item(cur, item_id, *, config=None):
 
 def approve_import_item(cur, item_id, actor_id, *, primary_field_id=None,
                         extra_field_ids=None, confirm_retracted=False,
-                        confirm_critical=False):
+                        confirm_critical=False, metadata_overrides=None):
     """Candidate'ni `scientific_articles`ga yozadi (§30–§34, §46).
 
     Idempotent: item allaqachon `approved` bo'lsa, xato EMAS — mavjud
@@ -224,7 +224,14 @@ def approve_import_item(cur, item_id, actor_id, *, primary_field_id=None,
             "Kritik nomuvofiqlik (masalan, DOI farqi) bor — davom etish "
             "uchun aniq tasdiqlash kerak.")
 
-    metadata = item.get('metadata_candidate') or {}
+    # Provider qiymatlari boshlang'ich taklif, yakuniy admin qarori emas.
+    # Faqat aniq ruxsat berilgan maydonlar qo'lda almashtiriladi.
+    metadata = dict(item.get('metadata_candidate') or {})
+    overrides = metadata_overrides or {}
+    if 'abstract' in overrides:
+        abstract = str(overrides.get('abstract') or '').strip()
+        metadata['abstract'] = abstract[:100_000] or None
+
     try:
         article_id = persistence.create_article_from_metadata(
             cur, metadata, actor_id, primary_field_id=primary_field_id,

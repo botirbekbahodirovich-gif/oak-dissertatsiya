@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% from "components/page_header.html" import page_header %}
 {% from "components/article_bits.html" import results_bar, results_block, pager, active_chips %}
-{% from "components/article_filters.html" import filter_panel %}
+{% from "components/article_filters.html" import filter_panel, catalog_search %}
 
 {% block title %}Ilmiy maqolalar | Olimlar.uz{% endblock %}
 {% block meta_description %}Ochiq va tekshirilgan ilmiy maqolalar katalogi — mavzu, muallif, jurnal yoki DOI bo'yicha qidiring. Fan yo'nalishlari bo'yicha tartiblangan.{% endblock %}
@@ -17,49 +17,61 @@
 {% endblock %}
 
 {% block extra_head %}
-<link href="/static/css/maqolalar.css?v=20260807" rel="stylesheet">
+<link href="/static/css/maqolalar.css?v=20260825" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="ol-page">
+<div class="ol-page mq-page mq-catalog-page">
   {{ page_header(
        'Ilmiy maqolalar',
        "Ochiq va tekshirilgan ilmiy maqolalarni mavzu, muallif, jurnal yoki DOI bo'yicha izlang.",
        crumbs=[('Bosh sahifa', '/'), ('Ilmiy resurslar', '/maqolalar')]) }}
 
-  {{ filter_panel(field_tree, facets, access_types, licenses, version_types, languages) }}
+  {{ catalog_search() }}
 
-  {{ active_chips(active_filters, qs) }}
+  <div class="mq-catalog-layout">
+    <aside class="mq-catalog-sidebar" aria-label="Maqolalarni filtrlash">
+      {{ filter_panel(field_tree, facets, access_types, licenses, version_types,
+                      languages, sidebar=True) }}
+      <a class="mq-fields-link" href="/maqolalar/yonalishlar">
+        <i class="bi bi-list-nested" aria-hidden="true"></i>
+        Fan yo'nalishlarini ko'rish
+      </a>
+    </aside>
 
-  <section class="ol-section" aria-labelledby="mq-natijalar" style="margin-top:var(--space-24);">
-    <h2 id="mq-natijalar" class="mq-sr-only">Qidiruv natijalari</h2>
+    <main class="mq-catalog-results">
+      {{ active_chips(active_filters, qs) }}
 
-    {{ results_bar(total, sort_key, sort_options, view_mode, qs) }}
+      <section class="ol-section mq-results-section" aria-labelledby="mq-natijalar">
+        <h2 id="mq-natijalar" class="mq-sr-only">Qidiruv natijalari</h2>
 
-    {% if total == 0 and not active_filters %}
-    {# Katalog hali bo'sh — bu filtr natijasi emas, shuning uchun xabar boshqa. #}
-    <div class="ol-empty">
-      <h3 class="ol-h5">Katalogda hali maqola yo'q</h3>
-      <p class="ol-body">Maqolalar huquqi tekshirilgandan keyin joylashtiriladi.
-        Shu vaqtgacha fan yo'nalishlari katalogini ko'rib chiqishingiz mumkin.</p>
-      <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">
-        <i class="bi bi-list-nested" aria-hidden="true"></i>Fan yo'nalishlari</a>
-    </div>
-    {% else %}
-      {{ results_block(articles, view_mode,
-                       'Natija topilmadi',
-                       "Qidiruv so'zini qisqartiring yoki filtrlarni tozalab qayta urinib ko'ring.") }}
-      {{ pager(page, pages, qs) }}
-    {% endif %}
-  </section>
+        {{ results_bar(total, sort_key, sort_options, view_mode, qs) }}
 
-  <section class="ol-section" aria-labelledby="mq-tahlil">
-    <h2 id="mq-tahlil" class="ol-h4">Nashrlar tahlili alohida bo'limda</h2>
-    <div class="ol-card">
-      <p class="ol-body" style="margin:0 0 var(--space-16);">
-        Bu katalog Olimlar.uz'da saqlanadigan maqolalar to'plami. Global nashr
-        oqimini (OpenAlex bo'yicha 250 mln+ maqola) tahlil qilish uchun alohida
-        bo'lim mavjud.
+        {% if total == 0 and not active_filters %}
+        {# Katalog hali bo'sh: bu filtr natijasi emas, shuning uchun xabar boshqa. #}
+        <div class="ol-empty">
+          <h3 class="ol-h5">Katalogda hali maqola yo'q</h3>
+          <p class="ol-body">Maqolalar huquqi tekshirilgandan keyin joylashtiriladi.
+            Shu vaqtgacha fan yo'nalishlari katalogini ko'rib chiqishingiz mumkin.</p>
+          <a class="ol-btn ol-btn--secondary" href="/maqolalar/yonalishlar">
+            <i class="bi bi-list-nested" aria-hidden="true"></i>Fan yo'nalishlari</a>
+        </div>
+        {% else %}
+          {{ results_block(articles, view_mode,
+                           'Natija topilmadi',
+                           "Qidiruv so'zini qisqartiring yoki filtrlarni tozalab qayta urinib ko'ring.") }}
+          {{ pager(page, pages, qs) }}
+        {% endif %}
+      </section>
+    </main>
+  </div>
+
+  <section class="ol-section mq-analysis-note" aria-labelledby="mq-tahlil">
+    <h2 id="mq-tahlil" class="ol-h4">Global nashrlar tahlili</h2>
+    <div class="mq-analysis-note__body">
+      <p class="ol-body">
+        Bu sahifada Olimlar.uz katalogiga huquqi tekshirilib kiritilgan maqolalar
+        ko'rsatiladi. OpenAlex bo'yicha global nashrlar oqimi alohida tahlil qilinadi.
       </p>
       <a class="ol-btn ol-btn--tertiary" href="/maqolalar-tahlili">
         Maqolalar tahliliga o'tish<i class="bi bi-arrow-right" aria-hidden="true"></i></a>

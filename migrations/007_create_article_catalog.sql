@@ -75,6 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_scientific_fields_active
 CREATE TABLE IF NOT EXISTS scientific_articles (
     id                  SERIAL PRIMARY KEY,
     title               TEXT         NOT NULL,
+    title_uz            TEXT,
     slug                VARCHAR(220) NOT NULL UNIQUE,
     abstract            TEXT,
     keywords            TEXT,

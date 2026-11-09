@@ -1527,6 +1527,8 @@ def admin_institutions():
     log_per_page = 25
 
     groups, recent = [], []
+    identity_items, identity_queue, identity_events = [], [], []
+    identity_stats = {'linked': 0, 'total': 0, 'pending': 0}
     categories, regions = [], []
     log_total = 0
     added_stats = {'today': 0, 'week': 0, 'month': 0}
@@ -1579,6 +1581,79 @@ def admin_institutions():
                         'was_merge': r[3], 'variant_count': len(mv),
                         'admin_username': r[5] or '',
                         'created_at': str(r[6])[:16] if r[6] else ''})
+
+                # New canonical-ID layer. Legacy name groups stay below during
+                # the transition, while ranking uses only these approved IDs.
+                try:
+                    cur.execute("""
+                        SELECT i.id, i.canonical_name, i.category,
+                               COALESCE(i.region, ''),
+                               COUNT(DISTINCT a.id) AS aliases,
+                               COUNT(DISTINCT d.id) AS dissertations,
+                               p.canonical_name AS parent_name
+                        FROM institutions i
+                        LEFT JOIN institution_aliases a ON a.institution_id = i.id
+                        LEFT JOIN dissertations d ON d.institution_id = i.id
+                        LEFT JOIN institutions p ON p.id = i.parent_id
+                        WHERE i.is_active = TRUE AND i.merged_into_id IS NULL
+                        GROUP BY i.id, p.canonical_name
+                        ORDER BY dissertations DESC, i.canonical_name
+                        LIMIT 250
+                    """)
+                    identity_items = [{
+                        'id': r[0], 'name': r[1], 'category': r[2],
+                        'region': r[3], 'alias_count': r[4],
+                        'diss_count': r[5], 'parent_name': r[6] or '',
+                    } for r in cur.fetchall()]
+                    cur.execute("""
+                        SELECT q.id, q.raw_name, q.reason, q.occurrence_count,
+                               q.source, q.suggested_institution_id,
+                               i.canonical_name
+                        FROM institution_resolution_queue q
+                        LEFT JOIN institutions i
+                          ON i.id = q.suggested_institution_id
+                        WHERE q.status = 'pending'
+                        ORDER BY (q.reason = 'multiple') DESC,
+                                 q.occurrence_count DESC, q.id
+                        LIMIT 100
+                    """)
+                    identity_queue = [{
+                        'id': r[0], 'raw_name': r[1], 'reason': r[2],
+                        'occurrence_count': r[3], 'source': r[4],
+                        'suggested_id': r[5], 'suggested_name': r[6] or '',
+                    } for r in cur.fetchall()]
+                    cur.execute("""
+                        SELECT COUNT(*) FILTER (WHERE institution_id IS NOT NULL),
+                               COUNT(*) FROM dissertations
+                    """)
+                    linked, identity_total = cur.fetchone()
+                    cur.execute("""
+                        SELECT COUNT(*) FROM institution_resolution_queue
+                        WHERE status = 'pending'
+                    """)
+                    identity_stats = {
+                        'linked': linked or 0, 'total': identity_total or 0,
+                        'pending': cur.fetchone()[0] or 0,
+                    }
+                    cur.execute("""
+                        SELECT e.id, e.source_institution_id, s.canonical_name,
+                               e.target_institution_id, t.canonical_name,
+                               COALESCE(e.payload->>'dissertations', '0'),
+                               e.admin_username, e.created_at
+                        FROM institution_identity_events e
+                        LEFT JOIN institutions s ON s.id = e.source_institution_id
+                        LEFT JOIN institutions t ON t.id = e.target_institution_id
+                        WHERE e.action = 'merge' AND e.undone_at IS NULL
+                        ORDER BY e.id DESC LIMIT 20
+                    """)
+                    identity_events = [{
+                        'id': r[0], 'source_id': r[1], 'source_name': r[2] or '',
+                        'target_id': r[3], 'target_name': r[4] or '',
+                        'diss_count': r[5], 'admin_username': r[6] or '',
+                        'created_at': str(r[7])[:16] if r[7] else '',
+                    } for r in cur.fetchall()]
+                except Exception:
+                    identity_items, identity_queue, identity_events = [], [], []
         finally:
             conn.close()
     except Exception:
@@ -1631,7 +1706,11 @@ def admin_institutions():
                            total_diss=total_diss, cat_stats=cat_stats,
                            added_stats=added_stats, changed_stats=changed_stats,
                            recent=recent, lpage=lpage, log_total=log_total,
-                           log_total_pages=log_total_pages)
+                           log_total_pages=log_total_pages,
+                           identity_items=identity_items,
+                           identity_queue=identity_queue,
+                           identity_events=identity_events,
+                           identity_stats=identity_stats)
 
 
 @admin_bp.route('/admin/institutions/rename', methods=['POST'])
@@ -1700,6 +1779,307 @@ def admin_institutions_rename():
                        redirect='/university/' + quote(new_name, safe='')), 200
     except Exception:
         return jsonify(ok=False, error="Saqlashda xatolik yuz berdi."), 500
+
+
+
+
+@admin_bp.route('/admin/institutions/identity/resolve', methods=['POST'])
+@login_required
+def admin_institution_identity_resolve():
+    """Approve one raw OAK name as an alias of an existing canonical ID."""
+    from app import _require_admin, cache
+    from data import get_connection
+    from institution_identity import normalize_institution_identity
+    from psycopg2.extras import Json
+    _require_admin()
+    try:
+        queue_id = int(request.form.get('queue_id') or 0)
+        target_id = int(request.form.get('institution_id') or 0)
+    except (TypeError, ValueError):
+        queue_id = target_id = 0
+    if not queue_id or not target_id:
+        flash("Navbat va muassasa IDsi majburiy.", "error")
+        return redirect(url_for('admin.admin_institutions') + '#identity-review')
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT raw_name FROM institution_resolution_queue
+                WHERE id = %s AND status = 'pending' FOR UPDATE
+            """, (queue_id,))
+            row = cur.fetchone()
+            if not row:
+                flash("Tekshiruv yozuvi topilmadi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-review')
+            raw_name = row[0]
+            cur.execute("""
+                SELECT canonical_name FROM institutions
+                WHERE id = %s AND is_active = TRUE AND merged_into_id IS NULL
+                FOR UPDATE
+            """, (target_id,))
+            target = cur.fetchone()
+            if not target:
+                flash("Faol canonical muassasa topilmadi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-review')
+            normalized = normalize_institution_identity(raw_name)
+            cur.execute("""
+                SELECT institution_id FROM institution_aliases
+                WHERE normalized_name = %s
+            """, (normalized,))
+            owner = cur.fetchone()
+            if owner and owner[0] != target_id:
+                flash("Bu nom boshqa muassasa IDiga biriktirilgan.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-review')
+            cur.execute("""
+                INSERT INTO institution_aliases
+                    (institution_id, raw_name, normalized_name, alias_type, source)
+                VALUES (%s, %s, %s, 'admin_approved', 'admin')
+                ON CONFLICT (normalized_name) DO NOTHING
+            """, (target_id, raw_name, normalized))
+            cur.execute("""
+                UPDATE dissertations SET institution_id = %s
+                WHERE institution_id IS NULL AND TRIM(muassasa) = %s
+            """, (target_id, raw_name))
+            moved = cur.rowcount
+            cur.execute("""
+                UPDATE institution_resolution_queue
+                SET status = 'resolved', resolved_at = NOW(), resolved_by = %s,
+                    suggested_institution_id = %s
+                WHERE id = %s
+            """, (getattr(current_user, 'username', '') or '', target_id, queue_id))
+            cur.execute("""
+                INSERT INTO institution_identity_events
+                    (action, target_institution_id, payload, admin_username)
+                VALUES ('resolve', %s, %s, %s)
+            """, (target_id, Json({'raw_name': raw_name, 'dissertations': moved}),
+                  getattr(current_user, 'username', '') or ''))
+        conn.commit()
+        flash(f"Nom ID {target_id} ga biriktirildi; {moved} ta himoya yangilandi.", "success")
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, "Institution identity resolve failed")
+        flash("Biriktirishda xatolik yuz berdi.", "error")
+    finally:
+        conn.close()
+    for key in ('institution_directory', 'university_stats', 'reyting_data_v2'):
+        cache.delete(key)
+    return redirect(url_for('admin.admin_institutions') + '#identity-review')
+
+
+@admin_bp.route('/admin/institutions/identity/create', methods=['POST'])
+@login_required
+def admin_institution_identity_create():
+    """Create a canonical ID from a reviewed raw value and link its defenses."""
+    from app import _require_admin, cache
+    from data import get_connection
+    from institution_identity import normalize_institution_identity
+    from institutions import transliterate_display
+    from psycopg2.extras import Json
+    _require_admin()
+    try:
+        queue_id = int(request.form.get('queue_id') or 0)
+    except (TypeError, ValueError):
+        queue_id = 0
+    canonical = " ".join((request.form.get('canonical_name') or '').strip().split())
+    category = (request.form.get('category') or 'boshqa').strip()[:50]
+    if not queue_id or not canonical:
+        flash("Canonical nom majburiy.", "error")
+        return redirect(url_for('admin.admin_institutions') + '#identity-review')
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT raw_name FROM institution_resolution_queue
+                WHERE id = %s AND status = 'pending' FOR UPDATE
+            """, (queue_id,))
+            row = cur.fetchone()
+            if not row:
+                flash("Tekshiruv yozuvi topilmadi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-review')
+            raw_name = row[0]
+            canonical_key = normalize_institution_identity(canonical)
+            cur.execute("SELECT id FROM institutions WHERE normalized_name = %s",
+                        (canonical_key,))
+            if cur.fetchone():
+                flash("Bu canonical muassasa mavjud; uning ID raqamiga biriktiring.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-review')
+            cur.execute("""
+                INSERT INTO institutions
+                    (canonical_name, normalized_name, latin_name, category)
+                VALUES (%s, %s, %s, %s) RETURNING id
+            """, (canonical, canonical_key, transliterate_display(canonical), category))
+            target_id = cur.fetchone()[0]
+            aliases = [(canonical, canonical_key, 'canonical')]
+            raw_key = normalize_institution_identity(raw_name)
+            if raw_key != canonical_key:
+                aliases.append((raw_name, raw_key, 'admin_approved'))
+            for alias_name, alias_key, alias_type in aliases:
+                cur.execute("""
+                    INSERT INTO institution_aliases
+                        (institution_id, raw_name, normalized_name, alias_type, source)
+                    VALUES (%s, %s, %s, %s, 'admin')
+                    ON CONFLICT (normalized_name) DO NOTHING
+                """, (target_id, alias_name, alias_key, alias_type))
+            cur.execute("""
+                UPDATE dissertations SET institution_id = %s
+                WHERE institution_id IS NULL AND TRIM(muassasa) = %s
+            """, (target_id, raw_name))
+            moved = cur.rowcount
+            username = getattr(current_user, 'username', '') or ''
+            cur.execute("""
+                UPDATE institution_resolution_queue
+                SET status = 'resolved', resolved_at = NOW(), resolved_by = %s,
+                    suggested_institution_id = %s
+                WHERE id = %s
+            """, (username, target_id, queue_id))
+            cur.execute("""
+                INSERT INTO institution_identity_events
+                    (action, target_institution_id, payload, admin_username)
+                VALUES ('create', %s, %s, %s)
+            """, (target_id, Json({'raw_name': raw_name, 'dissertations': moved}), username))
+        conn.commit()
+        flash(f"Yangi canonical ID {target_id} yaratildi.", "success")
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, "Institution identity create failed")
+        flash("Canonical muassasa yaratishda xatolik.", "error")
+    finally:
+        conn.close()
+    for key in ('institution_directory', 'university_stats', 'reyting_data_v2'):
+        cache.delete(key)
+    return redirect(url_for('admin.admin_institutions') + '#identity-review')
+
+
+@admin_bp.route('/admin/institutions/identity/merge', methods=['POST'])
+@login_required
+def admin_institution_identity_merge():
+    """Merge one canonical ID into another without rewriting OAK source text."""
+    from app import _require_admin, cache
+    from data import get_connection
+    from psycopg2.extras import Json
+    _require_admin()
+    try:
+        source_id = int(request.form.get('source_id') or 0)
+        target_id = int(request.form.get('target_id') or 0)
+    except (TypeError, ValueError):
+        source_id = target_id = 0
+    if not source_id or not target_id or source_id == target_id:
+        flash("Ikki xil, to‘g‘ri ID kiriting.", "error")
+        return redirect(url_for('admin.admin_institutions') + '#identity')
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, canonical_name FROM institutions
+                WHERE id = ANY(%s) AND is_active = TRUE
+                  AND merged_into_id IS NULL FOR UPDATE
+            """, ([source_id, target_id],))
+            found = {r[0]: r[1] for r in cur.fetchall()}
+            if source_id not in found or target_id not in found:
+                flash("Muassasa IDlaridan biri faol emas yoki topilmadi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity')
+            cur.execute("SELECT raw_name FROM institution_aliases WHERE institution_id = %s",
+                        (source_id,))
+            alias_names = [r[0] for r in cur.fetchall()]
+            cur.execute("UPDATE institution_aliases SET institution_id = %s WHERE institution_id = %s",
+                        (target_id, source_id))
+            cur.execute("UPDATE dissertations SET institution_id = %s WHERE institution_id = %s",
+                        (target_id, source_id))
+            moved = cur.rowcount
+            cur.execute("""
+                UPDATE institutions SET is_active = FALSE, merged_into_id = %s,
+                    updated_at = NOW() WHERE id = %s
+            """, (target_id, source_id))
+            username = getattr(current_user, 'username', '') or ''
+            cur.execute("""
+                INSERT INTO institution_identity_events
+                    (action, source_institution_id, target_institution_id,
+                     payload, admin_username)
+                VALUES ('merge', %s, %s, %s, %s)
+            """, (source_id, target_id,
+                  Json({'alias_names': alias_names, 'dissertations': moved,
+                        'source_name': found[source_id],
+                        'target_name': found[target_id]}), username))
+        conn.commit()
+        flash(f"ID {source_id} → ID {target_id}: {moved} ta himoya birlashtirildi.", "success")
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, "Institution identity merge failed")
+        flash("IDlarni birlashtirishda xatolik.", "error")
+    finally:
+        conn.close()
+    for key in ('institution_directory', 'university_stats', 'reyting_data_v2'):
+        cache.delete(key)
+    return redirect(url_for('admin.admin_institutions') + '#identity')
+
+
+
+
+@admin_bp.route('/admin/institutions/identity/undo/<int:event_id>', methods=['POST'])
+@login_required
+def admin_institution_identity_undo(event_id):
+    """Undo one canonical-ID merge using the alias snapshot in its audit event."""
+    from app import _require_admin, cache
+    from data import get_connection
+    _require_admin()
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT source_institution_id, target_institution_id, payload
+                FROM institution_identity_events
+                WHERE id = %s AND action = 'merge' AND undone_at IS NULL
+                FOR UPDATE
+            """, (event_id,))
+            row = cur.fetchone()
+            if not row:
+                flash("Faol ID merge hodisasi topilmadi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-history')
+            source_id, target_id, payload = row
+            payload = payload if isinstance(payload, dict) else {}
+            alias_names = payload.get('alias_names') or []
+            cur.execute("""
+                SELECT id, merged_into_id FROM institutions
+                WHERE id = %s FOR UPDATE
+            """, (source_id,))
+            source = cur.fetchone()
+            if not source or source[1] != target_id:
+                flash("Merge holati o‘zgargan; avtomatik bekor qilib bo‘lmaydi.", "error")
+                return redirect(url_for('admin.admin_institutions') + '#identity-history')
+            if alias_names:
+                cur.execute("""
+                    UPDATE institution_aliases SET institution_id = %s
+                    WHERE institution_id = %s AND raw_name = ANY(%s)
+                """, (source_id, target_id, alias_names))
+                cur.execute("""
+                    UPDATE dissertations SET institution_id = %s
+                    WHERE institution_id = %s AND TRIM(muassasa) = ANY(%s)
+                """, (source_id, target_id, alias_names))
+                restored = cur.rowcount
+            else:
+                restored = 0
+            cur.execute("""
+                UPDATE institutions SET is_active = TRUE, merged_into_id = NULL,
+                    updated_at = NOW() WHERE id = %s
+            """, (source_id,))
+            cur.execute("""
+                UPDATE institution_identity_events
+                SET undone_at = NOW(), undone_by = %s WHERE id = %s
+            """, (getattr(current_user, 'username', '') or '', event_id))
+        conn.commit()
+        flash(f"ID merge bekor qilindi; {restored} ta himoya tiklandi.", "success")
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, "Institution identity undo failed")
+        flash("ID mergeni bekor qilishda xatolik.", "error")
+    finally:
+        conn.close()
+    for key in ('institution_directory', 'university_stats', 'reyting_data_v2'):
+        cache.delete(key)
+    return redirect(url_for('admin.admin_institutions') + '#identity-history')
 
 
 @admin_bp.route('/admin/institutions/undo/<int:rename_id>', methods=['POST'])

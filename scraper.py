@@ -330,16 +330,16 @@ def main():
 _INSERT_SQL = """
     INSERT INTO dissertations (
         oak_id, sana, olim, daraja, mavzu, ixtisoslik, fan_tarmoqi,
-        mavzu_raqami, ilmiy_rahbar, muassasa, ilmiy_kengash,
+        mavzu_raqami, ilmiy_rahbar, muassasa, institution_id, ilmiy_kengash,
         ilmiy_kengash_raqami, opponent_1, yetakchi_tashkilot, link, yonalish
     ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
     )
     ON CONFLICT (oak_id) DO NOTHING
 """
 
 
-def _item_values(item):
+def _item_values(item, institution_id=None):
     """_build_record() lug'atini INSERT ustunlari tartibiga moslaydi."""
     # "Rasmiy opponentlar" — matn; birinchi opponentni ajratamiz.
     opponents = item.get("Rasmiy opponentlar") or ""
@@ -355,6 +355,7 @@ def _item_values(item):
         item.get("Royxat raqami", ""),          # mavzu_raqami
         item.get("Ilmiy rahbar", ""),           # ilmiy_rahbar
         item.get("Bajarilgan muassasa", ""),    # muassasa
+        institution_id,                         # canonical ranking ID
         item.get("IK muassasa", ""),            # ilmiy_kengash
         item.get("IK raqami", ""),              # ilmiy_kengash_raqami
         opponent_1,                             # opponent_1
@@ -367,8 +368,11 @@ def _item_values(item):
 def db_save_one(conn, item):
     """Bitta elementni bazaga yozadi. 'added' / 'skip' / 'error' qaytaradi."""
     try:
+        from institution_identity import resolve_institution
         with conn.cursor() as cur:
-            cur.execute(_INSERT_SQL, _item_values(item))
+            institution_id = resolve_institution(
+                cur, item.get("Bajarilgan muassasa"), source='scraper')
+            cur.execute(_INSERT_SQL, _item_values(item, institution_id))
             hit = cur.rowcount
         conn.commit()
         return "added" if hit else "skip"

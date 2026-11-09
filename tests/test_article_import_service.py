@@ -233,6 +233,20 @@ class ApproveIdempotencyTests(unittest.TestCase):
         self.assertEqual(values[21], 'pending_review')
         self.assertEqual(values[22], 'draft')
 
+    def test_manual_abstract_overrides_provider_value(self):
+        svc.approve_import_item(
+            self.cur, self.item_id, actor_id=1,
+            metadata_overrides={'abstract': "  Qo'lda yozilgan annotatsiya.  "})
+        self.assertEqual(self.store['articles'][0]['abstract'],
+                         "Qo'lda yozilgan annotatsiya.")
+
+    def test_provider_abstract_stays_when_no_override_is_submitted(self):
+        self.store['items'][0]['metadata_candidate']['abstract'] = 'Provider annotatsiyasi.'
+        svc.approve_import_item(self.cur, self.item_id, actor_id=1)
+        self.assertEqual(self.store['articles'][0]['abstract'],
+                         'Provider annotatsiyasi.')
+
+
     def test_double_approve_does_not_create_second_article(self):
         first = svc.approve_import_item(self.cur, self.item_id, actor_id=1)
         second = svc.approve_import_item(self.cur, self.item_id, actor_id=1)

@@ -349,13 +349,22 @@ def import_item_approve(batch_id, item_id):
                       if v.isdigit()]
     confirm_retracted = bool(request.form.get('confirm_retracted'))
     confirm_critical = bool(request.form.get('confirm_critical'))
+    metadata_overrides = {}
+    if 'abstract' in request.form:
+        metadata_overrides['abstract'] = request.form.get('abstract')
 
-    _item_action(batch_id, item_id, lambda cur: import_service.approve_import_item(
+    result = _item_action(batch_id, item_id, lambda cur: import_service.approve_import_item(
         cur, item_id, current_user.id, primary_field_id=primary_field_id,
         extra_field_ids=extra_field_ids, confirm_retracted=confirm_retracted,
-        confirm_critical=confirm_critical))
-    flash('Maqola yaratildi (qoralama, tekshiruv kutilmoqda).')
-    return redirect(f'/admin/articles/imports/{batch_id}')
+        confirm_critical=confirm_critical, metadata_overrides=metadata_overrides))
+    if result is None:
+        return redirect(
+            f'/admin/articles/imports/{batch_id}/items/{item_id}')
+
+    article_id = result['article_id']
+    flash("Qoralama yaratildi. Ma'lumotlarni tekshirib, huquq/PDF holatini "
+          "to'ldiring va keyin nashr qiling.")
+    return redirect(f'/admin/articles/{article_id}/edit')
 
 
 @article_import_bp.route(

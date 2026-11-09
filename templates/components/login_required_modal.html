@@ -5,42 +5,45 @@
    u yerda Telegram widjeti allaqachon bor). Yopish/×/Esc yo'q: faqat ro'yxatdan
    o'tish yoki kirish orqali chiqiladi. #}
 <style>
-  #loginModal { position: fixed; inset: 0; z-index: 4300; display: none;
-    align-items: center; justify-content: center; background: rgba(2,6,23,0.88);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 16px; }
-  #loginModal.show { display: flex; }
-  #loginModal .lm-card { position: relative; background: var(--color-white); border: 1px solid var(--color-border);
-    border-radius: 18px; max-width: 420px; width: 100%; padding: 30px 26px 24px;
-    box-shadow: 0 4px 12px rgba(12,15,18,0.08); color: var(--color-text-primary); text-align: center;
-    animation: lmIn .22s ease; }
-  @keyframes lmIn { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
-  #loginModal .lm-eyebrow { font-size: 0.8rem; font-weight: 700; letter-spacing: .02em;
-    text-transform: uppercase; color: var(--color-action-blue); margin-bottom: 8px; }
-  #loginModal .lm-title { margin: 0 0 6px; font-size: 1.3rem; font-weight: 800; color: var(--color-text-primary); }
-  #loginModal .lm-sub { margin: 0 0 20px; font-size: 0.93rem; color: var(--color-text-muted); line-height: 1.5; }
-  #loginModal .lm-google { display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: #fff; color: #333; padding: 12px 20px; border-radius: 12px; text-decoration: none;
-    font-weight: 600; font-size: 0.98rem; border: 1px solid #ddd; }
-  #loginModal .lm-google:hover { background: #f4f6f8; text-decoration: none; color: #333; }
-  #loginModal .lm-or { color: var(--color-text-muted); font-size: 13px; margin: 14px 0 12px; }
-  #loginModal .lm-tg { display: flex; justify-content: center; min-height: 44px; }
-  #loginModal .lm-tg-status { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
-  #loginModal .lm-register { display: block; width: 100%; margin-top: 16px; background: var(--color-action-blue);
-    color: #fff; border: none; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 0.98rem;
-    text-decoration: none; }
-  #loginModal .lm-register:hover { background: #2563eb; color: #fff; text-decoration: none; }
-  #loginModal .lm-small { margin-top: 10px; font-size: 12px; color: var(--color-text-muted); }
-  #loginModal .lm-login { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-border);
-    font-size: 0.88rem; color: var(--color-text-muted); }
-  #loginModal .lm-login a { color: var(--color-action-blue); font-weight: 600; }
-  #loginModal .lm-login a:hover { text-decoration: underline; }
+  #loginModal { position:fixed; inset:0; z-index:4300; display:none;
+    align-items:center; justify-content:center; background:var(--color-background);
+    backdrop-filter:none; -webkit-backdrop-filter:blur(6px); padding:16px; }
+  #loginModal.show { display:flex; }
+  #loginModal .lm-card { position:relative; background:var(--color-white); border:1px solid var(--color-border);
+    border-radius:var(--radius-card); max-width:420px; width:100%; padding:30px 26px 24px;
+    box-shadow:none; color:var(--color-text-primary); text-align:center;
+    animation:lmIn .22s ease; }
+  @keyframes lmIn { from { transform:translateY(14px); opacity:0; } to { transform:none; opacity:1; } }
+  #loginModal .lm-eyebrow { font-size:0.8rem; font-weight:600; letter-spacing:.02em;
+    text-transform:uppercase; color:var(--color-action-blue); margin-bottom:8px; }
+  #loginModal .lm-title { margin:0 0 6px; font-size:1.3rem; font-weight:600; color:var(--color-text-primary); }
+  #loginModal .lm-sub { margin:0 0 20px; font-size:0.93rem; color:var(--color-text-muted); line-height:1.5; }
+  #loginModal .lm-google { display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--color-background); color:var(--color-text-primary); padding:12px 20px; border-radius:var(--radius-default); text-decoration:none;
+    font-weight:600; font-size:0.98rem; border:1px solid var(--color-border); }
+  #loginModal .lm-google:hover { background:var(--color-background); text-decoration:none; color:var(--color-text-primary); }
+  #loginModal .lm-or { color:var(--color-text-muted); font-size:13px; margin:14px 0 12px; }
+  #loginModal .lm-tg { display:flex; justify-content:center; min-height:44px; }
+  #loginModal .lm-tg-status { color:var(--color-text-secondary); font-size:13px; margin-top:8px; display:none; }
+  #loginModal .lm-telegram { display:inline-flex; min-height:44px; align-items:center;
+    justify-content:center; padding:10px 18px; border-radius:var(--radius-default); background:var(--color-background);
+    color:var(--color-text-primary); font-weight:600; text-decoration:none; }
+  #loginModal .lm-register { display:block; width:100%; margin-top:16px; background:var(--color-action-blue);
+    color:var(--color-surface); border:none; border-radius:var(--radius-default); padding:12px; font-weight:600; font-size:0.98rem;
+    text-decoration:none; }
+  #loginModal .lm-register:hover { background:var(--color-action); color:var(--color-surface); text-decoration:none; }
+  #loginModal .lm-small { margin-top:10px; font-size:12px; color:var(--color-text-muted); }
+  #loginModal .lm-login { margin-top:16px; padding-top:14px; border-top:1px solid var(--color-border);
+    font-size:0.88rem; color:var(--color-text-muted); }
+  #loginModal .lm-login a { color:var(--color-action-blue); font-weight:600; }
+  #loginModal .lm-login a:hover { text-decoration:underline; }
 </style>
 
 <div id="loginModal" role="dialog" aria-modal="true" aria-labelledby="lm-title">
   <div class="lm-card">
     <div class="lm-eyebrow">Hali roʻyxatdan oʻtmaganmisiz?</div>
     <h3 class="lm-title" id="lm-title">Barcha natijalar sizni kutmoqda</h3>
-    <p class="lm-sub" id="lm-sub">Barcha natijalarni koʻrish uchun roʻyxatdan oʻting. 5 soniya — email yoki Google.</p>
+    <p class="lm-sub" id="lm-sub">Barcha natijalarni koʻrish uchun roʻyxatdan oʻting. 5 soniya - email yoki Google.</p>
 
     <a href="/login/google" class="lm-google" id="lm-google"
        onclick="if(window.releaseGuestFreeze)window.releaseGuestFreeze();">
@@ -53,15 +56,9 @@
       Google bilan kirish
     </a>
 
-    <div class="lm-or">— yoki Telegram orqali —</div>
+    <div class="lm-or">yoki Telegram orqali</div>
     <div class="lm-tg" id="lm-tg-container">
-      <script async src="https://telegram.org/js/telegram-widget.js?22"
-        data-telegram-login="send_kod_bot"
-        data-size="large"
-        data-radius="8"
-        data-lang="uz"
-        data-onauth="oakGateTgAuth(user)"
-        data-request-access="write"></script>
+      <a class="lm-telegram" href="/login">Telegram bilan kirish</a>
     </div>
     <p class="lm-tg-status" id="lm-tg-status"></p>
 
