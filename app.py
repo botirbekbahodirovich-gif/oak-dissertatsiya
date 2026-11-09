@@ -2117,6 +2117,7 @@ def _collab_index():
     deg_map = {}                      # name -> 'PhD'/'DSc'
     spec_ctr = defaultdict(Counter)   # name -> Counter of ixtisoslik codes
     inst_ctr = defaultdict(Counter)   # name -> Counter of muassasa
+    year_min = year_max = None        # defence-year range over the whole base
 
     def _year(sana):
         m = _re_util.findall(r'(?:19|20)\d{2}', sana or '')
@@ -2180,6 +2181,12 @@ def _collab_index():
                                 opp_year[(opp, o)] = max(yr, opp_year.get((opp, o), yr))
                             opp_count[opp] += 1
                             adj[opp].add(o); adj[o].add(opp)
+                # Year slider bounds come from the data, never from code.
+                cur.execute(
+                    "SELECT MIN(y), MAX(y) FROM ("
+                    "SELECT substring(sana::text from '((?:19|20)[0-9]{2})')::int AS y "
+                    "FROM dissertations) t")
+                year_min, year_max = cur.fetchone() or (None, None)
         finally:
             conn.close()
     except Exception as e:
@@ -2194,6 +2201,7 @@ def _collab_index():
         "spec_map": spec_map, "inst_map": inst_map,
         "lower_map": {n.lower(): n for n in adj.keys()},
         "by_conn": sorted(adj.keys(), key=lambda n: -len(adj[n])),
+        "year_min": year_min, "year_max": year_max,
     }
     cache.set("collab_index_v2", idx, 1800)
     return idx
@@ -2267,7 +2275,8 @@ def _collab_search(name, max_nodes=500):
     idx = _collab_index()
     center = idx["lower_map"].get((name or "").strip().lower())
     if not center:
-        return {"nodes": [], "edges": [], "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}}
+        return {"nodes": [], "edges": [], "year_min": idx["year_min"], "year_max": idx["year_max"],
+                "stats": {"total_nodes": 0, "total_edges": 0, "most_connected": ""}}
     adj = idx["adj"]
     S = {center}
     frontier = [center]
@@ -2286,6 +2295,7 @@ def _collab_search(name, max_nodes=500):
     nodes, edges = _collab_nodes_edges(idx, S, center=center)
     most = max(nodes, key=lambda x: x["connections"])["id"] if nodes else ""
     return {"nodes": nodes, "edges": edges, "center": center,
+            "year_min": idx["year_min"], "year_max": idx["year_max"],
             "stats": {"total_nodes": len(nodes), "total_edges": len(edges), "most_connected": most}}
 
 
@@ -2308,6 +2318,7 @@ def _collab_full(node_limit=150):
     nodes, edges = _collab_nodes_edges(idx, S)
     most = max(nodes, key=lambda x: x["connections"])["id"] if nodes else ""
     return {"nodes": nodes, "edges": edges,
+            "year_min": idx["year_min"], "year_max": idx["year_max"],
             "stats": {"total_nodes": len(nodes), "total_edges": len(edges), "most_connected": most}}
 
 

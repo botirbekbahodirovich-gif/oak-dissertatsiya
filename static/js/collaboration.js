@@ -32,7 +32,6 @@
     student: OlimlarCharts.tokens.actionBlue,      // shogird — action blue
     opponent: OlimlarCharts.tokens.series4      // opponent — brend orange
   };
-  var DEFAULT_Y0 = 2000, DEFAULT_Y1 = 2026;
 
   function $(sel) { return typeof sel === 'string' ? document.querySelector(sel) : sel; }
   function esc(s) { var x = document.createElement('div'); x.textContent = s == null ? '' : s; return x.innerHTML; }
@@ -72,7 +71,8 @@
     this.infoEl = cfg.info ? $(cfg.info) : null;
     this.emptyEl = cfg.empty ? $(cfg.empty) : null;
     this.raw = { nodes: [], edges: [], center: '' };
-    this.filters = { spec: '', y0: DEFAULT_Y0, y1: DEFAULT_Y1,
+    // No year filter until setData() learns the real range.
+    this.filters = { spec: '', y0: -Infinity, y1: Infinity,
       types: { advisor: true, opponent: true, institution: false } };
     this.selected = null;
     this._uid = 0;
@@ -195,10 +195,11 @@
 
   CollabGraph.prototype.setData = function (d) {
     this.raw = { nodes: d.nodes || [], edges: d.edges || [], center: d.center || '' };
-    // derive year bounds from edges
+    // Year bounds: base-wide range from the API, else the edges, else this year.
     var years = this.raw.edges.map(function (e) { return e.year; }).filter(function (y) { return y != null; });
-    var min = years.length ? Math.min.apply(null, years) : DEFAULT_Y0;
-    var max = years.length ? Math.max.apply(null, years) : DEFAULT_Y1;
+    var now = new Date().getFullYear();
+    var min = d.year_min != null ? d.year_min : (years.length ? Math.min.apply(null, years) : now);
+    var max = d.year_max != null ? d.year_max : (years.length ? Math.max.apply(null, years) : now);
     if (min === max) { min -= 1; max += 1; }
     if (this.yFrom && this.yTo) {
       this.yFrom.min = this.yTo.min = min; this.yFrom.max = this.yTo.max = max;
