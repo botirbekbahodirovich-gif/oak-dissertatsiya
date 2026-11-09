@@ -135,6 +135,59 @@ class EmptyResultCacheTests(unittest.TestCase):
             self.assertEqual(client.get("/api/genealogy/Karimov").status_code, 200)
 
 
+class _DictCursor:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, *args, **kwargs):
+        pass
+
+    def fetchall(self):
+        return self.rows
+
+
+class _DictConn:
+    def __init__(self, rows):
+        self.rows = rows
+        self.closed_calls = 0
+
+    def cursor(self, *args, **kwargs):
+        return _DictCursor(self.rows)
+
+    def close(self):
+        self.closed_calls += 1
+
+
+class SupervisorCountsLookupTests(unittest.TestCase):
+    ROWS = [{"id": i, "Olim": f"Olim {i}", "Ilmiy_rahbar": "Karimov  Anvar" if i % 2 else "Yo'q Odam"}
+            for i in range(50)]
+
+    def test_query_rows_fetches_counts_once(self):
+        import data
+        conn = _DictConn(self.ROWS)
+        with patch.object(data, "get_connection", return_value=conn), \
+             patch.object(data, "get_supervisor_counts", return_value={"Karimov Anvar": 7}) as counts:
+            rows = data._query_rows("SELECT 1")
+        self.assertEqual(counts.call_count, 1)
+        self.assertEqual(conn.closed_calls, 1)
+        self.assertEqual(len(rows), 50)
+        self.assertEqual(rows[1]["supervisor_count"], 7)
+        self.assertEqual(rows[0]["supervisor_count"], 1)
+
+    def test_normalize_row_alone_still_looks_counts_up(self):
+        import data
+        with patch.object(data, "get_supervisor_counts", return_value={"Karimov Anvar": 3}):
+            row = data.normalize_row({"Ilmiy_rahbar": "Karimov Anvar"})
+        self.assertEqual(row["supervisor_count"], 3)
+        self.assertIsNone(data.normalize_row(None))
+
+
 class CspAnalyticsTests(unittest.TestCase):
     def _directives(self):
         import security

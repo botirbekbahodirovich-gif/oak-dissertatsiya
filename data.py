@@ -189,9 +189,13 @@ def get_display_author(dissertation):
     return olim
 
 
-def normalize_row(row):
+def normalize_row(row, supervisor_counts=None):
+    """`supervisor_counts` lets bulk callers pass the map once — fetching it per
+    row is a FileSystemCache pickle.load (~7 ms) each time."""
     if row is None:
         return None
+    if supervisor_counts is None:
+        supervisor_counts = get_supervisor_counts()
     oak_id = str(row.get("oak_id") or "").strip()
     link = str(row.get("Link") or "").strip()
     if not link and oak_id:
@@ -210,7 +214,7 @@ def normalize_row(row):
         "Ilmiy_rahbar": ' '.join(str(row.get("Ilmiy_rahbar") or "").split()),
         "Ilmiy_rahbar_short": clean_olim_name(' '.join(str(row.get("Ilmiy_rahbar") or "").split())),
         "Link": link,
-        "supervisor_count": get_supervisor_counts().get(
+        "supervisor_count": supervisor_counts.get(
             ' '.join(str(row.get("Ilmiy_rahbar") or "").split()), 1),
         "DataQuality": row.get("DataQuality") or 'complete',
     }
@@ -221,9 +225,11 @@ def _query_rows(sql, params=None):
     try:
         with conn.cursor(cursor_factory=psycopg2_extras.RealDictCursor) as cur:
             cur.execute(sql, tuple(params or ()))
-            return [normalize_row(row) for row in cur.fetchall()]
+            rows = cur.fetchall()
     finally:
         conn.close()
+    counts = get_supervisor_counts()
+    return [normalize_row(row, counts) for row in rows]
 
 
 def _query_scalar(sql, params=None):
