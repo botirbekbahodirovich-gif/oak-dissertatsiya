@@ -70,6 +70,18 @@ class CollaborationJsTests(unittest.TestCase):
     def test_empty_state_does_not_need_d3(self):
         self.assertNotIn("d3", _method(_js(), "_empty"))
 
+    def test_edge_colours_match_checkbox_dots(self):
+        js = _js()
+        block = js[js.index("var EDGE_COLOR"):js.index("var ROLE_COLOR")]
+        edge = dict(re.findall(r"(\w+): OlimlarCharts\.tokens\.(\w+)", block))
+        html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
+        dots = dict(re.findall(
+            r'id="cg-t-(\w+)"[^>]*><span class="dot" style="background:var\(--color-([\w-]+)\);"', html))
+        css_to_token = {"success": "success", "error": "error", "action-blue": "actionBlue"}
+        self.assertEqual(set(edge), {"advisor", "opponent", "institution"})
+        for kind, token in edge.items():
+            self.assertEqual(token, css_to_token[dots[kind]], kind)
+
     def test_template_has_message_slot(self):
         html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
         self.assertIn('class="cg-empty-msg"', html)

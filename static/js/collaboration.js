@@ -22,8 +22,8 @@
      legenda bilan bir xil — SVG canvas CSS var() ni o'qiy olmaydi.
      Rang yagona ajratuvchi emas: legenda + tugun o'lchami ham ma'no beradi. */
   var EDGE_COLOR = {
-    advisor: OlimlarCharts.tokens.series2,      // --color-success  (ustoz–shogird)
-    opponent: OlimlarCharts.tokens.error,     // --color-error    (opponent)
+    advisor: OlimlarCharts.tokens.success,      // --color-success  (ustoz–shogird)
+    opponent: OlimlarCharts.tokens.error,       // --color-error    (opponent)
     institution: OlimlarCharts.tokens.actionBlue   // --color-action-blue (muassasa)
   };
   var ROLE_COLOR = {
