@@ -2054,6 +2054,10 @@ def import_oak():
     finally:
         conn.close()
 
+    if inserted or updated:
+        from utils import analytics_cache
+        analytics_cache.invalidate()
+
     # Himoya e'lonlari smart matching: notify scholars whose ixtisoslik matches
     # a newly imported announcement (opt-out via himoya_elon pref, 3/day cap).
     # Runs after the import commit on its own connection — never fails the import.

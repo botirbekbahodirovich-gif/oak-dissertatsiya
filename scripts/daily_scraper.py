@@ -378,6 +378,13 @@ def main():
         time.sleep(DELAY)
 
     if new_count > 0:
+        # /analytics-data 6 soat keshlanadi — yangi himoyalar darhol ko'rinsin.
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from utils import analytics_cache
+            analytics_cache.invalidate()
+        except Exception as e:
+            print("Analytics keshi tozalanmadi: " + str(e))
         try:
             conn2 = get_conn()
             with conn2.cursor() as cur:

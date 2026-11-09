@@ -420,6 +420,10 @@ def save_to_db(items):
             skipped += 1
     print("Bazaga yozildi: " + str(added) + " ta yangi, "
           + str(skipped) + " ta mavjud (skip).")
+    if added:
+        # /analytics-data 6 soat keshlanadi — yangi himoyalar darhol ko'rinsin.
+        from utils import analytics_cache
+        analytics_cache.invalidate()
     return added, skipped
 
 

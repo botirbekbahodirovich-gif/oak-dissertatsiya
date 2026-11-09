@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from data import get_connection, query_dissertations, split_ixtisoslik
 from extensions import cache
+from utils import analytics_cache
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -57,8 +58,18 @@ def stats_json():
 
 
 @analytics_bp.route('/analytics-data')
-@cache.cached(timeout=600, key_prefix='analytics_data')
 def analytics_data():
+    # Cold build scans every dissertation — 6 h cache, one builder at a time,
+    # stale copy for everyone else (see utils/analytics_cache.py).
+    payload = analytics_cache.get_or_build(cache, _build_analytics_payload)
+    if payload is None:
+        resp = jsonify({"error": "Statistika tayyorlanmoqda, birozdan keyin qayta urinib ko'ring."})
+        resp.headers['Retry-After'] = '30'
+        return resp, 503
+    return jsonify(payload)
+
+
+def _build_analytics_payload():
     rows = query_dissertations("", "", "", "", "id", "asc")
     muassasa_counter = Counter(_normalize_text(row.get("Muassasa")) for row in rows if row.get("Muassasa"))
     daraja_counter = Counter(_normalize_text(row.get("Daraja")) for row in rows if row.get("Daraja"))
@@ -117,14 +128,14 @@ def analytics_data():
         ]
     }
 
-    return jsonify({
+    return {
         "top_muassasalar": top_muassasalar,
         "daraja_ratio": daraja_counts,
         "trend": trend_data,
         "top_ixtisosliklar": top_ixtisosliklar,
         "top_supervisors": top_supervisors,
         "heatmap": heatmap
-    })
+    }
 
 
 @analytics_bp.route('/api/faol')

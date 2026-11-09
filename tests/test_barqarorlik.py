@@ -188,6 +188,119 @@ class SupervisorCountsLookupTests(unittest.TestCase):
         self.assertIsNone(data.normalize_row(None))
 
 
+class AnalyticsCacheTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from cachelib import FileSystemCache
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = self.tmp.name
+        self.cache = FileSystemCache(self.dir)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_ttl_is_at_least_six_hours(self):
+        from utils import analytics_cache
+        self.assertGreaterEqual(analytics_cache.ANALYTICS_TTL, 6 * 3600)
+
+    def test_concurrent_cold_requests_build_once(self):
+        import threading, time
+        from utils import analytics_cache
+        builds = []
+
+        def build():
+            builds.append(1)
+            time.sleep(0.8)
+            return {"v": 1}
+
+        results = []
+        threads = [threading.Thread(target=lambda: results.append(
+            analytics_cache.get_or_build(self.cache, build, self.dir))) for _ in range(6)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        self.assertEqual(len(builds), 1)
+        self.assertEqual(results, [{"v": 1}] * 6)
+        self.assertFalse(os.path.exists(os.path.join(self.dir, "analytics_data.lock")))
+
+    def test_waiters_get_stale_copy_while_rebuilding(self):
+        from utils import analytics_cache
+        self.cache.set(analytics_cache.ANALYTICS_STALE_KEY, {"v": "old"})
+        open(os.path.join(self.dir, "analytics_data.lock"), "w").close()  # someone is building
+        got = analytics_cache.get_or_build(self.cache, lambda: self.fail("must not build"), self.dir)
+        self.assertEqual(got, {"v": "old"})
+
+    def test_nothing_ready_returns_none(self):
+        from utils import analytics_cache
+        open(os.path.join(self.dir, "analytics_data.lock"), "w").close()
+        with patch.object(analytics_cache, "WAIT_SECONDS", 0.6):
+            self.assertIsNone(analytics_cache.get_or_build(self.cache, dict, self.dir))
+
+    def test_crashed_builder_lock_expires(self):
+        from utils import analytics_cache
+        lock = os.path.join(self.dir, "analytics_data.lock")
+        open(lock, "w").close()
+        os.utime(lock, (0, 0))
+        self.assertEqual(analytics_cache.get_or_build(self.cache, lambda: {"v": 2}, self.dir), {"v": 2})
+
+    def test_failed_build_is_not_cached_and_releases_lock(self):
+        from utils import analytics_cache
+
+        def boom():
+            raise RuntimeError("db down")
+        with self.assertRaises(RuntimeError):
+            analytics_cache.get_or_build(self.cache, boom, self.dir)
+        self.assertIsNone(self.cache.get(analytics_cache.ANALYTICS_KEY))
+        self.assertFalse(os.path.exists(os.path.join(self.dir, "analytics_data.lock")))
+
+    def test_invalidate_drops_fresh_keeps_stale(self):
+        from utils import analytics_cache
+        analytics_cache.get_or_build(self.cache, lambda: {"v": 1}, self.dir)
+        self.assertTrue(analytics_cache.invalidate(self.dir))
+        self.assertIsNone(self.cache.get(analytics_cache.ANALYTICS_KEY))
+        self.assertEqual(self.cache.get(analytics_cache.ANALYTICS_STALE_KEY), {"v": 1})
+
+    def test_invalidate_reaches_the_app_cache(self):
+        # app.py's FileSystemCache and invalidate() must agree on dir and key names
+        from utils import analytics_cache
+        app_module.cache.set(analytics_cache.ANALYTICS_KEY, {"v": 1})
+        analytics_cache.invalidate()
+        self.assertIsNone(app_module.cache.get(analytics_cache.ANALYTICS_KEY))
+
+    def test_route_returns_503_when_nothing_ready(self):
+        import analytics
+        client = app_module.app.test_client()
+        with patch.object(analytics.analytics_cache, "get_or_build", return_value=None):
+            resp = client.get("/analytics-data")
+        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(resp.headers["Retry-After"], "30")
+        with patch.object(analytics.analytics_cache, "get_or_build", return_value={"trend": []}):
+            self.assertEqual(client.get("/analytics-data").get_json(), {"trend": []})
+
+    def test_scraper_invalidates_after_new_rows(self):
+        import scraper
+        with patch("data.get_connection", return_value=_TrackedConn()), \
+             patch.object(scraper, "db_save_one", side_effect=["added", "skip"]), \
+             patch("utils.analytics_cache.invalidate") as inv:
+            scraper.save_to_db([{"ID": 1}, {"ID": 2}])
+        inv.assert_called_once()
+        with patch("data.get_connection", return_value=_TrackedConn()), \
+             patch.object(scraper, "db_save_one", return_value="skip"), \
+             patch("utils.analytics_cache.invalidate") as inv:
+            scraper.save_to_db([{"ID": 1}])
+        inv.assert_not_called()
+
+    def test_import_hooks_present(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        data_src = (root / "data.py").read_text(encoding="utf-8")
+        hook = data_src[data_src.index("def import_oak"):]
+        self.assertIn("analytics_cache.invalidate()", hook[:hook.index("notify_himoya_matches")])
+        daily = (root / "scripts" / "daily_scraper.py").read_text(encoding="utf-8")
+        self.assertIn("analytics_cache.invalidate()", daily)
+
+
 class CspAnalyticsTests(unittest.TestCase):
     def _directives(self):
         import security
