@@ -3005,7 +3005,9 @@ def service_worker():
     # Serve the service worker from root so its scope can be "/"
     return app.send_static_file('sw.js'), 200, {
         'Content-Type': 'application/javascript',
-        'Service-Worker-Allowed': '/'
+        'Service-Worker-Allowed': '/',
+        # Always revalidate, so a fixed worker reaches browsers on next visit
+        'Cache-Control': 'no-cache',
     }
 
 

@@ -6,6 +6,14 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+os.environ.setdefault("APP_ENV", "testing")
+os.environ.setdefault("SESSION_SECRET", "collaboration-test-secret")
+# Empty values prevent python-dotenv from inheriting a parent workspace's .env.
+os.environ["DATABASE_URL"] = ""
+os.environ["POSTGRES_URL"] = ""
+
+import app as app_module
+
 SW = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
 
 
@@ -24,6 +32,13 @@ class ServiceWorkerTests(unittest.TestCase):
         # skipWaiting must not depend on the precache succeeding
         self.assertLess(install.index("self.skipWaiting()"), install.index("event.waitUntil"))
         self.assertIn("self.clients.claim()", SW)
+
+    def test_sw_route_is_never_cached(self):
+        response = app_module.app.test_client().get("/sw.js")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Cache-Control"], "no-cache")
+        self.assertEqual(response.headers["Service-Worker-Allowed"], "/")
+        response.close()
 
 
 if __name__ == "__main__":
