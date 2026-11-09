@@ -41,5 +41,39 @@ class ServiceWorkerTests(unittest.TestCase):
         response.close()
 
 
+def _js():
+    return (ROOT / "static" / "js" / "collaboration.js").read_text(encoding="utf-8")
+
+
+def _method(js, name):
+    start = js.index("CollabGraph.prototype.%s = function" % name)
+    end = js.find("CollabGraph.prototype.", start + 1)
+    return js[start:end if end > 0 else len(js)]
+
+
+class CollaborationJsTests(unittest.TestCase):
+    def test_every_fetch_checks_response_ok(self):
+        js = _js()
+        self.assertNotIn("r.json(); })", js)
+        self.assertEqual(js.count("fetch("), 1, "all requests go through getJSON")
+        self.assertIn("if (!r.ok) throw", js)
+
+    def test_load_draw_and_empty_have_distinct_messages(self):
+        js = _js()
+        for kind in ("empty", "load", "draw"):
+            self.assertRegex(js, r"\b%s: '" % kind)
+        self.assertIn("_empty(true, 'load')", _method(js, "loadFull"))
+        self.assertIn("_empty(true, 'load')", _method(js, "loadCenter"))
+        self.assertIn("_empty(true, 'draw')", _method(js, "render"))
+        self.assertIn("_empty(true, 'empty')", _method(js, "render"))
+
+    def test_empty_state_does_not_need_d3(self):
+        self.assertNotIn("d3", _method(_js(), "_empty"))
+
+    def test_template_has_message_slot(self):
+        html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
+        self.assertIn('class="cg-empty-msg"', html)
+
+
 if __name__ == "__main__":
     unittest.main()

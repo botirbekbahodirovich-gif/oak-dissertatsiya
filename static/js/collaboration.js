@@ -50,6 +50,19 @@
   function debounce(fn, ms) {
     var t; return function () { var a = arguments, self = this; clearTimeout(t); t = setTimeout(function () { fn.apply(self, a); }, ms); };
   }
+  // HTTP xatosi (masalan 500 yoki SW'ning 503 "Offline") ham yuklash xatosi.
+  function getJSON(url) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+  // Bo'sh holat sababiga qarab alohida xabar.
+  var EMPTY_MSG = {
+    empty: 'Olim topilmadi yoki tarmoq bo\'sh.<br><b>Yuqoridan boshqa ism qidiring.</b>',
+    load: 'Ma\'lumotni yuklab bo\'lmadi.<br><b>Internet aloqasini tekshirib, sahifani yangilang.</b>',
+    draw: 'Grafni chizib bo\'lmadi.<br><b>Sahifani yangilang.</b>'
+  };
 
   function CollabGraph(cfg) {
     this.cfg = cfg;
@@ -78,8 +91,7 @@
       q.addEventListener('input', debounce(function () {
         var term = q.value.trim();
         if (term.length < 2) { self._closeDrop(); return; }
-        fetch('/api/collaboration/search?q=' + encodeURIComponent(term))
-          .then(function (r) { return r.json(); })
+        getJSON('/api/collaboration/search?q=' + encodeURIComponent(term))
           .then(function (d) { self._showDrop(d.results || []); })
           .catch(function () { self._closeDrop(); });
       }, 220));
@@ -163,25 +175,22 @@
   CollabGraph.prototype.loadFull = function () {
     var self = this;
     this._loading(true);
-    fetch('/api/collaboration?mode=full')
-      .then(function (r) { return r.json(); })
-      .then(function (d) { self._loading(false); self.setData(d); })
-      .catch(function () { self._loading(false); self._empty(true); });
+    getJSON('/api/collaboration?mode=full')
+      .then(function (d) { self._loading(false); self.setData(d); },
+            function () { self._loading(false); self._empty(true, 'load'); });
   };
 
   CollabGraph.prototype.loadCenter = function (name) {
     var self = this;
     if (!name) return;
     this._loading(true);
-    fetch('/api/collaboration?name=' + encodeURIComponent(name))
-      .then(function (r) { return r.json(); })
+    getJSON('/api/collaboration?name=' + encodeURIComponent(name))
       .then(function (d) {
         self._loading(false);
-        if (!d.nodes || !d.nodes.length) { self._empty(true); return; }
+        if (!d.nodes || !d.nodes.length) { self._empty(true, 'empty'); return; }
         d.center = d.center || name;
         self.setData(d);
-      })
-      .catch(function () { self._loading(false); self._empty(true); });
+      }, function () { self._loading(false); self._empty(true, 'load'); });
   };
 
   CollabGraph.prototype.setData = function (d) {
@@ -202,9 +211,16 @@
     this.render();
   };
 
-  CollabGraph.prototype._empty = function (on) {
-    if (this.emptyEl) this.emptyEl.style.display = on ? 'flex' : 'none';
-    if (on && this.svgEl) d3.select(this.svgEl).selectAll('*').remove();
+  // d3'siz ishlaydi: d3 yuklanmagan bo'lsa ham xabar ko'rinishi kerak.
+  CollabGraph.prototype._empty = function (on, kind) {
+    if (this.emptyEl) {
+      this.emptyEl.style.display = on ? 'flex' : 'none';
+      var msg = this.emptyEl.querySelector('.cg-empty-msg');
+      if (on && msg) msg.innerHTML = EMPTY_MSG[kind] || EMPTY_MSG.empty;
+    }
+    if (on && this.svgEl) {
+      while (this.svgEl.firstChild) this.svgEl.removeChild(this.svgEl.firstChild);
+    }
   };
 
   // ── filtering ───────────────────────────────────────────
@@ -247,11 +263,21 @@
 
   // ── render ──────────────────────────────────────────────
   CollabGraph.prototype.render = function () {
-    var self = this;
     if (!this.svgEl) return;
     var data = this._filtered();
-    if (!data.nodes.length) { this._empty(true); d3.select(this.svgEl).selectAll('*').remove(); return; }
-    this._empty(false);
+    if (!data.nodes.length) { this._empty(true, 'empty'); return; }
+    try {
+      if (typeof d3 === 'undefined') throw new Error('d3 yuklanmadi');
+      this._empty(false);
+      this._draw(data);
+    } catch (err) {
+      if (global.console) console.error('CollabGraph:', err);
+      this._empty(true, 'draw');
+    }
+  };
+
+  CollabGraph.prototype._draw = function (data) {
+    var self = this;
 
     var svg = d3.select(this.svgEl);
     svg.selectAll('*').remove();
