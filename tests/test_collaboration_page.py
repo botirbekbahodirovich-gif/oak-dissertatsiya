@@ -41,6 +41,16 @@ class ServiceWorkerTests(unittest.TestCase):
         self.assertEqual(response.headers["Service-Worker-Allowed"], "/")
         response.close()
 
+    def test_page_reloads_once_when_updated_worker_takes_control(self):
+        base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+        reg = base[base.index("<!-- Service Worker Registration -->"):]
+        guard = reg.index("if (navigator.serviceWorker.controller)")
+        listener = reg.index("addEventListener('controllerchange'")
+        self.assertLess(guard, listener)
+        handler = reg[listener:reg.index("window.addEventListener('load'")]
+        self.assertLess(handler.index("sessionStorage.getItem"), handler.index("location.reload()"))
+        self.assertLess(handler.index("sessionStorage.setItem"), handler.index("location.reload()"))
+
 
 def _js():
     return (ROOT / "static" / "js" / "collaboration.js").read_text(encoding="utf-8")

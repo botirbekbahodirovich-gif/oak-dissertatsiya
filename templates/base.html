@@ -1349,6 +1349,17 @@ function closeSurvey() {
 <!-- Service Worker Registration -->
 <script>
 if ('serviceWorker' in navigator) {
+  // Yangilanishda (sahifani eski SW boshqargan bo'lsa) yangi SW nazoratni olganda
+  // bir marta qayta yuklaymiz; birinchi o'rnatishda reload yo'q.
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      try {
+        if (sessionStorage.getItem('sw-reloaded')) return;
+        sessionStorage.setItem('sw-reloaded', '1');
+      } catch (e) { return; }
+      window.location.reload();
+    });
+  }
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js', {scope: '/'})
       .then(function(reg) {
