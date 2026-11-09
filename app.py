@@ -2118,6 +2118,7 @@ def _collab_index():
     spec_ctr = defaultdict(Counter)   # name -> Counter of ixtisoslik codes
     inst_ctr = defaultdict(Counter)   # name -> Counter of muassasa
     year_min = year_max = None        # defence-year range over the whole base
+    db_failed = False
 
     def _year(sana):
         m = _re_util.findall(r'(?:19|20)\d{2}', sana or '')
@@ -2191,6 +2192,7 @@ def _collab_index():
             conn.close()
     except Exception as e:
         _log_silent(e)
+        db_failed = True
     spec_map = {n: c.most_common(1)[0][0] for n, c in spec_ctr.items() if c}
     inst_map = {n: c.most_common(1)[0][0] for n, c in inst_ctr.items() if c}
     idx = {
@@ -2203,7 +2205,9 @@ def _collab_index():
         "by_conn": sorted(adj.keys(), key=lambda n: -len(adj[n])),
         "year_min": year_min, "year_max": year_max,
     }
-    cache.set("collab_index_v2", idx, 1800)
+    # A DB error must not pin an empty graph in the cache for 30 minutes.
+    if not db_failed:
+        cache.set("collab_index_v2", idx, 1800)
     return idx
 
 

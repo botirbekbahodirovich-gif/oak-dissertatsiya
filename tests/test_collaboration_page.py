@@ -160,6 +160,23 @@ class CollabIndexTests(unittest.TestCase):
             self.assertEqual((payload["year_min"], payload["year_max"]), (1998, 2025))
         self.assertTrue(full["nodes"])
 
+    def test_db_error_is_not_cached(self):
+        with patch("data.get_connection", side_effect=RuntimeError("db down")):
+            idx = app_module._collab_index()
+        self.assertFalse(idx["adj"])
+        self.assertIsNone(app_module.cache.get("collab_index_v2"))
+        # once the DB is back, the next call builds the real graph
+        with patch("data.get_connection", return_value=FakeConnection()):
+            idx = app_module._collab_index()
+        self.assertIn("Karimov Anvar", idx["adj"])
+        self.assertIsNotNone(app_module.cache.get("collab_index_v2"))
+
+    def test_success_is_cached(self):
+        with patch("data.get_connection", return_value=FakeConnection()) as conn:
+            app_module._collab_index()
+            app_module._collab_index()
+        self.assertEqual(conn.call_count, 1)
+
     def test_no_hardcoded_years_in_page(self):
         js = _js()
         html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
