@@ -7,18 +7,20 @@ from flask import abort, g, has_request_context, request
 from flask_login import current_user
 
 _REQUEST_ID_RE = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+# Yandex Metrica: tag.js syncs via mc.yandex.md/.com (connect) and frames mc.yandex.ru;
+# Cloudflare injects the Web Analytics beacon (script) which posts to cloudflareinsights.com.
 _CSP = "; ".join((
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://telegram.org https://mc.yandex.ru",
+    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://telegram.org https://mc.yandex.ru https://static.cloudflareinsights.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://mc.yandex.ru https://telegram.org https://oauth.telegram.org",
-    "frame-src https://oauth.telegram.org https://telegram.org",
+    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://mc.yandex.ru https://mc.yandex.com https://mc.yandex.md https://cloudflareinsights.com https://telegram.org https://oauth.telegram.org",
+    "frame-src https://oauth.telegram.org https://telegram.org https://mc.yandex.ru",
     "upgrade-insecure-requests",
 ))
 

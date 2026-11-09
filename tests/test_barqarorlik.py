@@ -135,5 +135,27 @@ class EmptyResultCacheTests(unittest.TestCase):
             self.assertEqual(client.get("/api/genealogy/Karimov").status_code, 200)
 
 
+class CspAnalyticsTests(unittest.TestCase):
+    def _directives(self):
+        import security
+        return {part.split(" ", 1)[0]: part.split(" ")[1:] for part in security._CSP.split("; ")}
+
+    def test_cloudflare_web_analytics_allowed(self):
+        d = self._directives()
+        self.assertIn("https://static.cloudflareinsights.com", d["script-src"])
+        self.assertIn("https://cloudflareinsights.com", d["connect-src"])
+
+    def test_yandex_metrica_allowed(self):
+        d = self._directives()
+        self.assertIn("https://mc.yandex.ru", d["script-src"])
+        for host in ("https://mc.yandex.ru", "https://mc.yandex.md", "https://mc.yandex.com"):
+            self.assertIn(host, d["connect-src"])
+        self.assertIn("https://mc.yandex.ru", d["frame-src"])
+
+    def test_no_wildcards_added(self):
+        for name, sources in self._directives().items():
+            self.assertNotIn("*", " ".join(sources), name)
+
+
 if __name__ == "__main__":
     unittest.main()
