@@ -60,10 +60,6 @@
 .cg-check input { accent-color:var(--color-action-blue); width:15px; height:15px; }
 .cg-check .dot { width:11px; height:11px; border-radius:var(--radius-full); display:inline-block; }
 
-.cg-legend { margin-left:auto; display:flex; gap:14px; flex-wrap:wrap; font-size:0.82rem; font-weight:600; }
-.cg-legend span { display:inline-flex; align-items:center; gap:6px; }
-.cg-legend .dot { width:10px; height:10px; border-radius:var(--radius-full); display:inline-block; }
-
 /* ── Year slider ─────────────────────────────────────────── */
 .cg-years {
   display:flex; align-items:center; gap:10px;
@@ -141,7 +137,6 @@
 .cg-help b { color:var(--color-action-blue); }
 
 @media (max-width: 700px) {
-  .cg-legend { margin-left:0; width:100%; }
   .cg-stage { height:64vh; min-height:440px; }
   .cg-info { width:calc(100% - 28px); }
 }
@@ -177,12 +172,6 @@
         <label class="cg-check"><input type="checkbox" id="cg-t-advisor" checked><span class="dot" style="background:var(--color-success);"></span>ustoz–shogird</label>
         <label class="cg-check"><input type="checkbox" id="cg-t-opponent" checked><span class="dot" style="background:var(--color-error);"></span>opponent</label>
         <label class="cg-check"><input type="checkbox" id="cg-t-institution"><span class="dot" style="background:var(--color-action-blue);"></span>muassasa</label>
-      </div>
-
-      <div class="cg-legend">
-        <span><i class="dot" style="background:var(--color-success);"></i>ustoz–shogird</span>
-        <span><i class="dot" style="background:var(--color-error);"></i>opponent</span>
-        <span><i class="dot" style="background:var(--color-action-blue);"></i>muassasa</span>
       </div>
     </div>
 

@@ -82,6 +82,11 @@ class CollaborationJsTests(unittest.TestCase):
         for kind, token in edge.items():
             self.assertEqual(token, css_to_token[dots[kind]], kind)
 
+    def test_legend_is_not_duplicated(self):
+        html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
+        self.assertNotIn("cg-legend", html)
+        self.assertEqual(html.count("ustoz–shogird</label>"), 1)
+
     def test_template_has_message_slot(self):
         html = (ROOT / "templates" / "collaboration.html").read_text(encoding="utf-8")
         self.assertIn('class="cg-empty-msg"', html)
