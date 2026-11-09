@@ -2936,6 +2936,7 @@ def get_visitor_info():
 @app.before_request
 def track_visit():
     if request.endpoint and not request.path.startswith('/static') and not request.path.startswith('/api/'):
+        conn = None
         try:
             from data import get_connection
             from flask import session
@@ -2961,9 +2962,20 @@ def track_visit():
                   request.headers.get('Referer', '')[:500], sid, get_country()))
             conn.commit()
             cur.close()
-            conn.close()
         except Exception:
-            pass  # never break the app if tracking fails
+            # never break the app if tracking fails
+            if conn is not None:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+        finally:
+            # A failed INSERT must still hand the connection back to the pool.
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
 
 @app.before_request
