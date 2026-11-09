@@ -301,6 +301,32 @@ class AnalyticsCacheTests(unittest.TestCase):
         self.assertIn("analytics_cache.invalidate()", daily)
 
 
+class StatsPageStatesTests(unittest.TestCase):
+    def setUp(self):
+        from pathlib import Path
+        self.html = (Path(__file__).resolve().parents[1] / "templates" / "stats.html").read_text(encoding="utf-8")
+
+    def test_fetches_have_a_timeout(self):
+        self.assertIn("new AbortController()", self.html)
+        self.assertIn("fetchJSON('/analytics-data', ANALYTICS_TIMEOUT_MS)", self.html)
+        self.assertIn("fetchJSON('/stats-json', SUMMARY_TIMEOUT_MS)", self.html)
+        self.assertNotIn("await fetch('/analytics-data')", self.html)
+
+    def test_loading_and_error_states(self):
+        self.assertIn("setChartState('loading'", self.html)
+        self.assertIn("setChartState('error', errorText(e))", self.html)
+        self.assertIn("e.status === 503", self.html)
+        self.assertIn("e && e.timeout", self.html)
+        # retry redraws in place instead of reloading the page
+        self.assertNotIn("location.reload()", self.html)
+        self.assertIn("Chart.getChart(canvas)", self.html)
+
+    def test_no_raw_colours_added(self):
+        import re
+        block = self.html[self.html.index(".st-state"):self.html.index("</style>")]
+        self.assertIsNone(re.search(r"#[0-9a-fA-F]{3,8}|rgba?\(", block))
+
+
 class CspAnalyticsTests(unittest.TestCase):
     def _directives(self):
         import security
