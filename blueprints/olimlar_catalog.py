@@ -26,9 +26,10 @@ Routes:
   GET  /api/olimlar                 — filtr/saralash/guruh JSON
   POST /api/olimlar/<slug>/follow   — kuzatish toggle (@login_required)
 """
+import json
+import logging
 import re
 import time
-import json
 
 from flask import (Blueprint, jsonify, request, render_template, abort)
 from flask_login import login_required, current_user
@@ -44,6 +45,7 @@ from utils.olimlar_catalog_quality import (
 )
 
 olimlar_catalog_bp = Blueprint('olimlar_catalog', __name__)
+_log = logging.getLogger(__name__)
 
 _CACHE_TTL = 900          # 15 daqiqa
 _scholars_cache = {'data': None, 'facets': None, 'audit': [], 'timestamp': 0}
@@ -669,13 +671,13 @@ def api_follow(slug):
     return jsonify({'ok': True, 'following': following, 'scholar': target})
 
 
-# ── Follow bildirishnoma hook (Part 5) — import_oak'dan chaqiriladi ─────────
+# ── Follow bildirishnoma hook (Part 5) — services/oak_notify'dan chaqiriladi ─────────
 
-def notify_scholar_follows(new_defenses):
+def notify_scholar_follows(new_defenses, dry_run=False, report=None):
     """Yangi himoyalar ichida kuzatilayotgan ilmiy rahbar bo'lsa, uni kuzatuvchi
-    foydalanuvchilarga bell bildirishnomasi. Import'ni hech qachon yiqitmaydi;
-    dissertation_id bo'yicha takrorlanmaydi. Qaytaradi: yaratilgan bildirishnomalar
-    soni."""
+    foydalanuvchilarga bell bildirishnomasi. Scraper'ni hech qachon yiqitmaydi
+    (xato log'ga yoziladi); dissertation_id bo'yicha takrorlanmaydi. Qaytaradi:
+    yaratilgan bildirishnomalar soni. dry_run — yozmaydi, `report` ga qo'shadi."""
     if not new_defenses:
         return 0
     # rahbar (lower) → shu rahbarli yangi himoyalar
@@ -717,16 +719,26 @@ def notify_scholar_follows(new_defenses):
                             'mavzu': (d.get('mavzu') or '')[:160],
                             'diss_id': diss_id,
                         }, ensure_ascii=False)
-                        cur.execute(
-                            "INSERT INTO diss_notifications "
-                            "(user_id, event_type, payload) "
-                            "VALUES (%s, 'followed_scholar_new_student', %s)",
-                            (user_id, payload))
+                        if report is not None:
+                            report.append({'kind': 'kuzatuv', 'channel': 'site',
+                                           'user_id': user_id, 'diss_id': diss_id,
+                                           'text': f"{adv_name}: yangi shogird — "
+                                                   f"{d.get('olim') or ''}"})
+                        if not dry_run:
+                            cur.execute(
+                                "INSERT INTO diss_notifications "
+                                "(user_id, event_type, payload) "
+                                "VALUES (%s, 'followed_scholar_new_student', %s)",
+                                (user_id, payload))
                         created += 1
-            conn.commit()
+            if dry_run:
+                conn.rollback()
+            else:
+                conn.commit()
         finally:
             conn.close()
     except Exception:
+        _log.exception("notify_scholar_follows xatosi (%d ta yaratilgan)", created)
         return created
     return created
 

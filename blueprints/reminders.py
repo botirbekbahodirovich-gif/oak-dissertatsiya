@@ -29,7 +29,9 @@ Routes:
   GET/POST /cabinet/api/notification-prefs — cabinet toggles.
 """
 import hmac
+import logging
 import os
+import re
 from datetime import date
 
 from flask import (Blueprint, current_app, jsonify, request, render_template,
@@ -42,6 +44,7 @@ from security import log_exception
 from app import csrf
 
 reminders_bp = Blueprint('reminders', __name__)
+_log = logging.getLogger(__name__)
 
 _schema_ready = False
 
@@ -709,18 +712,26 @@ def admin_reminder_resend(id):
     return redirect('/admin/reminders')
 
 
-# ── Himoya e'lonlari auto-match (called from data.py /api/oak/import) ────────
+# ── Himoya e'lonlari auto-match (called from services/oak_notify.py) ─────────
 
 _HIMOYA_TITLE = "🎓 Yangi himoya e'loni"
 _HIMOYA_DAILY_CAP = 3  # max himoya notifications per user per day
 
 
-def notify_himoya_matches(new_records):
+def _codes(value):
+    """'05.01.01, 05.02.03' -> {'05.01.01', '05.02.03'}; no codes -> {normalized text}."""
+    found = set(re.findall(r'\d{2}\.\d{2}\.\d{2}', value or ''))
+    return found or ({_norm(value)} if _norm(value) else set())
+
+
+def notify_himoya_matches(new_records, dry_run=False, report=None):
     """Notify scholars whose ixtisoslik matches freshly imported OAK defense
     announcements. `new_records` is a list of dicts with keys:
-    olim, mavzu, ixtisoslik, link. Opens its own connection (called after the
-    import transaction commits); never raises — import must not fail because
-    notification delivery hiccuped. Returns number of notifications created."""
+    id, olim, mavzu, ixtisoslik (one or more codes), link. Opens its own
+    connection (called after the notified_at claim commits); never raises —
+    the scraper must not fail because delivery hiccuped; errors are logged.
+    Returns number of notifications created. dry_run: nothing is written or
+    sent; every (planned) send is appended to `report` when given."""
     records = [r for r in new_records if (r.get('ixtisoslik') or '').strip()]
     if not records:
         return 0
@@ -761,8 +772,10 @@ def notify_himoya_matches(new_records):
                         budget -= (cur.fetchone()[0] or 0)
                     if budget <= 0:
                         continue
+                    # A defense may carry several codes ("05.01.01, 05.02.03").
+                    user_codes = _codes(u['ixtisoslik'])
                     mine = [r for r in records
-                            if _norm(r['ixtisoslik']) == _norm(u['ixtisoslik'])]
+                            if user_codes & _codes(r['ixtisoslik'])]
                     for rec in mine[:budget]:
                         msg = (f"Sizning ixtisosligingizda ({rec['ixtisoslik']}) "
                                f"yangi himoya e'loni: {rec.get('olim') or ''} — "
@@ -770,21 +783,39 @@ def notify_himoya_matches(new_records):
                         if rec.get('link'):
                             msg += f"\n🔗 {rec['link']}"
                         if main_uid:
-                            cur.execute("""
-                                INSERT INTO user_alerts (user_id, title, message, level)
-                                VALUES (%s, %s, %s, 'info')
-                            """, (main_uid, _HIMOYA_TITLE, msg))
+                            if report is not None:
+                                report.append({'kind': 'himoya', 'channel': 'site',
+                                               'user_id': main_uid,
+                                               'diss_id': rec.get('id'), 'text': msg})
+                            if not dry_run:
+                                cur.execute("""
+                                    INSERT INTO user_alerts (user_id, title, message, level)
+                                    VALUES (%s, %s, %s, 'info')
+                                """, (main_uid, _HIMOYA_TITLE, msg))
                             sent += 1
                         if can_telegram:
-                            if _send_telegram(u['telegram_id'], {
+                            if report is not None:
+                                report.append({'kind': 'himoya', 'channel': 'telegram',
+                                               'user_id': main_uid,
+                                               'chat_id': u['telegram_id'],
+                                               'diss_id': rec.get('id'), 'text': msg})
+                            if dry_run or _send_telegram(u['telegram_id'], {
                                     'title': f"Yangi himoya e'loni ({rec['ixtisoslik']})",
                                     'description': (f"{rec.get('olim') or ''} — "
                                                     f"{rec.get('mavzu') or ''}"),
                                     'url': rec.get('link') or ''}):
                                 sent += 1
-            conn.commit()
+                            else:
+                                _log.warning("himoya: telegram yuborilmadi "
+                                             "(chat=%s, diss=%s)",
+                                             u['telegram_id'], rec.get('id'))
+            if dry_run:
+                conn.rollback()
+            else:
+                conn.commit()
         finally:
             conn.close()
     except Exception:
+        _log.exception("notify_himoya_matches failed after %d sends", sent)
         return sent
     return sent

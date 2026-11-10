@@ -1,0 +1,22 @@
+name: Yozishmalarni tozalash
+# Avval daily.yml (OAK scraper) ichidagi qadam edi. Scraper endi server
+# cron'ida ishlaydi (scraper.py → DB + services/oak_notify), shuning uchun
+# bu yerda faqat chat retention qoldi.
+on:
+  schedule:
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      # Chat retention — 3 kundan eski yozishmalarni global tozalash (idempotent).
+      # Lazy tozalash send/GET da ham ishlaydi; bu esa jim suhbatlarni ham tozalaydi.
+      - name: Eski yozishmalarni tozalash (3 kun)
+        env:
+          REMINDERS_API_KEY: ${{ secrets.REMINDERS_API_KEY }}
+        run: |
+          curl --fail-with-body -sS -X POST \
+            -H "X-API-Key: ${REMINDERS_API_KEY}" \
+            https://www.olimlar.uz/api/v1/messages/cleanup || true

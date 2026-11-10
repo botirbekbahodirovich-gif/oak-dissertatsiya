@@ -27,14 +27,19 @@ Current features (v0.2+):
   REMINDERS_API_KEY secret in server .env + GitHub)
 - Notification preferences: per-user ON/OFF toggles (notification_prefs table,
   key-value; API in `blueprints/notifications.py`, UI in cabinet)
+- OAK ingest = single path: server cron `scraper.py` (06:00) inserts with
+  ON CONFLICT DO NOTHING RETURNING id and passes only new ids to
+  `services/oak_notify.py` (claims `dissertations.notified_at` in its own
+  committed transaction, then sends — at-most-once; `--dry-run`,
+  `--notify-only --ids`). `/api/oak/import` is 410 Gone.
 - Himoya auto-match: new OAK imports notify scholars with matching ixtisoslik
-  (site + Telegram, 3/day cap) — hook in `data.py` import_oak
+  (site + Telegram, 3/day cap) — dispatched by `services/oak_notify.py`
 - Advisor pages: /rahbar-topish directory + /rahbar/<slug> profiles
   (`blueprints/advisors.py`, 10-min cached aggregation over dissertations;
   invite CTA bridges to Konstruktor `?invite=` prefill)
 - Ixtisoslik obunasi: specialty_subscriptions (max 5/user, site+Telegram
   toggles) — new-defense alerts on OAK import (`blueprints/subscriptions.py`,
-  second hook in import_oak; chat id in users.telegram_chat_id, set at
+  second channel in oak_notify; chat id in users.telegram_chat_id, set at
   Telegram login, or derived from `<id>@telegram.uz` e-mails)
 - Public /reminders page (filter tabs) + upcoming-deadlines widget
   (`templates/_reminders_widget.html` on home, dashboard, cabinet)

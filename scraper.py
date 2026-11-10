@@ -1,8 +1,13 @@
 # ============================================================
 # OAK.UZ — Kunlik avtomatik scraper
-# GitHub Actions uchun
+# Server cron'i (06:00) ishga tushiradi: DB ga to'g'ridan-to'g'ri yozadi va
+# yangi qo'shilgan qatorlar bo'yicha bildirishnoma yuboradi (services/oak_notify).
+#   python3 scraper.py [--dry-run]
+#   python3 scraper.py --notify-only --ids 123,124 [--dry-run]
 # ============================================================
 
+import argparse
+import logging
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -11,11 +16,13 @@ import time
 import os
 from datetime import datetime
 
+log = logging.getLogger("scraper")
+
 # ----------------- SOZLAMALAR -----------------
 # Bir nechta manba — har biri bir xil strukturada, alohida scraping qilinadi.
 SOURCES = [
-    {"url": "https://oak.uz/page/8",  "yonalish": "Oddiy"},
-    {"url": "https://oak.uz/page/31", "yonalish": "Mustaqil ilmiy kengash"},
+    {"url": "https://oak.uz/page/8",  "nomi": "Oddiy"},
+    {"url": "https://oak.uz/page/31", "nomi": "Mustaqil ilmiy kengash"},
 ]
 MAX_PAGES = 10        # Kuniga max 10 sahifa tekshiriladi (~100 ta e'lon)
 DELAY = 1.0
@@ -98,7 +105,104 @@ def detect_degree(text):
     return ""
 
 
+# ----------------- BO'LIMLARGA AJRATISH -----------------
+# extract_field() qiymatni matn ichidagi "Илмий", "Тадқиқот", "Диссертация"
+# so'zlarida kesib qo'yadi ("катта илмий ходим", "илмий-тадқиқот институти").
+# Shuning uchun e'lon matni avval qator boshidagi sarlavhalar bo'yicha
+# bo'limlarga ajratiladi; qiymat — keyingi sarlavhagacha bo'lgan butun matn.
+_SECTION_HEADERS = [
+    ("ro_yxat_raqami", r"Диссерта(?:ция|сия) мавзуси рўй[хҳ]атга олинган рақам"),
+    ("mavzu", r"Диссерта(?:ция|сия) мавзуси"),
+    ("ilmiy_rahbar", r"Илмий (?:раҳбар(?:лар)?|маслаҳатчи)"),
+    ("bajarilgan_muassasa", r"Диссерта(?:ция|сия) бажарилган муассаса"),
+    ("ik_muassasa", r"(?:ИК|Илмий [Кк]енгаш) фаолият кўрсатаётган муассаса"),
+    ("opponentlar", r"Расмий оппонентлар"),
+    ("yetakchi_tashkilot", r"Етакчи\s+ташкилот"),
+    ("yo_nalish", r"Диссерта(?:ция|сия) йўналиши"),
+]
+_SECTION_RE = re.compile(
+    r"(?m)^[ \t]*(?:" + "|".join(
+        "(?P<%s>%s)" % (k, p) for k, p in _SECTION_HEADERS) + ")")
+# Sarlavha dumi: "… (илмий даража бериладиган фан тармоғи номи):",
+# "… номи\n:" yoki "… –". Ikki nuqta bo'lmasa qiymat darhol boshlanadi.
+_HEADER_TAIL_RE = re.compile(r"[^:\n]{0,90}:|[^:\n]{0,40}\n\s*:|\s*[–—-]\s")
+
+
+def split_sections(text):
+    """E'lon matnini {kalit: xom qiymat} ga ajratadi (birinchi uchragani)."""
+    matches = list(_SECTION_RE.finditer(text or ""))
+    out = {}
+    for i, m in enumerate(matches):
+        key = m.lastgroup
+        start = m.end()
+        tail = _HEADER_TAIL_RE.match(text, start)
+        if tail:
+            start = tail.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        if key not in out:
+            out[key] = text[start:end].strip()
+    return out
+
+
+def _clean(value):
+    return re.sub(r"\s+", " ", value or "").strip().lstrip(":–—- ").rstrip(" .;,")
+
+
+_CODE_RE = re.compile(r"\b(\d{2}\.\d{2}\.\d{2})\b")
+
+
+def normalize_codes(text):
+    """Ixtisoslik shifrlari: noyob, tartiblangan, ", " bilan (bazadagi mavjud
+    ko'p kodli qatorlar formati: "02.00.07, 05.02.01")."""
+    return ", ".join(sorted(set(_CODE_RE.findall(text or ""))))
+
+
+def clean_mavzu(section):
+    """"“Mavzu”, 13.00.04 – Ixtisoslik nomi (…)" dan faqat mavzu nomini oladi."""
+    text = re.sub(r"\s+", " ", section or "").strip()
+    m = re.search(r"[«\"“„]([^»\"”“]{20,})[»\"”]", text)
+    if m:
+        return m.group(1).strip()
+    m = re.search(r"^(.+?)[\s,]+(?:мавзусидаги\s+)?\d{2}\.\d{2}\.\d{2}", text)
+    if m:
+        return m.group(1).strip(" ,–—-")
+    return _clean(text)
+
+
+# "Фамилия Исм Отасининг" — opponentlar vergul bilan ajratilgan, ";" siz
+# yozilganda yangi opponent shu F.I.Sh. dan boshlanadi.
+_FULL_NAME_RE = re.compile(
+    r"(?<![\w-])[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]+\s+[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]+\s+"
+    r"[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]*(?:вич|вна|\s+ўғли|\s+қизи|\s+угли|\s+кизи)"
+    r"(?![\w-])")
+
+
+def split_opponents(section, limit=3):
+    """"Расмий оппонентлар" bo'limini alohida opponentlarga ajratadi.
+
+    OAK'da uchragan shakllar: "A, …; B, …" (asosiy), har biri yangi qatorda,
+    va ";" siz vergul/bo'shliq bilan ("A, …, дотсент Б Б Б, …").
+    Har bir element bazadagi formatda: "F.I.Sh., daraja, unvon".
+    """
+    raw = (section or "").strip()
+    if not raw:
+        return []
+    parts = [p for p in re.split(r";", raw) if _clean(p)]
+    if len(parts) == 1:
+        lines = [ln for ln in raw.split("\n") if _clean(ln)]
+        if len(lines) > 1:
+            parts = lines
+    if len(parts) == 1:
+        text = re.sub(r"\s+", " ", raw)
+        starts = [m.start() for m in _FULL_NAME_RE.finditer(text)]
+        if len(starts) > 1:
+            starts[0] = 0
+            parts = [text[a:b] for a, b in zip(starts, starts[1:] + [len(text)])]
+    return [_clean(p) for p in parts if _clean(p)][:limit]
+
+
 def parse_announcement(text):
+    sections = split_sections(text)
     fields = {
         "mavzu": [
             r"Диссертация мавзуси[^:]*шифри[^:]*",
@@ -124,8 +228,20 @@ def parse_announcement(text):
         "yetakchi_tashkilot": [r"Етакчи ташкилот"],
         "yo_nalish": [r"Диссертация йўналиши", r"Диссертасия йўналиши"],
     }
-    result = {k: extract_field(text, v) for k, v in fields.items()}
-    codes = re.findall(r"\b(\d{2}\.\d{2}\.\d{2})\b", text)
+    # Bo'lim topilsa — undan (to'liq qiymat), aks holda eski extract_field.
+    result = {k: (_clean(sections[k]) if sections.get(k) else extract_field(text, v))
+              for k, v in fields.items()}
+    if sections.get("yo_nalish"):
+        result["yo_nalish"] = _clean(sections["yo_nalish"].split("\n")[0])
+    result["mavzu_nomi"] = clean_mavzu(sections.get("mavzu") or result["mavzu"])
+    result["opponentlar_list"] = split_opponents(
+        sections.get("opponentlar") or result["opponentlar"])
+    # Shifrlar mavzu bo'limidan: opponentlar qatoridagi "(06.01.02)" kabi
+    # kodlar dissertatsiya ixtisosligi emas. Mavzuda kod bo'lmasa — butun
+    # matndan, opponentlar bo'limini chiqarib tashlab.
+    codes = _CODE_RE.findall(sections.get("mavzu") or "")
+    if not codes:
+        codes = _CODE_RE.findall(text.replace(sections.get("opponentlar") or "\0", ""))
     result["ixtisoslik_shifrlari"] = sorted(set(codes))
     result["fan_tarmogi"] = extract_science_branch(text)
     result["ik_raqami"] = extract_ik_code(text)
@@ -206,16 +322,25 @@ def save_state(state):
 
 
 # ----------------- ASOSIY -----------------
-def main():
+def main(dry_run=False):
+    """Manbalarni scraping qiladi, yangi e'lonlarni bazaga yozadi va faqat
+    HAQIQATAN qo'shilgan qatorlar (INSERT ... RETURNING id) bo'yicha
+    bildirishnoma yuboradi.
+
+    dry_run=True: bazaga ham, state/new_items fayllariga ham yozmaydi; qaysi
+    e'lon qo'shilishi va kimga qanday xabar ketishini chiqaradi xolos.
+    """
     state = load_state()
     print("=" * 50)
-    print("OAK.UZ kunlik scraper (" + str(len(SOURCES)) + " manba)")
+    print("OAK.UZ kunlik scraper (" + str(len(SOURCES)) + " manba)"
+          + (" [DRY-RUN]" if dry_run else ""))
     print("Sana: " + datetime.now().isoformat())
     print("=" * 50)
 
     new_items = []
-    added_total = 0
+    new_ids = []
     skipped_total = 0
+    error_total = 0
 
     # Bazaga ulanish — barcha manbalar bo'ylab bir marta ochiladi.
     try:
@@ -235,7 +360,6 @@ def main():
     # Har bir manbani alohida sahifalab, alohida smart-stop bilan scraping qilamiz.
     for source in SOURCES:
         src_url = source["url"]
-        yonalish = source["yonalish"]
         key = _state_key(src_url)
         last_id = state.get(key, 0)
         max_id_seen = last_id
@@ -243,7 +367,7 @@ def main():
         stop = False
 
         print("-" * 50)
-        print("Manba: " + yonalish + " (" + src_url + ")")
+        print("Manba: " + source["nomi"] + " (" + src_url + ")")
         print("Oxirgi ID (" + key + "): " + str(last_id))
         print("-" * 50)
 
@@ -264,28 +388,35 @@ def main():
                 if item["id"] > max_id_seen:
                     max_id_seen = item["id"]
 
-                # "Yangi" ni state fayldagi watermark (last_id) bo'yicha aniqlaymiz.
-                # Bu bazaga ulanishga bog'liq EMAS — GitHub Actions da psycopg2
-                # o'rnatilmagani uchun conn=None bo'lib, avval hamma element "skip"
-                # bo'lib qolar edi va yangi e'lonlar hech qachon aniqlanmasdi.
+                # Watermark (last_id) faqat qachon to'xtashni belgilaydi.
+                # "Yangi" degani — bazaga haqiqatan qo'shilgan qator.
                 is_new = item["id"] > last_id
 
                 parsed = parse_announcement(item["raw_text"])
-                record = _build_record(item, parsed, yonalish)
+                record = _build_record(item, parsed)
 
-                # Bazaga yozish — faqat imkon bo'lsa (mahalliy ishga tushirishda).
-                # Saytga yuborish esa new_items.json orqali send_to_site.py bilan
-                # amalga oshadi, shuning uchun DB bu yerda majburiy emas.
+                status = None
                 if conn is not None:
-                    db_save_one(conn, record)
+                    if dry_run:
+                        status = db_would_insert(conn, record)
+                    else:
+                        status, new_id = db_save_one(conn, record)
+                        if new_id:
+                            new_ids.append(new_id)
 
-                if is_new:
+                if status == "added":
                     new_items.append(record)
-                    added_total += 1
-                    consec_skip = 0
                     print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
+                    if dry_run:
+                        _print_record(record)
+                elif status == "error":
+                    error_total += 1
                 else:
                     skipped_total += 1
+
+                if is_new:
+                    consec_skip = 0
+                else:
                     consec_skip += 1
                     # 4 ta ketma-ket eski (watermark dan pastroq) element = eski
                     # ma'lumotlarga yetdik, to'xtatamiz.
@@ -308,21 +439,60 @@ def main():
         except Exception:
             pass
 
-    # State faylini bir marta saqlaymiz
-    state["last_run"] = datetime.now().isoformat()
-    save_state(state)
+    if not dry_run:
+        # State faylini bir marta saqlaymiz
+        state["last_run"] = datetime.now().isoformat()
+        save_state(state)
+        # Natijani JSON ga saqlash (faqat yangi qo'shilganlar — log uchun)
+        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+            json.dump(new_items, f, ensure_ascii=False, indent=2)
 
-    print("\nTopildi: " + str(len(new_items)) + " ta yangi e'lon")
+    print("\nAniqlandi: " + str(len(new_items)) + " ta yangi, "
+          + str(skipped_total) + " ta mavjud (skip), "
+          + str(error_total) + " ta xato."
+          + ("" if conn is not None else " (DB ulanmagan — hech narsa yozilmadi)"))
 
-    # Natijani JSON ga saqlash (faqat yangi qo'shilganlar — log uchun)
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(new_items, f, ensure_ascii=False, indent=2)
-
-    print("Aniqlandi: " + str(added_total) + " ta yangi, "
-          + str(skipped_total) + " ta eski (skip)."
-          + ("" if conn is not None else " (DB ulanmagan — faqat saytga yuboriladi)"))
+    # Bildirishnomalar — faqat shu ishga tushishda qo'shilgan qatorlar uchun.
+    if dry_run:
+        if new_items:
+            run_notifications(records=[_notify_record(r) for r in new_items])
+    elif new_ids:
+        run_notifications(ids=new_ids)
 
     return new_items
+
+
+def run_notifications(ids=None, records=None, dry_run=False):
+    """services/oak_notify ni chaqiradi. Xato scraper'ni to'xtatmaydi — faqat
+    log'ga yoziladi. `records` berilsa — bazasiz ko'rib chiqish (dry-run)."""
+    try:
+        from services import oak_notify
+        if records is not None:
+            result = oak_notify.preview_records(records)
+        else:
+            result = oak_notify.notify_new_dissertations(ids, dry_run=dry_run)
+        print(oak_notify.format_result(result))
+        return result
+    except Exception:
+        log.exception("Bildirishnomalar yuborilmadi (scraper davom etadi)")
+        return None
+
+
+def _notify_record(record):
+    """_build_record() lug'ati → bildirishnoma yozuvi (dry-run, id yo'q)."""
+    return {
+        "id": None, "olim": record.get("Olim", ""), "mavzu": record.get("Mavzu", ""),
+        "ixtisoslik": record.get("Ixtisoslik shifrlari", ""),
+        "ilmiy_rahbar": record.get("Ilmiy rahbar", ""), "link": record.get("Havola", ""),
+    }
+
+
+def _print_record(record):
+    for k in ("Olim", "Daraja", "Mavzu", "Ixtisoslik shifrlari", "Ilmiy rahbar",
+              "Bajarilgan muassasa", "Yetakchi tashkilot", "Yonalish"):
+        print("      " + k + ": " + str(record.get(k, ""))[:160])
+    for n, opp in enumerate(record.get("Opponentlar") or [], 1):
+        print("      Opponent " + str(n) + ": " + opp[:160])
 
 
 # ── Bazaga yozish yordamchilari ─────────────────────────────────────────────
@@ -331,26 +501,27 @@ _INSERT_SQL = """
     INSERT INTO dissertations (
         oak_id, sana, olim, daraja, mavzu, ixtisoslik, fan_tarmoqi,
         mavzu_raqami, ilmiy_rahbar, muassasa, institution_id, ilmiy_kengash,
-        ilmiy_kengash_raqami, opponent_1, yetakchi_tashkilot, link, yonalish
+        ilmiy_kengash_raqami, opponent_1, opponent_2, opponent_3,
+        yetakchi_tashkilot, link, yonalish
     ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+        %s, %s
     )
     ON CONFLICT (oak_id) DO NOTHING
+    RETURNING id
 """
 
 
 def _item_values(item, institution_id=None):
     """_build_record() lug'atini INSERT ustunlari tartibiga moslaydi."""
-    # "Rasmiy opponentlar" — matn; birinchi opponentni ajratamiz.
-    opponents = item.get("Rasmiy opponentlar") or ""
-    opponent_1 = opponents.split(";")[0].strip() if opponents else ""
+    opponents = (list(item.get("Opponentlar") or []) + ["", "", ""])[:3]
     return (
         str(item.get("ID", "")),                # oak_id
         item.get("Sana", ""),                   # sana
         item.get("Olim", ""),                   # olim
         item.get("Daraja", ""),                 # daraja
-        item.get("Mavzu va ixtisoslik", ""),    # mavzu
-        item.get("Ixtisoslik shifrlari", ""),   # ixtisoslik
+        item.get("Mavzu", ""),                  # mavzu (faqat nomi)
+        item.get("Ixtisoslik shifrlari", ""),   # ixtisoslik (barcha kodlar)
         item.get("Fan tarmogi", ""),            # fan_tarmoqi
         item.get("Royxat raqami", ""),          # mavzu_raqami
         item.get("Ilmiy rahbar", ""),           # ilmiy_rahbar
@@ -358,7 +529,9 @@ def _item_values(item, institution_id=None):
         institution_id,                         # canonical ranking ID
         item.get("IK muassasa", ""),            # ilmiy_kengash
         item.get("IK raqami", ""),              # ilmiy_kengash_raqami
-        opponent_1,                             # opponent_1
+        opponents[0],                           # opponent_1
+        opponents[1],                           # opponent_2
+        opponents[2],                           # opponent_3
         item.get("Yetakchi tashkilot", ""),     # yetakchi_tashkilot
         item.get("Havola", ""),                 # link
         item.get("Yonalish", ""),               # yonalish
@@ -366,16 +539,38 @@ def _item_values(item, institution_id=None):
 
 
 def db_save_one(conn, item):
-    """Bitta elementni bazaga yozadi. 'added' / 'skip' / 'error' qaytaradi."""
+    """Bitta elementni bazaga yozadi.
+
+    (status, new_id) qaytaradi: status — 'added' / 'skip' / 'error';
+    new_id — faqat haqiqatan qo'shilgan qatorning dissertations.id si.
+    """
     try:
         from institution_identity import resolve_institution
         with conn.cursor() as cur:
             institution_id = resolve_institution(
                 cur, item.get("Bajarilgan muassasa"), source='scraper')
             cur.execute(_INSERT_SQL, _item_values(item, institution_id))
-            hit = cur.rowcount
+            row = cur.fetchone()
         conn.commit()
-        return "added" if hit else "skip"
+        return ("added", row[0]) if row else ("skip", None)
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print("  DB xato (ID=" + str(item.get("ID")) + "): " + str(e))
+        return "error", None
+
+
+def db_would_insert(conn, item):
+    """Dry-run: yozmasdan, element qo'shilarmidi — 'added' / 'skip' / 'error'."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s",
+                        (str(item.get("ID", "")),))
+            exists = cur.fetchone() is not None
+        conn.rollback()
+        return "skip" if exists else "added"
     except Exception as e:
         try:
             conn.rollback()
@@ -409,7 +604,7 @@ def save_to_db(items):
         except Exception as e:
             print("  DB xato (ID=" + str(item.get("ID")) + "): " + str(e))
             continue
-        status = db_save_one(conn, item)
+        status, _ = db_save_one(conn, item)
         try:
             conn.close()
         except Exception:
@@ -452,9 +647,7 @@ def extract_author_from_title(title):
     return ""
 
 
-def _build_record(item, parsed, yonalish=None):
-    import re
-
+def _build_record(item, parsed):
     # Olim ismini sarlavhadan tozalab ajratish
     title = item.get("title", "")
     olim = extract_author_from_title(title)
@@ -475,7 +668,8 @@ def _build_record(item, parsed, yonalish=None):
         "Olim": olim,                # Tozalangan ism (saytga yuborish uchun)
         "Havola": item["link"],
         "Daraja": daraja,
-        "Mavzu va ixtisoslik": parsed["mavzu"],
+        "Mavzu va ixtisoslik": parsed["mavzu"],   # xom matn (log uchun)
+        "Mavzu": parsed["mavzu_nomi"] or parsed["mavzu"],
         "Ixtisoslik shifrlari": ", ".join(parsed["ixtisoslik_shifrlari"]),
         "Fan tarmogi": parsed["fan_tarmogi"],
         "Royxat raqami": parsed["ro_yxat_raqami"],
@@ -484,9 +678,11 @@ def _build_record(item, parsed, yonalish=None):
         "IK muassasa": parsed["ik_muassasa"],
         "IK raqami": parsed["ik_raqami"],
         "Rasmiy opponentlar": parsed["opponentlar"],
+        "Opponentlar": parsed["opponentlar_list"],
         "Yetakchi tashkilot": parsed["yetakchi_tashkilot"],
-        # Manba "yonalish" i berilgan bo'lsa — o'shani yozamiz, aks holda parsed.
-        "Yonalish": yonalish if yonalish else parsed["yo_nalish"],
+        # "Диссертация йўналиши" (назарий ва амалий аҳамиятга молик …) —
+        # bazadagi mavjud qiymatlar shu; manba nomi (Oddiy/Mustaqil) emas.
+        "Yonalish": parsed["yo_nalish"],
     }
 
 
@@ -502,7 +698,29 @@ def ping_google():
         pass
 
 
-if __name__ == "__main__":
-    items = main()
-    if items:
+def cli(argv=None):
+    parser = argparse.ArgumentParser(description="OAK.UZ kunlik scraper")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="bazaga yozmaydi, xabar yubormaydi; nima bo'lishini chiqaradi")
+    parser.add_argument("--notify-only", action="store_true",
+                        help="scraping qilmaydi; --ids dagi qatorlar uchun bildirishnoma")
+    parser.add_argument("--ids", default="",
+                        help="--notify-only uchun dissertations.id lar (vergul bilan)")
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+    if args.notify_only:
+        ids = [int(x) for x in re.split(r"[,\s]+", args.ids) if x.strip()]
+        if not ids:
+            parser.error("--notify-only uchun --ids kerak")
+        run_notifications(ids=ids, dry_run=args.dry_run)
+        return
+
+    items = main(dry_run=args.dry_run)
+    if items and not args.dry_run:
         ping_google()
+
+
+if __name__ == "__main__":
+    cli()

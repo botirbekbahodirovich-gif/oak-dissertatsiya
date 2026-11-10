@@ -11,8 +11,6 @@ load_dotenv()
 import openpyxl
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OAK_API_KEY  = os.environ.get('OAK_API_KEY', '')
-# Shared secret for the scraper → VPS import endpoint (/api/v1/import-oak).
-SITE_API_KEY = os.environ.get('SITE_API_KEY', '')
 from flask import (Blueprint, current_app, jsonify, request, send_file,
                    render_template, abort, redirect, Response)
 from flask_login import login_required
@@ -1906,184 +1904,19 @@ def oak_ingest():
 
 
 # ---------------------------------------------------------------------------
-# Secure import endpoint for the daily scraper (VPS-direct, X-API-KEY auth).
-# Unlike /api/oak/ingest this UPSERTs: existing records (matched on oak_id) are
-# updated in place instead of skipped, so re-runs refresh changed data.
-#
-# Exposed at BOTH paths, same handler:
-#   /api/oak/import   — preferred; under the /api/oak/ prefix that api_protection
-#                       whitelists, so the scraper's python-requests User-Agent
-#                       is not blocked (403) by the anti-scraping middleware.
-#   /api/v1/import-oak — legacy alias kept for backwards compatibility.
-# Point the SITE_API_URL secret at https://olimlar.uz/api/oak/import.
+# Removed: OAK import endpoint (410 Gone).
+# The server cron (scraper.py) writes to the DB directly and dispatches
+# notifications via services/oak_notify.py — the single ingest path. This API
+# used to UPSERT (overwriting admin fixes), never read opponents/yonalish and
+# kept a separate last_state.json. The handler name stays because app.py
+# references the 'data.import_oak' endpoint in csrf.exempt().
 # ---------------------------------------------------------------------------
 
 @data_bp.route('/api/oak/import', methods=['POST'])
 @data_bp.route('/api/v1/import-oak', methods=['POST'])
 def import_oak():
-    api_key = request.headers.get('X-API-KEY', '')
-    if not SITE_API_KEY or not hmac.compare_digest(api_key, SITE_API_KEY):
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    payload = request.get_json(silent=True) or {}
-    # Accept either a bare JSON array or {"items": [...]}.
-    items = payload.get('items', payload) if isinstance(payload, dict) else payload
-    if not isinstance(items, list):
-        return jsonify({'error': 'items must be a list'}), 400
-
-    inserted = 0
-    updated = 0
-    skipped = 0
-    skip_reasons: dict = {}
-    new_defenses = []  # freshly inserted announcements → himoya_elon matching
-
-    # Optional, OFF-by-default Data Quality pre-check. When
-    # DATA_QUALITY_IMPORT_PRECHECK is disabled (the default) nothing below
-    # changes the import: precheck_enabled stays False, no records are collected
-    # and no 'precheck' key is added to the response.
-    precheck_enabled = False
-    precheck_records: list = []
-    try:
-        from data_quality.config import get_config as _dq_config
-        precheck_enabled = _dq_config().import_precheck_enabled
-    except Exception:
-        precheck_enabled = False
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            for item in items:
-                oak_id     = str(item.get('ID', '') or '').strip()
-                title      = str(item.get('Sarlavha', '') or '').strip()
-                mavzu_full = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
-                muassasa   = str(item.get('Bajarilgan muassasa', '') or '').strip()[:300]
-
-                olim     = str(item.get('Olim', '') or '').strip() or _extract_olim(title)
-                mavzu    = _extract_mavzu(mavzu_full)
-                daraja   = _extract_daraja(title, mavzu_full) or str(item.get('Daraja', '') or '').strip()
-                ixtisoslik = _extract_ixtisoslik(
-                    str(item.get('Ixtisoslik shifrlari', '') or ''),
-                    mavzu_full
-                )
-
-                reason = _validate_ingest_record(oak_id, olim, daraja, mavzu, muassasa)
-                if reason:
-                    skipped += 1
-                    skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
-                    continue
-
-                cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
-                exists = cur.fetchone() is not None
-
-                from institution_identity import resolve_institution
-                institution_id = resolve_institution(
-                    cur, muassasa, source='api_v1_import_oak')
-                cur.execute(
-                    """
-                    INSERT INTO dissertations
-                        (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
-                         mavzu_raqami, ilmiy_rahbar, muassasa, institution_id,
-                         ilmiy_kengash_raqami, opponent_1, opponent_2,
-                         yetakchi_tashkilot, link)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                    ON CONFLICT (oak_id) DO UPDATE SET
-                        sana = EXCLUDED.sana,
-                        daraja = EXCLUDED.daraja,
-                        olim = EXCLUDED.olim,
-                        mavzu = EXCLUDED.mavzu,
-                        ixtisoslik = EXCLUDED.ixtisoslik,
-                        mavzu_raqami = EXCLUDED.mavzu_raqami,
-                        ilmiy_rahbar = EXCLUDED.ilmiy_rahbar,
-                        muassasa = EXCLUDED.muassasa,
-                        institution_id = EXCLUDED.institution_id,
-                        ilmiy_kengash_raqami = EXCLUDED.ilmiy_kengash_raqami,
-                        opponent_1 = EXCLUDED.opponent_1,
-                        opponent_2 = EXCLUDED.opponent_2,
-                        yetakchi_tashkilot = EXCLUDED.yetakchi_tashkilot,
-                        link = EXCLUDED.link
-                    RETURNING id
-                    """,
-                    (
-                        oak_id,
-                        str(item.get('Sana', '') or '')[:50],
-                        daraja,
-                        olim[:200],
-                        mavzu[:500],
-                        ixtisoslik[:50],
-                        str(item.get('Royxat raqami', '') or ''),
-                        str(item.get('Ilmiy rahbar', '') or '')[:200],
-                        muassasa,
-                        institution_id,
-                        str(item.get('IK raqami', '') or ''),
-                        str(item.get('Opponent 1', '') or '')[:200],
-                        str(item.get('Opponent 2', '') or '')[:200],
-                        str(item.get('Yetakchi tashkilot', '') or '')[:200],
-                        str(item.get('Havola', '') or ''),
-                    )
-                )
-                row = cur.fetchone()
-                if exists:
-                    updated += 1
-                else:
-                    inserted += 1
-                    new_defenses.append({
-                        'id': row[0] if row else None,
-                        'olim': olim, 'mavzu': mavzu, 'ixtisoslik': ixtisoslik,
-                        'ilmiy_rahbar': str(item.get('Ilmiy rahbar', '') or '').strip(),
-                        'link': str(item.get('Havola', '') or ''),
-                    })
-
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        log_exception(current_app.logger, "Data API amali bajarilmadi")
-        return jsonify({'error': "Ichki server xatosi."}), 500
-    finally:
-        conn.close()
-
-    # Himoya e'lonlari smart matching: notify scholars whose ixtisoslik matches
-    # a newly imported announcement (opt-out via himoya_elon pref, 3/day cap).
-    # Runs after the import commit on its own connection — never fails the import.
-    notified = 0
-    subs_notified = 0
-    if new_defenses:
-        try:
-            from blueprints.reminders import notify_himoya_matches
-            notified = notify_himoya_matches(new_defenses)
-        except Exception:
-            notified = 0
-        # Ixtisoslik obunachilari (specialty_subscriptions) — sayt + Telegram.
-        try:
-            from blueprints.subscriptions import notify_specialty_subscribers
-            subs_notified = notify_specialty_subscribers(new_defenses)
-        except Exception:
-            subs_notified = 0
-        # Kuzatilayotgan olimlar (scholar_follows): yangi shogird → kuzatuvchilarga
-        # sayt bildirishnomasi (bell). Import'ni hech qachon yiqitmaydi.
-        try:
-            from blueprints.olimlar_catalog import notify_scholar_follows
-            notify_scholar_follows(new_defenses)
-        except Exception:
-            pass
-
-    # Data Quality pre-check summary (only when the flag is on). Purely
-    # informational — the import above already ran unchanged; this never skips
-    # or merges anything and never breaks the import if it errors.
-    precheck_summary = None
-    if precheck_enabled and precheck_records:
-        try:
-            from data_quality.import_precheck import summarize_precheck
-            precheck_summary = summarize_precheck(precheck_records)
-        except Exception:
-            precheck_summary = None
-
-    response = {'success': True, 'inserted': inserted, 'updated': updated,
-                'skipped': skipped, 'total': len(items),
-                'skip_reasons': skip_reasons, 'himoya_notified': notified,
-                'subscribers_notified': subs_notified}
-    if precheck_summary is not None:
-        response['precheck'] = precheck_summary
-    return jsonify(response)
+    return jsonify({'error': "Bu endpoint o'chirilgan. OAK e'lonlari server "
+                             "cron'i (scraper.py) orqali import qilinadi."}), 410
 
 
 # ---------------------------------------------------------------------------

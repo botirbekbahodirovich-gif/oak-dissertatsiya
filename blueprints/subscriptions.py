@@ -1,7 +1,7 @@
 """Ixtisoslik obunasi (subs_bp) — yangi himoyalardan xabardor bo'lish (bepul).
 
 Foydalanuvchi (asosiy sayt `users`) 5 tagacha ixtisoslikka obuna bo'ladi;
-scraper yangi dissertatsiya import qilganda (data.py /api/v1/import-oak)
+scraper yangi dissertatsiya qo'shganda (services/oak_notify.py orqali)
 `notify_specialty_subscribers` mos obunachilarga sayt bildirishnomasi
 (user_alerts) va xohlasa Telegram xabari yuboradi.
 
@@ -18,6 +18,7 @@ Routes (JSON, Flask-Login):
   POST /api/v1/subscriptions/remove   — o'chirish {id}
   POST /api/v1/subscriptions/toggle   — kanal {id, channel: site|telegram, enabled}
 """
+import logging
 import re
 
 from flask import Blueprint, jsonify, request
@@ -27,6 +28,7 @@ from app import csrf
 from data import get_connection
 
 subs_bp = Blueprint('subscriptions', __name__)
+_log = logging.getLogger(__name__)
 
 MAX_SUBSCRIPTIONS = 5
 _CODE_RE = re.compile(r'\d{2}\.\d{2}\.\d{2}')
@@ -216,18 +218,20 @@ def toggle_subscription():
         conn.close()
 
 
-# ── Dispatch (data.py /api/v1/import-oak dan chaqiriladi) ────────────────────
+# ── Dispatch (services/oak_notify.py dan chaqiriladi) ───────────────────────
 
 _SUB_TITLE = "🔔 Obunangiz bo'yicha yangi himoya"
 
 
-def notify_specialty_subscribers(new_records):
-    """Yangi import qilingan himoyalarni obunachilarga tarqatadi.
+def notify_specialty_subscribers(new_records, dry_run=False, report=None):
+    """Yangi qo'shilgan himoyalarni obunachilarga tarqatadi.
 
     `new_records` — [{'id', 'olim', 'mavzu', 'ixtisoslik', 'link'}, …]
-    (id bo'lmasa dedup log yozilmaydi, lekin xabar baribir ketadi).
-    Import tranzaksiyasidan keyin o'z ulanishida ishlaydi; hech qachon
-    exception ko'tarmaydi. Yuborilgan xabarlar sonini qaytaradi."""
+    (id bo'lmasa dedup log yozilmaydi, lekin xabar baribir ketadi;
+    ixtisoslik bir nechta kod bo'lishi mumkin: "05.01.01, 05.02.03").
+    O'z ulanishida ishlaydi; hech qachon exception ko'tarmaydi (xato log'ga
+    yoziladi). Yuborilgan xabarlar sonini qaytaradi. dry_run — hech narsa
+    yozilmaydi/yuborilmaydi; rejalashtirilgan xabarlar `report` ga qo'shiladi."""
     records = [r for r in new_records if (r.get('ixtisoslik') or '').strip()]
     if not records:
         return 0
@@ -272,20 +276,31 @@ def notify_specialty_subscribers(new_records):
                         if rec.get('link'):
                             msg += f"\n🔗 {rec['link']}"
                         if notify_site and 'site' not in already:
-                            cur.execute("""
-                                INSERT INTO user_alerts (user_id, title, message, level)
-                                VALUES (%s, %s, %s, 'info')
-                            """, (user_id, _SUB_TITLE, msg))
-                            if diss_id:
+                            if report is not None:
+                                report.append({'kind': 'obuna', 'channel': 'site',
+                                               'user_id': user_id, 'diss_id': diss_id,
+                                               'text': msg})
+                            if not dry_run:
                                 cur.execute("""
-                                    INSERT INTO specialty_notifications_log
-                                        (subscription_id, dissertation_id, sent_via)
-                                    VALUES (%s, %s, 'site')
-                                """, (sub_id, diss_id))
+                                    INSERT INTO user_alerts (user_id, title, message, level)
+                                    VALUES (%s, %s, %s, 'info')
+                                """, (user_id, _SUB_TITLE, msg))
+                                if diss_id:
+                                    cur.execute("""
+                                        INSERT INTO specialty_notifications_log
+                                            (subscription_id, dissertation_id, sent_via)
+                                        VALUES (%s, %s, 'site')
+                                    """, (sub_id, diss_id))
                             sent += 1
                         tg_chat = _telegram_chat_id(chat_id, email)
                         if notify_telegram and tg_chat and 'telegram' not in already:
-                            if _send_telegram(tg_chat, {
+                            if report is not None:
+                                report.append({'kind': 'obuna', 'channel': 'telegram',
+                                               'user_id': user_id, 'chat_id': tg_chat,
+                                               'diss_id': diss_id, 'text': msg})
+                            if dry_run:
+                                sent += 1
+                            elif _send_telegram(tg_chat, {
                                     'title': f"Yangi himoya ({rec['ixtisoslik']})",
                                     'description': (f"{rec.get('olim') or ''} — "
                                                     f"{rec.get('mavzu') or ''}"),
@@ -297,9 +312,16 @@ def notify_specialty_subscribers(new_records):
                                         VALUES (%s, %s, 'telegram')
                                     """, (sub_id, diss_id))
                                 sent += 1
-            conn.commit()
+                            else:
+                                _log.warning("obuna: telegram yuborilmadi "
+                                             "(user=%s, diss=%s)", user_id, diss_id)
+            if dry_run:
+                conn.rollback()
+            else:
+                conn.commit()
         finally:
             conn.close()
     except Exception:
+        _log.exception("notify_specialty_subscribers xatosi (%d ta yuborilgan)", sent)
         return sent
     return sent
