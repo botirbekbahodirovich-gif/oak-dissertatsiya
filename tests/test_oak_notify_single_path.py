@@ -154,6 +154,77 @@ class OpponentParsingTests(unittest.TestCase):
         self.assertEqual(scraper.split_opponents(""), [])
 
 
+class OpponentEdgeCaseTests(unittest.TestCase):
+    """Sections copied from live oak.uz announcements (2026-11)."""
+
+    def test_degree_first_comma_list(self):  # 34799
+        opps = scraper.split_opponents(
+            "фалсафа фанлари доктори(DSc), дотсент Юлдашев Серобжон Урмоналиевич, "
+            "фалсафа фанлари доктори, профессор Жуманиёз Султонович Раматов, фалсафа "
+            "фанлари доктори(DSc), профессор Назаров Насриддин Атакулович.")
+        self.assertEqual(opps, [
+            "фалсафа фанлари доктори(DSc), дотсент Юлдашев Серобжон Урмоналиевич",
+            "фалсафа фанлари доктори, профессор Жуманиёз Султонович Раматов",
+            "фалсафа фанлари доктори(DSc), профессор Назаров Насриддин Атакулович"])
+
+    def test_hamda_between_opponents(self):  # 34816
+        opps = scraper.split_opponents(
+            "педагогика фанлари доктори (DSc), профессор Қўлдошев Рустамбек "
+            "Авезмуродович ҳамда филология фанлари доктори (DSc), профессор "
+            "Хамидова Муборак Ҳафизовна")
+        self.assertEqual(opps[1], "филология фанлари доктори (DSc), профессор "
+                                  "Хамидова Муборак Ҳафизовна")
+
+    def test_name_first_with_uglu_and_dash(self):  # 34791
+        opps = scraper.split_opponents(
+            "Чоротегин Тинчитбек Кадирмамбет углу – тарих фанлари доктори, профессор, "
+            "Саидбобоев Зокиржон Абдукаримович – тарих фанлари доктори, профессор; "
+            "Қўлдошев Шерали Темиралиевич – тарих фанлари доктори, дотсент")
+        self.assertEqual([o.split(" –")[0] for o in opps], [
+            "Чоротегин Тинчитбек Кадирмамбет углу", "Саидбобоев Зокиржон Абдукаримович",
+            "Қўлдошев Шерали Темиралиевич"])
+
+    def test_third_opponent_after_a_period(self):  # 33255
+        opps = scraper.split_opponents(
+            "Халилов Умеджон Боймаматович, физика-математика фанлари доктори, профессор; "
+            "Юлдашев Шавкат Узгенович, физика-математика фанлари доктори, профессор. "
+            "Юсупов Жавдат Бақиджанович, физика-математика фанлари доктори, профессор")
+        self.assertEqual(len(opps), 3)
+        self.assertTrue(opps[2].startswith("Юсупов Жавдат Бақиджанович"))
+
+    def _parse(self, body):
+        return scraper.parse_announcement(
+            "Диссертация мавзуси, ихтисослик шифри: “Синов мавзуси узунроқ номи”, "
+            "13.00.02 – Таълим.\n" + body)
+
+    def test_inline_misspelled_etakchi_does_not_leak(self):  # 34792 / 34696
+        p = self._parse(
+            "Расмий оппонентлар: Холмирзаев Нодиржон Низомжонович фалсафа фанлари доктори "
+            "(DSc), профессор; Гаффарова Гулчеҳра Гуламжановна фалсафа фанлари доктори "
+            "(DSc), профессор. Этакчи ташкилот: Тошкент ахборот технологиялари университети")
+        self.assertEqual(p["opponentlar_list"][1],
+                         "Гаффарова Гулчеҳра Гуламжановна фалсафа фанлари доктори (DSc), профессор")
+        self.assertEqual(p["yetakchi_tashkilot"], "Тошкент ахборот технологиялари университети")
+
+    def test_misspelled_opponentlar_header(self):  # 34811
+        p = self._parse(
+            "Расмий оппонетлар: Давлатова Адиба Рахматовна, филология фанлари доктори, "
+            "профессор; Зарипов Лочин Рустамович, педагогика фанлари доктори, профессор;\n"
+            "Етакчи ташкилот: Андижон давлат педагогика институти.")
+        self.assertEqual(len(p["opponentlar_list"]), 2)
+
+    def test_latin_homoglyphs_are_fixed(self):  # 34873
+        p = self._parse(
+            "Расмий оппонентлар: Тажибаев Сойиб Самижановиç педагогика фанлари доктори. "
+            "Етакçи таşкилот: Гулистон давлат университети. Диссертация йöналиşи: "
+            "назарий ва амалий аҳамиятга молик.")
+        self.assertEqual(p["opponentlar_list"],
+                         ["Тажибаев Сойиб Самижанович педагогика фанлари доктори"])
+        self.assertEqual(p["yetakchi_tashkilot"], "Гулистон давлат университети")
+        self.assertEqual(p["yo_nalish"], "назарий ва амалий аҳамиятга молик")
+        self.assertEqual(scraper.fix_homoglyphs("Ibragim ç"), "Ibragim ç")
+
+
 class FieldParsingTests(unittest.TestCase):
     def test_codes_come_from_the_mavzu_section_only(self):
         # 34798's opponents carry their own codes (06.01.02, 04.00.04)

@@ -129,14 +129,32 @@ _SECTION_HEADERS = [
     ("mavzu", r"Диссерта(?:ция|сия) мавзуси"),
     ("ilmiy_rahbar", r"Илмий (?:раҳбар(?:лар)?|маслаҳатчи)"),
     ("bajarilgan_muassasa", r"Диссерта(?:ция|сия) бажарилган муассаса"),
-    ("ik_muassasa", r"(?:ИК|Илмий [Кк]енгаш) фаолият кўрсатаётган муассаса"),
-    ("opponentlar", r"Расмий оппонентлар"),
-    ("yetakchi_tashkilot", r"Етакчи\s+ташкилот"),
-    ("yo_nalish", r"Диссерта(?:ция|сия) йўналиши"),
+    ("ik_muassasa", r"(?:ИК|Ик|Илмий [Кк]енгаш) фаолият кўрсатаётган муассаса"),
+    ("opponentlar", r"Расмий оппоне(?:н)?тлар"),          # "оппонетлар" ham uchraydi
+    ("yetakchi_tashkilot", r"[ЕЭ]такчи\s+ташкилот"),      # "Этакчи" ham uchraydi
+    ("yo_nalish", r"Диссерта(?:ция|сия) (?:йўналиши|ё\s*[‘ʻ’']\s*налиши)"),
 ]
+# Bu ikki sarlavha ko'pincha qator o'rtasida keladi: "…, профессор. Етакчи
+# ташкилот: …" — ular har qanday bo'shliqdan keyin ham tan olinadi.
+_INLINE_HEADERS = ("yetakchi_tashkilot", "yo_nalish")
 _SECTION_RE = re.compile(
     r"(?m)^[ \t]*(?:" + "|".join(
-        "(?P<%s>%s)" % (k, p) for k, p in _SECTION_HEADERS) + ")")
+        "(?P<%s>%s)" % (k, p) for k, p in _SECTION_HEADERS) + ")"
+    + "|(?<=\\s)(?:" + "|".join(
+        "(?P<%s__inline>%s)" % (k, p) for k, p in _SECTION_HEADERS
+        if k in _INLINE_HEADERS) + ")")
+
+# Ba'zi e'lonlar kirill matn ichida lotin "ç ş ö ğ" bilan yozilgan
+# ("Етакçи таşкилот", "Мухаммадовиç") — kirill harfi yonida bo'lsa almashtiriladi.
+_HOMOGLYPHS = {"ç": "ч", "Ç": "Ч", "ş": "ш", "Ş": "Ш", "ö": "ў", "Ö": "Ў",
+               "ğ": "ғ", "Ğ": "Ғ"}
+_CYR = "А-Яа-яЁёЎўҚқҒғҲҳ"
+_HOMOGLYPH_RE = re.compile(
+    "(?<=[%s])[çÇşŞöÖğĞ]|[çÇşŞöÖğĞ](?=[%s])" % (_CYR, _CYR))
+
+
+def fix_homoglyphs(text):
+    return _HOMOGLYPH_RE.sub(lambda m: _HOMOGLYPHS[m.group(0)], text or "")
 # Sarlavha dumi: "… (илмий даража бериладиган фан тармоғи номи):",
 # "… номи\n:" yoki "… –". Ikki nuqta bo'lmasa qiymat darhol boshlanadi.
 _HEADER_TAIL_RE = re.compile(r"[^:\n]{0,90}:|[^:\n]{0,40}\n\s*:|\s*[–—-]\s")
@@ -147,7 +165,7 @@ def split_sections(text):
     matches = list(_SECTION_RE.finditer(text or ""))
     out = {}
     for i, m in enumerate(matches):
-        key = m.lastgroup
+        key = m.lastgroup.split("__")[0]
         start = m.end()
         tail = _HEADER_TAIL_RE.match(text, start)
         if tail:
@@ -183,12 +201,15 @@ def clean_mavzu(section):
     return _clean(text)
 
 
-# "Фамилия Исм Отасининг" — opponentlar vergul bilan ajratilgan, ";" siz
-# yozilganda yangi opponent shu F.I.Sh. dan boshlanadi.
+# To'liq ism: "Фамилия Исм Отасининг" (…вич/…вна/… ўғли/… қизи) yoki
+# teskari tartib "Исм Отасининг Фамилия" ("Жуманиёз Султонович Раматов").
+_CAP = r"[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]"
 _FULL_NAME_RE = re.compile(
-    r"(?<![\w-])[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]+\s+[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]+\s+"
-    r"[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]*(?:вич|вна|\s+ўғли|\s+қизи|\s+угли|\s+кизи)"
-    r"(?![\w-])")
+    r"(?<![\w-])(?:"
+    + _CAP + r"+\s+" + _CAP + r"+\s+" + _CAP
+    + r"*(?:вич|вна|\s+ўғли|\s+қизи|\s+угли|\s+углу|\s+кизи)"
+    + r"|" + _CAP + r"+\s+" + _CAP + r"*(?:вич|вна)\s+" + _CAP + r"+"
+    + r")(?![\w-])")
 
 
 def split_opponents(section, limit=3):
@@ -206,16 +227,34 @@ def split_opponents(section, limit=3):
         lines = [ln for ln in raw.split("\n") if _clean(ln)]
         if len(lines) > 1:
             parts = lines
-    if len(parts) == 1:
-        text = re.sub(r"\s+", " ", raw)
-        starts = [m.start() for m in _FULL_NAME_RE.finditer(text)]
-        if len(starts) > 1:
-            starts[0] = 0
-            parts = [text[a:b] for a, b in zip(starts, starts[1:] + [len(text)])]
-    return [_clean(p) for p in parts if _clean(p)][:limit]
+    out = []
+    for part in parts:
+        out.extend(_split_by_names(part))
+    return [_clean(p) for p in out if _clean(p)][:limit]
+
+
+def _split_by_names(part):
+    """Bitta bo'lakda bir nechta to'liq ism bo'lsa — ism bo'yicha ajratadi.
+
+    Ism oldin ("A A A, daraja, unvon, Б Б Б, …") — yangi opponent ismdan
+    boshlanadi; daraja oldin, ya'ni kichik harf bilan ("daraja, unvon A A A,
+    daraja, unvon Б Б Б") — opponent ism bilan tugaydi.
+    """
+    text = re.sub(r"\s+", " ", part).strip()
+    names = list(_FULL_NAME_RE.finditer(text))
+    if len(names) < 2:
+        return [text]
+    if text[:1].islower():
+        cuts = [m.end() for m in names[:-1]]
+    else:
+        cuts = [m.start() for m in names if m.start() > 0]
+    bounds = [0] + cuts + [len(text)]
+    pieces = [text[a:b] for a, b in zip(bounds, bounds[1:])]
+    return [re.sub(r"^[\s,.;]*(?:ва|ҳамда)?\s+", "", piece) for piece in pieces]
 
 
 def parse_announcement(text):
+    text = fix_homoglyphs(text)
     sections = split_sections(text)
     fields = {
         "mavzu": [
@@ -680,7 +719,7 @@ def extract_author_from_title(title):
 
 def _build_record(item, parsed):
     # Olim ismini sarlavhadan tozalab ajratish
-    title = item.get("title", "")
+    title = fix_homoglyphs(item.get("title", ""))
     olim = extract_author_from_title(title)
 
     # Daraja: avval sarlavhadan, keyin e'lonning o'z matnidan.
