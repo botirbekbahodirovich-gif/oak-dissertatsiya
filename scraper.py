@@ -212,6 +212,16 @@ _FULL_NAME_RE = re.compile(
     + r")(?![\w-])")
 
 
+# Ishonchsiz matn: erkin gap ("… тавсия этилади") yoki faqat bosh harfli ismlar
+# ("Ж.Р. Раимбаев (…) ҳамда …") — bo'lsak noto'g'ri odamlar chiqadi.
+_UNRELIABLE_OPP_RE = re.compile(
+    r"(?i:тавсия\s+этил)|(?<![\w.])[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ][а-яёўқғҳ]+")
+
+
+def opponents_unreliable(section):
+    return bool(_UNRELIABLE_OPP_RE.search(section or ""))
+
+
 def split_opponents(section, limit=3):
     """"Расмий оппонентлар" bo'limini alohida opponentlarga ajratadi.
 
@@ -222,6 +232,8 @@ def split_opponents(section, limit=3):
     raw = (section or "").strip()
     if not raw:
         return []
+    if opponents_unreliable(raw):
+        return [_clean(raw)]   # bo'linmaydi: to'liq matn opponent_1 ga
     parts = [p for p in re.split(r";", raw) if _clean(p)]
     if len(parts) == 1:
         lines = [ln for ln in raw.split("\n") if _clean(ln)]
@@ -287,8 +299,9 @@ def parse_announcement(text):
     if sections.get("yo_nalish"):
         result["yo_nalish"] = _clean(sections["yo_nalish"].split("\n")[0])
     result["mavzu_nomi"] = clean_mavzu(sections.get("mavzu") or result["mavzu"])
-    result["opponentlar_list"] = split_opponents(
-        sections.get("opponentlar") or result["opponentlar"])
+    opp_raw = sections.get("opponentlar") or result["opponentlar"]
+    result["opponentlar_list"] = split_opponents(opp_raw)
+    result["opponentlar_ishonchsiz"] = opponents_unreliable(opp_raw)
     # Shifrlar mavzu bo'limidan: opponentlar qatoridagi "(06.01.02)" kabi
     # kodlar dissertatsiya ixtisosligi emas. Mavzuda kod bo'lmasa — butun
     # matndan, opponentlar bo'limini chiqarib tashlab.
@@ -453,6 +466,9 @@ def main(dry_run=False):
 
                 parsed = parse_announcement(item["raw_text"])
                 record = _build_record(item, parsed)
+                if parsed["opponentlar_ishonchsiz"]:
+                    log.warning("ID=%s: opponentlar matni ishonchsiz — bo'linmadi, "
+                                "opponent_1 ga xom yozildi", item["id"])
 
                 status = None
                 if conn is not None:

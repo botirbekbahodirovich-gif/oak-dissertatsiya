@@ -192,6 +192,54 @@ class OpponentEdgeCaseTests(unittest.TestCase):
         self.assertEqual(len(opps), 3)
         self.assertTrue(opps[2].startswith("Юсупов Жавдат Бақиджанович"))
 
+    UNRELIABLE = {
+        34824: "Тошкент давлат иқтисодиёт университети, кафедра профессори Иқтисодиёт "
+               "фанлари доктори, профессор Касимов Азамат Абдукаримович ва Термиз давлат "
+               "педагогика институти, кафедра дотсенти Иқтисодиёт фанлари бўйича фалсафа "
+               "доктори, Исмоилова Дилфуза Ибодуллаевна тавсия этилади.",
+        32449: "ф.-м.ф.д., Ж.Р. Раимбаев (Мирзо Улуғбек номидаги Ўзбекистон Миллий "
+               "университети қошидаги назарий физика институти) ҳамда ф.-м.ф.д. Т.Р. "
+               "Ахунов (Мирзо Улуғбек номидаги Ўзбекистон Миллий университети Физика "
+               "факултети профессори)",
+        32346: "ф.-м.ф.д. Б.В. Туримов (ЎзР ФА Астрономия институти), ф.-м.ф.ф.д.(PhD) "
+               "Ф.Ў.Ботиров (Мирзо Улуғбек номидаги Ўзбекистон Миллий университети "
+               "Физика факултети в.б.доценти)",
+    }
+
+    def test_unreliable_text_is_kept_whole_in_opponent_1(self):
+        for oak_id, section in self.UNRELIABLE.items():
+            self.assertTrue(scraper.opponents_unreliable(section), oak_id)
+            self.assertEqual(scraper.split_opponents(section),
+                             [" ".join(section.split()).rstrip(".")], oak_id)
+
+    def test_reliable_sections_are_not_flagged(self):
+        for oak_id, (item, parsed, rec) in PARSED.items():
+            self.assertFalse(parsed["opponentlar_ishonchsiz"], oak_id)
+        # 33426: lower-case abbreviations ("кат.и.х.") are not initials
+        section = ("ф-.м.ф.д., кат.и.х. Тажибаев Илхомжон Иброхимжонович; ф.-м.ф.д., "
+                   "доц. Абсанов Ахмад Абдусатторович")
+        self.assertFalse(scraper.opponents_unreliable(section))
+        self.assertEqual(len(scraper.split_opponents(section)), 2)
+
+    def test_unreliable_text_is_logged_by_the_scraper(self):
+        page = ('<div><h3><a href="/pages/32449">Каримов Карим Каримовичнинг фалсафа '
+                'доктори (PhD) диссертацияси ҳимояси ҳақида эълон</a></h3>'
+                '<p>09.11.2026</p><p>Расмий оппонентлар: ' + self.UNRELIABLE[32449] +
+                '</p><a href="/pages/32449">Batafsil</a></div>')
+        tmp = tempfile.mkdtemp()
+        with mock.patch.object(scraper, "STATE_FILE", os.path.join(tmp, "s.json")), \
+                mock.patch.object(scraper, "OUTPUT_FILE", os.path.join(tmp, "n.json")), \
+                mock.patch.object(scraper, "DELAY", 0), \
+                mock.patch.object(scraper, "SOURCES",
+                                  [{"url": "https://oak.uz/page/8", "nomi": "Oddiy"}]), \
+                mock.patch.object(scraper, "fetch",
+                                  lambda url: page if "page=" not in url else None), \
+                mock.patch.dict(sys.modules, _fake_modules(lambda: FakeConn())), \
+                mock.patch.object(scraper, "run_notifications"), \
+                self.assertLogs("scraper", level="WARNING") as logs:
+            scraper.main(dry_run=True)
+        self.assertIn("ID=32449: opponentlar matni ishonchsiz", logs.output[0])
+
     def _parse(self, body):
         return scraper.parse_announcement(
             "Диссертация мавзуси, ихтисослик шифри: “Синов мавзуси узунроқ номи”, "
