@@ -81,7 +81,7 @@ from data_quality import repository as repo  # noqa: E402
 from data_quality.cli_common import (  # noqa: E402
     require_manual_transactions, resolve_connection, truncate)
 from scraper import (  # noqa: E402  — mavjud OAK parsing mantiqi
-    detect_degree, extract_author_from_title, parse_announcement)
+    degree_from_title, detect_degree, extract_author_from_title, parse_announcement)
 from utils.transliterate import kiril_to_lotin  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -314,7 +314,7 @@ def parse_page(html: str) -> Dict[str, str]:
     title = page_title(html)
     parsed = parse_announcement(text)
 
-    daraja = parsed.get("daraja") or detect_degree(title)
+    daraja = degree_from_title(title) or parsed.get("daraja") or detect_degree(title)
     return {
         "mavzu": parsed.get("mavzu", ""),
         "olim": extract_author_from_title(title),

@@ -199,6 +199,32 @@ class FieldParsingTests(unittest.TestCase):
         self.assertNotIn("DO UPDATE", sql)
 
 
+class DegreeTests(unittest.TestCase):
+    def test_phd_announcement_with_dsc_opponents_is_phd(self):
+        # 34845: PhD defence, both opponents are "(DSc)"
+        self.assertIn("(DSc)", PARSED[34845][1]["opponentlar"])
+        self.assertEqual(PARSED[34845][2]["Daraja"], "PhD")
+
+    def test_dsc_title_is_dsc(self):
+        self.assertEqual(PARSED[34797][2]["Daraja"], "DSc")
+
+    def test_every_fixture_record_matches_its_title(self):
+        for oak_id, (item, parsed, rec) in PARSED.items():
+            want = "DSc" if "(DSc)" in item["title"] else "PhD"
+            self.assertEqual(rec["Daraja"], want, oak_id)
+
+    def test_body_detection_ignores_rahbar_ik_and_opponents(self):
+        # IK code "DSc.03/…" and opponents' "(DSc)" must not decide the degree
+        self.assertEqual(PARSED[34798][1]["daraja"], "PhD")
+
+    def test_degree_from_title(self):
+        f = scraper.degree_from_title
+        self.assertEqual(f("Каримов Каримнинг фалсафа доктори (PhD) диссертацияси"), "PhD")
+        self.assertEqual(f("Реджепов Шовкатнинг Фан доктори (DSc) диссертацияси"), "DSc")
+        self.assertEqual(f("Karimov Karimning falsafa doktori (PhD) dissertatsiyasi"), "PhD")
+        self.assertEqual(f("Эълон"), "")
+
+
 # ── DB writes ───────────────────────────────────────────────────────────────
 def _fake_modules(conn_factory):
     data = types.ModuleType("data")

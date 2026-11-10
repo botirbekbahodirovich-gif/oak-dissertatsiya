@@ -105,6 +105,20 @@ def detect_degree(text):
     return ""
 
 
+def degree_from_title(title):
+    """Sarlavhadagi daraja: "…нинг фалсафа доктори (PhD) диссертацияси".
+
+    Ishonchli manba — e'lon matnida opponent/rahbarlarning "(DSc)" lari va
+    "DSc.03/…" kengash kodi ham bor, ular dissertatsiya darajasi emas.
+    """
+    t = title or ""
+    if re.search(r"фалсафа доктори|falsafa doktori|\bPhD\b", t, re.IGNORECASE):
+        return "PhD"
+    if re.search(r"фан доктори|fan doktori|\bDSc\b", t, re.IGNORECASE):
+        return "DSc"
+    return ""
+
+
 # ----------------- BO'LIMLARGA AJRATISH -----------------
 # extract_field() qiymatni matn ichidagi "Илмий", "Тадқиқот", "Диссертация"
 # so'zlarida kesib qo'yadi ("катта илмий ходим", "илмий-тадқиқот институти").
@@ -245,7 +259,13 @@ def parse_announcement(text):
     result["ixtisoslik_shifrlari"] = sorted(set(codes))
     result["fan_tarmogi"] = extract_science_branch(text)
     result["ik_raqami"] = extract_ik_code(text)
-    result["daraja"] = detect_degree(text)
+    # Rahbar, IK va opponentlar bo'limlarida boshqa odamlarning darajasi va
+    # "DSc.03/…" kengash kodi bor — ularni chiqarib tashlab aniqlaymiz.
+    own_text = text
+    for key in ("ilmiy_rahbar", "ik_muassasa", "opponentlar"):
+        if sections.get(key):
+            own_text = own_text.replace(sections[key], " ")
+    result["daraja"] = detect_degree(own_text)
     return result
 
 
@@ -652,8 +672,8 @@ def _build_record(item, parsed):
     title = item.get("title", "")
     olim = extract_author_from_title(title)
 
-    # Daraja aniqlashtirish
-    daraja = parsed.get("daraja", "")
+    # Daraja: avval sarlavhadan, keyin e'lonning o'z matnidan.
+    daraja = degree_from_title(title) or parsed.get("daraja", "")
     if not daraja:
         text = title + " " + parsed.get("mavzu", "")
         if any(x in text for x in ["фалсафа доктори", "falsafa doktori", "(PhD)", "PhD/"]):
