@@ -643,7 +643,8 @@ def extract_author_from_title(title):
 
     Sarlavha odatda "Фамилия Исм Отасининг фалсафа доктори (PhD) ..." shaklida
     bo'ladi. Alohida funksiya — rescrape_broken_records.py ham shu mantiqni
-    ishlatadi (mantiq _build_record dagidan o'zgarmagan).
+    ishlatadi. "-нинг" siz sarlavhalar ham uchraydi (oak.uz, 2026-11:
+    200 tadan 18 tasi).
     """
     title = (title or "").strip()
     # Kirill: "Фамилия Исм Отасининг фалсафа/фан доктори..."
@@ -660,6 +661,16 @@ def extract_author_from_title(title):
     )
     if m:
         return m.group(1).strip()
+    # Qo'shimchasiz: "Фамилия Исм Отаси [Педагогика фанлари бўйича] фалсафа
+    # доктори (PhD) …" — ism 2–5 so'z (ba'zan lotin harfi aralash: "Қуwанишбай").
+    m = re.search(
+        r"^((?:[^\s\d()]+\s+){1,4}?[^\s\d()]+)\s+"
+        r"(?:[^\s\d()]+\s+фанлари\s+бўйича\s+)?(?:фалсафа|фан)\s+доктори",
+        title, re.IGNORECASE
+    )
+    if m:
+        # "…ўғлининг Фан доктори" (katta harf) ham shu yerga tushadi.
+        return re.sub(r"нинг$", "", m.group(1).strip())
     # Zaxira: "нинг" gacha
     m = re.search(r'^(.+?)нинг', title)
     if m:
