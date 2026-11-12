@@ -4,6 +4,14 @@
 # yangi qo'shilgan qatorlar bo'yicha bildirishnoma yuboradi (services/oak_notify).
 #   python3 scraper.py [--dry-run]
 #   python3 scraper.py --notify-only --ids 123,124 [--dry-run]
+#
+# Manba (2026-11-12 dan): oak.uz yangi sayti (SPA) JSON API —
+#   GET /api/elonlar?list=8|31&page=N   (har sahifada 10 ta, fields to'liq)
+# Eski HTML (/page/8, /pages/N) endi bo'sh qobiq qaytaradi. API har doim asl
+# kirill matnni beradi; "fields" [{label, value}] → "label: value" qatorlari →
+# o'zgarmagan parse_announcement().
+# Bildirishnomalar: OAK_NOTIFY_ENABLED=1 bo'lmasa yuborilmaydi, yangi qatorlar
+# esa notified_at=NOW() bilan belgilanadi (keyin yoqilganda eskilarga ketmaydi).
 # ============================================================
 
 import argparse
@@ -19,12 +27,18 @@ from datetime import datetime
 log = logging.getLogger("scraper")
 
 # ----------------- SOZLAMALAR -----------------
-# Bir nechta manba — har biri bir xil strukturada, alohida scraping qilinadi.
+# Ikki ro'yxat (oak.uz "list") — har biri alohida watermark bilan.
+API_URL = "https://oak.uz/api/elonlar"
 SOURCES = [
-    {"url": "https://oak.uz/page/8",  "nomi": "Oddiy"},
-    {"url": "https://oak.uz/page/31", "nomi": "Mustaqil ilmiy kengash"},
+    {"list": 8,  "nomi": "Oddiy"},
+    {"list": 31, "nomi": "Mustaqil ilmiy kengash"},
 ]
-MAX_PAGES = 10        # Kuniga max 10 sahifa tekshiriladi (~100 ta e'lon)
+# Sahifada 10 ta e'lon. 60 sahifa = 600 ta: bir necha hafta o'tkazib yuborilgan
+# kunlarni ham yetkazib oladi (smart-stop odatda 1–2 sahifada to'xtatadi).
+MAX_PAGES = 60
+# Yangi saytda 1000000+ ID li yozuvlar paydo bo'ldi (2026-11-12) — eski
+# /pages/N raqamlashidan tashqarida; watermark'ni buzmasligi uchun o'tkaziladi.
+ID_CEILING = 1_000_000
 DELAY = 1.0
 TIMEOUT = 20
 STATE_FILE = "last_state.json"
@@ -32,8 +46,59 @@ OUTPUT_FILE = "new_items.json"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+                  "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
 }
+
+
+def fetch_json(url, retries=3):
+    """JSON javob yoki None. 403/429 da qayta urinmaydi (bloklanmaslik uchun)."""
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
+            if r.status_code == 200 and "json" in r.headers.get("content-type", ""):
+                return r.json()
+            print(f"  HTTP {r.status_code} ({attempt+1}/{retries}): {url}")
+            if r.status_code in (403, 404, 429):
+                return None
+        except Exception as e:
+            print(f"  Xato ({attempt+1}/{retries}): {e}")
+        time.sleep(2)
+    return None
+
+
+def fetch_list_page(list_id, page):
+    return fetch_json(f"{API_URL}?list={list_id}&page={page}")
+
+
+def api_item_text(item):
+    """API fields → e'lon matni ("Сарлавҳа: қиймат" qatorlari).
+
+    Label'lar eski sahifadagi sarlavhalar bilan bir xil, shuning uchun
+    split_sections()/parse_announcement() o'zgarishsiz ishlaydi.
+    """
+    lines = []
+    for f in item.get("fields") or []:
+        label = " ".join(str(f.get("label") or "").split()).rstrip(":")
+        value = str(f.get("value") or "").strip()
+        if label:
+            lines.append(label + ": " + value)
+    return "\n".join(lines)
+
+
+def api_list_item(item):
+    """API element → parse_list_page() bilan bir xil lug'at (id/title/link/date/raw_text)."""
+    item_id = int(item["id"])
+    return {
+        "id": item_id,
+        "title": item.get("title") or "",
+        # DB'dagi barcha link'lar shu formatda (oak_id bilan mos).
+        "link": f"https://oak.uz/pages/{item_id}",
+        "date": item.get("date") or "",
+        "raw_text": api_item_text(item),
+        "person": item.get("person") or "",
+        "degree": item.get("degree") or "",
+    }
 
 
 # ----------------- YORDAMCHI -----------------
@@ -368,24 +433,29 @@ def parse_list_page(html):
 
 # ----------------- STATE -----------------
 def load_state():
+    """Watermark'lar: last_id_list8 / last_id_list31.
+
+    Eski kalitlar (last_id, last_id_page8, last_id_page31) bir xil ID
+    makonida — o'qilganda yangi kalitlarga ko'chiriladi, watermark yo'qolmaydi.
+    """
+    state = {}
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r", encoding="utf-8") as f:
             state = json.load(f)
-        # Eski bir manbali format ({"last_id": N}) ni page/8 kalitiga ko'chiramiz,
-        # aks holda watermark yo'qolib, hamma e'lon "eski" deb hisoblanardi.
-        if "last_id" in state and "last_id_page8" not in state:
-            state["last_id_page8"] = state.pop("last_id")
-        state.setdefault("last_id_page8", 0)
-        state.setdefault("last_id_page31", 0)
-        return state
-    # Har bir manba uchun alohida last_id.
-    return {"last_id_page8": 0, "last_id_page31": 0, "last_run": None}
+    if "last_id" in state and "last_id_page8" not in state:
+        state["last_id_page8"] = state.pop("last_id")
+    for src in SOURCES:
+        key = _state_key(src["list"])
+        old = "last_id_page" + str(src["list"])
+        if key not in state:
+            state[key] = int(state.get(old) or 0)
+    state.setdefault("last_run", None)
+    return state
 
 
-def _state_key(url):
-    """Manba URL idan state kalitini hosil qiladi: .../page/8 -> last_id_page8."""
-    m = re.search(r"/page/(\d+)", url)
-    return "last_id_page" + (m.group(1) if m else "0")
+def _state_key(list_id):
+    """Ro'yxat raqamidan state kaliti: 8 -> last_id_list8."""
+    return "last_id_list" + str(list_id)
 
 
 def save_state(state):
@@ -429,32 +499,48 @@ def main(dry_run=False):
             print("Bazaga ulanib bo'lmadi: " + str(e))
             conn = None
 
-    # Har bir manbani alohida sahifalab, alohida smart-stop bilan scraping qilamiz.
+    # Har bir ro'yxatni alohida sahifalab, alohida smart-stop bilan o'qiymiz.
+    global LAST_RUN_ERRORS
+    LAST_RUN_ERRORS = []
     for source in SOURCES:
-        src_url = source["url"]
-        key = _state_key(src_url)
+        list_id = source["list"]
+        key = _state_key(list_id)
         last_id = state.get(key, 0)
         max_id_seen = last_id
         consec_skip = 0
         stop = False
 
         print("-" * 50)
-        print("Manba: " + source["nomi"] + " (" + src_url + ")")
+        print("Manba: " + source["nomi"] + " (" + API_URL + "?list=" + str(list_id) + ")")
         print("Oxirgi ID (" + key + "): " + str(last_id))
         print("-" * 50)
 
         for page_num in range(1, MAX_PAGES + 1):
             if stop:
                 break
-            url = f"{src_url}?page={page_num}" if page_num > 1 else src_url
             print("Sahifa " + str(page_num) + " tekshirilmoqda...")
-            html = fetch(url)
-            if html is None:
-                continue
-
-            items = parse_list_page(html)
-            if not items:
+            data = fetch_list_page(list_id, page_num)
+            raw_items = (data or {}).get("items") or []
+            if not raw_items:
+                if page_num == 1:
+                    # Bo'sh/xato javob — watermark o'zgarmaydi; cron log'ida ko'rinsin.
+                    msg = f"list={list_id}: API bo'sh yoki xato javob qaytardi"
+                    log.error(msg)
+                    LAST_RUN_ERRORS.append(msg)
                 break
+
+            items = []
+            for raw in raw_items:
+                try:
+                    it = api_list_item(raw)
+                except (KeyError, TypeError, ValueError):
+                    log.warning("list=%s: tushunilmagan element o'tkazildi: %r",
+                                list_id, str(raw)[:80])
+                    continue
+                if it["id"] >= ID_CEILING:
+                    log.warning("ID=%s: %s+ raqamlash — o'tkazildi", it["id"], ID_CEILING)
+                    continue
+                items.append(it)
 
             for item in items:
                 if item["id"] > max_id_seen:
@@ -528,13 +614,41 @@ def main(dry_run=False):
           + ("" if conn is not None else " (DB ulanmagan — hech narsa yozilmadi)"))
 
     # Bildirishnomalar — faqat shu ishga tushishda qo'shilgan qatorlar uchun.
+    enabled = notify_enabled()
     if dry_run:
-        if new_items:
+        if new_items and enabled:
             run_notifications(records=[_notify_record(r) for r in new_items])
+        elif new_items:
+            print("Bildirishnoma o'chiq (OAK_NOTIFY_ENABLED=0): "
+                  + str(len(new_items)) + " ta yangi qator notified_at bilan belgilanardi.")
     elif new_ids:
-        run_notifications(ids=new_ids)
+        if enabled:
+            run_notifications(ids=new_ids)
+        else:
+            mark_silently(new_ids)
 
     return new_items
+
+
+LAST_RUN_ERRORS = []
+
+
+def notify_enabled():
+    """OAK_NOTIFY_ENABLED=1/true/yes/on — aks holda (default) o'chiq."""
+    return os.environ.get("OAK_NOTIFY_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
+
+
+def mark_silently(ids):
+    """Bildirishnoma o'chiq: qatorlar notified_at bilan belgilanadi, xabar ketmaydi."""
+    try:
+        from services import oak_notify
+        n = oak_notify.mark_without_notify(ids)
+        print("Bildirishnoma o'chiq (OAK_NOTIFY_ENABLED=0): " + str(n)
+              + " ta qator notified_at bilan belgilandi, xabar yuborilmadi.")
+        return n
+    except Exception:
+        log.exception("notified_at belgilanmadi (scraper davom etadi)")
+        return None
 
 
 def run_notifications(ids=None, records=None, dry_run=False):
@@ -734,12 +848,15 @@ def extract_author_from_title(title):
 
 
 def _build_record(item, parsed):
-    # Olim ismini sarlavhadan tozalab ajratish
+    # Olim ismini sarlavhadan tozalab ajratish; API'da "person" zaxira manba.
     title = fix_homoglyphs(item.get("title", ""))
     olim = extract_author_from_title(title)
+    if not olim and item.get("person"):
+        olim = re.sub(r"(нинг|ни)$", "", fix_homoglyphs(item["person"]).strip())
 
-    # Daraja: avval sarlavhadan, keyin e'lonning o'z matnidan.
-    daraja = degree_from_title(title) or parsed.get("daraja", "")
+    # Daraja: avval sarlavhadan, keyin API "degree", keyin e'lonning o'z matnidan.
+    api_degree = item.get("degree") if item.get("degree") in ("PhD", "DSc") else ""
+    daraja = degree_from_title(title) or api_degree or parsed.get("daraja", "")
     if not daraja:
         text = title + " " + parsed.get("mavzu", "")
         if any(x in text for x in ["фалсафа доктори", "falsafa doktori", "(PhD)", "PhD/"]):
@@ -806,6 +923,9 @@ def cli(argv=None):
     items = main(dry_run=args.dry_run)
     if items and not args.dry_run:
         ping_google()
+    if LAST_RUN_ERRORS:
+        # cron/monitoring ko'rishi uchun: manba javob bermadi.
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

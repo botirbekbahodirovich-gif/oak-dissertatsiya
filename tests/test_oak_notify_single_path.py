@@ -222,18 +222,18 @@ class OpponentEdgeCaseTests(unittest.TestCase):
         self.assertEqual(len(scraper.split_opponents(section)), 2)
 
     def test_unreliable_text_is_logged_by_the_scraper(self):
-        page = ('<div><h3><a href="/pages/32449">Каримов Карим Каримовичнинг фалсафа '
-                'доктори (PhD) диссертацияси ҳимояси ҳақида эълон</a></h3>'
-                '<p>09.11.2026</p><p>Расмий оппонентлар: ' + self.UNRELIABLE[32449] +
-                '</p><a href="/pages/32449">Batafsil</a></div>')
+        api_item = {"id": "32449", "date": "09.11.2026", "degree": "PhD",
+                    "title": "Каримов Карим Каримовичнинг фалсафа доктори (PhD) "
+                             "диссертацияси ҳимояси ҳақида эълон",
+                    "fields": [{"label": "Расмий оппонентлар",
+                                "value": self.UNRELIABLE[32449]}]}
         tmp = tempfile.mkdtemp()
         with mock.patch.object(scraper, "STATE_FILE", os.path.join(tmp, "s.json")), \
                 mock.patch.object(scraper, "OUTPUT_FILE", os.path.join(tmp, "n.json")), \
                 mock.patch.object(scraper, "DELAY", 0), \
-                mock.patch.object(scraper, "SOURCES",
-                                  [{"url": "https://oak.uz/page/8", "nomi": "Oddiy"}]), \
-                mock.patch.object(scraper, "fetch",
-                                  lambda url: page if "page=" not in url else None), \
+                mock.patch.object(scraper, "SOURCES", [{"list": 8, "nomi": "Oddiy"}]), \
+                mock.patch.object(scraper, "fetch_list_page",
+                                  lambda lst, page: {"items": [api_item]} if page == 1 else None), \
                 mock.patch.dict(sys.modules, _fake_modules(lambda: FakeConn())), \
                 mock.patch.object(scraper, "run_notifications"), \
                 self.assertLogs("scraper", level="WARNING") as logs:
@@ -415,10 +415,14 @@ class ScraperMainTests(unittest.TestCase):
             mock.patch.object(scraper, "STATE_FILE", os.path.join(self.tmp, "state.json")),
             mock.patch.object(scraper, "OUTPUT_FILE", os.path.join(self.tmp, "new.json")),
             mock.patch.object(scraper, "DELAY", 0),
-            mock.patch.object(scraper, "SOURCES",
-                              [{"url": "https://oak.uz/page/8", "nomi": "Oddiy"}]),
-            mock.patch.object(scraper, "fetch",
-                              lambda url: FIXTURE if "page=" not in url else None),
+            mock.patch.object(scraper, "SOURCES", [{"list": 8, "nomi": "Oddiy"}]),
+            # Real HTML fixture'dagi e'lonlar API ro'yxati sifatida beriladi
+            # (api_list_item() bilan bir xil lug'at shakli).
+            mock.patch.object(scraper, "fetch_list_page",
+                              lambda lst, page: {"items": scraper.parse_list_page(FIXTURE)}
+                              if page == 1 else None),
+            mock.patch.object(scraper, "api_list_item", lambda raw: raw),
+            mock.patch.dict(os.environ, {"OAK_NOTIFY_ENABLED": "1"}),
         ]
         for p in patches:
             p.start()
@@ -467,7 +471,7 @@ class ScraperMainTests(unittest.TestCase):
         self.assertEqual(len(items), 2)
         self.assertIn("Bildirishnomalar yuborilmadi", logs.output[0])
         with open(scraper.STATE_FILE, encoding="utf-8") as f:
-            self.assertEqual(json.load(f)["last_id_page8"], 34845)
+            self.assertEqual(json.load(f)["last_id_list8"], 34845)
 
 
 # ── services/oak_notify ─────────────────────────────────────────────────────

@@ -106,6 +106,31 @@ def notify_new_dissertations(ids, dry_run=False):
     return _dispatch(records, result)
 
 
+_MARK_SQL = """
+    UPDATE dissertations SET notified_at = NOW()
+    WHERE id = ANY(%s) AND notified_at IS NULL
+"""
+
+
+def mark_without_notify(ids):
+    """Bildirishnoma o'chiq paytda (OAK_NOTIFY_ENABLED=0): qatorlarni yuborilgan
+    deb belgilaydi, hech narsa yubormaydi. Keyin kalit yoqilganda bu qatorlar
+    uchun eski xabarlar ketmaydi. Belgilangan qatorlar sonini qaytaradi."""
+    ids = sorted({int(i) for i in (ids or []) if i})
+    if not ids:
+        return 0
+    from data import get_connection
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(_MARK_SQL, (ids,))
+            n = cur.rowcount
+        conn.commit()
+    finally:
+        conn.close()
+    return n
+
+
 def preview_records(records):
     """Bazada hali yo'q yozuvlar uchun (scraper --dry-run): kimga nima ketardi."""
     result = _new_result(True)
