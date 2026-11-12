@@ -471,7 +471,7 @@ class ScraperMainTests(unittest.TestCase):
         self.assertEqual(len(items), 2)
         self.assertIn("Bildirishnomalar yuborilmadi", logs.output[0])
         with open(scraper.STATE_FILE, encoding="utf-8") as f:
-            self.assertEqual(json.load(f)["last_id_list8"], 34845)
+            self.assertEqual(json.load(f)["last_run_lists"]["8"]["yangi"], 2)
 
 
 # ── services/oak_notify ─────────────────────────────────────────────────────

@@ -27,18 +27,22 @@ from datetime import datetime
 log = logging.getLogger("scraper")
 
 # ----------------- SOZLAMALAR -----------------
-# Ikki ro'yxat (oak.uz "list") — har biri alohida watermark bilan.
+# Ikki ro'yxat (oak.uz "list"). Ro'yxat sana, keyin ID bo'yicha kamayadi.
+# 2026-11-12 dan yangi e'lonlar 1000000+ raqamlash bilan keladi (eski /pages/N
+# raqamlashi 35181 da tugagan) — ikkalasi bir ro'yxatda aralash.
 API_URL = "https://oak.uz/api/elonlar"
+SITE_URL = "https://oak.uz"
 SOURCES = [
     {"list": 8,  "nomi": "Oddiy"},
     {"list": 31, "nomi": "Mustaqil ilmiy kengash"},
 ]
-# Sahifada 10 ta e'lon. 60 sahifa = 600 ta: bir necha hafta o'tkazib yuborilgan
-# kunlarni ham yetkazib oladi (smart-stop odatda 1–2 sahifada to'xtatadi).
+# "Yangi" = DB ga haqiqatan qo'shilgan (INSERT … ON CONFLICT DO NOTHING
+# RETURNING id). Watermark yo'q: ro'yxat boshidan o'qiladi; kamida MIN_PAGES
+# sahifa o'qilgach, ketma-ket STOP_EMPTY_PAGES sahifada 0 ta yangi bo'lsa
+# to'xtaydi. MAX_PAGES — xavfsizlik chegarasi (uzilishdan keyin --max-pages).
+MIN_PAGES = 5
+STOP_EMPTY_PAGES = 3
 MAX_PAGES = 60
-# Yangi saytda 1000000+ ID li yozuvlar paydo bo'ldi (2026-11-12) — eski
-# /pages/N raqamlashidan tashqarida; watermark'ni buzmasligi uchun o'tkaziladi.
-ID_CEILING = 1_000_000
 DELAY = 1.0
 TIMEOUT = 20
 STATE_FILE = "last_state.json"
@@ -71,11 +75,18 @@ def fetch_list_page(list_id, page):
     return fetch_json(f"{API_URL}?list={list_id}&page={page}")
 
 
+_GENERAL_SECTION_RE = re.compile(r"^\s*(?:I\.\s*)?(?:Умумий маълумот|Umumiy ma.lumot)", re.I)
+
+
 def api_item_text(item):
     """API fields → e'lon matni ("Сарлавҳа: қиймат" qatorlari).
 
     Label'lar eski sahifadagi sarlavhalar bilan bir xil, shuning uchun
     split_sections()/parse_announcement() o'zgarishsiz ishlaydi.
+    - Bo'sh label: qiymat oldingi maydonning davomi.
+    - Yangi format (1000000+, ba'zan lotin): maydonlar kam, "Umumiy ma'lumotlar"
+      bo'limining paragraflarida "Sarlavha: qiymat" qatorlari keladi —
+      ular ham qo'shiladi (fields'dagi bilan takrorlanganlari o'tkaziladi).
     """
     lines = []
     for f in item.get("fields") or []:
@@ -83,17 +94,31 @@ def api_item_text(item):
         value = str(f.get("value") or "").strip()
         if label:
             lines.append(label + ": " + value)
+        elif value and lines:
+            lines[-1] += " " + value
+    seen = {ln.split(":", 1)[0].strip().lower() for ln in lines}
+    for sec in item.get("sections") or []:
+        if not _GENERAL_SECTION_RE.match(str(sec.get("title") or "")):
+            continue
+        for par in sec.get("paragraphs") or []:
+            par = " ".join(str(par or "").split())
+            head = par.split(":", 1)[0].strip().lower()
+            if ":" in par and head not in seen:
+                lines.append(par)
+                seen.add(head)
     return "\n".join(lines)
 
 
 def api_list_item(item):
     """API element → parse_list_page() bilan bir xil lug'at (id/title/link/date/raw_text)."""
     item_id = int(item["id"])
+    href = str(item.get("href") or "")
     return {
         "id": item_id,
         "title": item.get("title") or "",
-        # DB'dagi barcha link'lar shu formatda (oak_id bilan mos).
-        "link": f"https://oak.uz/pages/{item_id}",
+        # Yangi saytda e'lon sahifasi /himoya-elonlari/N (API "href"); eski
+        # /pages/N ham ishlaydi (301 → /material/N → SPA shu yerga yo'naltiradi).
+        "link": SITE_URL + href if href.startswith("/") else f"{SITE_URL}/himoya-elonlari/{item_id}",
         "date": item.get("date") or "",
         "raw_text": api_item_text(item),
         "person": item.get("person") or "",
@@ -189,15 +214,26 @@ def degree_from_title(title):
 # so'zlarida kesib qo'yadi ("катта илмий ходим", "илмий-тадқиқот институти").
 # Shuning uchun e'lon matni avval qator boshidagi sarlavhalar bo'yicha
 # bo'limlarga ajratiladi; qiymat — keyingi sarlavhagacha bo'lgan butun matn.
+# Lotin sarlavhalar — yangi saytdagi lotin e'lonlar uchun (1000001 kabi);
+# qiymat yozuvi o'zgarmaydi (kirillga o'girilmaydi).
+_Q = r"[‘ʻ’'`ʼ]?"
 _SECTION_HEADERS = [
-    ("ro_yxat_raqami", r"Диссерта(?:ция|сия) мавзуси рўй[хҳ]атга олинган рақам"),
-    ("mavzu", r"Диссерта(?:ция|сия) мавзуси"),
-    ("ilmiy_rahbar", r"Илмий (?:раҳбар(?:лар)?|маслаҳатчи)"),
-    ("bajarilgan_muassasa", r"Диссерта(?:ция|сия) бажарилган муассаса"),
-    ("ik_muassasa", r"(?:ИК|Ик|Илмий [Кк]енгаш) фаолият кўрсатаётган муассаса"),
-    ("opponentlar", r"Расмий оппоне(?:н)?тлар"),          # "оппонетлар" ham uchraydi
-    ("yetakchi_tashkilot", r"[ЕЭ]такчи\s+ташкилот"),      # "Этакчи" ham uchraydi
-    ("yo_nalish", r"Диссерта(?:ция|сия) (?:йўналиши|ё\s*[‘ʻ’']\s*налиши)"),
+    ("ro_yxat_raqami", r"Диссерта(?:ция|сия) мавзуси р[ўо]" + _Q + r"й[хҳ]атга олинган рақам"
+                       r"|Dissertatsiya mavzusi ro" + _Q + r"yxatga olingan raqam"),
+    ("mavzu", r"Диссерта(?:ция|сия) мавзуси|Dissertatsiya mavzusi"),
+    ("ilmiy_rahbar", r"Илмий (?:ра[ҳх]бар|маслаҳатчи)|Ilmiy (?:rahbar|raxbar|maslahatchi)"),
+    ("bajarilgan_muassasa", r"(?:Диссерта(?:ция|сия)|Илмий тадқиқот иши) "
+                            r"бажари?(?:лган|лаётган|ган) муассаса"
+                            r"|(?:Dissertatsiya|Ilmiy tadqiqot ishi) bajarilgan muassasa"),
+    ("ik_muassasa", r"(?:ИК|Ик|Илмий [Кк]енгаш) фаолият кўрсатаётган муассаса"
+                    r"|(?:IK|Ilmiy [Kk]engash) faoliyat ko" + _Q + r"rsatayotgan muassasa"),
+    # Ba'zi e'lonlarda "ИК рақами" alohida maydon (34884) — aks holda IK
+    # muassasa qiymatiga qo'shilib ketadi. Kod extract_ik_code() bilan olinadi.
+    ("ik_raqami_maydon", r"(?:ИК|Илмий [Кк]енгаш|IK|Ilmiy [Kk]engash) (?:рақами|raqami)"),
+    ("opponentlar", r"Расмий оппоне(?:н)?тлар|Rasmiy opponentlar"),   # "оппонетлар" ham uchraydi
+    ("yetakchi_tashkilot", r"[ЕЭ]такчи\s+ташкилот|(?:Yetakchi|Etakchi)\s+tashkilot"),
+    ("yo_nalish", r"Диссерта(?:ция|сия)(?:нинг)? (?:йўналиши|ё\s*[‘ʻ’']\s*налиши)"
+                  r"|Dissertatsiya(?:ning)? yo" + _Q + r"nalishi"),
 ]
 # Bu ikki sarlavha ko'pincha qator o'rtasida keladi: "…, профессор. Етакчи
 # ташкилот: …" — ular har qanday bo'shliqdan keyin ham tan olinadi.
@@ -433,29 +469,16 @@ def parse_list_page(html):
 
 # ----------------- STATE -----------------
 def load_state():
-    """Watermark'lar: last_id_list8 / last_id_list31.
-
-    Eski kalitlar (last_id, last_id_page8, last_id_page31) bir xil ID
-    makonida — o'qilganda yangi kalitlarga ko'chiriladi, watermark yo'qolmaydi.
-    """
-    state = {}
+    """last_state.json — faqat ma'lumot uchun (oxirgi run, har ro'yxat bo'yicha
+    sonlar). Yangi e'lonni aniqlashda ISHLATILMAYDI; eski last_id_* kalitlari
+    o'zgarishsiz saqlanadi."""
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            state = json.load(f)
-    if "last_id" in state and "last_id_page8" not in state:
-        state["last_id_page8"] = state.pop("last_id")
-    for src in SOURCES:
-        key = _state_key(src["list"])
-        old = "last_id_page" + str(src["list"])
-        if key not in state:
-            state[key] = int(state.get(old) or 0)
-    state.setdefault("last_run", None)
-    return state
-
-
-def _state_key(list_id):
-    """Ro'yxat raqamidan state kaliti: 8 -> last_id_list8."""
-    return "last_id_list" + str(list_id)
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            log.warning("%s o'qilmadi — yangisi yoziladi", STATE_FILE)
+    return {}
 
 
 def save_state(state):
@@ -499,63 +522,54 @@ def main(dry_run=False):
             print("Bazaga ulanib bo'lmadi: " + str(e))
             conn = None
 
-    # Har bir ro'yxatni alohida sahifalab, alohida smart-stop bilan o'qiymiz.
-    global LAST_RUN_ERRORS
+    # Har bir ro'yxat boshidan o'qiladi; "yangi" = DB ga haqiqatan qo'shilgan.
+    global LAST_RUN_ERRORS, LAST_RUN_STATS
     LAST_RUN_ERRORS = []
-    for source in SOURCES:
+    LAST_RUN_STATS = {}
+    if conn is None:
+        # DB'siz "yangi"ni aniqlab bo'lmaydi (watermark yo'q) — xato sifatida.
+        LAST_RUN_ERRORS.append("DB ulanmagan — yangi e'lonlarni aniqlab bo'lmadi")
+        log.error(LAST_RUN_ERRORS[-1])
+        sources = []
+    else:
+        sources = SOURCES
+    for source in sources:
         list_id = source["list"]
-        key = _state_key(list_id)
-        last_id = state.get(key, 0)
-        max_id_seen = last_id
-        consec_skip = 0
-        stop = False
+        empty_streak = 0
+        pages_read = 0
+        stop_reason = f"MAX_PAGES={MAX_PAGES} chegarasi"
+        list_new = 0
 
         print("-" * 50)
         print("Manba: " + source["nomi"] + " (" + API_URL + "?list=" + str(list_id) + ")")
-        print("Oxirgi ID (" + key + "): " + str(last_id))
         print("-" * 50)
 
-        # Watermark faqat eski e'lonlarga yetib borilsa (yoki ro'yxat tugasa)
-        # suriladi. Aks holda (MAX_PAGES tugadi) oradagi e'lonlar keyingi
-        # ishga tushishlarda abadiy o'tkazib yuborilardi.
-        reached_old = False
         for page_num in range(1, MAX_PAGES + 1):
-            if stop:
-                break
             print("Sahifa " + str(page_num) + " tekshirilmoqda...")
             data = fetch_list_page(list_id, page_num)
             raw_items = (data or {}).get("items") or []
             if not raw_items:
-                if page_num == 1:
-                    # Bo'sh/xato javob — watermark o'zgarmaydi; cron log'ida ko'rinsin.
-                    msg = f"list={list_id}: API bo'sh yoki xato javob qaytardi"
+                if data is None or page_num == 1:
+                    # Bo'sh/xato javob — cron log'ida ko'rinsin, exit 1.
+                    stop_reason = "API bo'sh yoki xato javob (sahifa " + str(page_num) + ")"
+                    msg = f"list={list_id}: {stop_reason}"
                     log.error(msg)
                     LAST_RUN_ERRORS.append(msg)
-                elif data is not None:
-                    reached_old = True          # ro'yxat oxiri
+                else:
+                    stop_reason = "ro'yxat oxiri"
                 break
+            pages_read += 1
 
             items = []
             for raw in raw_items:
                 try:
-                    it = api_list_item(raw)
+                    items.append(api_list_item(raw))
                 except (KeyError, TypeError, ValueError):
                     log.warning("list=%s: tushunilmagan element o'tkazildi: %r",
                                 list_id, str(raw)[:80])
-                    continue
-                if it["id"] >= ID_CEILING:
-                    log.warning("ID=%s: %s+ raqamlash — o'tkazildi", it["id"], ID_CEILING)
-                    continue
-                items.append(it)
 
+            page_new = 0
             for item in items:
-                if item["id"] > max_id_seen:
-                    max_id_seen = item["id"]
-
-                # Watermark (last_id) faqat qachon to'xtashni belgilaydi.
-                # "Yangi" degani — bazaga haqiqatan qo'shilgan qator.
-                is_new = item["id"] > last_id
-
                 parsed = parse_announcement(item["raw_text"])
                 record = _build_record(item, parsed)
                 if parsed["opponentlar_ishonchsiz"]:
@@ -573,6 +587,7 @@ def main(dry_run=False):
 
                 if status == "added":
                     new_items.append(record)
+                    page_new += 1
                     print("  + Yangi: ID=" + str(item["id"]) + " | " + item["date"])
                     if dry_run:
                         _print_record(record)
@@ -581,33 +596,28 @@ def main(dry_run=False):
                 else:
                     skipped_total += 1
 
-                if is_new:
-                    consec_skip = 0
-                else:
-                    consec_skip += 1
-                    # 4 ta ketma-ket eski (watermark dan pastroq) element = eski
-                    # ma'lumotlarga yetdik, to'xtatamiz.
-                    if consec_skip >= 4:
-                        print("  4 ta ketma-ket eski element — eski ma'lumotlarga "
-                              "yetildi, to'xtatildi.")
-                        stop = True
-                        reached_old = True
-                        break
-
-            if not stop and isinstance(data.get("lastPage"), int) and page_num >= data["lastPage"]:
-                reached_old = True              # ro'yxatning oxirgi sahifasi
-                stop = True
+            list_new += page_new
+            empty_streak = 0 if page_new else empty_streak + 1
             time.sleep(DELAY)
+            if pages_read >= MIN_PAGES and empty_streak >= STOP_EMPTY_PAGES:
+                stop_reason = (f"ketma-ket {empty_streak} sahifada yangi yo'q "
+                               f"({pages_read} sahifa o'qildi)")
+                break
+            if isinstance(data.get("lastPage"), int) and page_num >= data["lastPage"]:
+                stop_reason = "ro'yxat oxiri (lastPage)"
+                break
+        else:
+            # MAX_PAGES tugadi, oxirgi sahifalarda hali yangi bor edi — chuqurroq
+            # yangilar qolgan bo'lishi mumkin.
+            if empty_streak < STOP_EMPTY_PAGES:
+                msg = (f"list={list_id}: {MAX_PAGES} sahifa chegarasi, oxirgi sahifalarda hali "
+                       f"yangi bor — --max-pages bilan qayta ishga tushiring")
+                log.error(msg)
+                LAST_RUN_ERRORS.append(msg)
 
-        # Ushbu manba uchun alohida last_id yangilash
-        if max_id_seen > last_id and reached_old:
-            state[key] = max_id_seen
-            print(key + " yangilandi: " + str(max_id_seen))
-        elif max_id_seen > last_id:
-            msg = (f"list={list_id}: {MAX_PAGES} sahifada watermark ({last_id}) ga "
-                   f"yetilmadi — watermark surilmadi; --max-pages bilan qayta ishga tushiring")
-            log.error(msg)
-            LAST_RUN_ERRORS.append(msg)
+        print(f"list={list_id}: {list_new} ta yangi; to'xtash: {stop_reason}")
+        LAST_RUN_STATS[str(list_id)] = {"yangi": list_new, "sahifa": pages_read,
+                                        "toxtash": stop_reason}
 
     if conn is not None:
         try:
@@ -616,8 +626,10 @@ def main(dry_run=False):
             pass
 
     if not dry_run:
-        # State faylini bir marta saqlaymiz
+        # State fayli — faqat ma'lumot uchun.
         state["last_run"] = datetime.now().isoformat()
+        state["last_run_lists"] = LAST_RUN_STATS
+        state["last_run_errors"] = LAST_RUN_ERRORS
         save_state(state)
         # Natijani JSON ga saqlash (faqat yangi qo'shilganlar — log uchun)
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
@@ -646,6 +658,7 @@ def main(dry_run=False):
 
 
 LAST_RUN_ERRORS = []
+LAST_RUN_STATS = {}
 
 
 def notify_enabled():
