@@ -420,7 +420,7 @@ class ScraperMainTests(unittest.TestCase):
             # (api_list_item() bilan bir xil lug'at shakli).
             mock.patch.object(scraper, "fetch_list_page",
                               lambda lst, page: {"items": scraper.parse_list_page(FIXTURE)}
-                              if page == 1 else None),
+                              if page == 1 else {"items": []}),
             mock.patch.object(scraper, "api_list_item", lambda raw: raw),
             mock.patch.dict(os.environ, {"OAK_NOTIFY_ENABLED": "1"}),
         ]

@@ -166,7 +166,8 @@ class MainApiTests(unittest.TestCase):
         calls = []
         with mock.patch.dict(sys.modules, _fake_modules(lambda: conn)), \
                 mock.patch.object(scraper, "fetch_list_page",
-                                  lambda lst, page: calls.append(page) or pages.get(page)), \
+                                  lambda lst, page: calls.append(page) or pages.get(
+                                      page, {"items": []} if page > 1 else None)), \
                 mock.patch.object(scraper, "run_notifications") as notify, \
                 mock.patch.object(scraper, "mark_silently") as mark, \
                 mock.patch.dict(os.environ, env or {}, clear=False):
@@ -191,6 +192,45 @@ class MainApiTests(unittest.TestCase):
         items, calls, _, _ = self._run(pages, state={"last_id_list8": 35181})
         self.assertEqual(len(items), 25)
         self.assertEqual(calls, [1, 2, 3])
+
+    def test_page_cap_before_watermark_does_not_move_it(self):
+        # 2 sahifa chegarasi, watermark'gacha yetilmaydi → oradagilar yo'qolmasin.
+        pages = {1: _api_page(range(35230, 35220, -1)), 2: _api_page(range(35220, 35210, -1)),
+                 3: _api_page(range(35210, 35200, -1))}
+        with mock.patch.object(scraper, "MAX_PAGES", 2):
+            items, calls, _, _ = self._run(pages, state={"last_id_list8": 35181})
+        self.assertEqual(calls, [1, 2])
+        self.assertEqual(len(items), 20)          # o'qilganlari baribir yoziladi
+        with open(scraper.STATE_FILE) as f:
+            self.assertEqual(json.load(f)["last_id_list8"], 35181)
+        self.assertTrue(any("yetilmadi" in e for e in scraper.LAST_RUN_ERRORS))
+
+    def test_failed_later_page_does_not_move_watermark(self):
+        pages = {1: _api_page(range(35195, 35185, -1)), 2: None}
+        items, calls, _, _ = self._run(pages, state={"last_id_list8": 35181})
+        with open(scraper.STATE_FILE) as f:
+            self.assertEqual(json.load(f)["last_id_list8"], 35181)
+
+    def test_last_page_counts_as_reaching_old(self):
+        page = _api_page([35183, 35182]); page["lastPage"] = 1
+        items, calls, _, _ = self._run({1: page}, state={"last_id_list8": 35181})
+        self.assertEqual(calls, [1])
+        with open(scraper.STATE_FILE) as f:
+            self.assertEqual(json.load(f)["last_id_list8"], 35183)
+
+    def test_end_of_list_counts_as_reaching_old(self):
+        pages = {1: _api_page([35183, 35182]), 2: {"items": []}}
+        items, calls, _, _ = self._run(pages, state={"last_id_list8": 35181})
+        with open(scraper.STATE_FILE) as f:
+            self.assertEqual(json.load(f)["last_id_list8"], 35183)
+        self.assertEqual(scraper.LAST_RUN_ERRORS, [])
+
+    def test_max_pages_cli_flag(self):
+        with mock.patch.object(scraper, "main", lambda dry_run=False: []), \
+                mock.patch.object(scraper, "LAST_RUN_ERRORS", []), \
+                mock.patch.object(scraper, "MAX_PAGES", 60):
+            scraper.cli(["--max-pages", "200", "--dry-run"])
+            self.assertEqual(scraper.MAX_PAGES, 200)
 
     def test_empty_api_keeps_watermark_and_reports_error(self):
         items, _, _, _ = self._run({}, state={"last_id_list8": 35181})

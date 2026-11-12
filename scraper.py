@@ -515,6 +515,10 @@ def main(dry_run=False):
         print("Oxirgi ID (" + key + "): " + str(last_id))
         print("-" * 50)
 
+        # Watermark faqat eski e'lonlarga yetib borilsa (yoki ro'yxat tugasa)
+        # suriladi. Aks holda (MAX_PAGES tugadi) oradagi e'lonlar keyingi
+        # ishga tushishlarda abadiy o'tkazib yuborilardi.
+        reached_old = False
         for page_num in range(1, MAX_PAGES + 1):
             if stop:
                 break
@@ -527,6 +531,8 @@ def main(dry_run=False):
                     msg = f"list={list_id}: API bo'sh yoki xato javob qaytardi"
                     log.error(msg)
                     LAST_RUN_ERRORS.append(msg)
+                elif data is not None:
+                    reached_old = True          # ro'yxat oxiri
                 break
 
             items = []
@@ -585,14 +591,23 @@ def main(dry_run=False):
                         print("  4 ta ketma-ket eski element — eski ma'lumotlarga "
                               "yetildi, to'xtatildi.")
                         stop = True
+                        reached_old = True
                         break
 
+            if not stop and isinstance(data.get("lastPage"), int) and page_num >= data["lastPage"]:
+                reached_old = True              # ro'yxatning oxirgi sahifasi
+                stop = True
             time.sleep(DELAY)
 
         # Ushbu manba uchun alohida last_id yangilash
-        if max_id_seen > last_id:
+        if max_id_seen > last_id and reached_old:
             state[key] = max_id_seen
             print(key + " yangilandi: " + str(max_id_seen))
+        elif max_id_seen > last_id:
+            msg = (f"list={list_id}: {MAX_PAGES} sahifada watermark ({last_id}) ga "
+                   f"yetilmadi — watermark surilmadi; --max-pages bilan qayta ishga tushiring")
+            log.error(msg)
+            LAST_RUN_ERRORS.append(msg)
 
     if conn is not None:
         try:
@@ -909,7 +924,12 @@ def cli(argv=None):
                         help="scraping qilmaydi; --ids dagi qatorlar uchun bildirishnoma")
     parser.add_argument("--ids", default="",
                         help="--notify-only uchun dissertations.id lar (vergul bilan)")
+    parser.add_argument("--max-pages", type=int, default=None,
+                        help="har ro'yxat uchun sahifa chegarasi (uzoq uzilishdan keyin yetkazib olish)")
     args = parser.parse_args(argv)
+    if args.max_pages:
+        global MAX_PAGES
+        MAX_PAGES = args.max_pages
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
