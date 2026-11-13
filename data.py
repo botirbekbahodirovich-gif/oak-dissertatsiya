@@ -1804,103 +1804,12 @@ def _validate_ingest_record(oak_id: str, olim: str, daraja: str,
 
 @data_bp.route('/api/oak/ingest', methods=['POST'])
 def oak_ingest():
-    auth = request.headers.get('Authorization', '')
-    if not OAK_API_KEY or not hmac.compare_digest(auth, f'Bearer {OAK_API_KEY}'):
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    payload = request.get_json(silent=True) or {}
-    items = payload.get('items', [])
-    if not isinstance(items, list):
-        return jsonify({'error': 'items must be a list'}), 400
-
-    added = 0
-    skipped = 0
-    skip_reasons: dict = {}
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            for item in items:
-                oak_id     = str(item.get('ID', '') or '').strip()
-                title      = str(item.get('Sarlavha', '') or '').strip()
-                mavzu_full = str(item.get('Mavzu va ixtisoslik', '') or '').strip()
-                muassasa   = str(item.get('Bajarilgan muassasa', '') or '').strip()[:300]
-
-                # Extract & clean fields
-                olim     = str(item.get('Olim', '') or '').strip() or _extract_olim(title)
-                mavzu    = _extract_mavzu(mavzu_full)
-                daraja   = _extract_daraja(title, mavzu_full) or str(item.get('Daraja', '') or '').strip()
-                ixtisoslik = _extract_ixtisoslik(
-                    str(item.get('Ixtisoslik shifrlari', '') or ''),
-                    mavzu_full
-                )
-
-                # Validate
-                if precheck_enabled:
-                    precheck_records.append({
-                        'id': len(precheck_records) + 1,
-                        'olim': olim, 'mavzu': mavzu, 'daraja': daraja,
-                        'ixtisoslik': ixtisoslik, 'muassasa': muassasa,
-                        'sana': str(item.get('Sana', '') or ''),
-                        'ilmiy_rahbar': str(item.get('Ilmiy rahbar', '') or ''),
-                        'link': str(item.get('Havola', '') or ''),
-                    })
-
-                reason = _validate_ingest_record(oak_id, olim, daraja, mavzu, muassasa)
-                if reason:
-                    skipped += 1
-                    skip_reasons[reason] = skip_reasons.get(reason, 0) + 1
-                    continue
-
-                cur.execute("SELECT 1 FROM dissertations WHERE oak_id = %s", (oak_id,))
-                if cur.fetchone():
-                    skipped += 1
-                    skip_reasons['duplicate'] = skip_reasons.get('duplicate', 0) + 1
-                    continue
-
-                from institution_identity import resolve_institution
-                institution_id = resolve_institution(
-                    cur, muassasa, source='api_oak_ingest')
-                cur.execute(
-                    """
-                    INSERT INTO dissertations
-                        (oak_id, sana, daraja, olim, mavzu, ixtisoslik,
-                         mavzu_raqami, ilmiy_rahbar, muassasa, institution_id,
-                         ilmiy_kengash_raqami, opponent_1, opponent_2,
-                         yetakchi_tashkilot, link)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                    ON CONFLICT (oak_id) DO NOTHING
-                    """,
-                    (
-                        oak_id,
-                        str(item.get('Sana', '') or '')[:50],
-                        daraja,
-                        olim[:200],
-                        mavzu[:500],
-                        ixtisoslik[:50],
-                        str(item.get('Royxat raqami', '') or ''),
-                        str(item.get('Ilmiy rahbar', '') or '')[:200],
-                        muassasa,
-                        institution_id,
-                        str(item.get('IK raqami', '') or ''),
-                        str(item.get('Opponent 1', '') or '')[:200],
-                        str(item.get('Opponent 2', '') or '')[:200],
-                        str(item.get('Yetakchi tashkilot', '') or '')[:200],
-                        str(item.get('Havola', '') or ''),
-                    )
-                )
-                added += 1
-
-        conn.commit()
-    except Exception as e:
-        conn.rollback()
-        log_exception(current_app.logger, "Data API amali bajarilmadi")
-        return jsonify({'error': "Ichki server xatosi."}), 500
-    finally:
-        conn.close()
-
-    return jsonify({'added': added, 'skipped': skipped,
-                    'total': len(items), 'skip_reasons': skip_reasons})
+    # O'chirilgan (2026-11-13): yagona import yo'li — server cron'i (scraper.py,
+    # oak.uz JSON API). Bu endpoint bildirishnomasiz yozar, opponent_3/yonalish/IK
+    # muassasani o'qimas va aniqlanmagan precheck_* o'zgaruvchilari sabab 500
+    # qaytarardi. Nom saqlanadi — 'data.oak_ingest' ga havola bo'lishi mumkin.
+    return jsonify({'error': "Bu endpoint o'chirilgan. OAK e'lonlari server "
+                             "cron'i (scraper.py) orqali import qilinadi."}), 410
 
 
 # ---------------------------------------------------------------------------

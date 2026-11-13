@@ -657,8 +657,9 @@ class DispatcherTests(unittest.TestCase):
 class EndpointRemovedTests(unittest.TestCase):
     def test_import_endpoints_return_410(self):
         client = app.app.test_client()
-        for path in ("/api/oak/import", "/api/v1/import-oak"):
-            resp = client.post(path, json=[], headers={"X-API-KEY": "x"})
+        for path in ("/api/oak/import", "/api/v1/import-oak", "/api/oak/ingest"):
+            resp = client.post(path, json={"items": []}, headers={"X-API-KEY": "x",
+                                                                  "Authorization": "Bearer x"})
             self.assertEqual(resp.status_code, 410, path)
 
     def test_send_to_site_and_scraper_workflow_are_gone(self):
