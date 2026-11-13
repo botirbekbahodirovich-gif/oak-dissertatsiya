@@ -304,23 +304,35 @@ def clean_mavzu(section):
 
 # To'liq ism: "Фамилия Исм Отасининг" (…вич/…вна/… ўғли/… қизи) yoki
 # teskari tartib "Исм Отасининг Фамилия" ("Жуманиёз Султонович Раматов").
-_CAP = r"[А-ЯЁЎҚҒҲA-Z][\w'ʻ’-]"
+# Lotin (1000000+ e'lonlarning ko'pi, 2026-11): "…vich/…vna/… o'g'li/… qizi".
+_CAP = r"[А-ЯЁЎҚҒҲA-Z][\w'ʻ’‘`-]"
+_APO = r"[‘’'ʻʼ`]?"
+_PATR_TAIL = (r"(?:вич|вна|vich|vna"
+              r"|\s+ўғли|\s+қизи|\s+угли|\s+углу|\s+кизи"
+              r"|\s+o" + _APO + r"g" + _APO + r"li|\s+ogli|\s+qizi|\s+kizi|\s+uly|\s+kyzy|\s+ugli)")
 _FULL_NAME_RE = re.compile(
     r"(?<![\w-])(?:"
-    + _CAP + r"+\s+" + _CAP + r"+\s+" + _CAP
-    + r"*(?:вич|вна|\s+ўғли|\s+қизи|\s+угли|\s+углу|\s+кизи)"
-    + r"|" + _CAP + r"+\s+" + _CAP + r"*(?:вич|вна)\s+" + _CAP + r"+"
+    + _CAP + r"+\s+" + _CAP + r"+\s+" + _CAP + r"*" + _PATR_TAIL
+    + r"|" + _CAP + r"+\s+" + _CAP + r"*(?:вич|вна|vich|vna)\s+" + _CAP + r"+"
     + r")(?![\w-])")
 
 
 # Ishonchsiz matn: erkin gap ("… тавсия этилади") yoki faqat bosh harfli ismlar
-# ("Ж.Р. Раимбаев (…) ҳамда …") — bo'lsak noto'g'ri odamlar chiqadi.
+# ("Ж.Р. Раимбаев (…) ҳамда …", "A.A.Tursunov") — bo'lsak noto'g'ri odamlar chiqadi.
 _UNRELIABLE_OPP_RE = re.compile(
-    r"(?i:тавсия\s+этил)|(?<![\w.])[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ][а-яёўқғҳ]+")
+    r"(?i:тавсия\s+этил|tavsiya\s+etil)"
+    r"|(?<![\w.])[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ]\.\s?[А-ЯЁЎҚҒҲ][а-яёўқғҳ]+")
+# Lotin initsiallar faqat to'liq lotin matnda: kirill e'lon ichidagi "T.N.Qori
+# Ниёзий номидаги …" muassasa nomi, "E.A.Asrarxanova" esa avvalgidek bo'linadi.
+_UNRELIABLE_LAT_RE = re.compile(r"(?<![\w.])[A-Z]\.\s?[A-Z]\.\s?[A-Z][a-z]+")
+_CYR_RE = re.compile(r"[А-Яа-яЁёЎўҚқҒғҲҳ]")
 
 
 def opponents_unreliable(section):
-    return bool(_UNRELIABLE_OPP_RE.search(section or ""))
+    s = section or ""
+    if _UNRELIABLE_OPP_RE.search(s):
+        return True
+    return not _CYR_RE.search(s) and bool(_UNRELIABLE_LAT_RE.search(s))
 
 
 def split_opponents(section, limit=3):
@@ -363,7 +375,7 @@ def _split_by_names(part):
         cuts = [m.start() for m in names if m.start() > 0]
     bounds = [0] + cuts + [len(text)]
     pieces = [text[a:b] for a, b in zip(bounds, bounds[1:])]
-    return [re.sub(r"^[\s,.;]*(?:ва|ҳамда)?\s+", "", piece) for piece in pieces]
+    return [re.sub(r"^[\s,.;]*(?:ва|ҳамда|va|hamda)?\s+", "", piece) for piece in pieces]
 
 
 def parse_announcement(text):
