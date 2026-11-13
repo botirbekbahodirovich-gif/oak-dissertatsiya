@@ -188,8 +188,11 @@ def build_plan(rows, api):
                              "reason": reason})
         ch = ch_o + plan_fill(r, rec)
         for col, old, new, action, why in ch:
+            raw_old = r.get(col)                     # None = NULL (CSV'da "1" belgisi)
             plan.append({"dissertation_id": r["id"], "oak_id": oak_id, "column": col,
-                         "old_value": old, "new_value": new, "action": action, "reason": why})
+                         "old_value": "" if raw_old is None else raw_old,
+                         "old_is_null": "1" if raw_old is None else "",
+                         "new_value": new, "action": action, "reason": why})
         stats["qator o'zgaradi" if ch else "qator tegilmaydi"] += 1
     for p in plan:
         stats[f"{p['action']}:{p['column']}"] += 1
@@ -250,11 +253,12 @@ ROW_COLS = ("id", "oak_id", "opponent_1", "opponent_2", "opponent_3", "ilmiy_ken
 
 
 def load_rows_db():
+    """NULL lar None bo'lib qoladi — reja va undo ularni '' dan farqlaydi."""
     conn = _connect(readonly=True)
     try:
         with conn.cursor() as cur:
             cur.execute(ROW_SQL)
-            rows = [dict(zip(ROW_COLS, ["" if v is None else str(v) for v in r])) for r in cur.fetchall()]
+            rows = [dict(zip(ROW_COLS, [None if v is None else str(v) for v in r])) for r in cur.fetchall()]
         conn.rollback()
     finally:
         conn.close()
@@ -262,6 +266,8 @@ def load_rows_db():
 
 
 def load_rows_csv(path):
+    """Tahlil uchun (CSV NULL ni '' dan farqlamaydi) — apply uchun reja DB'dan tuziladi;
+    CSV rejasi qo'llansa, NULL katakli qatorlar 'stale' bo'lib o'tkaziladi."""
     rows = []
     for r in csv.DictReader(open(path, encoding="utf-8")):
         if r.get("merged_into_id"):
@@ -270,8 +276,14 @@ def load_rows_csv(path):
     return rows
 
 
+# IS NOT DISTINCT FROM: NULL va '' alohida — reja tuzilgandan keyin o'zgargan
+# (yoki NULL/'' farqi bor) katak yozilmaydi.
 UPDATE_SQL = ("UPDATE dissertations SET {col} = %s WHERE id = %s "
-              "AND COALESCE({col}, '') = %s RETURNING id")
+              "AND {col} IS NOT DISTINCT FROM %s RETURNING id")
+
+
+def _old(p):
+    return None if p.get("old_is_null") == "1" else (p.get("old_value") or "")
 LOG_SQL = ("INSERT INTO dissertation_field_changes (batch_id, dissertation_id, oak_id, column_name, "
            "old_value, new_value, action, reason, source) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 
@@ -286,13 +298,13 @@ def apply_plan(conn, plan, batch_id, chunk=500):
                 col = p["column"]
                 if col not in ALLOWED_COLS:
                     raise ValueError(f"ruxsat etilmagan ustun: {col}")
-                cur.execute(UPDATE_SQL.format(col=col),
-                            (p["new_value"], int(p["dissertation_id"]), p["old_value"] or ""))
+                old = _old(p)
+                cur.execute(UPDATE_SQL.format(col=col), (p["new_value"], int(p["dissertation_id"]), old))
                 if cur.fetchone() is None:
                     c["stale"] += 1
                     continue
                 cur.execute(LOG_SQL, (batch_id, int(p["dissertation_id"]), str(p["oak_id"]), col,
-                                      p["old_value"], p["new_value"], p["action"], p["reason"], SOURCE))
+                                      old, p["new_value"], p["action"], p["reason"], SOURCE))
                 c["updated"] += 1
         conn.commit()
     return c
@@ -311,7 +323,8 @@ def undo_batch(conn, batch_id):
         for log_id, diss_id, col, old, new in rows:
             if col not in ALLOWED_COLS:
                 raise ValueError(f"ruxsat etilmagan ustun: {col}")
-            cur.execute(UPDATE_SQL.format(col=col), (old or "", diss_id, new or ""))
+            # log'dagi NULL aynan NULL bo'lib qaytadi
+            cur.execute(UPDATE_SQL.format(col=col), (old, diss_id, new))
             if cur.fetchone() is None:
                 c["o'zgargan (tegilmadi)"] += 1
                 continue
@@ -376,7 +389,8 @@ def main(argv=None):
         rows = load_rows_csv(args.rows_csv) if args.rows_csv else load_rows_db()
         plan, unproven, stats = build_plan(rows, api)
         _write_csv(os.path.join(args.out, "plan.csv"), plan,
-                   ["dissertation_id", "oak_id", "column", "old_value", "new_value", "action", "reason"])
+                   ["dissertation_id", "oak_id", "column", "old_value", "old_is_null", "new_value",
+                    "action", "reason"])
         _write_csv(os.path.join(args.out, "isbotlanmagan.csv"), unproven,
                    ["dissertation_id", "oak_id", "opponent_1", "reason"])
         summary = {"api_elon": len(api), "db_qator": len(rows), **stats}

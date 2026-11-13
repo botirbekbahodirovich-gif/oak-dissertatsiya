@@ -166,7 +166,8 @@ class ApplyUndoTests(unittest.TestCase):
         self.assertEqual(dict(c), {"updated": 1, "stale": 1})
         sql = conn.sql()
         self.assertIn("UPDATE dissertations SET opponent_1 = %s WHERE id = %s AND "
-                      "COALESCE(opponent_1, '') = %s RETURNING id", sql[0])
+                      "opponent_1 IS NOT DISTINCT FROM %s RETURNING id", sql[0])
+        self.assertNotIn("COALESCE", sql[0])
         logs = [e for e in conn.log if e[0] == "execute" and "dissertation_field_changes" in e[1]]
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0][2][:7], ("b1", 7, "100", "opponent_1", X, A, "replace"))
@@ -188,6 +189,36 @@ class ApplyUndoTests(unittest.TestCase):
         self.assertEqual(restore[0][2], (X, 7, A))
         marks = [e for e in conn.log if e[0] == "execute" and "SET undone_at" in e[1]]
         self.assertEqual([m[2] for m in marks], [(11,)])
+
+    # --- NULL va '' farqi (staging 2026-11-13: undo NULL ni '' qilib qaytargan edi)
+    def test_plan_keeps_null_distinct_from_empty(self):
+        api = {**API}
+        rows = [row(1, 100, None, None, None), row(2, 100, "", "", "")]
+        for r in rows:
+            r["yonalish"] = None if r["id"] == "1" else ""
+        api[100] = rec([A, B], Yonalish="амалий")
+        plan, _, _ = bf.build_plan(rows, api)
+        by = {(p["dissertation_id"], p["column"]): p for p in plan}
+        self.assertEqual(by[("1", "opponent_1")]["old_is_null"], "1")
+        self.assertEqual(by[("1", "yonalish")]["old_is_null"], "1")
+        self.assertEqual(by[("2", "opponent_1")]["old_is_null"], "")
+        self.assertEqual(by[("2", "opponent_1")]["old_value"], "")
+
+    def test_apply_passes_none_for_null_and_logs_null(self):
+        plan = [dict(self.PLAN[1], old_is_null="1"), dict(self.PLAN[1], dissertation_id="9", old_is_null="")]
+        conn = FakeConn(rules=[("UPDATE dissertations SET opponent_1", lambda p: [(int(p[1]),)])])
+        bf.apply_plan(conn, plan, "b2")
+        upd = [e[2] for e in conn.log if e[0] == "execute" and e[1].startswith("UPDATE dissertations")]
+        self.assertEqual([u[2] for u in upd], [None, ""])          # NULL ≠ ''
+        logs = [e[2] for e in conn.log if e[0] == "execute" and "dissertation_field_changes" in e[1]]
+        self.assertEqual([l[4] for l in logs], [None, ""])          # log old_value
+
+    def test_undo_restores_null_as_null(self):
+        conn = FakeConn(rules=[("FROM dissertation_field_changes WHERE batch_id", [(21, 8, "opponent_1", None, C)]),
+                               ("UPDATE dissertations SET opponent_1", lambda p: [(p[1],)])])
+        bf.undo_batch(conn, "b2")
+        restore = [e for e in conn.log if e[0] == "execute" and e[1].startswith("UPDATE dissertations")]
+        self.assertEqual(restore[0][2], (None, 8, C))
 
 
 class CliTests(unittest.TestCase):
