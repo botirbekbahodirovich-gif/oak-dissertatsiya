@@ -149,8 +149,14 @@ class OpponentParsingTests(unittest.TestCase):
         self.assertEqual(PARSED[34796][1]["yetakchi_tashkilot"],
                          "Қарши давлат техника университети")
 
-    def test_split_opponents_limits_to_three_columns(self):
-        self.assertEqual(scraper.split_opponents("А; Б; В; Г"), ["А", "Б", "В"])
+    def test_more_than_three_opponents_are_kept_whole(self):
+        # 3 ta ustun; 4-opponentni jimgina tashlab yuborish o'rniga (invariant)
+        # to'liq matn opponent_1 ga, ishonchsiz belgisi bilan.
+        text = ("Алиев Али Алиевич, т.ф.д.; Валиев Вали Валиевич, т.ф.д.; "
+                "Салимов Салим Салимович, т.ф.д.; Каримов Карим Каримович, т.ф.д.")
+        parts, unreliable = scraper.split_opponents_checked(text)
+        self.assertTrue(unreliable)
+        self.assertEqual(parts, [scraper._clean(text)])
         self.assertEqual(scraper.split_opponents(""), [])
 
 

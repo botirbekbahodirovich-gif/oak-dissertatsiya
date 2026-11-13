@@ -87,8 +87,32 @@ def load_api(api_dir):
             parsed = scraper.parse_announcement(it["raw_text"])
             rec = scraper._build_record(it, parsed)
             rec["ishonchsiz"] = bool(parsed.get("opponentlar_ishonchsiz"))
+            rec["opp_raw"] = parsed.get("opponentlar_xom") or ""
             out[it["id"]] = rec
     return out
+
+
+V3_MAX_ID = 30600
+
+
+def load_v3(path):
+    """{oak_id: [1_oponent, 2_oponent, 3_oponent]} — v3 Excel (oak_id ≤ 30600)."""
+    from openpyxl import load_workbook
+    ws = load_workbook(path, read_only=True).worksheets[0]
+    it = ws.iter_rows(values_only=True)
+    ix = {str(h): i for i, h in enumerate(next(it))}
+    out = {}
+    for r in it:
+        try:
+            out.setdefault(int(float(r[ix["ID"]])),
+                           [str(r[ix[c]] or "").strip() for c in ("1_oponent", "2_oponent", "3_oponent")])
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _surnames(vals):
+    return {name_key(v).split()[0] for v in vals if v and name_key(v)}
 
 
 class Neighbours:
@@ -113,14 +137,66 @@ class Neighbours:
 
 
 # ----------------------------------------------------------------- qarorlar
-def plan_opponents(db_row, rec, nb):
-    """→ (changes [(col, old, new, action, reason)], status, reason)."""
+def api_untrusted(db_vals, v3_vals, rec):
+    """API natijasiga tayanib bo'lmaydigan sabab yoki "" .
+
+    - parser invarianti buzilgan (ishonchsiz) yoki API'da ismsiz;
+    - API'da opponent DB/v3 dagidan kam va tushib qolgan familiya API xom
+      matnida bor (parser tushirib qoldirgan).
+    """
+    own = list(rec["Opponentlar"])
+    if rec.get("ishonchsiz"):
+        return "API matni ishonchsiz (invariant)"
+    own_s = _surnames(own)
+    raw_tokens = set(name_key(rec.get("opp_raw") or "").split())
+    for label, vals in (("v3", v3_vals or []), ("DB", db_vals)):
+        other = _surnames(vals)
+        missing = other - own_s
+        if len(own_s) < len(other) and missing and missing & raw_tokens:
+            return f"API'da opponent kam ({label} da bor, xom matnda bor)"
+    return ""
+
+
+def _plan_target(db, target, source, why, unnamed, db_keys):
+    """DB ↔ maqsad: mos / fill / replace (target uzunligi 3)."""
+    t_keys = {name_key(t) for t in target if t} - {""}
+    if db_keys and not unnamed and all(k in t_keys for k in db_keys):
+        reason = "; ".join(x for x in ("bo'sh ustun to'ldirildi", why) if x)
+        ch = [(c, db[i], target[i], "fill", reason, source) for i, c in enumerate(OPP_COLS)
+              if _blank(db[i]) and target[i] and name_key(target[i]) not in db_keys]
+        return ch, ("fill" if ch else "mos"), reason
+    if not any(not _blank(v) for v in db):
+        reason = "; ".join(x for x in ("opponentlar bo'sh edi", why) if x)
+        return ([(c, db[i], target[i], "fill", reason, source) for i, c in enumerate(OPP_COLS) if target[i]],
+                "fill", reason)
+    return None
+
+
+def plan_opponents(db_row, rec, nb, v3_vals=None):
+    """→ (changes [(col, old, new, action, reason, source)], status, reason)."""
     oak_id = int(db_row["oak_id"])
     db = [db_row.get(c) or "" for c in OPP_COLS]
     filled = [v for v in db if not _blank(v)]
     db_keys = [k for k in (name_key(v) for v in filled) if k]
     unnamed = len(filled) - len(db_keys)      # sarlavha bo'lagi va h.k. — ismsiz qiymat
     own = list(rec["Opponentlar"])
+    v3_list = [v for v in (v3_vals or []) if v][:3] if oak_id <= V3_MAX_ID else []
+
+    # 1) API'ga tayanib bo'lmasa: v3 (≤30600) yoki ehtiyot ro'yxati.
+    distrust = api_untrusted(db, v3_list, rec) if own else ""
+    if distrust or (not own and v3_list):
+        why = distrust or "API'da opponent yo'q, v3 da bor"
+        if not v3_list:
+            return [], "ehtiyot", why
+        target = (v3_list + ["", "", ""])[:3]
+        res = _plan_target(db, target, "v3", f"manba=v3: {why}", unnamed, db_keys)
+        if res:
+            ch, status, reason = res
+            return ch, ("v3_" + status), reason
+        reason = f"manba=v3: {why}"
+        ch = [(c, db[i], target[i], "replace", reason, "v3") for i, c in enumerate(OPP_COLS)
+              if (db[i] or "").strip() != target[i].strip()]
+        return ch, "v3_replace", reason
 
     if not own:
         if not filled:
@@ -128,33 +204,22 @@ def plan_opponents(db_row, rec, nb):
         off = nb.find(oak_id, db_keys[0] if db_keys else "")
         if off is not None:
             reason = f"API'da opponent yo'q; DB qiymati qo'shni {off:+d} e'lonniki"
-            return ([(c, db[i], "", "clear", reason) for i, c in enumerate(OPP_COLS) if not _blank(db[i])],
+            return ([(c, db[i], "", "clear", reason, SOURCE) for i, c in enumerate(OPP_COLS) if not _blank(db[i])],
                     "clear", reason)
         return [], "isbotlanmagan", "API'da opponent yo'q; DB qiymati qo'shniniki ekani isbotlanmadi"
 
-    if rec.get("ishonchsiz"):
-        target, base_reason = [own[0], "", ""], "ishonchsiz"
-    else:
-        target, base_reason = (own + ["", "", ""])[:3], ""
+    target, base_reason = (own + ["", "", ""])[:3], ""
     own_keys = {name_key(o) for o in own} - {""}
 
-    if db_keys and not unnamed and all(k in own_keys for k in db_keys):
-        # o'z e'loniga mos — faqat bo'sh ustunlar
-        reason = "; ".join(x for x in ("bo'sh ustun to'ldirildi", base_reason) if x)
-        ch = [(c, db[i], target[i], "fill", reason) for i, c in enumerate(OPP_COLS)
-              if _blank(db[i]) and target[i] and name_key(target[i]) not in db_keys]
-        return ch, ("fill" if ch else "mos"), reason
-
-    if not filled:
-        reason = "; ".join(x for x in ("opponentlar bo'sh edi", base_reason) if x)
-        ch = [(c, db[i], target[i], "fill", reason) for i, c in enumerate(OPP_COLS) if target[i]]
-        return ch, "fill", reason
+    res = _plan_target(db, target, SOURCE, base_reason, unnamed, db_keys)
+    if res:
+        return res
 
     off = nb.find(oak_id, db_keys[0]) if db_keys else None
     why = (f"qo'shni {off:+d} e'lonniki" if off is not None else
            "sarlavha bo'lagi/ismsiz" if unnamed else "o'z e'loniga mos emas")
     reason = "; ".join(x for x in (why, base_reason) if x)
-    ch = [(c, db[i], target[i], "replace", reason) for i, c in enumerate(OPP_COLS)
+    ch = [(c, db[i], target[i], "replace", reason, SOURCE) for i, c in enumerate(OPP_COLS)
           if (db[i] or "").strip() != target[i].strip()]
     return ch, "replace", reason
 
@@ -164,13 +229,15 @@ def plan_fill(db_row, rec):
     for col, key in FILL_COLS.items():
         new = (rec.get(key) or "").strip()
         if _blank(db_row.get(col)) and new:
-            ch.append((col, db_row.get(col) or "", new, "fill", "bo'sh ustun to'ldirildi"))
+            ch.append((col, db_row.get(col) or "", new, "fill", "bo'sh ustun to'ldirildi", SOURCE))
     return ch
 
 
-def build_plan(rows, api):
+def build_plan(rows, api, v3=None):
     nb = Neighbours(api)
+    v3 = v3 or {}
     plan, unproven, stats = [], [], Counter()
+    caution = []
     for r in rows:
         try:
             oak_id = int(str(r.get("oak_id") or "").strip())
@@ -181,22 +248,28 @@ def build_plan(rows, api):
         if rec is None:
             stats["API'da yo'q"] += 1
             continue
-        ch_o, status, reason = plan_opponents(r, rec, nb)
+        ch_o, status, reason = plan_opponents(r, rec, nb, v3.get(oak_id))
         stats["opp:" + status] += 1
         if status == "isbotlanmagan":
             unproven.append({"dissertation_id": r["id"], "oak_id": oak_id, "opponent_1": r.get("opponent_1", ""),
                              "reason": reason})
+        if status == "ehtiyot":
+            caution.append({"dissertation_id": r["id"], "oak_id": oak_id, "opponent_1": r.get("opponent_1", ""),
+                            "api_xom": rec.get("opp_raw", ""), "reason": reason})
         ch = ch_o + plan_fill(r, rec)
-        for col, old, new, action, why in ch:
+        for col, old, new, action, why, source in ch:
             raw_old = r.get(col)                     # None = NULL (CSV'da "1" belgisi)
             plan.append({"dissertation_id": r["id"], "oak_id": oak_id, "column": col,
                          "old_value": "" if raw_old is None else raw_old,
                          "old_is_null": "1" if raw_old is None else "",
-                         "new_value": new, "action": action, "reason": why})
+                         "new_value": new, "action": action, "reason": why, "source": source})
         stats["qator o'zgaradi" if ch else "qator tegilmaydi"] += 1
     for p in plan:
         stats[f"{p['action']}:{p['column']}"] += 1
-    return plan, unproven, stats
+        if p["source"] == "v3":
+            stats["manba v3 (katak)"] += 1
+    stats["manba v3 (qator)"] = len({p["dissertation_id"] for p in plan if p["source"] == "v3"})
+    return plan, unproven, stats, caution
 
 
 def compare_v3(plan_rows_by_id, rows, api, v3_path, max_id=30600):
@@ -304,7 +377,8 @@ def apply_plan(conn, plan, batch_id, chunk=500):
                     c["stale"] += 1
                     continue
                 cur.execute(LOG_SQL, (batch_id, int(p["dissertation_id"]), str(p["oak_id"]), col,
-                                      old, p["new_value"], p["action"], p["reason"], SOURCE))
+                                      old, p["new_value"], p["action"], p["reason"],
+                                      p.get("source") or SOURCE))
                 c["updated"] += 1
         conn.commit()
     return c
@@ -387,12 +461,15 @@ def main(argv=None):
         os.makedirs(args.out, exist_ok=True)
         api = load_api(args.api_dir)
         rows = load_rows_csv(args.rows_csv) if args.rows_csv else load_rows_db()
-        plan, unproven, stats = build_plan(rows, api)
+        v3 = load_v3(args.v3) if args.v3 else {}
+        plan, unproven, stats, caution = build_plan(rows, api, v3)
         _write_csv(os.path.join(args.out, "plan.csv"), plan,
                    ["dissertation_id", "oak_id", "column", "old_value", "old_is_null", "new_value",
-                    "action", "reason"])
+                    "action", "reason", "source"])
         _write_csv(os.path.join(args.out, "isbotlanmagan.csv"), unproven,
                    ["dissertation_id", "oak_id", "opponent_1", "reason"])
+        _write_csv(os.path.join(args.out, "ehtiyot.csv"), caution,
+                   ["dissertation_id", "oak_id", "opponent_1", "api_xom", "reason"])
         summary = {"api_elon": len(api), "db_qator": len(rows), **stats}
         if args.v3:
             by_id = {}

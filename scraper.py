@@ -335,18 +335,71 @@ def opponents_unreliable(section):
     return not _CYR_RE.search(s) and bool(_UNRELIABLE_LAT_RE.search(s))
 
 
-def split_opponents(section, limit=3):
-    """"Расмий оппонентлар" bo'limini alohida opponentlarga ajratadi.
+OPPONENT_LIMIT = 3
+_UP = "А-ЯЁЎҚҒҲA-Z"
+_WORD = r"[" + _UP + r"][\w'ʻ’‘`-]+"
+# Daraja iborasi: har opponentda odatda bittasi ("… фанлари доктори", "(DSc)" bilan birga).
+_DEGREE_RE = re.compile(
+    r"(?i)(?:доктори|номзоди|doktori|nomzodi|ф\.\s?-?\s?м?\.?\s?ф\.\s?[дн]\b|[а-яa-z]\.ф\.[дн]\.)")
+# Raqamlangan ro'yxat: "1. A …, 2. B …" / "1) A …".
+_NUMBERED_RE = re.compile(r"(?:^|[\s,;.])\d{1,2}[.)]\s+(?=[" + _UP + r"])")
+# Ismdan oldingi nuqta: "… профессор. Раҳимов Рустам, …" — oldida kamida 5 harfli
+# so'z (yoki ")"), shunda "проф. Абдусалямов" / "доц. Х" bo'linmaydi.
+_DOT_BEFORE_NAME_RE = re.compile(
+    r"(?:(?<=[^\W\d_]{5})|(?<=\)))\.\s+(?=" + _WORD + r"\s+" + _WORD + r")")
+# Otasining ismisiz ism: ", Ўлжаев Эркин, техника фанлари …" / ", Индиаминов Сайит, …"
+_SHORT_NAME_CUT_RE = re.compile(
+    r"[,;]\s+(?=" + _WORD + r"\s+" + _WORD + r"(?:\s+" + _WORD + r")?\s*[,–—-]\s*"
+    r"[^,;]{0,40}?(?:фан|fan|доктор|doktor|номзод|nomzod|профессор|professor|академик|akademik))")
+_NAME_TOKEN_RE = re.compile(r"(?<![\w.])" + _WORD)
+# Ism bo'lmagan bosh harfli so'zlar (sarlavha/muassasa/qisqartma boshlari).
+_NON_NAME_TOKENS = {"PhD", "DSc", "MD", "MPH", "Dr", "Prof", "Professor", "РАМН", "ЎзР", "ФА", "UzR", "FA"}
 
-    OAK'da uchragan shakllar: "A, …; B, …" (asosiy), har biri yangi qatorda,
-    va ";" siz vergul/bo'shliq bilan ("A, …, дотсент Б Б Б, …").
-    Har bir element bazadagi formatda: "F.I.Sh., daraja, unvon".
+
+def _name_tokens(text):
+    return {t for t in _NAME_TOKEN_RE.findall(text or "")
+            if t not in _NON_NAME_TOKENS and len(t) > 2}
+
+
+def _invariant_ok(raw, parts):
+    """Ajratish xom matndagi hamma ism va daraja bo'laklarini qamraganmi."""
+    if not parts or len(parts) > OPPONENT_LIMIT:
+        return False
+    if any(not _name_tokens(p) for p in parts):           # ismsiz bo'lak (26773)
+        return False
+    # kimdir tushib qolgan; manbadagi "доктори доктори" takrori bitta sanaladi (33696)
+    deduped = re.sub(r"(?i)\b(\w+)(?:\s+\1\b)+", r"\1", raw)
+    if len(_DEGREE_RE.findall(deduped)) > len(parts):
+        return False
+    joined = " ".join(parts)
+    return _name_tokens(raw) <= _name_tokens(joined)       # hech bir ism yo'qolmagan
+
+
+def split_opponents_checked(section, limit=OPPONENT_LIMIT):
+    """"Расмий оппонентлар" → (opponentlar, ishonchsiz).
+
+    Jonli scraper ham, backfill ham shu funksiyadan foydalanadi. Ajratib
+    bo'lmasa yoki natija invariantdan o'tmasa — to'liq matn opponent_1 ga,
+    ishonchsiz=True.
     """
     raw = (section or "").strip()
     if not raw:
-        return []
+        return [], False
+    whole = [_clean(raw)]
     if opponents_unreliable(raw):
-        return [_clean(raw)]   # bo'linmaydi: to'liq matn opponent_1 ga
+        return whole, True
+    parts = _split_raw(raw)
+    if len(parts) > limit or not _invariant_ok(raw, parts):
+        return whole, True
+    return parts, False
+
+
+def split_opponents(section, limit=OPPONENT_LIMIT):
+    """Moslik uchun: faqat ro'yxat (split_opponents_checked ga qarang)."""
+    return split_opponents_checked(section, limit)[0]
+
+
+def _split_raw(raw):
     parts = [p for p in re.split(r";", raw) if _clean(p)]
     if len(parts) == 1:
         lines = [ln for ln in raw.split("\n") if _clean(ln)]
@@ -354,25 +407,70 @@ def split_opponents(section, limit=3):
             parts = lines
     out = []
     for part in parts:
-        out.extend(_split_by_names(part))
-    return [_clean(p) for p in out if _clean(p)][:limit]
+        for sub in _split_numbered(part):
+            out.extend(_split_by_names(sub))
+    return _merge_nameless([_clean(p) for p in out if _clean(p)])
+
+
+def _merge_nameless(parts):
+    """Ismsiz bo'lak (";" dan keyingi yolg'iz "доцент") qo'shni bo'lakka qo'shiladi:
+    oldingisiga, birinchi bo'lsa — keyingisiga."""
+    out = []
+    pending = ""
+    for p in parts:
+        if not _name_tokens(p):
+            if out:
+                out[-1] = out[-1] + ", " + p
+            else:
+                pending = (pending + ", " + p) if pending else p
+            continue
+        out.append((pending + ", " + p) if pending else p)
+        pending = ""
+    if pending:
+        out.append(pending)
+    return out
+
+
+_DEGREE_FIRST_RE = re.compile(
+    r"(?i)^(?:[\w'ʻ’-]+\s+фан(?:лари|лар)\b|[\w'ʻ’-]+\s+fan(?:lari|lar)\b|[а-яa-z]{1,3}\.\s?-?\s?[а-яa-z]?\.?\s?ф\.)")
+
+
+def _degree_first(text):
+    lead = re.sub(r"^[\W\d_]+", "", text)
+    return lead[:1].islower() or bool(_DEGREE_FIRST_RE.match(lead))
+
+
+def _split_numbered(part):
+    text = re.sub(r"\s+", " ", part).strip()
+    if not re.match(r"^\d{1,2}[.)]\s", text):
+        return [text]
+    pieces = [p for p in _NUMBERED_RE.split(" " + text) if p and p.strip(" ,;.")]
+    return pieces or [text]
 
 
 def _split_by_names(part):
-    """Bitta bo'lakda bir nechta to'liq ism bo'lsa — ism bo'yicha ajratadi.
+    """Bitta bo'lakda bir nechta ism bo'lsa — ism bo'yicha ajratadi.
 
-    Ism oldin ("A A A, daraja, unvon, Б Б Б, …") — yangi opponent ismdan
-    boshlanadi; daraja oldin, ya'ni kichik harf bilan ("daraja, unvon A A A,
-    daraja, unvon Б Б Б") — opponent ism bilan tugaydi.
+    1) To'liq ism (otasining ismi bilan) bo'yicha: ism oldin ("A A A, daraja,
+       unvon, Б Б Б, …") — yangi opponent ismdan boshlanadi; daraja oldin, ya'ni
+       kichik harf bilan ("daraja, unvon A A A, daraja, unvon Б Б Б") — opponent
+       ism bilan tugaydi.
+    2) Bo'lmasa: ismdan oldingi nuqta ("… профессор. Раҳимов Рустам, …").
+    3) Bo'lmasa: otasining ismisiz ism + daraja (", Ўлжаев Эркин, техника …").
     """
     text = re.sub(r"\s+", " ", part).strip()
     names = list(_FULL_NAME_RE.finditer(text))
-    if len(names) < 2:
-        return [text]
-    if text[:1].islower():
-        cuts = [m.end() for m in names[:-1]]
+    if len(names) >= 2:
+        if _degree_first(text):
+            cuts = [m.end() for m in names[:-1]]
+        else:
+            cuts = [m.start() for m in names if m.start() > 0]
     else:
-        cuts = [m.start() for m in names if m.start() > 0]
+        cuts = [m.end() for m in _DOT_BEFORE_NAME_RE.finditer(text)]
+        if not cuts and not _degree_first(text):
+            cuts = [m.end() for m in _SHORT_NAME_CUT_RE.finditer(text) if m.end() > 0]
+        if not cuts:
+            return [text]
     bounds = [0] + cuts + [len(text)]
     pieces = [text[a:b] for a, b in zip(bounds, bounds[1:])]
     return [re.sub(r"^[\s,.;]*(?:ва|ҳамда|va|hamda)?\s+", "", piece) for piece in pieces]
@@ -413,8 +511,8 @@ def parse_announcement(text):
         result["yo_nalish"] = _clean(sections["yo_nalish"].split("\n")[0])
     result["mavzu_nomi"] = clean_mavzu(sections.get("mavzu") or result["mavzu"])
     opp_raw = sections.get("opponentlar") or result["opponentlar"]
-    result["opponentlar_list"] = split_opponents(opp_raw)
-    result["opponentlar_ishonchsiz"] = opponents_unreliable(opp_raw)
+    result["opponentlar_list"], result["opponentlar_ishonchsiz"] = split_opponents_checked(opp_raw)
+    result["opponentlar_xom"] = _clean(opp_raw)
     # Shifrlar mavzu bo'limidan: opponentlar qatoridagi "(06.01.02)" kabi
     # kodlar dissertatsiya ixtisosligi emas. Mavzuda kod bo'lmasa — butun
     # matndan, opponentlar bo'limini chiqarib tashlab.
