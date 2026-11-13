@@ -5,7 +5,7 @@
 --   action: replace (opponent set from the announcement itself replaces a
 --           neighbour's), fill (empty column filled), clear (neighbour's
 --           opponents removed; the announcement itself has none)
--- Rollback: migrations/rollback/023_dissertation_field_changes.down.sql
+-- Rollback: migrations/rollback/025_dissertation_field_changes.down.sql
 BEGIN;
 CREATE TABLE IF NOT EXISTS dissertation_field_changes (
     id               BIGSERIAL PRIMARY KEY,

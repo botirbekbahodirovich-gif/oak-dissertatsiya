@@ -27,7 +27,7 @@ Buyruqlar
          qiymat o'zgarmagan bo'lsa; 500 tadan tranzaksiya.
   undo   --batch ID --yes                  yangi qiymat hali turgan joylarda eskisini qaytaradi.
 
-DB: data.get_connection() (DATABASE_URL). Migratsiya 023 (dissertation_field_changes) kerak.
+DB: data.get_connection() (DATABASE_URL). Migratsiya 025 (dissertation_field_changes) kerak.
 """
 import argparse
 import csv

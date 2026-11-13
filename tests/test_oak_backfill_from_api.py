@@ -219,13 +219,13 @@ class CliTests(unittest.TestCase):
 
 
 class MigrationTests(unittest.TestCase):
-    def test_023_log_table(self):
-        sql = (ROOT / "migrations" / "023_dissertation_field_changes.sql").read_text()
+    def test_025_log_table(self):
+        sql = (ROOT / "migrations" / "025_dissertation_field_changes.sql").read_text()
         for s in ("CREATE TABLE IF NOT EXISTS dissertation_field_changes", "batch_id         TEXT NOT NULL",
                   "old_value        TEXT", "undone_at        TIMESTAMPTZ",
                   "CHECK (action IN ('replace', 'fill', 'clear'))"):
             self.assertIn(s, sql)
-        down = (ROOT / "migrations" / "rollback" / "023_dissertation_field_changes.down.sql").read_text()
+        down = (ROOT / "migrations" / "rollback" / "025_dissertation_field_changes.down.sql").read_text()
         self.assertIn("DROP TABLE IF EXISTS dissertation_field_changes", down)
 
 
