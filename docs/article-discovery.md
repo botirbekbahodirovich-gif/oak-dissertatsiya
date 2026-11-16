@@ -101,7 +101,10 @@ alohida regex YO'Q).
 ## 6. Bounded qidiruv (§33)
 
 Bitta so'rov — bitta OpenAlex `/works` chaqiruvi, `per_page<=100`, `page=1`.
-Cursor bilan minglab natijani avtomatik yig'ish YO'Q. Preview'da:
+Cursor bilan minglab natijani avtomatik yig'ish YO'Q (admin UI'da). CLI
+uchun alohida `openalex.iter_cursor()` bor (qat'iy `limit`, `per_page<=200`)
+— faqat `scripts/ingest_uz_articles.py`; UZ/core filtrlari va kalit so'zsiz
+qidiruv — [`articles-uz-ingest.md`](articles-uz-ingest.md) §2. Preview'da:
 
 - **Manbada mos** — OpenAlex `meta.count` (jami mos, provayderda).
 - **Ko'rib chiqildi** — bu so'rovda haqiqatan qaytgan/tekshirilgan son

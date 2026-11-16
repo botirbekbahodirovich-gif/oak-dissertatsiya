@@ -38,6 +38,8 @@ data/rescrape_cache/
 # Ilmiy maqolalar PDF fayllari — runtime yuklamalar, static/ tashqarisida
 # saqlanadi (nginx to'g'ridan-to'g'ri bermasin). Hech qachon commit qilinmaydi.
 storage/
+# scripts/ingest_uz_articles.py va scripts/fetch_open_pdfs.py JSON hisobotlari.
+reports/
 
 # Lokal/serverdagi runtime va ish qoldiqlari — hech qachon commit qilinmaydi.
 # artifacts/ — skrinshot/brauzer hisobotlari; static/uploads/ — foydalanuvchi

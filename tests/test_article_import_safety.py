@@ -43,13 +43,21 @@ class NoPdfDownloadStaticTests(unittest.TestCase):
 
     def test_persistence_insert_never_touches_pdf_or_rights_columns(self):
         """`create_article_from_metadata` INSERT ustunlari orasida
-        `pdf_path`/`access_type`/`license_type` YO'Q — ular DB DEFAULT
-        qiymatida qoladi (`metadata_only`/`unknown`), forma orqali
-        tanlanmasa o'zgarmaydi."""
+        `pdf_path`/`access_type`/huquqiy tasdiq YO'Q — ular DB DEFAULT
+        qiymatida qoladi (`metadata_only`), forma orqali tanlanmasa
+        o'zgarmaydi.
+
+        2026-11 qarori: `license_type` endi FAQAT uch manbali kelishuv
+        natijasi `resolved` bo'lsa yoziladi (pastdagi test)."""
         source = inspect.getsource(persistence.create_article_from_metadata)
-        for forbidden_column in ('pdf_path', 'access_type', 'license_type',
-                                 'pdf_original_name', 'checksum_sha256'):
+        for forbidden_column in ('pdf_path', 'access_type', 'pdf_original_name',
+                                 'checksum_sha256', 'rights_confirmed_by',
+                                 'rights_confirmed_at'):
             self.assertNotIn("'%s'" % forbidden_column, source, forbidden_column)
+
+    def test_license_is_written_only_for_a_resolved_agreement(self):
+        source = inspect.getsource(persistence.create_article_from_metadata)
+        self.assertIn("license_resolution.get('status') == 'resolved'", source)
 
 
 class OaAccessSeparationServiceTests(unittest.TestCase):

@@ -73,6 +73,7 @@ class FakeCursor:
         self.store = store
         self._rows = []
         self.description = None
+        self.rowcount = -1
 
     # ── context manager ──
     def __enter__(self):
@@ -89,6 +90,11 @@ class FakeCursor:
         normalized = ' '.join(str(sql).split())
         self.store['sql'].append((normalized, params))
         self._rows, self.description = self._dispatch(normalized, params)
+        # Qalbaki DB filtrlamaydi: UPDATE ... ANY(%s) uchun ro'yxat uzunligi.
+        self.rowcount = -1
+        if normalized.upper().startswith('UPDATE'):
+            lists = [p for p in (params or ()) if isinstance(p, (list, tuple))]
+            self.rowcount = len(lists[-1]) if lists else 1
 
     def fetchone(self):
         return self._rows[0] if self._rows else None

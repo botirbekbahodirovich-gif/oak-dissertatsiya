@@ -13,7 +13,7 @@
    Viewer paneli ham OQ — to'q panel global dark theme bilan chalkashmasin. #}
 
 {% block title %}{{ article.title|truncate(70) }} — o'qish | Olimlar.uz{% endblock %}
-{% block meta_description %}{{ (article.abstract or article.title)|striptags|truncate(200) }}{% endblock %}
+{% block meta_description %}{{ article.meta_description|striptags|truncate(200) }}{% endblock %}
 
 {# Kanonik ilmiy sahifa — maqola tafsiloti. O'quvchi uning ko'rish rejimi,
    shuning uchun indekslanmaydi va nofollow (route ham X-Robots-Tag beradi). #}
@@ -34,6 +34,20 @@
   {% endfor %}
   {{ page_header(article.title, "Hujjat saytdan chiqmasdan o'qiladi.",
                  crumbs=crumb_list) }}
+
+  {# CC atributsiyasi (TASL) — backend `article.attribution` qo'ygan bo'lsa. #}
+  {% if article.attribution %}
+  {% set att = article.attribution %}
+  <p class="ol-small mq-attribution" data-mqv="attribution">
+    {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+    &laquo;{{ att.title }}&raquo;.
+    {%- if att.journal %} {{ att.journal }}.{% endif %}
+    {%- if att.doi_url %} <a href="{{ att.doi_url }}" rel="nofollow noopener" target="_blank">{{ att.doi_url }}</a>.{% endif %}
+    Litsenziya:
+    {% if att.license_url %}<a href="{{ att.license_url }}" rel="license noopener" target="_blank">{{ att.license_label }}</a>{% else %}{{ att.license_label }}{% endif %}.
+    {{ att.unmodified }}
+  </p>
+  {% endif %}
 
   {# Barcha yo'llar bitta joyda: JS ichida hech qanday manzil qattiq yozilmagan.
      Storage kaliti va fayl tizimidagi yo'l bu yerga UMUMAN chiqmaydi. #}

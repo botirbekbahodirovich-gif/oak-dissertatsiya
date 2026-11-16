@@ -60,8 +60,15 @@ def validate_query(raw, config=None) -> ArticleDiscoveryQuery:
     """
     config = config or config_from_env()
 
+    country_code = 'UZ' if _checkbox(raw.get('uz_only')) else None
+    core_only = _checkbox(raw.get('core_only'))
+    scoped = bool(country_code or core_only)
+
     keyword = (raw.get('keyword') or '').strip()
-    if not (config.keyword_min_length <= len(keyword) <= config.keyword_max_length):
+    # O'zbekiston/core filtri berilganda kalit so'z ixtiyoriy (bo'sh bo'lishi
+    # mumkin); berilsa — odatdagi uzunlik qoidasi amal qiladi.
+    if not (scoped and not keyword) and not (
+            config.keyword_min_length <= len(keyword) <= config.keyword_max_length):
         raise DiscoveryValidationError(
             'invalid_keyword',
             "Kalit so'z %d–%d belgi orasida bo'lishi kerak." % (
@@ -99,9 +106,24 @@ def validate_query(raw, config=None) -> ArticleDiscoveryQuery:
     oak_field_id = _parse_int(raw.get('oak_field_id'), None)
     providers = _parse_providers(raw)
 
+    if scoped and CROSSREF in providers:
+        # Crossref mamlakat/core filtrini bilmaydi: u filtrsiz natija
+        # qaytarib, "faqat O'zbekiston" degan preview'ni soxtalashtirardi.
+        raise DiscoveryValidationError(
+            'scope_requires_openalex',
+            "O'zbekiston/core filtri faqat OpenAlex bilan ishlaydi — "
+            "Crossref belgisini olib tashlang.")
+
     return ArticleDiscoveryQuery(keyword=keyword, from_date=from_date,
                                  to_date=to_date, oak_field_id=oak_field_id,
-                                 limit=limit, providers=providers)
+                                 limit=limit, providers=providers,
+                                 country_code=country_code, core_only=core_only)
+
+
+def _checkbox(value):
+    if isinstance(value, (list, tuple)):
+        value = value[-1] if value else ''
+    return str(value or '').strip().lower() in ('1', 'on', 'true', 'yes')
 
 
 def _parse_providers(raw):

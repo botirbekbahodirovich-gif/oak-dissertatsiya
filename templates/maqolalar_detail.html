@@ -3,7 +3,10 @@
 {% from "components/article_bits.html" import index_badges, access_badge, article_card %}
 
 {% block title %}{{ article.display_title|truncate(90) }} | Ilmiy maqolalar | Olimlar.uz{% endblock %}
-{% block meta_description %}{{ (article.abstract or article.display_title)|striptags|truncate(300) }}{% endblock %}
+{# Annotatsiya faqat backend `article.can_show_abstract` ruxsat bersa (ochiq
+   litsenziya). `article.meta_description` backend'da shu qoida bilan
+   tuzilgan: yopiq maqolada — sarlavha · jurnal · yil. #}
+{% block meta_description %}{{ article.meta_description|striptags|truncate(300) }}{% endblock %}
 {% block og_type %}article{% endblock %}
 
 {% block seo_extra %}
@@ -16,7 +19,7 @@
    iqtibos yoki indeks ma'lumoti structured data'ga QO'SHILMAYDI (§24). #}
 {{ seo_meta(
      article.title,
-     (article.abstract or article.title)|striptags|truncate(300),
+     article.meta_description|striptags|truncate(300),
      schema_type='ScholarlyArticle',
      canonical_path='/maqolalar/' ~ article.slug,
      extra_schema={
@@ -98,7 +101,23 @@
         {% endif %}
       </div>
 
-      {% if article.abstract %}
+      {% if article.attribution %}
+      {% set att = article.attribution %}
+      <section class="ol-section mq-attribution" aria-labelledby="mq-atributsiya">
+        <h2 id="mq-atributsiya" class="ol-h4">Atributsiya</h2>
+        <p class="ol-body mq-flush">
+          {% for a in article.authors %}{{ a.author_name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+          &laquo;{{ att.title }}&raquo;.
+          {%- if att.journal %} {{ att.journal }}.{% endif %}
+          {%- if att.doi_url %} <a href="{{ att.doi_url }}" rel="nofollow noopener" target="_blank">{{ att.doi_url }}</a>.{% endif %}
+          Litsenziya:
+          {% if att.license_url %}<a href="{{ att.license_url }}" rel="license noopener" target="_blank">{{ att.license_label }}</a>{% else %}{{ att.license_label }}{% endif %}.
+          {{ att.unmodified }}
+        </p>
+      </section>
+      {% endif %}
+
+      {% if article.can_show_abstract and article.abstract %}
       <section class="ol-section" aria-labelledby="mq-annotatsiya">
         <h2 id="mq-annotatsiya" class="ol-h4">Annotatsiya</h2>
         <p class="ol-body mq-pre-line">{{ article.abstract }}</p>
@@ -219,6 +238,9 @@
         <p class="ol-small mq-flush">
           Bu yozuv faqat bibliografik ma'lumot sifatida saqlanadi — to'liq matn
           Olimlar.uz'da joylashtirilmagan.
+          {%- if article.doi %} Asl nashr:
+          <a href="https://doi.org/{{ article.doi }}" rel="nofollow noopener" target="_blank">doi.org/{{ article.doi }}</a>.
+          {%- endif %}
         </p>
       </div>
       {% endif %}

@@ -45,7 +45,9 @@ class MigrationNumberingTests(unittest.TestCase):
         numbers = sorted(set(EXISTING_MIGRATION_NUMBERS))
         # 022 is reserved for 022_muassasa_recovered.sql (feat/institution-backfill-v2,
         # not on main yet); it may be absent until that branch lands.
-        expected = [n for n in range(1, max(numbers) + 1) if n in numbers or n != 22]
+        # 024 is reserved for 024_clear_supabase_photo_urls.sql (photo cleanup,
+        # waits for wave1 on prod); 025 (articles UZ ingest) does not reuse it.
+        expected = [n for n in range(1, max(numbers) + 1) if n in numbers or n not in (22, 24)]
         self.assertEqual(numbers, expected)
 
     def test_only_historical_006_is_duplicated(self):

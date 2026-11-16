@@ -225,5 +225,24 @@ def _licenses(entries):
             'label': label,
             # `vor` (version of record), `am` (accepted manuscript), `tdm`.
             'applies_to': clean_text(entry.get('content-version'), 40),
+            # Litsenziya qachondan amal qiladi (embargo). Litsenziyani
+            # kelishtirishda (`services/article_license.py`) start sanasi
+            # nashr sanasidan kech bo'lgan VOR litsenziya hisobga olinmaydi.
+            'start_date': _license_start(entry.get('start')),
         })
     return out
+
+
+def _license_start(start):
+    """Crossref `license[].start` -> ISO sana yoki None."""
+    if not isinstance(start, dict):
+        return None
+    parsed = date_from_parts(start)
+    if parsed is None:
+        raw = clean_text(start.get('date-time'), 40)
+        if raw and len(raw) >= 10:
+            try:
+                parsed = datetime.fromisoformat(raw[:10]).date()
+            except ValueError:
+                parsed = None
+    return parsed.isoformat() if parsed else None

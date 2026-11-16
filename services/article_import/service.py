@@ -26,6 +26,18 @@ from services.article_import.state import (ALREADY_EXISTS, APPROVED,
 from services.article_import.validator import (enforce_max_items,
                                                 normalize_rows)
 from services.article_metadata import fetch_article_metadata
+from utils.article_license import resolve_license
+from utils.oak_mapping import HIGH, suggest_oak_field
+
+
+def find_active_field_id_by_code(cur, code):
+    """OAK shifri -> faol `scientific_fields.id` (yoki None)."""
+    if not code:
+        return None
+    cur.execute("SELECT id FROM scientific_fields WHERE code = %s AND is_active "
+                "ORDER BY id LIMIT 1", (code,))
+    row = cur.fetchone()
+    return row[0] if row else None
 
 # Skip — deyarli har qanday tugallangan-bo'lmagan holatdan mumkin (§23-jadval).
 SKIPPABLE_STATUSES = frozenset({
@@ -232,10 +244,27 @@ def approve_import_item(cur, item_id, actor_id, *, primary_field_id=None,
         abstract = str(overrides.get('abstract') or '').strip()
         metadata['abstract'] = abstract[:100_000] or None
 
+    # Avtomatik qarorlar (2026-11): litsenziya uch manbadan kelishtiriladi;
+    # OAK yo'nalishi admin tanlamagan bo'lsa FAQAT `high` moslikda qo'yiladi.
+    license_resolution = resolve_license(metadata)
+    field_suggestion = suggest_oak_field(metadata)
+    auto_field_applied = False
+    if primary_field_id is None and field_suggestion.get('confidence') == HIGH:
+        primary_field_id = find_active_field_id_by_code(cur, field_suggestion['oak_code'])
+        auto_field_applied = primary_field_id is not None
+    ingest_evidence = {
+        'license': {k: license_resolution.get(k) for k in
+                    ('status', 'license_type', 'basis', 'reason', 'votes', 'evidence')},
+        'oak_field': dict(field_suggestion, applied=auto_field_applied),
+        'oa_status': metadata.get('oa_status'),
+    }
+
     try:
         article_id = persistence.create_article_from_metadata(
             cur, metadata, actor_id, primary_field_id=primary_field_id,
-            extra_field_ids=extra_field_ids)
+            extra_field_ids=extra_field_ids,
+            license_resolution=license_resolution,
+            ingest_evidence=ingest_evidence)
     except psycopg2.IntegrityError as exc:
         raise DuplicateArticleError(item['normalized_doi']) from exc
 
@@ -318,16 +347,24 @@ def bulk_approve_safe_items(cur, batch_id, actor_id, item_ids, *,
         if item['status'] not in BULK_APPROVE_SAFE_STATUSES or item['is_retracted']:
             skipped_unsafe.append(item_id)
             continue
+        # Har element o'z SAVEPOINT'ida: DOI UNIQUE to'qnashuvi (IntegrityError)
+        # Postgres'da butun tranzaksiyani "aborted" holatga o'tkazadi —
+        # savepoint'siz `resolve_duplicate_after_conflict` va keyingi
+        # elementlar shu tranzaksiyada ishlay olmas edi.
+        cur.execute('SAVEPOINT bulk_approve_item')
         try:
             result = approve_import_item(cur, item_id, actor_id,
                                          primary_field_id=primary_field_id,
                                          extra_field_ids=extra_field_ids)
+            cur.execute('RELEASE SAVEPOINT bulk_approve_item')
             approved.append({'item_id': item_id, 'article_id': result['article_id']})
         except DuplicateArticleError:
+            cur.execute('ROLLBACK TO SAVEPOINT bulk_approve_item')
             resolve_duplicate_after_conflict(cur, item_id, item['normalized_doi'],
                                              batch_id)
             duplicates.append(item_id)
         except ImportServiceError:
+            cur.execute('ROLLBACK TO SAVEPOINT bulk_approve_item')
             skipped_unsafe.append(item_id)
     return {'approved': approved, 'duplicates': duplicates,
            'skipped_unsafe': skipped_unsafe}

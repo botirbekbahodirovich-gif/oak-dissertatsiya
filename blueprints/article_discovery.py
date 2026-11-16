@@ -279,7 +279,9 @@ def discovery_enqueue():
         to_date=_date.fromisoformat(query_data['to_date']),
         oak_field_id=query_data.get('oak_field_id'),
         limit=query_data['limit'],
-        providers=providers)
+        providers=providers,
+        country_code=query_data.get('country_code'),
+        core_only=bool(query_data.get('core_only')))
     candidates = bridge.candidates_from_cache(entry['candidates'])
 
     conn = get_connection()

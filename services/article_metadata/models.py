@@ -131,6 +131,8 @@ class LicenseCandidate:
     label: str | None = None
     version: str | None = None
     applies_to: str | None = None
+    # Crossref `license[].start` (ISO sana) — embargo tekshiruvi uchun.
+    start_date: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -166,6 +168,14 @@ class TopicCandidate:
     source: str
     score: float | None = None
     is_primary: bool = False
+    # OpenAlex ierarxiyasi (topic -> subfield -> field -> domain). Faqat
+    # `data/openalex_oak_mapping.json` orqali OAK yo'nalishini TAKLIF qilish
+    # uchun (utils/oak_mapping.py) — o'zi OAK yo'nalishi emas.
+    subfield_id: str | None = None
+    subfield: str | None = None
+    field_id: str | None = None
+    field: str | None = None
+    domain_id: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

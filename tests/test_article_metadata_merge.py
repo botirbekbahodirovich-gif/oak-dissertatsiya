@@ -100,11 +100,18 @@ class NormalizerTests(unittest.TestCase):
 
     def test_unmappable_licences_stay_unmapped(self):
         """Tanib bo'lmagan litsenziya ruxsat beruvchi kalitga aylanmaydi."""
-        for url in ('https://creativecommons.org/licenses/by-nd/4.0/',
-                    'https://creativecommons.org/licenses/by-nc-nd/4.0/',
-                    'https://www.elsevier.com/tdm/userlicense/1.0/'):
-            self.assertIsNone(map_license_url(url)[0], url)
-        self.assertIsNone(map_license_label('cc-by-nd')[0])
+        self.assertIsNone(map_license_url('https://www.elsevier.com/tdm/userlicense/1.0/')[0])
+        self.assertIsNone(map_license_label('publisher-specific-oa')[0])
+
+    def test_no_derivatives_licences_keep_their_own_key(self):
+        """ND variantlari endi lug'atda bor (2026-11) — lekin HECH QACHON
+        CC BY ga "yumshatilmaydi": ND sharti o'z kalitida saqlanadi."""
+        self.assertEqual(map_license_url(
+            'https://creativecommons.org/licenses/by-nd/4.0/')[0], 'cc_by_nd')
+        self.assertEqual(map_license_url(
+            'https://creativecommons.org/licenses/by-nc-nd/4.0/')[0], 'cc_by_nc_nd')
+        self.assertEqual(map_license_label('cc-by-nd')[0], 'cc_by_nd')
+        self.assertEqual(map_license_label('cc-by-nc-nd')[0], 'cc_by_nc_nd')
 
     def test_name_key_is_exact_not_fuzzy(self):
         self.assertEqual(name_key('Sardor Karimov'), name_key('sardor  KARIMOV'))
@@ -198,11 +205,14 @@ class ConflictTests(unittest.TestCase):
         conflict = self.conflict(conflicts, 'license_type')
         self.assertIsNotNone(conflict)
         self.assertEqual(conflict.preferred, 'cc_by')
+        # OpenAlex best_oa_location.license (fixture'da cc-by) — 2026-11'dan
+        # uchinchi mustaqil manba sifatida nomzodlar va konfliktga kiradi.
         self.assertEqual(conflict.alternatives,
-                         [{'source': UNPAYWALL, 'value': 'cc_by_nc'}])
+                         [{'source': UNPAYWALL, 'value': 'cc_by_nc'},
+                          {'source': OPENALEX, 'value': 'cc_by'}])
         self.assertTrue(any(w.code == 'license_conflict' for w in warnings))
-        # Ikkala nomzod ham saqlanadi — biri o'chirilmaydi.
-        self.assertEqual(len(metadata.license_candidates), 2)
+        # Barcha nomzodlar saqlanadi — hech biri o'chirilmaydi.
+        self.assertEqual(len(metadata.license_candidates), 3)
 
     def test_a_single_licence_source_is_a_candidate_without_a_conflict(self):
         candidates, conflict = merge_licenses({

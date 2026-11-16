@@ -47,27 +47,109 @@ def search(query, config, *, sleep=None):
 
     per_page = max(1, min(query.limit, config.hard_result_limit))
     params = {
-        'search': query.keyword,
-        'filter': ','.join([
-            'has_doi:true',
-            'type:article',
-            'from_publication_date:%s' % query.from_date.isoformat(),
-            'to_publication_date:%s' % query.to_date.isoformat(),
-        ]),
+        'filter': build_filter(query.from_date, query.to_date,
+                               country_code=getattr(query, 'country_code', None),
+                               core_only=getattr(query, 'core_only', False)),
         'per_page': str(per_page),
         'page': '1',
         'select': SELECT_FIELDS,
     }
-    if config.openalex_api_key:
-        params['api_key'] = config.openalex_api_key
-    elif config.openalex_contact:
-        params['mailto'] = config.openalex_contact
+    # Kalit so'z faqat berilgan bo'lsa (UZ/core filtrida ixtiyoriy).
+    if query.keyword:
+        params = dict({'search': query.keyword}, **params)
+    _auth_params(params, config)
 
     kwargs = {'sleep': sleep} if sleep is not None else {}
     outcome = fetch_json(config.openalex_base, provider=OPENALEX, config=config,
                          params=params,
                          headers={'User-Agent': config.user_agent()}, **kwargs)
+    return _result_from_outcome(outcome)
 
+
+def build_filter(from_date, to_date, *, country_code=None, core_only=False):
+    """OpenAlex `filter=` qiymati. Tartib deterministik (testlar va kesh)."""
+    parts = [
+        'has_doi:true',
+        'type:article',
+        'from_publication_date:%s' % from_date.isoformat(),
+        'to_publication_date:%s' % to_date.isoformat(),
+    ]
+    if country_code:
+        code = str(country_code).strip().upper()
+        if not (len(code) == 2 and code.isalpha()):
+            raise ValueError('country_code ikki harfli ISO kod bo\'lishi kerak')
+        parts.append('authorships.institutions.country_code:%s' % code)
+    if core_only:
+        parts.append('primary_location.source.is_core:true')
+    return ','.join(parts)
+
+
+def _auth_params(params, config):
+    if config.openalex_api_key:
+        params['api_key'] = config.openalex_api_key
+    elif config.openalex_contact:
+        params['mailto'] = config.openalex_contact
+
+
+CURSOR_PER_PAGE = 200          # OpenAlex ruxsat etgan maksimal sahifa hajmi
+
+
+def iter_cursor(config, *, from_date, to_date, limit, country_code=None,
+                core_only=False, keyword=None, per_page=CURSOR_PER_PAGE,
+                sleep=None, fetch=fetch_json):
+    """CLI uchun cursor pagination (`cursor=*`). Admin UI bitta sahifali
+    `search()` dan foydalanadi (§33 o'zgarmagan) — bu funksiya faqat
+    `scripts/ingest_uz_articles.py` uchun.
+
+    `limit` — QAT'IY umumiy chegara (majburiy, > 0): shu sondan ortiq
+    nomzod hech qachon qaytarilmaydi va keyingi sahifa so'ralmaydi.
+
+    Har sahifa uchun bitta `(page_result, next_cursor)` beradi;
+    `page_result` — `DiscoverySearchResult` (status, candidates,
+    total_count, excluded_no_doi_count). Xato sahifasida iteratsiya
+    to'xtaydi (xato natija oxirgi element bo'ladi).
+    """
+    if not limit or int(limit) <= 0:
+        raise ValueError('limit majburiy va musbat bo\'lishi kerak')
+    if not config.is_configured:
+        yield DiscoverySearchResult(status=NOT_CONFIGURED), None
+        return
+    limit = int(limit)
+    per_page = max(1, min(int(per_page), CURSOR_PER_PAGE))
+    cursor = '*'
+    remaining = limit
+    while cursor and remaining > 0:
+        params = {
+            'filter': build_filter(from_date, to_date, country_code=country_code,
+                                   core_only=core_only),
+            'per_page': str(min(per_page, remaining)),
+            'cursor': cursor,
+            'select': SELECT_FIELDS,
+        }
+        if keyword:
+            params = dict({'search': keyword}, **params)
+        _auth_params(params, config)
+        kwargs = {'sleep': sleep} if sleep is not None else {}
+        outcome = fetch(config.openalex_base, provider=OPENALEX, config=config,
+                        params=params, headers={'User-Agent': config.user_agent()},
+                        **kwargs)
+        result = _result_from_outcome(outcome)
+        if not result.ok:
+            yield result, None
+            return
+        # Qat'iy chegara: sahifa kutilganidan ko'p qaytarsa ham kesiladi.
+        if len(result.candidates) > remaining:
+            result.candidates = result.candidates[:remaining]
+        remaining -= len(result.candidates) + result.excluded_no_doi_count
+        next_cursor = ((outcome.payload or {}).get('meta') or {}).get('next_cursor')
+        raw_results = (outcome.payload or {}).get('results') or []
+        if not raw_results:
+            next_cursor = None
+        yield result, next_cursor
+        cursor = next_cursor
+
+
+def _result_from_outcome(outcome):
     if not outcome.ok:
         return DiscoverySearchResult(status=outcome.status,
                                      http_status=outcome.http_status,

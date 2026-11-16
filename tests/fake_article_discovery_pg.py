@@ -39,7 +39,9 @@ SAVED_QUERY_COLUMNS = ['id', 'name', 'created_by', 'keyword', 'from_date', 'to_d
                        # Phase 2D.3 — migrations/018.
                        'schedule_enabled', 'schedule_frequency', 'next_run_at',
                        'last_scheduled_run_at', 'last_run_status', 'last_run_error',
-                       'scheduled_updated_at']
+                       'scheduled_updated_at',
+                       # migrations/025 — UZ/core filtrlari.
+                       'country_code', 'core_only']
 
 
 def new_store():
@@ -145,7 +147,7 @@ class FakeDiscoveryCursor(FakeImportCursor):
 
     def _insert_saved_query(self, p):
         (name, created_by, keyword, from_date, to_date, oak_field_id,
-         providers, result_limit) = p
+         providers, result_limit, country_code, core_only) = p
         row_id = self.store['next_saved_query_id']
         self.store['next_saved_query_id'] += 1
         row = {
@@ -158,6 +160,7 @@ class FakeDiscoveryCursor(FakeImportCursor):
             'schedule_enabled': False, 'schedule_frequency': None, 'next_run_at': None,
             'last_scheduled_run_at': None, 'last_run_status': None,
             'last_run_error': None, 'scheduled_updated_at': None,
+            'country_code': country_code, 'core_only': bool(core_only),
         }
         self.store['saved_queries'].append(row)
         return [(row_id,)], [('id',)]
@@ -181,13 +184,14 @@ class FakeDiscoveryCursor(FakeImportCursor):
 
     def _update_saved_query(self, p):
         (name, keyword, from_date, to_date, oak_field_id, providers,
-         result_limit, query_id) = p
+         result_limit, country_code, core_only, query_id) = p
         row = self._saved_query_by_id(query_id)
         if row is None:
             return [], [('id',)]
         row.update(name=name, keyword=keyword, from_date=from_date, to_date=to_date,
                   oak_field_id=oak_field_id, providers=_loads(providers),
-                  result_limit=result_limit)
+                  result_limit=result_limit, country_code=country_code,
+                  core_only=bool(core_only))
         return [(query_id,)], [('id',)]
 
     def _set_saved_query_active(self, p):

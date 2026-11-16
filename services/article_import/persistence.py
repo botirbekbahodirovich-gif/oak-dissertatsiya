@@ -471,12 +471,19 @@ def _unique_slug(cur, base, exclude_id=None):
 
 
 def create_article_from_metadata(cur, metadata, created_by, primary_field_id=None,
-                                 extra_field_ids=None):
+                                 extra_field_ids=None, license_resolution=None,
+                                 ingest_evidence=None):
     """Tasdiqlangan candidate'dan BITTA maqola yaratadi (§30–§34).
 
     Har doim: `verification_status='pending_review'`, `publication_status='draft'`.
-    PDF, litsenziya, access_type — HECH QACHON bu yerdan avtomatik kelmaydi
-    (§30, §40–§42): ular DB DEFAULT qiymatida qoladi (`unknown`/`metadata_only`).
+    PDF va access_type HECH QACHON bu yerdan avtomatik kelmaydi (§30,
+    §40–§42): `access_type` DB DEFAULT (`metadata_only`) da qoladi.
+
+    Litsenziya (qabul qilingan qaror, 2026-11): `license_resolution` —
+    `utils.article_license.resolve_license()` natijasi; faqat
+    `status == 'resolved'` bo'lsa `license_type`/`license_url` yoziladi,
+    aks holda DB DEFAULT `unknown` qoladi. `ingest_evidence` — dalil JSON
+    (migrations/025).
     """
     from utils.article_rules import make_slug
 
@@ -512,6 +519,16 @@ def create_article_from_metadata(cur, metadata, created_by, primary_field_id=Non
               metadata.get('citation_count_source'), citation_checked,
               _json(source_summary), 'pending_review', 'draft', created_by,
               datetime.now()]
+
+    if license_resolution and license_resolution.get('status') == 'resolved':
+        from utils.article_rules import LICENSES, UNKNOWN_LICENSE
+        license_type = license_resolution.get('license_type')
+        if license_type in LICENSES and license_type != UNKNOWN_LICENSE:
+            columns += ['license_type', 'license_url']
+            values += [license_type, (license_resolution.get('license_url') or None)]
+    if ingest_evidence:
+        columns.append('ingest_evidence')
+        values.append(_json(ingest_evidence))
 
     placeholders = ', '.join(['%s'] * len(columns))
     try:

@@ -85,6 +85,12 @@ def ensure_schema(cur):
         "CREATE INDEX IF NOT EXISTS idx_article_discovery_saved_queries_due "
         "ON article_discovery_saved_queries (next_run_at) "
         "WHERE schedule_enabled AND is_active")
+    # migrations/025 — "Faqat O'zbekiston mualliflari" / "Faqat core jurnallar".
+    cur.execute("""
+        ALTER TABLE article_discovery_saved_queries
+            ADD COLUMN IF NOT EXISTS country_code VARCHAR(2),
+            ADD COLUMN IF NOT EXISTS core_only    BOOLEAN NOT NULL DEFAULT FALSE
+    """)
     _schema_ready = True
 
 
@@ -125,10 +131,11 @@ def create(cur, created_by, name, query: ArticleDiscoveryQuery):
     cur.execute(
         """INSERT INTO article_discovery_saved_queries
               (name, created_by, keyword, from_date, to_date, oak_field_id,
-               providers, result_limit)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+               providers, result_limit, country_code, core_only)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
         (name, created_by, query.keyword, query.from_date, query.to_date,
-         query.oak_field_id, json.dumps(list(query.providers)), query.limit))
+         query.oak_field_id, json.dumps(list(query.providers)), query.limit,
+         query.country_code, bool(query.core_only)))
     return cur.fetchone()[0]
 
 
@@ -160,11 +167,12 @@ def update(cur, query_id, name, query: ArticleDiscoveryQuery):
         """UPDATE article_discovery_saved_queries SET
               name = %s, keyword = %s, from_date = %s, to_date = %s,
               oak_field_id = %s, providers = %s, result_limit = %s,
+              country_code = %s, core_only = %s,
               updated_at = NOW()
            WHERE id = %s RETURNING id""",
         (name, query.keyword, query.from_date, query.to_date,
          query.oak_field_id, json.dumps(list(query.providers)), query.limit,
-         query_id))
+         query.country_code, bool(query.core_only), query_id))
     return cur.fetchone() is not None
 
 
@@ -195,4 +203,6 @@ def to_query(row) -> ArticleDiscoveryQuery:
     return ArticleDiscoveryQuery(
         keyword=row['keyword'], from_date=row['from_date'], to_date=row['to_date'],
         oak_field_id=row.get('oak_field_id'), limit=row['result_limit'],
-        providers=tuple(providers or ()))
+        providers=tuple(providers or ()),
+        country_code=(row.get('country_code') or None),
+        core_only=bool(row.get('core_only')))

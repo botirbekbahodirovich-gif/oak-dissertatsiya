@@ -133,7 +133,11 @@ Python enum emas, **validated string** (loyiha uslubi;
 | `source_type` | `open_journal`, `university_repository`, `subject_repository`, `author_website`, `author_submission`, `public_domain`, `other_verified_source` |
 | `verification_status` | `draft`, `pending_review`, `verified`, `rejected`, `copyright_hold` |
 | `publication_status` | `draft`, `published`, `archived` |
-| `license_type` | `cc_by`, `cc_by_sa`, `cc_by_nc`, `cc_by_nc_sa`, `cc0`, `public_domain`, `author_permission`, `repository_permission`, `other`, `unknown` |
+| `license_type` | `cc_by`, `cc_by_sa`, `cc_by_nc`, `cc_by_nc_sa`, `cc_by_nd`, `cc_by_nc_nd`, `cc0`, `public_domain`, `author_permission`, `repository_permission`, `other`, `unknown` |
+
+**Annotatsiya** sahifada (karta, tafsilot, meta, og, JSON-LD) faqat
+`can_show_abstract()` True bo'lsa — CC yoki public domain litsenziya
+(`articles-uz-ingest.md` §6).
 
 PDF **saqlash** faqat `PDF_ALLOWED_ACCESS_TYPES` uchun:
 `open_access`, `author_permission`, `public_domain`, `repository_copy`.
@@ -683,6 +687,9 @@ Bu yerdagi modul uchun eng muhim uchta natija:
   qo'shildi (migratsiya 009, §15 dagi rollback naqshi bilan bir xil);
 * `access_type` va `license_type` **hech qachon** avtomatik to'ldirilmaydi —
   ular huquqiy qaror va `can_read_pdf()` ga to'g'ridan-to'g'ri ta'sir qiladi;
+  **YANGILANDI (2026-11):** import approve paytida `license_type` uch manbali
+  kelishuv (`utils/article_license.py`) `resolved` bo'lsa yoziladi, PDF esa
+  faqat `scripts/fetch_open_pdfs.py` orqali — [`articles-uz-ingest.md`](articles-uz-ingest.md);
 * `is_retracted` bayrog'i paydo bo'ldi: chaqirib olingan maqola signali
   jimgina yo'qolmaydi.
 

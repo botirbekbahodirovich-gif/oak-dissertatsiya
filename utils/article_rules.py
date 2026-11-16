@@ -75,6 +75,8 @@ LICENSES = {
     'cc_by_sa': 'CC BY-SA',
     'cc_by_nc': 'CC BY-NC',
     'cc_by_nc_sa': 'CC BY-NC-SA',
+    'cc_by_nd': 'CC BY-ND',
+    'cc_by_nc_nd': 'CC BY-NC-ND',
     'cc0': 'CC0',
     'public_domain': 'Public Domain',
     'author_permission': 'Author Permission',
@@ -92,8 +94,44 @@ LICENSE_URLS = {
     'cc_by_sa': 'https://creativecommons.org/licenses/by-sa/4.0/',
     'cc_by_nc': 'https://creativecommons.org/licenses/by-nc/4.0/',
     'cc_by_nc_sa': 'https://creativecommons.org/licenses/by-nc-sa/4.0/',
+    'cc_by_nd': 'https://creativecommons.org/licenses/by-nd/4.0/',
+    'cc_by_nc_nd': 'https://creativecommons.org/licenses/by-nc-nd/4.0/',
     'cc0': 'https://creativecommons.org/publicdomain/zero/1.0/',
 }
+
+# Ochiq kontent litsenziyalari — barcha Creative Commons variantlari va
+# public domain. Annotatsiya sahifada FAQAT shularda ko'rsatiladi
+# (`can_show_abstract`). `author_permission` / `repository_permission` /
+# `other` ataylab kirmaydi: ularning matni har xil va annotatsiyani qayta
+# nashr qilishga ruxsat berishi kafolatlanmagan.
+OPEN_CONTENT_LICENSES = frozenset({
+    'cc_by', 'cc_by_sa', 'cc_by_nc', 'cc_by_nc_sa', 'cc_by_nd', 'cc_by_nc_nd',
+    'cc0', 'public_domain',
+})
+
+# Avtomatik PDF saqlashga (scripts/fetch_open_pdfs.py) default ruxsat
+# etilgan litsenziyalar. NC variantlari ATAYIN yo'q: saytda pullik tariflar
+# bor va NC shartining bu yerda qo'llanilishi huquqiy jihatdan noaniq —
+# ular metadata + DOI havolasi bo'lib qoladi.
+DEFAULT_AUTO_PDF_LICENSES = frozenset({
+    'cc_by', 'cc_by_sa', 'cc_by_nd', 'cc0', 'public_domain',
+})
+
+
+def auto_pdf_licenses(environ=None):
+    """`ARTICLE_AUTO_PDF_LICENSES` (vergul bilan) -> frozenset.
+
+    Faqat `OPEN_CONTENT_LICENSES` ichidagi kalitlar qabul qilinadi; `unknown`,
+    `other` va ruxsat turlari hech qachon kirmaydi. Bo'sh yoki faqat
+    noto'g'ri qiymat bo'lsa — default.
+    """
+    import os
+    env = environ if environ is not None else os.environ
+    raw = (env.get('ARTICLE_AUTO_PDF_LICENSES') or '').strip()
+    if not raw:
+        return DEFAULT_AUTO_PDF_LICENSES
+    picked = {token.strip().lower() for token in raw.split(',')} & OPEN_CONTENT_LICENSES
+    return frozenset(picked) or DEFAULT_AUTO_PDF_LICENSES
 
 LANGUAGES = {
     'uz': "O‘zbek",
@@ -146,6 +184,19 @@ def pdf_block_reason(article):
 def can_read_pdf(article):
     """PDF'ni ommaga ko'rsatish mumkinmi (§23). Backend ham, shablon ham shuni chaqiradi."""
     return pdf_block_reason(article) is None
+
+
+def can_show_abstract(article):
+    """Annotatsiyani sahifada (karta, tafsilot, meta description, og,
+    ScholarlyArticle JSON-LD) ko'rsatish mumkinmi.
+
+    Yagona qoida: faqat ochiq (CC yoki public domain) litsenziya. Annotatsiya
+    bazada saqlanadi va ichki qidiruvda ishlatilishi mumkin — bu funksiya
+    faqat CHIQARISHNI boshqaradi. Shablonlar backend qo'ygan
+    `article.can_show_abstract` ni o'qiydi, qoidani o'zi hisoblamaydi.
+    """
+    get = article.get if hasattr(article, 'get') else lambda k, d=None: getattr(article, k, d)
+    return (get('license_type') or UNKNOWN_LICENSE) in OPEN_CONTENT_LICENSES
 
 
 def can_store_pdf(access_type):

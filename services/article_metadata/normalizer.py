@@ -178,9 +178,13 @@ valid_year = _valid_year
 # variantlari bizning lug'atda YO'Q va ular ruxsat beruvchi kalitga
 # o'girilmaydi — aks holda qayta tarqatish huquqi bo'lmagan maqola CC BY
 # bo'lib qolardi.
+#
+# YANGILANDI: `cc_by_nd` / `cc_by_nc_nd` lug'atga qo'shildi. Ular o'z nomi
+# bilan xaritalanadi (hech qachon CC BY ga "yumshatilmaydi"), shuning uchun
+# qayta tarqatish shartlari yo'qolmaydi.
 _CC_PATTERNS = (
-    ('by-nc-nd', None),
-    ('by-nd', None),
+    ('by-nc-nd', 'cc_by_nc_nd'),
+    ('by-nd', 'cc_by_nd'),
     ('by-nc-sa', 'cc_by_nc_sa'),
     ('by-nc', 'cc_by_nc'),
     ('by-sa', 'cc_by_sa'),
@@ -204,8 +208,6 @@ def map_license_url(url):
         for token, key in _CC_PATTERNS:
             if tail.startswith(token + '/') or tail == token:
                 label = 'CC ' + token.upper()
-                # `nd` variantlari bizda yo'q — `other` sifatida qoladi va
-                # admin qo'lda hal qiladi.
                 return (key if key in LICENSES else None), label
         return None, 'Creative Commons (aniqlanmagan)'
     return None, None

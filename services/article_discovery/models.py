@@ -79,10 +79,22 @@ class ArticleDiscoveryQuery:
     # ishlashda davom etadi: bitta provayder, OpenAlex — aynan 2D.1
     # xulq-atvori.
     providers: tuple = (OPENALEX,)
+    # O'zbekiston/sifat filtrlari (OpenAlex): `country_code='UZ'` — kamida
+    # bitta muallif muassasasi shu mamlakatda
+    # (`authorships.institutions.country_code`); `core_only` — faqat
+    # `primary_location.source.is_core:true` jurnallar. Shu filtrlardan biri
+    # berilganda kalit so'z ixtiyoriy. Default qiymatlar avvalgi xulq-atvorni
+    # o'zgartirmaydi.
+    country_code: str | None = None
+    core_only: bool = False
+
+    @property
+    def has_scope_filter(self) -> bool:
+        return bool(self.country_code or self.core_only)
 
     def canonical(self) -> dict:
         """Provenance'da saqlanadigan JSON — kalit/mailto/xom URL YO'Q (§20)."""
-        return {
+        out = {
             'keyword': self.keyword,
             'from_date': self.from_date.isoformat(),
             'to_date': self.to_date.isoformat(),
@@ -90,6 +102,11 @@ class ArticleDiscoveryQuery:
             'limit': self.limit,
             'providers': list(self.providers),
         }
+        if self.country_code:
+            out['country_code'] = self.country_code
+        if self.core_only:
+            out['core_only'] = True
+        return out
 
     @property
     def source_provider_label(self) -> str:

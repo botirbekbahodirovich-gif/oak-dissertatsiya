@@ -236,17 +236,40 @@ def _topics(topics, primary):
         name = clean_text(entry.get('display_name'), 200)
         if not name:
             continue
-        out.append({
+        out.append(dict({
             'name': name,
             'score': _score(entry.get('score')),
             'is_primary': bool(primary_id and entry.get('id') == primary_id),
-        })
+        }, **_topic_hierarchy(entry)))
     if primary_id and not any(t['is_primary'] for t in out):
         name = clean_text(primary.get('display_name'), 200)
         if name:
-            out.insert(0, {'name': name, 'score': _score(primary.get('score')),
-                           'is_primary': True})
+            out.insert(0, dict({'name': name, 'score': _score(primary.get('score')),
+                                'is_primary': True}, **_topic_hierarchy(primary)))
     return out
+
+
+def topic_level_id(node):
+    """`{"id": "https://openalex.org/subfields/2713", ...}` -> "2713"."""
+    if not isinstance(node, dict):
+        return None
+    raw = str(node.get('id') or '').rstrip('/')
+    tail = raw.rsplit('/', 1)[-1] if raw else ''
+    return tail if tail.isdigit() else None
+
+
+def _topic_hierarchy(entry):
+    """topic -> subfield/field/domain id va nomlari (OAK xaritasi uchun)."""
+    subfield = entry.get('subfield') if isinstance(entry.get('subfield'), dict) else {}
+    field = entry.get('field') if isinstance(entry.get('field'), dict) else {}
+    domain = entry.get('domain') if isinstance(entry.get('domain'), dict) else {}
+    return {
+        'subfield_id': topic_level_id(subfield),
+        'subfield': clean_text(subfield.get('display_name'), 200),
+        'field_id': topic_level_id(field),
+        'field': clean_text(field.get('display_name'), 200),
+        'domain_id': topic_level_id(domain),
+    }
 
 
 def _keywords(entries):

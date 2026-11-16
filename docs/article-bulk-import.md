@@ -220,7 +220,14 @@ scientific_articles.license_type         = DEFAULT 'unknown'         (o'zgarmayd
 
 Asosiy fan yo'nalishi **ixtiyoriy** admin approve paytida: agar
 tanlanmasa, maqola primary field'siz draft sifatida yaratiladi (§35 —
-"sun'iy field tanlama"). Nashr qilish alohida moderatsiya oqimida bo'ladi,
+"sun'iy field tanlama").
+
+**YANGILANDI (2026-11)** — [`articles-uz-ingest.md`](articles-uz-ingest.md):
+admin tanlamagan bo'lsa, OpenAlex `primary_topic` →
+`data/openalex_oak_mapping.json` bo'yicha FAQAT `high` moslikda
+`primary_field_id` qo'yiladi; `license_type` faqat uch manbali kelishuv
+`resolved` bo'lsa yoziladi (`access_type` hamon `metadata_only`). Dalil —
+`scientific_articles.ingest_evidence`. Nashr qilish alohida moderatsiya oqimida bo'ladi,
 u yerda field talab qilinishi mumkin — bu bulk importer javobgarligi emas.
 
 **Retraction** — `is_retracted=TRUE` element approve qilinishi uchun

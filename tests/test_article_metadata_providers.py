@@ -93,8 +93,17 @@ class CrossrefTests(ProviderTestCase):
             {'URL': 'http://creativecommons.org/licenses/by-nc-nd/4.0/',
              'content-version': 'vor'}])
         licence = self.ok(payload).data['licenses'][0]
-        self.assertIsNone(licence['license_type'])
+        # ND o'z kalitiga xaritalanadi (2026-11), lekin hech qachon cc_by emas.
+        self.assertEqual(licence['license_type'], 'cc_by_nc_nd')
         self.assertEqual(licence['label'], 'CC BY-NC-ND')
+
+    def test_licence_start_date_is_kept_for_embargo_checks(self):
+        payload = crossref_work(license=[
+            {'URL': 'http://creativecommons.org/licenses/by/4.0/',
+             'content-version': 'vor',
+             'start': {'date-parts': [[2024, 3, 1]],
+                       'date-time': '2024-03-01T00:00:00Z'}}])
+        self.assertEqual(self.ok(payload).data['licenses'][0]['start_date'], '2024-03-01')
 
     def test_article_number_is_used_when_there_are_no_pages(self):
         payload = crossref_work(page=None, **{'article-number': 'e12345'})

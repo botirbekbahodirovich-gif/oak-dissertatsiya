@@ -59,9 +59,10 @@
         <div class="ol-field-group">
           <label class="ol-label" for="ad-keyword">Kalit so'z</label>
           <input class="ol-field" type="text" id="ad-keyword" name="keyword"
-                 minlength="3" maxlength="300" required
+                 minlength="3" maxlength="300"
                  value="{{ (form.keyword if form else '') }}"
                  placeholder="masalan: machine learning in oncology">
+          <p class="ai-help">O'zbekiston yoki core filtri tanlansa — ixtiyoriy.</p>
         </div>
         <div class="ol-field-group">
           <label class="ol-label" for="ad-from-date">Boshlanish sanasi</label>
@@ -103,6 +104,23 @@
             {% endfor %}
           </div>
         </div>
+        <div class="ol-field-group">
+          <span class="ol-label" id="ad-scope-label">Qamrov (faqat OpenAlex)</span>
+          <div class="ad-provider-options" role="group" aria-labelledby="ad-scope-label">
+            <label class="ad-provider-option">
+              <input type="checkbox" name="uz_only" value="1"
+                     {{ 'checked' if form and form.get('uz_only') }}>
+              Faqat O'zbekiston mualliflari
+            </label>
+            <label class="ad-provider-option">
+              <input type="checkbox" name="core_only" value="1"
+                     {{ 'checked' if form and form.get('core_only') }}>
+              Faqat sifatli (core) jurnallar
+            </label>
+          </div>
+          <p class="ai-help">Kamida bitta muallif O'zbekiston muassasasidan /
+            OpenAlex "core" jurnal. Crossref bu filtrlarni bilmaydi — belgisini olib tashlang.</p>
+        </div>
       </div>
       <div class="ad-saved-name-row">
         <div class="ol-field-group">
@@ -143,7 +161,11 @@
           {% for sq in saved_queries %}
           <tr>
             <td>{{ sq.name }}</td>
-            <td>{{ sq.keyword }}</td>
+            <td>
+              {{ sq.keyword or '—' }}
+              {% if sq.country_code %}<span class="ol-badge">{{ sq.country_code }}</span>{% endif %}
+              {% if sq.core_only %}<span class="ol-badge">core</span>{% endif %}
+            </td>
             <td>
               {% for p in (sq.providers or []) %}
               <span class="ol-badge">{{ provider_labels.get(p, p) }}</span>

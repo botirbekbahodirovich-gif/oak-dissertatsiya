@@ -54,7 +54,7 @@ class FakeSavedQueriesCursor:
 
     def _insert(self, p):
         (name, created_by, keyword, from_date, to_date, oak_field_id,
-         providers, result_limit) = p
+         providers, result_limit, country_code, core_only) = p
         row_id = self.store['next_id']
         self.store['next_id'] += 1
         row = {
@@ -63,6 +63,7 @@ class FakeSavedQueriesCursor:
             'providers': json.loads(providers), 'result_limit': result_limit,
             'is_active': True, 'created_at': None, 'updated_at': None,
             'last_used_at': None,
+            'country_code': country_code, 'core_only': bool(core_only),
         }
         self.store['rows'].append(row)
         self.description = [('id',)]
@@ -85,7 +86,7 @@ class FakeSavedQueriesCursor:
 
     def _update(self, p):
         (name, keyword, from_date, to_date, oak_field_id, providers,
-         result_limit, query_id) = p
+         result_limit, country_code, core_only, query_id) = p
         row = self._row_by_id(query_id)
         self.description = [('id',)]
         if row is None:
@@ -93,7 +94,8 @@ class FakeSavedQueriesCursor:
             return
         row.update(name=name, keyword=keyword, from_date=from_date, to_date=to_date,
                   oak_field_id=oak_field_id, providers=json.loads(providers),
-                  result_limit=result_limit)
+                  result_limit=result_limit, country_code=country_code,
+                  core_only=bool(core_only))
         self._result = [(query_id,)]
 
     def _set_active(self, p):

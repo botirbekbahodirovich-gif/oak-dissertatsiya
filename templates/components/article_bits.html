@@ -64,7 +64,8 @@
     </p>
     {% endif %}
 
-    {% if article.abstract %}
+    {# Annotatsiya faqat ochiq litsenziyada (backend: can_show_abstract). #}
+    {% if article.can_show_abstract and article.abstract %}
     <p class="mq-card__abstract">{{ article.abstract|truncate(320) }}</p>
     {% endif %}
   </div>

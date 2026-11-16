@@ -55,9 +55,10 @@ from utils.article_rules import (ACCESS_TYPES, LANGUAGES, LICENSE_URLS, LICENSES
                                  PDF_ALLOWED_ACCESS_TYPES, PUBLICATION_STATUSES,
                                  SOURCE_TYPES, VERIFICATION_STATUSES,
                                  VERSION_TYPES, ArticleValidationError,
-                                 can_read_pdf, make_slug, pdf_block_reason,
-                                 validate_article_rights, validate_choice,
-                                 validate_doi)
+                                 can_read_pdf, can_show_abstract, make_slug,
+                                 pdf_block_reason, validate_article_rights,
+                                 validate_choice, validate_doi)
+from utils.article_publish_rules import publish_blockers, review_blockers
 from utils.scientific_fields import (FieldValidationError, build_tree,
                                      check_no_cycle, descendant_ids, field_slug,
                                      normalize_code, resolve_level)
@@ -252,6 +253,9 @@ def _ensure_schema(cur):
                 "ON scientific_articles (is_retracted) WHERE is_retracted")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_articles_metadata_synced "
                 "ON scientific_articles (metadata_last_synced_at NULLS FIRST)")
+    # Migratsiya 025 — avtomatik qarorlar dalili (litsenziya, OAK taklifi, PDF).
+    cur.execute("ALTER TABLE scientific_articles "
+                "ADD COLUMN IF NOT EXISTS ingest_evidence JSONB")
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS article_authors (
@@ -400,7 +404,47 @@ def _decorate(article):
     article['publication_label'] = PUBLICATION_STATUSES.get(article.get('publication_status'), '—')
     article['is_public'] = (article.get('publication_status') == 'published'
                             and article.get('verification_status') == 'verified')
+    # Annotatsiya — yagona qoida `can_show_abstract()` (faqat CC / public
+    # domain). Shablonlar, meta description, og va JSON-LD faqat shu
+    # maydonlarni o'qiydi; yopiq maqolada annotatsiya bazada qoladi
+    # (ichki qidiruv uchun), lekin sahifaga chiqmaydi.
+    article['can_show_abstract'] = can_show_abstract(article)
+    article['meta_description'] = _meta_description(article)
+    article['attribution'] = _attribution(article)
     return article
+
+
+def _meta_description(article):
+    """Ochiq maqola — annotatsiyadan; yopiq maqola — sarlavha, jurnal va
+    yildan. Annotatsiya matni hech qachon yopiq maqola meta'siga tushmaydi."""
+    if article.get('can_show_abstract') and (article.get('abstract') or '').strip():
+        return article['abstract']
+    parts = [article.get('display_title') or article.get('title') or '']
+    if article.get('journal_name'):
+        parts.append(article['journal_name'])
+    if article.get('publication_year'):
+        parts.append(str(article['publication_year']))
+    return ' · '.join(p for p in parts if p)
+
+
+def _attribution(article):
+    """CC atributsiyasi (TASL): faqat PDF ommaga ochiq va litsenziya ochiq
+    bo'lsa. Shablon (tafsilot va o'quvchi) faqat shu dict'ni ko'rsatadi."""
+    if not (article.get('can_read_pdf') and article.get('can_show_abstract')):
+        return None
+    return {
+        'title': article.get('title') or '',
+        'journal': article.get('journal_name') or article.get('source_name') or '',
+        'doi_url': ('https://doi.org/%s' % article['doi']) if article.get('doi') else None,
+        'license_label': LICENSES.get(article.get('license_type'), ''),
+        'license_url': (article.get('license_url')
+                        or LICENSE_URLS.get(article.get('license_type'))),
+        # Fayl serverda hech qachon o'zgartirilmaydi; matn versiyaga mos.
+        'unmodified': ("Asl nashrdan o'zgarishsiz."
+                       if article.get('version_type') in (None, 'version_of_record')
+                       else "Manbadagi nusxadan o'zgarishsiz (%s)."
+                       % VERSION_TYPES.get(article.get('version_type'), '').lower()),
+    }
 
 
 def _attach_authors_and_fields(cur, articles):
@@ -451,7 +495,7 @@ ARTICLE_COLUMNS = """
     a.created_at, a.updated_at,
     a.openalex_id, a.crossref_member_id, a.primary_issn, a.is_retracted,
     a.citation_count, a.citation_count_source, a.citation_count_checked_at,
-    a.metadata_last_synced_at, a.metadata_source_summary
+    a.metadata_last_synced_at, a.metadata_source_summary, a.ingest_evidence
 """
 
 # Ommaga ko'rinadigan maqola: nashr etilgan VA tekshirilgan. Bu shart har bir
@@ -1957,7 +2001,17 @@ def admin_articles():
                          ('doaj', 'index_doaj')):
         if _flag_arg(flag):
             where.append(f'a.{column} IS TRUE')
+    queue = (request.args.get('queue') or '').strip()
+    if queue not in ADMIN_QUEUES:
+        queue = ''
+    if queue == 'needs_field':
+        where.append(f"a.publication_status = 'draft' AND NOT {_HAS_PRIMARY_FIELD_SQL}")
+    elif queue == 'license_conflict':
+        where.append("a.ingest_evidence -> 'license' ->> 'status' = 'conflict'")
     where_sql = ' AND '.join(where)
+
+    if queue == 'ready':
+        return _admin_publish_queue(where_sql, params)
 
     conn = get_connection()
     try:
@@ -1979,12 +2033,192 @@ def admin_articles():
     finally:
         conn.close()
 
+    if queue == 'needs_field':
+        for a in articles:
+            a['field_suggestion'] = ((a.get('ingest_evidence') or {}).get('oak_field')
+                                     if isinstance(a.get('ingest_evidence'), dict) else None)
+
     return render_template('admin/articles.html', articles=articles, total=total,
                            page=page, pages=max(1, math.ceil(total / ADMIN_PER_PAGE)),
                            stats=stats, field_rows=field_rows,
                            access_types=ACCESS_TYPES, licenses=LICENSES,
                            verification_statuses=VERIFICATION_STATUSES,
-                           publication_statuses=PUBLICATION_STATUSES, qs=_query_string)
+                           publication_statuses=PUBLICATION_STATUSES, qs=_query_string,
+                           queue=queue, admin_queues=ADMIN_QUEUES)
+
+
+# ── Avto-tekshiruv va ommaviy nashr ──────────────────────────────────────────
+
+ADMIN_QUEUES = {
+    'ready': 'Nashrga tayyor',
+    'needs_field': "Yo'nalish kerak",
+    'license_conflict': 'Litsenziya ziddiyati',
+}
+BULK_PUBLISH_MAX = 500
+PUBLISH_QUEUE_BLOCKED_LIMIT = 200
+
+_HAS_PRIMARY_FIELD_SQL = ("EXISTS (SELECT 1 FROM article_scientific_fields pf "
+                          "WHERE pf.article_id = a.id AND pf.is_primary)")
+_DRAFT_CANDIDATE_SQL = ("a.publication_status = 'draft' "
+                        "AND a.verification_status IN ('draft', 'pending_review')")
+# `publish_blockers()` ning SQL'da tekshirsa bo'ladigan qismi — faqat
+# sahifalash/sanash uchun oldindan saralash. YAKUNIY hakam har doim Python
+# `publish_blockers()` (ham ro'yxatda, ham POST paytida qayta).
+_READY_PREFILTER_SQL = (
+    "COALESCE(a.doi, '') <> '' AND NOT a.is_retracted "
+    "AND COALESCE(BTRIM(a.title), '') <> '' "
+    "AND COALESCE(BTRIM(a.journal_name), '') <> '' "
+    "AND a.publication_year IS NOT NULL "
+    "AND EXISTS (SELECT 1 FROM article_authors au WHERE au.article_id = a.id) "
+    f"AND {_HAS_PRIMARY_FIELD_SQL}")
+
+
+def _critical_conflict_ids(cur, article_ids):
+    """Import elementida `severity='critical'` konflikti bor maqolalar."""
+    if not article_ids:
+        return set()
+    cur.execute("SELECT to_regclass('article_import_items') IS NOT NULL")
+    row = cur.fetchone()
+    if not row or not row[0]:
+        return set()
+    cur.execute("""SELECT DISTINCT created_article_id FROM article_import_items
+                    WHERE created_article_id = ANY(%s)
+                      AND conflicts @> '[{"severity": "critical"}]'::jsonb""",
+                (list(article_ids),))
+    return {r[0] for r in cur.fetchall()}
+
+
+def _with_publish_blockers(cur, articles):
+    """Har bir maqolaga `blockers` ro'yxatini qo'shadi (yagona qoida:
+    `utils.article_publish_rules.publish_blockers`)."""
+    critical = _critical_conflict_ids(cur, [a['id'] for a in articles])
+    for a in articles:
+        a['has_critical_conflict'] = a['id'] in critical
+        a['doi_duplicate'] = False      # partial UNIQUE indeks kafolatlaydi
+        a['blockers'] = publish_blockers(a)
+    return articles
+
+
+def _admin_publish_queue(where_sql, params):
+    """"Nashrga tayyor" ko'rinishi: tayyor nomzodlar (checkbox bilan, eng
+    ko'pi 500) va blokeri bor qoralamalar sababi bilan alohida ro'yxatda."""
+    base = f"{where_sql} AND {_DRAFT_CANDIDATE_SQL}"
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            conn.commit()
+            cur.execute(f"SELECT COUNT(*) FROM scientific_articles a "
+                        f"WHERE {base} AND {_READY_PREFILTER_SQL}", params)
+            prefilter_total = int(cur.fetchone()[0])
+            cur.execute(
+                f"SELECT {ARTICLE_COLUMNS} FROM scientific_articles a "
+                f"WHERE {base} AND {_READY_PREFILTER_SQL} "
+                f"ORDER BY a.publication_year DESC NULLS LAST, a.id LIMIT %s",
+                params + [BULK_PUBLISH_MAX])
+            candidates = [_decorate(a) for a in _dict_rows(cur)]
+            _attach_authors_and_fields(cur, candidates)
+            _with_publish_blockers(cur, candidates)
+
+            cur.execute(f"SELECT COUNT(*) FROM scientific_articles a "
+                        f"WHERE {base} AND NOT ({_READY_PREFILTER_SQL})", params)
+            blocked_total = int(cur.fetchone()[0])
+            cur.execute(
+                f"SELECT {ARTICLE_COLUMNS} FROM scientific_articles a "
+                f"WHERE {base} AND NOT ({_READY_PREFILTER_SQL}) "
+                f"ORDER BY a.updated_at DESC, a.id DESC LIMIT %s",
+                params + [PUBLISH_QUEUE_BLOCKED_LIMIT])
+            blocked = [_decorate(a) for a in _dict_rows(cur)]
+            _attach_authors_and_fields(cur, blocked)
+            _with_publish_blockers(cur, blocked)
+            cur.execute("""SELECT publication_status, COUNT(*) FROM scientific_articles
+                           GROUP BY publication_status""")
+            stats = dict(cur.fetchall())
+            _tree, field_rows = _field_tree(cur, only_active=False)
+    finally:
+        conn.close()
+
+    ready = [a for a in candidates if not a['blockers']]
+    # Prefiltrdan o'tib, Python qoidasida yiqilganlar ham blokerlar ro'yxatiga.
+    late_blocked = [a for a in candidates if a['blockers']]
+    blocked = late_blocked + blocked
+    blocked_count = blocked_total + len(late_blocked)
+    return render_template(
+        'admin/articles.html', articles=[], total=prefilter_total, page=1, pages=1,
+        stats=stats, field_rows=field_rows, access_types=ACCESS_TYPES,
+        licenses=LICENSES, verification_statuses=VERIFICATION_STATUSES,
+        publication_statuses=PUBLICATION_STATUSES, qs=_query_string,
+        queue='ready', admin_queues=ADMIN_QUEUES, ready_articles=ready,
+        blocked_articles=blocked, blocked_count=blocked_count,
+        prefilter_total=prefilter_total, bulk_publish_max=BULK_PUBLISH_MAX)
+
+
+@articles_bp.route('/admin/articles/bulk-publish', methods=['POST'])
+@login_required
+def admin_articles_bulk_publish():
+    """Tanlangan maqolalarni BITTA tranzaksiyada nashr qiladi.
+
+    CSRF — global `CSRFProtect`; faqat admin; bir martada eng ko'pi 500.
+    Har bir maqola qulf ostida (`FOR UPDATE`) QAYTA `publish_blockers()`
+    dan o'tadi — ro'yxat ochilgandan keyin o'zgargan maqola nashr bo'lmaydi.
+    Admin tugmani bosmaguncha hech narsa nashr qilinmaydi.
+    """
+    _require_admin()
+    raw_ids = request.form.getlist('article_ids')
+    ids = []
+    for raw in raw_ids:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if value > 0 and value not in ids:
+            ids.append(value)
+    if not ids:
+        flash('Hech qanday maqola tanlanmagan.')
+        return redirect('/admin/articles?queue=ready')
+    if len(ids) > BULK_PUBLISH_MAX:
+        flash('Bir martada eng ko\'pi %d ta maqola nashr qilinadi (tanlangan: %d).'
+              % (BULK_PUBLISH_MAX, len(ids)))
+        return redirect('/admin/articles?queue=ready')
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            conn.commit()
+            cur.execute(f"SELECT {ARTICLE_COLUMNS} FROM scientific_articles a "
+                        f"WHERE a.id = ANY(%s) AND {_DRAFT_CANDIDATE_SQL} "
+                        f"ORDER BY a.id FOR UPDATE", (ids,))
+            rows = [_decorate(a) for a in _dict_rows(cur)]
+            _attach_authors_and_fields(cur, rows)
+            _with_publish_blockers(cur, rows)
+            ready_ids = [a['id'] for a in rows if not a['blockers']]
+            blocked = [a for a in rows if a['blockers']]
+            published = 0
+            if ready_ids:
+                cur.execute("""UPDATE scientific_articles
+                                  SET verification_status = 'verified',
+                                      publication_status = 'published',
+                                      reviewed_by = %s, reviewed_at = NOW(),
+                                      updated_at = NOW()
+                                WHERE id = ANY(%s) AND publication_status = 'draft'""",
+                            (current_user.id, ready_ids))
+                published = cur.rowcount
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        log_exception(current_app.logger, 'Ommaviy nashr muvaffaqiyatsiz')
+        flash('Ommaviy nashr bajarilmadi — hech bir maqola o\'zgarmadi.')
+        return redirect('/admin/articles?queue=ready')
+    finally:
+        conn.close()
+
+    skipped = len(ids) - len(rows)
+    flash('Nashr qilindi: %d. Blokerlangan: %d. Qoralama emas/topilmadi: %d.'
+          % (published, len(blocked), skipped))
+    for a in blocked[:20]:
+        flash('#%d — %s' % (a['id'], '; '.join(a['blockers'])))
+    return redirect('/admin/articles?queue=ready')
 
 
 @articles_bp.route('/admin/articles/new', methods=['GET', 'POST'])
@@ -2129,6 +2363,14 @@ def admin_article_review(article_id):
                                            verification_statuses=VERIFICATION_STATUSES,
                                            publication_statuses=PUBLICATION_STATUSES,
                                            error='Holat qiymati noto\'g\'ri.'), 400
+                blockers = (review_blockers(article)
+                            if publication == 'published' else [])
+                if blockers:
+                    return render_template(
+                        'admin/article_review.html', article=article,
+                        verification_statuses=VERIFICATION_STATUSES,
+                        publication_statuses=PUBLICATION_STATUSES,
+                        error='Nashr qilib bo\'lmaydi: %s.' % '; '.join(blockers)), 400
                 cur.execute("""UPDATE scientific_articles
                                   SET verification_status = %s, publication_status = %s,
                                       permission_note = COALESCE(NULLIF(%s, ''), permission_note),

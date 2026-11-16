@@ -46,7 +46,8 @@ class MigrationNumberingTests(unittest.TestCase):
             if re.match(r'\d+_', name)))
         # 022 is reserved for 022_muassasa_recovered.sql (feat/institution-backfill-v2,
         # not on main yet); it may be absent until that branch lands.
-        expected = [n for n in range(1, max(numbers) + 1) if n in numbers or n != 22]
+        # 024 is reserved for 024_clear_supabase_photo_urls.sql (waits for wave1).
+        expected = [n for n in range(1, max(numbers) + 1) if n in numbers or n not in (22, 24)]
         self.assertEqual(numbers, expected)
 
 

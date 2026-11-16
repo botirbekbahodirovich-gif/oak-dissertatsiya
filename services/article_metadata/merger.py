@@ -20,7 +20,8 @@ from services.article_metadata.models import (CROSSREF, OPENALEX, UNPAYWALL,
                                               FieldConflict, LicenseCandidate,
                                               NormalizedArticleMetadata,
                                               TopicCandidate, Warning_)
-from services.article_metadata.normalizer import name_key, parse_iso_date
+from services.article_metadata.normalizer import (map_license_label, name_key,
+                                                  parse_iso_date)
 
 # ── Ustuvorlik jadvali ──────────────────────────────────────────────────────
 # maydon -> (provayderlar tartibi, provayder ma'lumotidagi kalit)
@@ -317,7 +318,8 @@ def merge_licenses(data):
             license_type=entry.get('license_type'),
             url=entry.get('url'),
             label=entry.get('label'),
-            applies_to=entry.get('applies_to')))
+            applies_to=entry.get('applies_to'),
+            start_date=entry.get('start_date')))
     unpaywall_license = (data.get(UNPAYWALL) or {}).get('license')
     if unpaywall_license:
         candidates.append(LicenseCandidate(
@@ -326,6 +328,14 @@ def merge_licenses(data):
             url=unpaywall_license.get('url'),
             label=unpaywall_license.get('label'),
             applies_to=unpaywall_license.get('applies_to')))
+    # OpenAlex `best_oa_location.license` — uchinchi mustaqil manba
+    # (litsenziyani kelishtirish uchun, services/article_license.py).
+    openalex_best = (data.get(OPENALEX) or {}).get('best_oa_location') or {}
+    if openalex_best.get('license'):
+        license_type, label = map_license_label(openalex_best.get('license'))
+        candidates.append(LicenseCandidate(
+            source=OPENALEX, license_type=license_type, url=None,
+            label=label, applies_to=openalex_best.get('version')))
 
     # Konflikt: turli manbalar bir-biriga mos kelmaydigan TANIB OLINGAN
     # litsenziya turini beradi. Tanib olinmaganlari (None) konflikt yaratmaydi
@@ -338,7 +348,7 @@ def merge_licenses(data):
     if len(distinct) < 2:
         return candidates, None
 
-    order = [CROSSREF, UNPAYWALL]
+    order = [CROSSREF, UNPAYWALL, OPENALEX]
     ordered = sorted(by_source.values(), key=lambda c: order.index(c.source))
     preferred = ordered[0]
     return candidates, FieldConflict(
@@ -377,7 +387,12 @@ def merge_locations(data):
 
 def _topics(data):
     return [TopicCandidate(name=t['name'], source=OPENALEX, score=t.get('score'),
-                           is_primary=bool(t.get('is_primary')))
+                           is_primary=bool(t.get('is_primary')),
+                           subfield_id=t.get('subfield_id'),
+                           subfield=t.get('subfield'),
+                           field_id=t.get('field_id'),
+                           field=t.get('field'),
+                           domain_id=t.get('domain_id'))
             for t in ((data.get(OPENALEX) or {}).get('topics') or [])]
 
 

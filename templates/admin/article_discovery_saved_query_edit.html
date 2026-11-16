@@ -41,7 +41,7 @@
         <div class="ol-field-group">
           <label class="ol-label" for="ad-edit-keyword">Kalit so'z</label>
           <input class="ol-field" type="text" id="ad-edit-keyword" name="keyword"
-                 minlength="3" maxlength="300" required value="{{ saved_query.keyword }}">
+                 minlength="3" maxlength="300" value="{{ saved_query.keyword }}">
         </div>
         <div class="ol-field-group">
           <label class="ol-label" for="ad-edit-from-date">Boshlanish sanasi</label>
@@ -81,6 +81,21 @@
               {{ provider_labels[p] }}
             </label>
             {% endfor %}
+          </div>
+        </div>
+        <div class="ol-field-group">
+          <span class="ol-label" id="ad-edit-scope-label">Qamrov (faqat OpenAlex)</span>
+          <div class="ad-provider-options" role="group" aria-labelledby="ad-edit-scope-label">
+            <label class="ad-provider-option">
+              <input type="checkbox" name="uz_only" value="1"
+                     {{ 'checked' if saved_query.country_code }}>
+              Faqat O'zbekiston mualliflari
+            </label>
+            <label class="ad-provider-option">
+              <input type="checkbox" name="core_only" value="1"
+                     {{ 'checked' if saved_query.core_only }}>
+              Faqat sifatli (core) jurnallar
+            </label>
           </div>
         </div>
       </div>
