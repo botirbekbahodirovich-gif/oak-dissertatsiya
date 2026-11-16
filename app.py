@@ -515,15 +515,13 @@ app.config.update(
     PREFERRED_URL_SCHEME="https" if IS_PRODUCTION else "http",
 )
 
-# ── Fix 5.3: sanitized Supabase avatar path + patronymic normalization ──────
+# ── Fix 5.3: scholar avatar + patronymic normalization ──────────────────────
 import re as _re_util
+from utils.olim_photos import matched_photo_url
 
-AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
-                 "object/public/avatars/")
 DEFAULT_AVATAR = "/static/images/default-avatar.svg"
-_AVATAR_STRIP = "'\"’‘ʻʼ`´"
 
-# Uzbek Cyrillic → Latin map (Supabase avatar filenames are lowercase Latin).
+# Uzbek Cyrillic → Latin map.
 KIRILL_TO_LATIN = {
     'А': 'a', 'Б': 'b', 'В': 'v', 'Г': 'g', 'Д': 'd', 'Е': 'e', 'Ё': 'yo',
     'Ж': 'j', 'З': 'z', 'И': 'i', 'Й': 'y', 'К': 'k', 'Л': 'l', 'М': 'm',
@@ -546,21 +544,9 @@ def transliterate(text):
 
 
 def avatar_url(full_name):
-    """Map a scholar name to its sanitized Supabase avatar URL
-    ({Last}_{First}_{Patronymic}.png): Cyrillic→Latin, Title_Case, spaces→'_',
-    quotes/ticks stripped, consecutive underscores collapsed to one."""
-    s = (full_name or "").strip()
-    if not s:
-        return DEFAULT_AVATAR
-    s = transliterate(s)
-    s = _re_util.sub(r"\s+", "_", s)
-    for ch in _AVATAR_STRIP:
-        s = s.replace(ch, "")
-    s = _re_util.sub(r"_+", "_", s).strip("_")
-    if not s:
-        return DEFAULT_AVATAR
-    s = "_".join(part[:1].upper() + part[1:] for part in s.split("_"))
-    return AVATAR_BUCKET + s + ".png"
+    """Archive photo for a scholar name (olim_photos), else the placeholder.
+    The Supabase bucket this used to point at no longer exists."""
+    return matched_photo_url(full_name) or DEFAULT_AVATAR
 
 
 def normalize_patronymic(name):
@@ -574,6 +560,7 @@ def normalize_patronymic(name):
 
 
 app.jinja_env.globals["avatar_url"] = avatar_url
+app.jinja_env.globals["olim_photo_url"] = matched_photo_url
 app.jinja_env.filters["avatar_url"] = avatar_url
 app.jinja_env.globals["DEFAULT_AVATAR"] = DEFAULT_AVATAR
 app.jinja_env.filters["normalize_patronymic"] = normalize_patronymic
@@ -1823,7 +1810,7 @@ def home():
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, olim, mavzu, daraja, sana, ixtisoslik, photo_url "
+                    "SELECT id, olim, mavzu, daraja, sana, ixtisoslik "
                     "FROM dissertations "
                     "WHERE mavzu IS NOT NULL AND TRIM(mavzu) != '' "
                     f"ORDER BY {sana_key} DESC NULLS LAST, id DESC LIMIT 4")
@@ -1837,7 +1824,7 @@ def home():
                         "Daraja": row.get("daraja") or "",
                         "Sana": row.get("sana") or "",
                         "Ixtisoslik": row.get("ixtisoslik") or "",
-                        "photo_url": row.get("photo_url") or "",
+                        "photo_url": matched_photo_url(row.get("olim")) or "",
                     })
         finally:
             conn.close()
@@ -3434,8 +3421,7 @@ def top_olimlar():
                 )
                 total = cur.fetchone()[0] or 0
                 cur.execute(
-                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt, "
-                    "MAX(ilmiy_rahbar_photo_url) AS photo_url "
+                    "SELECT TRIM(ilmiy_rahbar) AS rahbar, COUNT(*) AS cnt "
                     "FROM dissertations "
                     "WHERE ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) != '' "
                     "GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC, rahbar "
@@ -3447,7 +3433,7 @@ def top_olimlar():
                     "name": r[0] or "",
                     "display": clean_olim_name(r[0] or ""),
                     "count": r[1] or 0,
-                    "photo_url": r[2] or "",
+                    "photo_url": matched_photo_url(r[0]) or "",
                 } for i, r in enumerate(cur.fetchall())]
         finally:
             conn.close()

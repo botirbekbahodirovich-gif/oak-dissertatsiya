@@ -10,6 +10,8 @@ each view (auth.py / cabinet.py pattern) to avoid circular imports.
 from flask import Blueprint, render_template, request, abort
 from flask_login import current_user
 
+from utils.olim_photos import matched_photo_url
+
 content_bp = Blueprint('content', __name__)
 
 
@@ -380,19 +382,19 @@ def university_profile(name):
                     stats = {'total': r[0] or 0, 'phd': r[1] or 0, 'dsc': r[2] or 0,
                              'olimlar': r[3] or 0, 'ixtisosliklar': r[4] or 0, 'rahbarlar': r[5] or 0}
                 cur.execute(f"""
-                    SELECT TRIM(olim), COUNT(*) cnt, MAX(daraja), MAX(photo_url)
+                    SELECT TRIM(olim), COUNT(*) cnt, MAX(daraja)
                     FROM dissertations WHERE {where} AND olim IS NOT NULL AND TRIM(olim) <> ''
                     GROUP BY TRIM(olim) ORDER BY cnt DESC LIMIT 24
                 """, params)
                 top_olimlar = [{'name': x[0], 'display': clean_olim_name(x[0]), 'count': x[1],
-                                'daraja': x[2] or '', 'photo_url': x[3] or ''} for x in cur.fetchall()]
+                                'daraja': x[2] or '', 'photo_url': matched_photo_url(x[0]) or ''} for x in cur.fetchall()]
                 cur.execute(f"""
-                    SELECT TRIM(ilmiy_rahbar), COUNT(*) cnt, MAX(ilmiy_rahbar_photo_url)
+                    SELECT TRIM(ilmiy_rahbar), COUNT(*) cnt
                     FROM dissertations WHERE {where} AND ilmiy_rahbar IS NOT NULL AND TRIM(ilmiy_rahbar) <> ''
                     GROUP BY TRIM(ilmiy_rahbar) ORDER BY cnt DESC LIMIT 10
                 """, params)
                 top_rahbarlar = [{'name': x[0], 'display': clean_olim_name(x[0]), 'count': x[1],
-                                  'photo_url': x[2] or ''} for x in cur.fetchall()]
+                                  'photo_url': matched_photo_url(x[0]) or ''} for x in cur.fetchall()]
                 cur.execute(f"""
                     SELECT id, olim, mavzu, daraja, sana FROM dissertations WHERE {where}
                     ORDER BY id DESC LIMIT 30

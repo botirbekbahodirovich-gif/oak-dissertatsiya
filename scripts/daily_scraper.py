@@ -161,25 +161,6 @@ def detect_degree(text):
     return ""
 
 
-AVATAR_BUCKET = ("https://qzbgmfbpryneyacrcdfh.supabase.co/storage/v1/"
-                 "object/public/avatars/")
-_AVATAR_STRIP = "'\"’‘ʻʼ`´"
-
-
-def generate_avatar_url(olim_name: str):
-    """Fix: yangi olimlar uchun Supabase avatar URL (ismni tozalab)."""
-    s = (olim_name or "").strip()
-    if not s:
-        return None
-    for ch in _AVATAR_STRIP:
-        s = s.replace(ch, "")
-    s = re.sub(r"\s+", "_", s)
-    s = re.sub(r"_+", "_", s).strip("_")
-    if not s:
-        return None
-    return AVATAR_BUCKET + s + ".jpg"
-
-
 def normalize_patronymic(name: str) -> str:
     """Fix 5.5: standardize Uzbek patronymic suffixes on scholar records.
 
@@ -365,8 +346,10 @@ def main():
                 "opponent_2":           opp2,
                 "yetakchi_tashkilot":   parsed["yetakchi_tashkilot"],
                 "yonalish":             parsed["yo_nalish"],
-                "photo_url":            generate_avatar_url(olim_name),
-                "ilmiy_rahbar_photo_url": generate_avatar_url(rahbar_name),
+                # Photos come from olim_photos (utils/olim_photos.py); the old
+                # Supabase avatar bucket is gone, so these columns stay NULL.
+                "photo_url":            None,
+                "ilmiy_rahbar_photo_url": None,
             }
             try:
                 insert_item(conn, db_item)

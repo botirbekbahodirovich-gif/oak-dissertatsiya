@@ -224,7 +224,7 @@
 function opCopyUname(){var t=document.getElementById('op-uname');if(!t)return;
   navigator.clipboard.writeText('https://olimlar.uz/{{ profile.slug if (profile and profile.slug) else (public_id or "") }}').then(function(){var old=t.textContent;t.textContent='Nusxalandi';setTimeout(function(){t.textContent=old;},1200);});}
 </script>
-{% set photo = (profile.photo_url if profile and profile.photo_url else (dissertations[0].photo_url if dissertations else None)) %}
+{% set photo = olim_photo %}
 {% set gender = detect_gender(olim_name) %}
 {% set gender_emoji = '' if gender == 'male' else ('' if gender == 'female' else '') %}
 {% set gender_icon = '' if gender == 'male' else ('' if gender == 'female' else '') %}

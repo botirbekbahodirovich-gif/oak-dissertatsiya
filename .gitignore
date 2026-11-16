@@ -44,5 +44,7 @@ storage/
 # yuklamalari; scraper.log — cron logi; *.dump — pg_dump zaxiralari.
 artifacts/
 static/uploads/
+# static/olim_photos/ — arxiv olim rasmlari (WebP), serverga rsync bilan joylanadi.
+static/olim_photos/
 scraper.log
 *.dump
