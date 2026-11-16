@@ -386,6 +386,7 @@ def apply_pdf(cur, article, location, *, rel_path, size, checksum, admin_id,
         'location_license': location.get('license'),
         'sha256': checksum, 'size': size, 'fetched_at': fetched_at,
         'admin_id': admin_id}}
+    note = permission_note_text(article, location, checksum, fetched_at)
     cur.execute(
         """UPDATE scientific_articles SET
               pdf_path = %s, pdf_original_name = %s, pdf_size = %s,
@@ -394,7 +395,9 @@ def apply_pdf(cur, article, location, *, rel_path, size, checksum, admin_id,
               source_name = %s, source_url = %s,
               license_url = COALESCE(NULLIF(license_url, ''), %s),
               rights_confirmed_by = %s, rights_confirmed_at = NOW(),
-              permission_note = %s,
+              permission_note = CASE
+                  WHEN COALESCE(BTRIM(permission_note), '') = '' THEN %s
+                  ELSE permission_note || E'\\n\\n' || %s END,
               ingest_evidence = COALESCE(ingest_evidence, '{}'::jsonb) || %s::jsonb,
               updated_at = NOW()
             WHERE id = %s AND COALESCE(pdf_path, '') = ''""",
@@ -403,7 +406,8 @@ def apply_pdf(cur, article, location, *, rel_path, size, checksum, admin_id,
          (article.get('journal_name') or '').strip() or None,
          location.get('landing_page_url') or location.get('pdf_url'),
          LICENSE_URLS.get(article['license_type']), admin_id,
-         permission_note_text(article, location, checksum, fetched_at),
+         # Admin yoki oldingi bosqich yozgan izoh saqlanadi — dalil OXIRIGA qo'shiladi.
+         note, note,
          json.dumps(evidence, ensure_ascii=False), article['id']))
     return cur.rowcount == 1
 

@@ -23,7 +23,7 @@ from services.article_metadata.http import HttpOutcome
 from services.article_metadata.models import OK
 from services import article_pdf_fetch as pf
 from utils import article_rules as rules
-from utils.article_license import resolve_license
+from utils.article_license import evidence_note, resolve_license
 from utils.article_publish_rules import (BLOCKER_AUTHORS, BLOCKER_DOI,
                                          BLOCKER_FIELD, BLOCKER_JOURNAL,
                                          BLOCKER_RETRACTED, publish_blockers,
@@ -240,18 +240,38 @@ class LicenseResolutionTests(unittest.TestCase):
                          ('resolved', 'cc_by', 'crossref_vor'))
         self.assertEqual(result['license_url'], rules.LICENSE_URLS['cc_by'])
 
-    def test_crossref_vor_starting_after_publication_needs_a_second_source(self):
+    def test_crossref_vor_starting_after_publication_needs_openalex_or_unpaywall(self):
         late = _lic('crossref', 'cc_by', 'vor', '2024-09-01')
         result = resolve_license(self.meta(late), today=date(2025, 1, 1))
         self.assertEqual(result['license_type'], 'unknown')
-        result = resolve_license(self.meta(late, _lic('openalex', 'cc_by')),
-                                 today=date(2025, 1, 1))
-        self.assertEqual((result['license_type'], result['basis']), ('cc_by', 'two_sources'))
+        for oa in ('openalex', 'unpaywall'):
+            result = resolve_license(self.meta(late, _lic(oa, 'cc_by')), today=date(2025, 1, 1))
+            self.assertEqual((result['license_type'], result['basis']),
+                             ('cc_by', 'crossref_and_oa'), oa)
 
-    def test_two_independent_sources_agreeing(self):
+    def test_crossref_vor_without_start_date_plus_unpaywall(self):
+        result = resolve_license(self.meta(_lic('crossref', 'cc_by_sa', 'vor'),
+                                           _lic('unpaywall', 'cc_by_sa')))
+        self.assertEqual((result['status'], result['basis']), ('resolved', 'crossref_and_oa'))
+
+    def test_openalex_and_unpaywall_count_as_one_source(self):
+        # Ikkalasi ham OurResearch ma'lumoti — mustaqil tasdiq emas.
         result = resolve_license(self.meta(_lic('openalex', 'cc_by_sa'),
                                            _lic('unpaywall', 'cc_by_sa')))
-        self.assertEqual((result['license_type'], result['basis']), ('cc_by_sa', 'two_sources'))
+        self.assertEqual((result['status'], result['license_type'], result['basis']),
+                         ('insufficient', 'unknown', None))
+        self.assertIn('bitta manba', result['reason'])
+
+    def test_crossref_non_vor_does_not_join_openalex(self):
+        result = resolve_license(self.meta(_lic('crossref', 'cc_by', 'am', '2024-01-01'),
+                                           _lic('openalex', 'cc_by')))
+        self.assertEqual(result['license_type'], 'unknown')
+
+    def test_evidence_note_names_the_new_basis(self):
+        late = _lic('crossref', 'cc_by', 'vor', '2024-09-01')
+        note = evidence_note(resolve_license(self.meta(late, _lic('openalex', 'cc_by')),
+                                             today=date(2025, 1, 1)))
+        self.assertIn('Crossref VOR + OpenAlex/Unpaywall', note)
 
     def test_single_non_crossref_source_is_insufficient(self):
         result = resolve_license(self.meta(_lic('unpaywall', 'cc_by')))
@@ -557,6 +577,20 @@ class PdfFetchTests(unittest.TestCase):
             self.assertEqual(params[5], 'Jurnal')
             self.assertEqual(params[8], 5)                          # rights_confirmed_by
             self.assertIn('https://journal.example/a.pdf', params[9])  # permission_note
+
+    def test_permission_note_is_appended_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as storage:
+            cur = _FakeCur()
+            pf.fetch_one(cur, _pdf_article(), config=self.config, session=_Session(_Resp(200)),
+                         throttle=self.throttle, storage_dir=storage, admin_id=5, execute=True,
+                         resolver=_public_resolver, sleep=_no_sleep)
+            update_sql, params = cur.sql[-1]
+            # Bo'sh bo'lsa — faqat dalil; aks holda eski izoh + bo'sh qator + dalil.
+            self.assertIn("WHEN COALESCE(BTRIM(permission_note), '') = '' THEN %s", update_sql)
+            self.assertIn("ELSE permission_note || E'\\n\\n' || %s END", update_sql)
+            self.assertNotRegex(update_sql, r'permission_note = %s,')
+            self.assertEqual(params[9], params[10])
+            self.assertIn('SHA-256:', params[10])
 
     def test_failed_download_records_reason_and_writes_no_file(self):
         with tempfile.TemporaryDirectory() as storage:

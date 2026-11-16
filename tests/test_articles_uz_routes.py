@@ -265,6 +265,110 @@ class ReviewGuardTests(AdminTestCase):
         self.assertEqual(len(writes), 1)
 
 
+class DoiDuplicateTests(BulkPublishTests):
+    """DOI noyobligi endi haqiqatan tekshiriladi (ilgari `doi_duplicate=False`)."""
+
+    def test_duplicate_doi_blocks_bulk_publish(self):
+        self.login(is_admin=True)
+        store = _store(**_draft())
+        store['doi_duplicate_ids'] = [1]
+        response, connection = self.post({'article_ids': ['1']}, store)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self._updates(connection), [])
+        check = [sql for sql, _ in connection.store['sql']
+                 if sql.startswith('SELECT a.id FROM scientific_articles a WHERE a.id = ANY')]
+        self.assertTrue(check)
+        self.assertIn('LOWER(BTRIM(b.doi)) = LOWER(BTRIM(a.doi))', check[0])
+        self.assertIn('b.id <> a.id', check[0])
+
+    def test_duplicate_doi_is_listed_with_its_reason(self):
+        self.login(is_admin=True)
+        store = _store(**_draft())
+        store['doi_duplicate_ids'] = [1]
+        with fake_db(FakeConnection(store)):
+            html = self.client.get('/admin/articles?queue=ready').get_data(as_text=True)
+        self.assertIn('Bu DOI boshqa maqolada ham bor', html)
+        self.assertNotIn('name="article_ids" value="1"', html)
+
+
+class FormPublishGuardTests(AdminTestCase):
+    """`/admin/articles/new` va `/<id>/edit` formasida `published` tanlansa —
+    ommaviy nashr bilan bir xil `publish_blockers()`; bloker bo'lsa rollback."""
+
+    def setUp(self):
+        super().setUp()
+        self._orig_csrf = app.config.get('WTF_CSRF_ENABLED', True)
+        app.config['WTF_CSRF_ENABLED'] = False
+        self.login(is_admin=True)
+
+    def tearDown(self):
+        app.config['WTF_CSRF_ENABLED'] = self._orig_csrf
+        super().tearDown()
+
+    def post(self, path, store, **data):
+        payload = {
+            'title': 'Ochiq maqola', 'language': 'uz', 'access_type': 'metadata_only',
+            'license_type': 'unknown', 'version_type': 'version_of_record',
+            'source_type': 'open_journal', 'verification_status': 'verified',
+            'publication_status': 'published', 'primary_field_id': '1',
+            'author_name': 'Karimov Sardor', 'author_orcid': '', 'author_affiliation': '',
+            'doi': '10.1234/abc.2024', 'journal_name': 'Ilm Sarchashmalari',
+            'publication_year': '2024',
+        }
+        payload.update(data)
+        connection = FakeConnection(store)
+        with fake_db(connection):
+            response = self.client.post(path, data=payload, content_type='multipart/form-data')
+        return response, connection
+
+    def test_edit_publish_without_primary_field_is_rolled_back(self):
+        store = _store(**_draft(access_type='metadata_only'))
+        store['links'] = []
+        response, connection = self.post('/admin/articles/1/edit', store)
+        self.assertEqual(response.status_code, 400)
+        html = response.get_data(as_text=True)
+        self.assertIn('Nashr qilib bo&#39;lmaydi', html)
+        self.assertIn('Asosiy fan yo‘nalishi tanlanmagan', html)
+        self.assertEqual(connection.rollbacks, 1)
+
+    def test_edit_publish_without_author_is_rolled_back(self):
+        store = _store(**_draft())
+        store['authors'] = []
+        response, connection = self.post('/admin/articles/1/edit', store)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Kamida bitta muallif kerak', response.get_data(as_text=True))
+        self.assertEqual(connection.rollbacks, 1)
+
+    def test_edit_publish_with_duplicate_doi_is_rolled_back(self):
+        store = _store(**_draft())
+        store['doi_duplicate_ids'] = [1]
+        response, connection = self.post('/admin/articles/1/edit', store)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Bu DOI boshqa maqolada ham bor', response.get_data(as_text=True))
+        self.assertEqual(connection.rollbacks, 1)
+
+    def test_new_article_published_without_doi_is_rolled_back(self):
+        store = _store(**_draft(doi=None))
+        response, connection = self.post('/admin/articles/new', store, doi='')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('DOI yo‘q yoki noto‘g‘ri', response.get_data(as_text=True))
+        self.assertEqual(connection.rollbacks, 1)
+
+    def test_complete_article_can_be_published_from_the_edit_form(self):
+        response, connection = self.post('/admin/articles/1/edit', _store(**_draft()))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(connection.rollbacks, 0)
+
+    def test_draft_save_without_field_is_not_checked(self):
+        store = _store(**_draft())
+        store['links'] = []
+        response, connection = self.post('/admin/articles/1/edit', store,
+                                         publication_status='draft',
+                                         verification_status='pending_review')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(connection.rollbacks, 0)
+
+
 class DiscoveryScopeFormTests(AdminTestCase):
     def test_form_has_scope_checkboxes_and_optional_keyword(self):
         from unittest import mock

@@ -2088,15 +2088,51 @@ def _critical_conflict_ids(cur, article_ids):
     return {r[0] for r in cur.fetchall()}
 
 
+def _doi_duplicate_ids(cur, article_ids):
+    """Boshqa (arxivlanmagan) maqolada xuddi shu DOI bor maqolalar.
+
+    Partial UNIQUE indeks yangi dublikatni baribir to'xtatadi; bu tekshiruv
+    indeksdan oldin kirib qolgan yoki registri farq qiladigan DOI'larni
+    ham ushlaydi (`publish_blockers` → BLOCKER_DOI_DUPLICATE)."""
+    if not article_ids:
+        return set()
+    cur.execute("""SELECT a.id FROM scientific_articles a
+                    WHERE a.id = ANY(%s) AND COALESCE(BTRIM(a.doi), '') <> ''
+                      AND EXISTS (SELECT 1 FROM scientific_articles b
+                                   WHERE b.id <> a.id
+                                     AND LOWER(BTRIM(b.doi)) = LOWER(BTRIM(a.doi))
+                                     AND b.publication_status <> 'archived')""",
+                (list(article_ids),))
+    return {r[0] for r in cur.fetchall()}
+
+
 def _with_publish_blockers(cur, articles):
     """Har bir maqolaga `blockers` ro'yxatini qo'shadi (yagona qoida:
     `utils.article_publish_rules.publish_blockers`)."""
-    critical = _critical_conflict_ids(cur, [a['id'] for a in articles])
+    ids = [a['id'] for a in articles]
+    critical = _critical_conflict_ids(cur, ids)
+    duplicates = _doi_duplicate_ids(cur, ids)
     for a in articles:
         a['has_critical_conflict'] = a['id'] in critical
-        a['doi_duplicate'] = False      # partial UNIQUE indeks kafolatlaydi
+        a['doi_duplicate'] = a['id'] in duplicates
         a['blockers'] = publish_blockers(a)
     return articles
+
+
+def _assert_publishable(cur, article_id):
+    """Admin formasi (`new`/`edit`) `published` saqlasa — ommaviy nashr bilan
+    BIR XIL qoida. Yozuv va bog'lanishlar shu tranzaksiyada yozilgan, commit
+    hali bo'lmagan: yakuniy holat qayta o'qiladi va `publish_blockers()` dan
+    o'tadi. Bloker bo'lsa ArticleValidationError → chaqiruvchi rollback qiladi."""
+    article = _load_article(cur, article_id=article_id, public_only=False)
+    if article is None:
+        return
+    _with_publish_blockers(cur, [article])
+    if article['blockers']:
+        raise ArticleValidationError(
+            "Nashr qilib bo'lmaydi: %s. Maqolani qoralama sifatida saqlang yoki "
+            "kamchiliklarni to'ldiring." % '; '.join(article['blockers']),
+            field='publication_status')
 
 
 def _admin_publish_queue(where_sql, params):
@@ -2262,6 +2298,8 @@ def admin_article_new():
                     f"VALUES ({placeholders}) RETURNING id", data)
                 article_id = cur.fetchone()[0]
                 _write_associations(cur, article_id, values)
+                if values['publication_status'] == 'published':
+                    _assert_publishable(cur, article_id)
                 conn.commit()
             except (ArticleValidationError, UploadValidationError) as exc:
                 conn.rollback()
@@ -2321,6 +2359,8 @@ def admin_article_edit(article_id):
                     f"UPDATE scientific_articles SET {', '.join(assignments)} WHERE id = %s",
                     data + [article_id])
                 _write_associations(cur, article_id, values)
+                if values['publication_status'] == 'published':
+                    _assert_publishable(cur, article_id)
                 conn.commit()
             except (ArticleValidationError, UploadValidationError) as exc:
                 conn.rollback()

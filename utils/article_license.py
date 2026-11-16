@@ -9,16 +9,21 @@ Manbalar (`metadata_candidate['license_candidates']`, Phase 2C.1 merger):
 * **OpenAlex** `best_oa_location.license`.
 * **Unpaywall** `best_oa_location.license`.
 
-Qaror qoidasi (qabul qilingan):
+OpenAlex va Unpaywall BITTA manba hisoblanadi: ikkalasi ham OurResearch
+ma'lumotidan (bir xil OA joylashuvlari bazasi) oziqlanadi, shuning uchun
+ularning "kelishuvi" mustaqil tasdiq emas.
+
+Qaror qoidasi (qabul qilingan, 2026-11-17):
 
 1. Manbalar TANIB OLINGAN, lekin bir-biriga zid litsenziya bersa (yoki bitta
    manba ichida ikki xil VOR litsenziya bo'lsa) — ``conflict``: litsenziya
    ``unknown`` qoladi va maqola qo'lda ko'rishga tushadi.
 2. Ziddiyat yo'q bo'lsa va Crossref'da start sanasi nashr sanasidan KECH
    BO'LMAGAN VOR litsenziya bo'lsa — shu litsenziya (`crossref_vor`).
-3. Aks holda kamida IKKI manba bir xil litsenziyani bersa — shu
-   (`two_sources`).
-4. Qolgan hamma holatda ``unknown`` (`insufficient`).
+3. Aks holda Crossref VOR litsenziyasi OpenAlex YOKI Unpaywall bilan mos
+   kelsa — shu (`crossref_and_oa`).
+4. Qolgan hamma holatda ``unknown`` (`insufficient`) — jumladan faqat
+   OpenAlex + Unpaywall mos kelgan holat ham.
 
 Tanib olinmagan matnli litsenziya (masalan `publisher-specific-oa`,
 `other-oa`) "ochiq emas" signali sifatida ziddiyat hisoblanadi — u bilan
@@ -34,13 +39,15 @@ CROSSREF = 'crossref'
 OPENALEX = 'openalex'
 UNPAYWALL = 'unpaywall'
 SOURCES = (CROSSREF, OPENALEX, UNPAYWALL)
+# Bitta upstream (OurResearch) — kelishuvda bitta manba sifatida sanaladi.
+OA_AGGREGATORS = frozenset({OPENALEX, UNPAYWALL})
 
 RESOLVED = 'resolved'
 CONFLICT = 'conflict'
 INSUFFICIENT = 'insufficient'
 
 BASIS_CROSSREF_VOR = 'crossref_vor'
-BASIS_TWO_SOURCES = 'two_sources'
+BASIS_CROSSREF_AND_OA = 'crossref_and_oa'
 
 # Litsenziya deb hisoblanmaydigan bo'sh/umumiy belgilar.
 _IGNORED_LABELS = frozenset({'', 'none', 'null', 'unknown', 'unspecified'})
@@ -152,8 +159,12 @@ def resolve_license(metadata, today=None):
 
     if value in crossref_vor_ok:
         basis = BASIS_CROSSREF_VOR
-    elif len(votes) >= 2:
-        basis = BASIS_TWO_SOURCES
+    elif CROSSREF in votes and OA_AGGREGATORS & set(votes):
+        basis = BASIS_CROSSREF_AND_OA
+    elif CROSSREF not in votes and len(votes) >= 2:
+        result['reason'] = ("OpenAlex va Unpaywall bitta manba (OurResearch) hisoblanadi; "
+                            "Crossref VOR tasdig'i yo'q.")
+        return result
     else:
         result['reason'] = ('Faqat bitta manba (%s) va Crossref VOR tasdig\'i yo\'q.'
                             % next(iter(votes)))
@@ -168,7 +179,7 @@ def evidence_note(resolution, extra_lines=()):
     """Odam o'qiydigan qisqa izoh (`permission_note` uchun)."""
     lines = []
     basis = {BASIS_CROSSREF_VOR: 'Crossref VOR (noshir depoziti)',
-             BASIS_TWO_SOURCES: 'kamida ikki mustaqil manba'}.get(resolution.get('basis'))
+             BASIS_CROSSREF_AND_OA: 'Crossref VOR + OpenAlex/Unpaywall'}.get(resolution.get('basis'))
     lines.append('Litsenziya: %s (%s).' % (
         LICENSES.get(resolution.get('license_type'), resolution.get('license_type')),
         basis or resolution.get('status')))

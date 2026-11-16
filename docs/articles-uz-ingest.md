@@ -66,7 +66,8 @@ har bir shifr OAK taksonomiyasida borligini tekshiradi.
 |---|---|
 | Tanib olingan litsenziyalar zid (yoki tanib olinmagan matnli litsenziya bor) | `conflict` → `unknown`, `/admin/articles?queue=license_conflict` |
 | Crossref VOR, `start <= nashr sanasi` | `crossref_vor` → litsenziya qo'yiladi |
-| Kamida ikki manba bir xil | `two_sources` → litsenziya qo'yiladi |
+| Crossref VOR (start kech yoki yo'q) + OpenAlex yoki Unpaywall bir xil | `crossref_and_oa` → litsenziya qo'yiladi |
+| Faqat OpenAlex + Unpaywall bir xil | `insufficient` → `unknown`: ikkalasi bitta upstream (OurResearch), mustaqil tasdiq emas |
 | Qolgan hammasi | `insufficient` → `unknown` |
 
 Approve paytida `resolved` bo'lsa `license_type` + `license_url` yoziladi;

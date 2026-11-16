@@ -207,6 +207,11 @@ class FakeCursor:
         if sql.startswith('SELECT * FROM article_metadata_syncs'):
             return [], []
 
+        # DOI noyobligi (blueprints/articles.py:_doi_duplicate_ids) — test
+        # `doi_duplicate_ids=[...]` bilan dublikatni beradi, sukut bo'yicha yo'q.
+        if sql.startswith('SELECT a.id FROM scientific_articles a WHERE a.id = ANY'):
+            return [(i,) for i in self.store.get('doi_duplicate_ids', [])], [('id',)]
+
         return [], None
 
 
