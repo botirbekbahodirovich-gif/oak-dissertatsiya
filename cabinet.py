@@ -121,6 +121,16 @@ def _bridge_from_main():
         return False
 
 
+def _forget_rail_link():
+    """Da'vo o'zgarganda tezkor paneldagi profil havolasi keshini tozalaydi."""
+    try:
+        from flask_login import current_user
+        from services.my_scholar import forget_user
+        forget_user(getattr(current_user, 'id', None), session.get('cabinet_user_id'))
+    except Exception:
+        pass
+
+
 def _set_session(user_id, olim_name=None):
     # Commit a durable (permanent) session so a page refresh re-mounts the
     # authenticated cabinet profile instead of dropping into a guest loop.
@@ -955,6 +965,7 @@ def claim():
                 pr = cur.fetchone()
             conn.commit()
             session['cabinet_olim_name'] = name
+            _forget_rail_link()
         finally:
             conn.close()
     except Exception:
@@ -1002,6 +1013,7 @@ def unclaim():
                     cur.execute("UPDATE cabinet_users SET olim_name = %s WHERE id = %s",
                                 (new_primary, user['id']))
             conn.commit()
+            _forget_rail_link()
             if (user.get('olim_name') or '').strip().lower() == name.lower():
                 session['cabinet_olim_name'] = new_primary or ''
         finally:

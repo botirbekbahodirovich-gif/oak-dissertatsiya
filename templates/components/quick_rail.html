@@ -1,0 +1,110 @@
+{# Chap tezkor panel (≥768px) va mobil pastki qator (<768px).
+   Sahifa tepasida yashirin; ~240px pastga aylantirilganda suzib chiqadi
+   (static/js/olimlar-rail.js). Yashirin holatda `inert` — Tab bilan o'tilmaydi.
+   Havolalar utils/navigation.py dan; olimga bog'liq havolalar
+   services/my_scholar.scholar_link() → `my_scholar_link`.
+   Hozircha YO'Q bandlar (Kuzatuvlar, Til, Fikr bildirish) ATAYIN chiqmaydi. #}
+{% set path = request.path %}
+{% set authed = current_user.is_authenticated %}
+{% set link = my_scholar_link if authed else none %}
+{% set profile_href = link.profile_url if link else rail_onboarding_href %}
+
+{% macro rail_link(href, label, icon, badge=None, current=False, external=False) -%}
+<li>
+  <a class="ol-rail__item" href="{{ href }}" title="{{ label }}" aria-label="{{ label }}"
+     {% if badge %}data-badge-label="{{ label }}"{% endif %}
+     {% if current %}aria-current="page"{% endif %}
+     {% if external %}target="_blank" rel="noopener"{% endif %}>
+    <span class="ol-rail__icon"><i class="bi {{ icon }}" aria-hidden="true"></i>
+      {% if badge %}<span class="ol-icon-btn__badge ol-rail__badge" data-badge="{{ badge }}" hidden>0</span>{% endif %}
+    </span>
+    <span class="ol-rail__label">{{ label }}</span>
+  </a>
+</li>
+{%- endmacro %}
+
+<nav class="ol-rail" id="ol-rail" aria-label="Tezkor panel" data-rail
+     data-visible="false" data-expanded="false" inert>
+  <button type="button" class="ol-rail__item ol-rail__toggle" data-rail-toggle
+          aria-expanded="false" aria-controls="ol-rail"
+          title="Panelni yoyish" aria-label="Panelni yoyish">
+    <span class="ol-rail__icon"><span class="ol-rail__logo" aria-hidden="true">O.</span></span>
+    <span class="ol-rail__label ol-rail__brand">Olimlar.uz</span>
+    <i class="bi bi-chevron-left ol-rail__label" aria-hidden="true"></i>
+  </button>
+  <hr class="ol-rail__sep">
+
+  <ul class="ol-rail__list">
+    {% if authed %}
+    {{ rail_link(rail_home_item.href, rail_home_item.label, rail_home_item.icon,
+                 current=nav_item_active(rail_home_item, path)) }}
+    <li>
+      <a class="ol-rail__item" href="{{ profile_href }}" data-rail-profile
+         title="{{ rail_profile_item.label }}" aria-label="{{ rail_profile_item.label }}">
+        <span class="ol-rail__icon"><i class="bi {{ rail_profile_item.icon }}" aria-hidden="true"></i></span>
+        <span class="ol-rail__label">{{ rail_profile_item.label }}</span>
+      </a>
+    </li>
+    {{ rail_link(rail_messages_item.href, rail_messages_item.label, rail_messages_item.icon,
+                 badge='messages', current=nav_item_active(rail_messages_item, path)) }}
+    {{ rail_link(rail_notifications_item.href, rail_notifications_item.label, rail_notifications_item.icon,
+                 badge='notifications', current=nav_item_active(rail_notifications_item, path)) }}
+    {% if link %}
+    {{ rail_link(link.school_url, rail_school_label, 'bi-diagram-3') }}
+    {% endif %}
+    {% endif %}
+    <li>
+      <button type="button" class="ol-rail__item" data-rail-search
+              title="{{ rail_search_label }} (Ctrl+K)" aria-label="{{ rail_search_label }}" aria-keyshortcuts="Control+K">
+        <span class="ol-rail__icon"><i class="bi bi-search" aria-hidden="true"></i></span>
+        <span class="ol-rail__label">{{ rail_search_label }}</span>
+      </button>
+    </li>
+  </ul>
+
+  <span class="ol-rail__spacer"></span>
+  <hr class="ol-rail__sep">
+
+  <ul class="ol-rail__list">
+    {{ rail_link(telegram_channel_item.href, telegram_channel_item.label, telegram_channel_item.icon, external=True) }}
+    {% if not authed %}
+    {{ rail_link(login_item.href, login_item.label, login_item.icon) }}
+    {% endif %}
+    <li class="ol-rail__more">
+      <button type="button" class="ol-rail__item" data-rail-toggle aria-expanded="false" aria-controls="ol-rail"
+              title="Panelni yoyish" aria-label="Panelni yoyish">
+        <span class="ol-rail__icon"><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<nav class="ol-bottombar" id="ol-bottombar" aria-label="Tezkor panel (mobil)" data-bottombar
+     data-visible="false" inert>
+  {% if authed %}
+  <a class="ol-bottombar__item" href="{{ profile_href }}">
+    <i class="bi {{ rail_profile_item.icon }}" aria-hidden="true"></i><span>Profil</span>
+  </a>
+  <a class="ol-bottombar__item" href="{{ rail_messages_item.href }}" data-badge-label="{{ rail_messages_item.label }}"
+     aria-label="{{ rail_messages_item.label }}">
+    <span class="ol-bottombar__icon"><i class="bi {{ rail_messages_item.icon }}" aria-hidden="true"></i>
+      <span class="ol-icon-btn__badge ol-rail__badge" data-badge="messages" hidden>0</span></span>
+    <span aria-hidden="true">{{ rail_messages_item.label }}</span>
+  </a>
+  {% else %}
+  <a class="ol-bottombar__item" href="{{ rail_home_item.href }}">
+    <i class="bi {{ rail_home_item.icon }}" aria-hidden="true"></i><span>{{ rail_home_item.label }}</span>
+  </a>
+  {% endif %}
+  <button type="button" class="ol-bottombar__item" data-rail-search aria-keyshortcuts="Control+K">
+    <i class="bi bi-search" aria-hidden="true"></i><span>Qidiruv</span>
+  </button>
+  {% if not authed %}
+  <a class="ol-bottombar__item" href="{{ login_item.href }}">
+    <i class="bi {{ login_item.icon }}" aria-hidden="true"></i><span>{{ login_item.label }}</span>
+  </a>
+  {% endif %}
+  <button type="button" class="ol-bottombar__item" data-bottombar-menu aria-controls="ol-drawer">
+    <i class="bi bi-list" aria-hidden="true"></i><span>Menyu</span>
+  </button>
+</nav>

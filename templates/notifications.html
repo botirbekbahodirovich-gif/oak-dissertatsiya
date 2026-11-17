@@ -1,13 +1,43 @@
 {% extends "base.html" %}
-{% block title %}Yangiliklar — Olimlar.uz{% endblock %}
+{% block title %}Bildirishnomalar — Olimlar.uz{% endblock %}
+{% block extra_head %}
+<style>
+  .nt-list { list-style: none; margin: 0 0 var(--space-32); padding: 0; display: flex; flex-direction: column; gap: var(--space-8); }
+  .nt-item { display: flex; gap: var(--space-12); align-items: flex-start; padding: var(--space-12) var(--space-16); }
+  .nt-item__text { margin: 0; font-size: var(--text-small); color: var(--color-text-primary); }
+  .nt-item__meta { margin: var(--space-4) 0 0; }
+  .nt-item__new { flex: none; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="page-heading">
   <div>
-    <h1><i class="bi bi-bell-fill me-2" style="color:var(--color-action);"></i>Yangiliklar</h1>
-    <p>Scraper tomonidan qo'shilgan yangi dissertatsiyalar haqida xabarlar.</p>
+    <h1><i class="bi bi-bell-fill me-2" style="color:var(--color-action);"></i>Bildirishnomalar</h1>
+    <p>Sizga tegishli bildirishnomalar va bazaga qo'shilgan yangi dissertatsiyalar.</p>
   </div>
   <a href="/dashboard" class="btn btn-action"><i class="bi bi-arrow-left me-1"></i>Ortga</a>
 </div>
+
+<section aria-labelledby="nt-personal-title">
+  <h2 id="nt-personal-title" class="ol-h5">Shaxsiy bildirishnomalar</h2>
+  {% if personal %}
+  <ul class="nt-list">
+    {% for n in personal %}
+    <li class="ol-card nt-item">
+      {% if n.unread %}<span class="ol-badge ol-badge--brand nt-item__new">Yangi</span>{% endif %}
+      <div>
+        <p class="nt-item__text">{% if n.url %}<a href="{{ n.url }}">{{ n.text }}</a>{% else %}{{ n.text }}{% endif %}</p>
+        <p class="ol-meta nt-item__meta">{{ n.created_at }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="ol-meta">Hozircha shaxsiy bildirishnoma yo'q.</p>
+  {% endif %}
+</section>
+
+<h2 class="ol-h5">Bazaga qo'shilgan dissertatsiyalar</h2>
 
 {% if notifications %}
 <div class="d-flex flex-column gap-2">

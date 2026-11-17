@@ -190,6 +190,24 @@ ACCOUNT_MENU: tuple[NavItem, ...] = (
 
 LOGOUT_ITEM = NavItem("Chiqish", "/logout", icon="bi-box-arrow-right")
 
+
+# ── Chap tezkor panel (components/quick_rail.html) ───────────────────────────
+# Faqat MAVJUD funksiyalar. Hali yo'q bandlar ATAYIN qo'shilmagan va bo'sh
+# sahifa yaratilmaydi (keyingi bosqich):
+#   - Kuzatuvlar: scholar_follows jadvali bor, ro'yxat sahifasi yo'q;
+#   - Til (UZ/RU/EN): i18n yo'q;
+#   - Fikr bildirish: faqat 10+ tashrifdan keyingi so'rovnoma bor.
+# "Mening profilim" va "Ilmiy maktabim" havolalari foydalanuvchining olim
+# profiliga bog'liq — ular services/my_scholar.scholar_link() dan olinadi.
+TELEGRAM_CHANNEL_ITEM = NavItem("Telegram kanal", "https://t.me/olimlar_uz", icon="bi-telegram")
+RAIL_HOME_ITEM = NavItem("Bosh sahifa", "/", icon="bi-house", exact=True)
+RAIL_PROFILE_ITEM = NavItem("Mening profilim", "/cabinet", icon="bi-person", exact=True)
+RAIL_ONBOARDING_HREF = "/cabinet/onboarding"
+RAIL_MESSAGES_ITEM = NavItem("Xabarlar", "/messages", icon="bi-chat-dots")
+RAIL_NOTIFICATIONS_ITEM = NavItem("Bildirishnomalar", "/notifications", icon="bi-bell")
+RAIL_SCHOOL_LABEL = "Ilmiy maktabim"
+RAIL_SEARCH_LABEL = "Tezkor qidiruv"
+
 # Eski "Boshqa" dropdown'i admin navigatsiyasi vazifasini ham bajargan —
 # admin sahifalarida o'zaro havolalar yo'q edi. To'liq ro'yxat ADMIN_SERVICES
 # da saqlanadi va admin panelining yuqorisida grid sifatida chiqadi; avatar
@@ -346,6 +364,14 @@ def navigation_context() -> dict:
         "nav_search_target": SEARCH_TARGET,
         "nav_search_label": SEARCH_SCOPE_LABEL,
         "nav_search_hint": SEARCH_SCOPE_HINT,
+        "telegram_channel_item": TELEGRAM_CHANNEL_ITEM,
+        "rail_home_item": RAIL_HOME_ITEM,
+        "rail_profile_item": RAIL_PROFILE_ITEM,
+        "rail_onboarding_href": RAIL_ONBOARDING_HREF,
+        "rail_messages_item": RAIL_MESSAGES_ITEM,
+        "rail_notifications_item": RAIL_NOTIFICATIONS_ITEM,
+        "rail_school_label": RAIL_SCHOOL_LABEL,
+        "rail_search_label": RAIL_SEARCH_LABEL,
         "nav_item_active": item_is_active,
         "nav_section_active": section_is_active,
     }

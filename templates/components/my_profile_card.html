@@ -1,0 +1,112 @@
+{# "Mening profilim" bloki — bosh sahifa, header ostida, qidiruvdan yuqorida.
+   Ma'lumot: services/my_scholar.build_home_profile() (app.py:home).
+   my_profile = None  → mehmon yoki DB xatosi: blok umuman chiqmaydi.
+   status 'unlinked' → profilni topib bog'lash taklifi.
+   status 'linked'   → yoyiladigan/yig'iladigan kartochka; holat localStorage'da
+                        (static/js/olimlar-rail.js, kalit 'ol.mycard'). #}
+{% macro cell_value(c) -%}
+  {%- if c.href and c.value != '—' -%}
+    <a href="{{ c.href }}"{% if c.href.startswith('http') %} target="_blank" rel="noopener"{% endif %}>{{ c.value }}</a>
+  {%- else -%}{{ c.value }}{%- endif -%}
+  {%- if c.approx %}<span class="visually-hidden"> (taxminiy)</span>{% endif -%}
+{%- endmacro %}
+
+{% macro bell(count) -%}
+<a href="{{ rail_notifications_item.href }}" class="ol-icon-btn ol-mycard__bell"
+   data-badge-label="{{ rail_notifications_item.label }}"
+   aria-label="{{ rail_notifications_item.label }}{% if count %}: {{ count }} ta o'qilmagan{% endif %}">
+  <i class="bi {{ rail_notifications_item.icon }}" aria-hidden="true"></i>
+  <span class="ol-icon-btn__badge" data-badge="notifications"{% if not count %} hidden{% endif %}>{{ '99+' if count > 99 else count }}</span>
+</a>
+{%- endmacro %}
+
+{% if my_profile and my_profile.status == 'linked' %}
+{% set p = my_profile %}
+{% set n_notif = p.badges.notifications %}
+<section class="ol-mycard" id="ol-mycard" data-state="expanded" aria-labelledby="ol-mycard-name">
+  <script>try{if(localStorage.getItem('ol.mycard')==='collapsed'){document.getElementById('ol-mycard').setAttribute('data-state','collapsed');}}catch(e){}</script>
+
+  <div class="ol-mycard__full" id="ol-mycard-full">
+    <div class="ol-mycard__main">
+      <p class="ol-mycard__eyebrow">Mening profilim</p>
+      <h2 id="ol-mycard-name" class="ol-mycard__name">{{ p.name }}</h2>
+      {% if p.degree_line %}<p class="ol-mycard__line">{{ p.degree_line }}</p>{% endif %}
+      {% if p.org_line %}<p class="ol-mycard__line">{{ p.org_line }}</p>{% endif %}
+      {% if p.interests %}
+      <ul class="ol-mycard__tags" aria-label="Ilmiy qiziqishlar">
+        {% for t in p.interests %}<li class="ol-chip">{{ t }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      <div class="ol-mycard__links">
+        <a href="{{ p.profile_url }}" class="ol-mycard__link">Profilni ko'rish <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        <a href="{{ p.edit_url }}" class="ol-mycard__link ol-mycard__link--muted">Tahrirlash</a>
+      </div>
+    </div>
+
+    <dl class="ol-mycard__grid">
+      {% for row in p.rows %}{% for c in row %}
+      <div class="ol-mycard__cell">
+        <dt>{{ c.label }}</dt>
+        <dd{% if c.title %} title="{{ c.title }}"{% endif %}>{{ cell_value(c) }}</dd>
+      </div>
+      {% endfor %}{% endfor %}
+    </dl>
+
+    <div class="ol-mycard__side">
+      <button type="button" class="ol-btn ol-btn--secondary ol-mycard__toggle" data-mycard-toggle
+              aria-expanded="true" aria-controls="ol-mycard-full">
+        Yig'ish <i class="bi bi-chevron-up" aria-hidden="true"></i>
+      </button>
+      {{ bell(n_notif) }}
+      {% if p.photo_url %}
+      <img class="ol-mycard__photo" src="{{ p.photo_url }}" alt="{{ p.name }} surati" width="104" height="128" loading="lazy">
+      {% else %}
+      <span class="ol-mycard__photo ol-mycard__photo--empty" role="img" aria-label="Surat yuklanmagan"><i class="bi bi-person" aria-hidden="true"></i></span>
+      {% endif %}
+    </div>
+
+    {% if p.latest_message %}
+    <a class="ol-mycard__msg" href="{{ p.latest_message.url }}">
+      <i class="bi bi-chat-dots" aria-hidden="true"></i>
+      <span><strong>{{ p.badges.messages }} ta yangi xabar</strong> · {{ p.latest_message.sender }}: {{ p.latest_message.snippet }}</span>
+      <span class="ol-mycard__msg-cta">Xabarlarni ochish <i class="bi bi-arrow-right" aria-hidden="true"></i></span>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="ol-mycard__compact" id="ol-mycard-compact">
+    {% if p.photo_url %}
+    <img class="ol-mycard__avatar" src="{{ p.photo_url }}" alt="" width="40" height="40" loading="lazy">
+    {% else %}
+    <span class="ol-mycard__avatar ol-mycard__avatar--empty" aria-hidden="true"><i class="bi bi-person"></i></span>
+    {% endif %}
+    <div class="ol-mycard__compact-main">
+      <p class="ol-mycard__compact-title"><span class="ol-mycard__eyebrow">Mening profilim</span>
+        <a href="{{ p.profile_url }}" class="ol-mycard__compact-name">{{ p.name }}</a></p>
+      {% if p.compact_line %}<p class="ol-mycard__compact-line">{{ p.compact_line }}</p>{% endif %}
+    </div>
+    <ul class="ol-mycard__compact-stats" aria-label="Asosiy ko'rsatkichlar">
+      {% for c in p.compact %}
+      <li{% if c.title %} title="{{ c.title }}"{% endif %}><span class="ol-mycard__compact-label">{{ c.label }}</span> <strong>{{ cell_value(c) }}</strong></li>
+      {% endfor %}
+    </ul>
+    <div class="ol-mycard__compact-actions">
+      {{ bell(n_notif) }}
+      <button type="button" class="ol-btn ol-btn--secondary ol-mycard__toggle" data-mycard-toggle
+              aria-expanded="false" aria-controls="ol-mycard-full">
+        Yoyish <i class="bi bi-chevron-down" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+</section>
+
+{% elif my_profile and my_profile.status == 'unlinked' %}
+<section class="ol-mycard ol-mycard--invite" aria-labelledby="ol-mycard-invite-title">
+  <div class="ol-mycard__main">
+    <p class="ol-mycard__eyebrow">Mening profilim</p>
+    <h2 id="ol-mycard-invite-title" class="ol-mycard__name">Profilingizni toping va bog'lang</h2>
+    <p class="ol-mycard__line">Dissertatsiyalar bazasidan o'zingizni toping: shogirdlar, opponentlik, reyting va h-indeks shu yerda ko'rinadi.</p>
+  </div>
+  <a class="ol-btn ol-btn--secondary" href="{{ my_profile.onboarding_url }}">Profilimni topish <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+</section>
+{% endif %}

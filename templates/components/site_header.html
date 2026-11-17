@@ -66,11 +66,14 @@
 
       {% if current_user.is_authenticated %}
       {# Tor ekranlarda yashiriladi — drawer ichidagi hisob akkordeonida qoladi. #}
+      {# Sonlar /api/me/badges dan (static/js/olimlar-rail.js) — chap panel bilan bir manba. #}
       {% for item in header_icon_items %}
-      <a href="{{ item.href }}" class="ol-icon-btn ol-icon-btn--secondary" aria-label="{{ item.label }}">
+      {% set kind = 'messages' if item.href == '/messages' else 'notifications' %}
+      <a href="{{ item.href }}" class="ol-icon-btn ol-icon-btn--secondary" aria-label="{{ item.label }}"
+         data-badge-label="{{ item.label }}">
         <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-        <span id="{{ 'msg-badge' if item.href == '/messages' else 'notif-badge' }}"
-              class="ol-icon-btn__badge" style="display:none;">0</span>
+        <span id="{{ 'msg-badge' if kind == 'messages' else 'notif-badge' }}"
+              class="ol-icon-btn__badge" data-badge="{{ kind }}" hidden>0</span>
       </a>
       {% endfor %}
 

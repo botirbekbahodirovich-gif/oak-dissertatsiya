@@ -6,6 +6,7 @@
 {% block content %}
 {% if current_user.is_authenticated %}
 <div class="ol-home-welcome"><span>Xush kelibsiz, {{ current_user.username }}.</span><a href="/cabinet">Shaxsiy kabinet <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+{% include "components/my_profile_card.html" %}
 {% endif %}
 <section class="ol-discovery" aria-labelledby="discovery-title">
   <div class="ol-discovery__intro">

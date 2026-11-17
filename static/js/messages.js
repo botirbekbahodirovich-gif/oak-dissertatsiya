@@ -25,22 +25,8 @@
     });
   }
 
-  /* ── navbar unread badge (har 60s) ── */
-  function refreshUnread() {
-    fetch('/api/messages/unread-count')
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var b = document.getElementById('msg-badge');
-        if (!b) return;
-        var n = (d && d.unread) || 0;
-        b.textContent = n > 99 ? '99+' : n;
-        b.style.display = n ? 'inline-block' : 'none';
-      }).catch(function () {});
-  }
-  if (document.getElementById('msg-badge')) {
-    refreshUnread();
-    setInterval(refreshUnread, 60000);
-  }
+  /* navbar unread badge: static/js/olimlar-rail.js (/api/me/badges) — bu yerda
+     ikkinchi marta so'ralmaydi. */
 
   /* ── profil / boshqa sahifalardan suhbat boshlash ── */
   window.startConversation = function (userId) {

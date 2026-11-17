@@ -138,10 +138,11 @@
     return !!searchPanel && searchPanel.getAttribute('data-open') === 'true';
   }
 
-  function openSearch() {
+  function openSearch(opts) {
     // Bosh sahifadagi hero qidiruvi mavjud bo'lsa — o'shanga fokus (mavjud xulq).
+    // Tezkor panel / Ctrl+K esa doim overlay ochadi (opts.overlay).
     var hero = document.getElementById('hx-search-input');
-    if (hero) {
+    if (hero && !(opts && opts.overlay)) {
       hero.scrollIntoView({ block: 'center' });
       hero.focus({ preventScroll: true });
       return;
@@ -171,6 +172,8 @@
     });
   });
   if (searchClose) searchClose.addEventListener('click', closeSearch);
+  // static/js/olimlar-rail.js (tezkor panel, Ctrl+K) shu API orqali ochadi.
+  window.OlimlarNav = { openSearch: openSearch, closeSearch: closeSearch };
   if (searchPanel) {
     searchPanel.addEventListener('click', function (event) {
       if (event.target === searchPanel) closeSearch();

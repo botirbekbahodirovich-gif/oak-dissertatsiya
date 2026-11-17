@@ -592,6 +592,7 @@
 <script>if (typeof ym === 'function' && typeof YM_ID !== 'undefined') { ym(YM_ID, 'reachGoal', 'login'); }</script>
 {% endif %}
 <link rel="stylesheet" href="/static/css/olimlar-product.css?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="/static/css/olimlar-rail.css?v={{ STATIC_VERSION }}">
   <script>
   // Detail templates render badges while the body is being parsed.
   function supervisorBadge(name, count) {
@@ -605,6 +606,7 @@
 <body class="{% block body_class %}{% endblock %}">
   <a class="ol-skip-link" href="#main-content">Asosiy kontentga o'tish</a>
   {% include "components/site_header.html" %}
+  {% include "components/quick_rail.html" %}
   {% if active_broadcasts %}
   <!-- Single rotating banner host: 2+ active messages share one slot and fade
        between each other every 25s instead of stacking. -->
@@ -660,20 +662,9 @@
     })(window.fetch);
   </script>
   <script src="/static/js/olimlar-nav.js?v={{ STATIC_VERSION }}" defer></script>
-  <script>
-  (function checkNotifs() {
-    fetch('/api/notifications/count')
-      .then(function(r) { return r.json(); })
-      .then(function(d) {
-        var b = document.getElementById('notif-badge');
-        if (!b) return;
-        if (d.count > 0) { b.textContent = d.count; b.style.display = 'inline-block'; }
-        else b.style.display = 'none';
-      }).catch(function() {});
-    setTimeout(checkNotifs, 60000);
-  })();
-
-  </script>
+  {# Tezkor panel + o'qilmaganlar belgilari (/api/me/badges, 60s). Global
+     scraper yangiliklari sanog'i (/api/notifications/count) endi so'ralmaydi. #}
+  <script src="/static/js/olimlar-rail.js?v={{ STATIC_VERSION }}" defer></script>
   <script src="/static/js/olimlar-product.js?v={{ STATIC_VERSION }}" defer></script>
   {% block scripts %}{% endblock %}
 <style>
@@ -1686,22 +1677,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (queue.length) window.PopupManager.request(1, next);
   });
 })();
-// ── Xabarlar (messaging) unread badge — barcha sahifalarda, 60s ──
-(function () {
-  var badge = document.getElementById('msg-badge');
-  if (!badge) return;
-  function tick() {
-    fetch('/api/messages/unread-count', { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var n = (d && d.unread) || 0;
-        badge.textContent = n > 99 ? '99+' : n;
-        badge.style.display = n ? 'inline-block' : 'none';
-      }).catch(function () {});
-  }
-  tick();
-  setInterval(tick, 60000);
-})();
+// Xabarlar va bildirishnomalar belgilari: static/js/olimlar-rail.js (/api/me/badges).
 </script>
 {% endif %}
 <script src="/static/js/auto_capitalize.js?v={{ STATIC_VERSION }}" defer></script>

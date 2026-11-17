@@ -263,6 +263,19 @@ def _inject_cabinet():
 
 
 @app.context_processor
+def _inject_my_scholar():
+    """Chap tezkor panel uchun: foydalanuvchiga bog'langan olim (keshlangan)."""
+    link = None
+    try:
+        if getattr(current_user, 'is_authenticated', False):
+            from services.my_scholar import scholar_link
+            link = scholar_link(current_user)
+    except Exception:
+        link = None
+    return dict(my_scholar_link=link)
+
+
+@app.context_processor
 def _inject_supervisor_counts():
     """Expose cached supervisor → student-count lookup to every template."""
     def supervisor_count(name):
@@ -1875,11 +1888,23 @@ def home():
     except Exception:
         upcoming_confs = []
 
+    # "Mening profilim" bloki: mehmonga None (blok yo'q), bog'lanmagan
+    # foydalanuvchiga taklif, bog'langanga to'liq kartochka.
+    my_profile = None
+    if current_user.is_authenticated:
+        try:
+            from services.my_scholar import build_home_profile
+            my_profile = build_home_profile(current_user)
+        except Exception as e:
+            _log_silent(e)
+            my_profile = None
+
     return render_template("home.html", recent=recent,
                            deadline_grants=deadline_grants,
                            top_hindex=top_hindex,
                            upcoming_confs=upcoming_confs,
-                           hstats=get_homepage_stats())
+                           hstats=get_homepage_stats(),
+                           my_profile=my_profile)
 
 
 @app.route("/dashboard")
@@ -2744,21 +2769,104 @@ def api_mavzu_tahlili_ai():
     return jsonify(data)
 
 
+@app.route("/api/me/badges")
+@login_required
+def my_badges():
+    """Header ikonkalari, chap panel va "Mening profilim" bloki uchun yagona
+    o'qilmaganlar manbai: shaxsiy xabarlar va shaxsiy bildirishnomalar
+    (diss_notifications + user_alerts). Global `notifications` jadvali
+    (scraper yangiliklari, user_id yo'q) bu yerda SANALMAYDI."""
+    from services.my_scholar import badge_counts
+    counts = badge_counts(current_user.id)
+    resp = jsonify(counts)
+    resp.headers['Cache-Control'] = 'private, no-store'
+    return resp
+
+
 @app.route("/api/notifications/count")
 @login_required
 def notifications_count():
-    from data import get_connection
+    """Eski mijozlar uchun moslik: endi faqat SHAXSIY bildirishnomalar soni.
+    Global scraper yangiliklari sanog'i olib tashlangan (/api/me/badges)."""
+    from services.my_scholar import badge_counts
+    return jsonify({'count': badge_counts(current_user.id)['notifications']})
+
+
+# Sahifani ochish bilan "o'qildi" qilinmaydigan turlar: ular dissertatsiya
+# ish maydonida qabul/rad tugmasini ko'rsatadi (static/js/dissertation.js).
+_ACTIONABLE_NOTIFICATIONS = ('advisor_invite', 'collaborator_invite')
+
+
+def _personal_notifications(cur, user_id):
+    """Shaxsiy bildirishnomalar ro'yxati + ko'rilganlarini o'qildi qilish."""
+    import json as _json
+    items = []
+    cur.execute("SAVEPOINT pn")
     try:
-        conn = get_connection()
-        try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM notifications WHERE is_read = FALSE")
-                count = cur.fetchone()[0]
-        finally:
-            conn.close()
-    except Exception:
-        count = 0
-    return jsonify({'count': count})
+        cur.execute(
+            "SELECT id, event_type, payload, is_read, created_at FROM diss_notifications "
+            "WHERE user_id = %s AND event_type <> 'new_message' "
+            "ORDER BY created_at DESC LIMIT 30", (user_id,))
+        for nid, etype, payload, is_read, created in cur.fetchall():
+            p = payload if isinstance(payload, dict) else _json.loads(payload or '{}')
+            items.append({'kind': 'diss', 'id': nid, 'type': etype, 'unread': not is_read,
+                          'text': _diss_notification_text(etype, p),
+                          'url': _diss_notification_url(etype, p),
+                          'created_at': str(created)[:16] if created else ''})
+        cur.execute(
+            "UPDATE diss_notifications SET is_read = TRUE WHERE user_id = %s "
+            "AND is_read = FALSE AND event_type <> 'new_message' "
+            "AND event_type <> ALL(%s)", (user_id, list(_ACTIONABLE_NOTIFICATIONS)))
+        cur.execute("RELEASE SAVEPOINT pn")
+    except Exception as e:
+        _log_silent(e)
+        cur.execute("ROLLBACK TO SAVEPOINT pn")
+    cur.execute("SAVEPOINT pa")
+    try:
+        cur.execute(
+            "SELECT id, title, message, is_read, created_at FROM user_alerts "
+            "WHERE user_id = %s ORDER BY created_at DESC LIMIT 30", (user_id,))
+        for aid, title, message, is_read, created in cur.fetchall():
+            items.append({'kind': 'alert', 'id': aid, 'type': 'alert', 'unread': not is_read,
+                          'text': ': '.join(x for x in (title, message) if x), 'url': '',
+                          'created_at': str(created)[:16] if created else ''})
+        cur.execute("UPDATE user_alerts SET is_read = TRUE WHERE user_id = %s AND is_read = FALSE",
+                    (user_id,))
+        cur.execute("RELEASE SAVEPOINT pa")
+    except Exception as e:
+        _log_silent(e)
+        cur.execute("ROLLBACK TO SAVEPOINT pa")
+    items.sort(key=lambda x: x['created_at'], reverse=True)
+    return items
+
+
+def _diss_notification_text(etype, p):
+    """static/js/dissertation.js dagi matnlar bilan bir xil."""
+    if etype == 'advisor_reviewed':
+        return p.get('message') or "Rahbaringiz ishingizni ko'rib chiqdi"
+    if etype == 'student_submitted':
+        return "Shogirdingiz tuzatishlarni kiritdi va qayta ko'rib chiqish uchun yubordi."
+    if etype == 'advisor_invite':
+        return "%s sizga hamkorlik taklifi yubordi." % (p.get('from') or '')
+    if etype == 'collaborator_invite':
+        return '%s sizni "%s" ga hamkor qilib taklif qilmoqda.' % (
+            p.get('from') or '', p.get('diss_title') or 'loyiha')
+    if etype == 'invite_accepted':
+        return "%s taklifingizni qabul qildi." % (p.get('by') or '')
+    if etype == 'annotation_added':
+        return "“%s” qismiga yangi izoh qo'shildi." % (p.get('block_title') or '')
+    if etype == 'status_changed':
+        return "“%s” holati: %s" % (p.get('block_title') or '', p.get('label') or '')
+    if etype == 'followed_scholar_new_student':
+        text = "%sning yangi shogirdi: %s" % (p.get('scholar_name') or '', p.get('student_name') or '')
+        return text + (' — ' + p['mavzu'] if p.get('mavzu') else '')
+    return 'Yangi bildirishnoma'
+
+
+def _diss_notification_url(etype, p):
+    if etype == 'followed_scholar_new_student' and p.get('scholar_name'):
+        return '/olim/' + quote(p['scholar_name'], safe='')
+    return '/workspace'
 
 
 @app.route("/notifications")
@@ -2766,10 +2874,13 @@ def notifications_count():
 def notifications_page():
     from data import get_connection
     notifs = []
+    personal = []
     try:
         conn = get_connection()
         try:
             with conn.cursor() as cur:
+                personal = _personal_notifications(cur, current_user.id)
+                conn.commit()
                 cur.execute(
                     "SELECT id, message, count, created_at FROM notifications "
                     "ORDER BY created_at DESC LIMIT 50"
@@ -2784,7 +2895,7 @@ def notifications_page():
             conn.close()
     except Exception as e:
         _log_silent(e)
-    return render_template("notifications.html", notifications=notifs)
+    return render_template("notifications.html", notifications=notifs, personal=personal)
 
 
 @app.route("/profile")
