@@ -62,8 +62,9 @@
 .mq-table__title { max-width:380px; overflow-wrap:anywhere; font-weight:600; }
 /* Qator sarlavhasi (<th scope="row">) — `.ol-table th` ustun sarlavhasi uchun
    (nowrap + yumshoq fon); u qator sarlavhasiga ham tushib, uzun nom qo'shni
-   ustunlar ustiga chiqib ketardi. Bu yerda matn o'raladi, fon — oddiy katak. */
-.ol-table tbody th.mq-table__title {
+   ustunlar ustiga chiqib ketardi. Bu yerda matn o'raladi, fon — oddiy katak.
+   Spetsifiklik (0,2,0) `.ol-table th` (0,1,1) dan yuqori; nom maydoni mq-. */
+.mq-table__title[scope="row"] {
   white-space: normal;
   background: transparent;
   color: var(--color-text-primary);
