@@ -2055,6 +2055,8 @@ ADMIN_QUEUES = {
     'license_conflict': 'Litsenziya ziddiyati',
 }
 BULK_PUBLISH_MAX = 500
+BULK_PUBLISH_PATH = '/admin/articles/bulk-publish'
+_PG_INT_MAX = 2 ** 31 - 1
 PUBLISH_QUEUE_BLOCKED_LIMIT = 200
 
 _HAS_PRIMARY_FIELD_SQL = ("EXISTS (SELECT 1 FROM article_scientific_fields pf "
@@ -2189,7 +2191,7 @@ def _admin_publish_queue(where_sql, params):
         prefilter_total=prefilter_total, bulk_publish_max=BULK_PUBLISH_MAX)
 
 
-@articles_bp.route('/admin/articles/bulk-publish', methods=['POST'])
+@articles_bp.route(BULK_PUBLISH_PATH, methods=['POST'])
 @login_required
 def admin_articles_bulk_publish():
     """Tanlangan maqolalarni BITTA tranzaksiyada nashr qiladi.
@@ -2201,13 +2203,17 @@ def admin_articles_bulk_publish():
     """
     _require_admin()
     raw_ids = request.form.getlist('article_ids')
-    ids = []
+    # O(n) with a set: a hand-made POST can carry tens of thousands of ids
+    # (form size is capped, see bulk_publish_too_large()). Values outside
+    # PostgreSQL's integer range cannot be article ids and are ignored.
+    ids, seen = [], set()
     for raw in raw_ids:
         try:
             value = int(raw)
         except (TypeError, ValueError):
             continue
-        if value > 0 and value not in ids:
+        if 0 < value <= _PG_INT_MAX and value not in seen:
+            seen.add(value)
             ids.append(value)
     if not ids:
         flash('Hech qanday maqola tanlanmagan.')
@@ -2254,6 +2260,19 @@ def admin_articles_bulk_publish():
           % (published, len(blocked), skipped))
     for a in blocked[:20]:
         flash('#%d — %s' % (a['id'], '; '.join(a['blockers'])))
+    return redirect('/admin/articles?queue=ready')
+
+
+@articles_bp.app_errorhandler(413)
+def bulk_publish_too_large(error):
+    """A hand-made bulk-publish POST with tens of thousands of ids exceeds the
+    form size limit before the view (or CSRF) can read it. Answer it like any
+    other over-limit selection instead of a bare 413 page; nothing is
+    published. Every other path keeps the default 413 response."""
+    if request.path != BULK_PUBLISH_PATH or request.method != 'POST':
+        return error
+    flash('Bir martada eng ko\'pi %d ta maqola nashr qilinadi — so\'rov juda katta, '
+          'hech narsa nashr qilinmadi.' % BULK_PUBLISH_MAX)
     return redirect('/admin/articles?queue=ready')
 
 

@@ -158,6 +158,57 @@ class BulkPublishTests(AdminTestCase):
         _response, connection = self.post({}, _store(**_draft()))
         self.assertEqual(self._updates(connection), [])
 
+    def _flashes(self):
+        with self.client.session_transaction() as sess:
+            return [message for _cat, message in sess.get('_flashes', [])]
+
+    def test_duplicate_ids_count_once(self):
+        """500 ids sent twice is 500 articles, not 1000."""
+        self.login(is_admin=True)
+        ids = [str(i) for i in range(1, 501)]
+        response, connection = self.post({'article_ids': ids + ids}, _store(**_draft()))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(self._updates(connection)), 1)
+        self.assertFalse(any('eng ko' in m for m in self._flashes()))
+
+    def test_out_of_range_and_junk_ids_are_ignored(self):
+        self.login(is_admin=True)
+        ids = ['99999999999999999999', '2147483648', 'abc', '-5', '0', '1']
+        response, connection = self.post({'article_ids': ids}, _store(**_draft()))
+        self.assertEqual(response.status_code, 302)
+        _sql, params = self._updates(connection)[0]
+        self.assertEqual(params, (1, [1]))
+        self.assertEqual(connection.rollbacks, 0)
+
+    def test_over_limit_message_counts_unique_ids(self):
+        self.login(is_admin=True)
+        ids = [str(i) for i in range(1, 20001)]
+        response, connection = self.post({'article_ids': ids}, _store(**_draft()))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self._updates(connection), [])
+        self.assertIn("Bir martada eng ko'pi 500 ta maqola nashr qilinadi (tanlangan: 20000).",
+                      self._flashes())
+
+    def test_oversized_form_redirects_with_message_not_an_error_page(self):
+        """Above the form size limit the request never reaches the view; the
+        413 is answered with the same kind of message, and nothing is written."""
+        self.login(is_admin=True)
+        ids = [str(i) for i in range(1, 100001)]
+        response, connection = self.post({'article_ids': ids}, _store(**_draft()))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers['Location'].endswith('/admin/articles?queue=ready'))
+        self.assertEqual(self._updates(connection), [])
+        self.assertTrue(any("so'rov juda katta" in m for m in self._flashes()))
+
+    def test_413_on_other_paths_is_unchanged(self):
+        from werkzeug.exceptions import RequestEntityTooLarge
+        from blueprints.articles import bulk_publish_too_large
+        error = RequestEntityTooLarge()
+        with app.test_request_context('/admin/articles/new', method='POST'):
+            self.assertIs(bulk_publish_too_large(error), error)
+        with app.test_request_context('/admin/articles/bulk-publish', method='GET'):
+            self.assertIs(bulk_publish_too_large(error), error)
+
 
 class BulkPublishCsrfTests(AdminTestCase):
     def setUp(self):

@@ -129,13 +129,24 @@
     </p>
     {% if ready_articles %}
     <form method="POST" action="/admin/articles/bulk-publish" data-mq-bulk
+          data-mq-bulk-max="{{ bulk_publish_max }}"
           onsubmit="return confirm('Tanlangan maqolalar nashr qilinsinmi?');">
       {{ csrf_token()|safe }}
       <div class="mq-detail__actions">
         <button type="button" class="ol-btn ol-btn--secondary" data-mq-bulk-all aria-pressed="false">
           <i class="bi bi-check2-square" aria-hidden="true"></i><span data-mq-bulk-all-label>Hammasini belgilash</span></button>
-        <span class="ol-meta" data-mq-bulk-count aria-live="polite">Tanlangan: 0</span>
+        <span class="ol-meta" data-mq-bulk-count aria-live="polite">Tanlangan: 0 / {{ bulk_publish_max }}</span>
       </div>
+      {% if prefilter_total > bulk_publish_max %}
+      <p class="ol-meta" data-mq-bulk-more>
+        Bazada {{ prefilter_total }} ta nomzod bor, ro'yxatda birinchi
+        {{ ready_articles|length }} tasi. "Hammasini belgilash" faqat shularni belgilaydi;
+        qolganlari nashrdan keyin keyingi qismda chiqadi.
+      </p>
+      {% endif %}
+      <p class="ol-meta" data-mq-bulk-limit role="status" hidden>
+        Bir martada eng ko'pi {{ bulk_publish_max }} ta maqola tanlash mumkin.
+      </p>
       <div class="ol-table-wrap">
         <table class="ol-table">
           <caption class="mq-sr-only">Nashrga tayyor maqolalar</caption>
@@ -307,22 +318,42 @@
   var allLabel = form.querySelector('[data-mq-bulk-all-label]');
   var count = form.querySelector('[data-mq-bulk-count]');
   var submit = form.querySelector('[data-mq-bulk-submit]');
+  var limitNote = form.querySelector('[data-mq-bulk-limit]');
+  // The server lists at most this many and refuses more; never select more.
+  var max = parseInt(form.getAttribute('data-mq-bulk-max'), 10) || boxes.length;
+  var selectable = Math.min(boxes.length, max);
+  function checked() { return boxes.filter(function (c) { return c.checked; }).length; }
   function sync() {
-    var n = boxes.filter(function (c) { return c.checked; }).length;
-    var all = n > 0 && n === boxes.length;
+    var n = checked();
+    var all = n > 0 && n === selectable;
     head.checked = all;
     head.indeterminate = n > 0 && !all;
     allBtn.setAttribute('aria-pressed', all ? 'true' : 'false');
-    allLabel.textContent = all ? 'Belgilashni bekor qilish' : 'Hammasini belgilash';
-    count.textContent = 'Tanlangan: ' + n;
-    submit.disabled = n === 0;
+    allLabel.textContent = all ? 'Belgilashni bekor qilish'
+      : (boxes.length > max ? 'Birinchi ' + max + ' tasini belgilash' : 'Hammasini belgilash');
+    count.textContent = 'Tanlangan: ' + n + ' / ' + max;
+    submit.disabled = n === 0 || n > max;
   }
-  function setAll(on) { boxes.forEach(function (c) { c.checked = on; }); sync(); }
+  function setAll(on) {
+    boxes.forEach(function (c, i) { c.checked = on && i < max; });
+    limitNote.hidden = !(on && boxes.length > max);
+    sync();
+  }
   allBtn.addEventListener('click', function () {
     setAll(allBtn.getAttribute('aria-pressed') !== 'true');
   });
   head.addEventListener('change', function () { setAll(head.checked); });
-  boxes.forEach(function (c) { c.addEventListener('change', sync); });
+  boxes.forEach(function (c) {
+    c.addEventListener('change', function () {
+      if (c.checked && checked() > max) {
+        c.checked = false;
+        limitNote.hidden = false;
+      } else {
+        limitNote.hidden = true;
+      }
+      sync();
+    });
+  });
   sync();
 })();
 </script>
