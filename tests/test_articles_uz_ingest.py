@@ -718,6 +718,37 @@ class CliSafetyTests(unittest.TestCase):
         self.assertFalse(big['fits_in_one_day'])
         self.assertGreaterEqual(big['days_needed'], 3)
 
+    def test_full_run_costs_list_pages_only(self):
+        # 2026-11-17 lokal pilot: 200 ta ishning to'liq ingestion'i 2 kredit oldi
+        # (singleton 0, ro'yxat 1). 11 521 ta ish = 58 sahifa + sanash = 59 kredit.
+        from scripts import ingest_uz_articles as ingest
+        live = {'rate_limit': {'credits_limit': 10000, 'credits_remaining': 9996,
+                               'daily_budget_usd': 1, 'daily_remaining_usd': 0.9996}}
+        plan = ingest.budget_plan(11521, 12000, live=live)
+        self.assertEqual(plan['credits_daily'], 10000)
+        self.assertEqual(plan['limits_source'], 'rate-limit')
+        self.assertEqual(plan['credits_estimate'], 59)
+        self.assertTrue(plan['fits_in_one_day'])
+        self.assertTrue(plan['fits_today'])
+
+    def test_execute_is_refused_when_today_remaining_is_too_small(self):
+        from scripts import ingest_uz_articles as ingest
+        live = {'rate_limit': {'credits_limit': 10000, 'credits_remaining': 20,
+                               'daily_budget_usd': 1, 'daily_remaining_usd': 0.002}}
+        plan = ingest.budget_plan(11521, 12000, live=live)
+        self.assertFalse(plan['fits_today'])
+        self.assertEqual(plan['today_limit_suggestion'], 19 * 200)
+        ok = ingest.budget_plan(11521, 200, live=live)
+        self.assertTrue(ok['fits_today'])
+        self.assertIsNone(ok['today_limit_suggestion'])
+
+    def test_budget_plan_falls_back_to_defaults_without_rate_limit(self):
+        from scripts import ingest_uz_articles as ingest
+        plan = ingest.budget_plan(200, 200, live={'status': 'http_error'})
+        self.assertEqual(plan['credits_daily'], ingest.CREDITS_DAILY)
+        self.assertEqual(plan['limits_source'], 'default')
+        self.assertTrue(plan['fits_today'])
+
     def test_fetch_requires_limit_and_admin(self):
         from scripts import fetch_open_pdfs as fetch
         with self.assertRaises(SystemExit):

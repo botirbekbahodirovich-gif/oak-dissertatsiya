@@ -64,12 +64,14 @@ DEFAULT_BATCH_SIZE = 500
 APPROVE_GROUP = 100
 
 # OpenAlex narxi (2026, developers.openalex.org): kalit bilan kuniga $1;
-# singleton (DOI bo'yicha) $0, ro'yxat so'rovi $0.0001. Eski "credits"
-# modeli (100 000/kun; singleton 1, ro'yxat 10) ham hisoblanadi — qaysi biri
-# amalda ekanini `/rate-limit` javobi ko'rsatadi.
+# singleton (DOI bo'yicha) $0, ro'yxat so'rovi $0.0001.
+# Kuzatilgan (2026-11-17, lokal pilot, /rate-limit): credits_limit=10000 (= $1),
+# ro'yxat so'rovi 1 kredit, singleton 0 kredit — 200 ta ishning to'liq
+# ingestion'i (sanash + 1 ro'yxat sahifasi + 200 singleton) jami 2 kredit oldi.
+# Kunlik limitlar `/rate-limit` javobidan olinadi; quyidagilar faqat zaxira.
 USD_DAILY = float(os.environ.get('OPENALEX_DAILY_BUDGET_USD') or 1.0)
 USD_LIST, USD_SINGLETON = 0.0001, 0.0
-CREDITS_DAILY, CREDITS_LIST, CREDITS_SINGLETON = 100_000, 10, 1
+CREDITS_DAILY, CREDITS_LIST, CREDITS_SINGLETON = 10_000, 1, 0
 UNPAYWALL_DAILY = 100_000
 
 
@@ -118,20 +120,50 @@ def _total_count(config, args, to_date):
     return result.total_count if result.ok else None
 
 
-def budget_plan(total, limit, per_page=openalex.CURSOR_PER_PAGE):
+def _positive_number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) \
+        and value > 0 else None
+
+
+def budget_plan(total, limit, per_page=openalex.CURSOR_PER_PAGE, live=None):
+    """So'rovlar soni va kunlik budjetga sig'ishi.
+
+    `live` — `/rate-limit` javobi. Undagi `credits_limit` / `daily_budget_usd`
+    va bugungi qoldiq (kalit egasining HAQIQIY holati) standart qiymatlardan
+    ustun turadi.
+    """
+    rate = (live or {}).get('rate_limit') or {}
+    credits_daily = _positive_number(rate.get('credits_limit')) or CREDITS_DAILY
+    usd_daily = _positive_number(rate.get('daily_budget_usd')) or USD_DAILY
+    credits_remaining = rate.get('credits_remaining')
+    usd_remaining = rate.get('daily_remaining_usd')
+
     n = min(total if total is not None else limit, limit)
     pages = math.ceil(n / per_page) + 1          # +1 — sanash so'rovi
     usd = pages * USD_LIST + n * USD_SINGLETON
     credits = pages * CREDITS_LIST + n * CREDITS_SINGLETON
-    days = max(math.ceil(usd / USD_DAILY) if USD_DAILY else 1,
-               math.ceil(credits / CREDITS_DAILY),
+    days = max(math.ceil(usd / usd_daily) if usd_daily else 1,
+               math.ceil(credits / credits_daily),
                math.ceil(n / UNPAYWALL_DAILY), 1)
+    fits_today = True
+    if isinstance(credits_remaining, (int, float)) and credits > credits_remaining:
+        fits_today = False
+    if isinstance(usd_remaining, (int, float)) and usd > usd_remaining:
+        fits_today = False
+    today_limit = None
+    if not fits_today and isinstance(credits_remaining, (int, float)):
+        # Bugungi qoldiqqa sig'adigan ro'yxat sahifalari (har biri per_page ish).
+        usable_pages = max(0, int(credits_remaining // CREDITS_LIST) - 1) if CREDITS_LIST else 0
+        today_limit = usable_pages * per_page
     return {'works': n, 'list_requests': pages, 'singleton_requests': n,
-            'usd_estimate': round(usd, 4), 'usd_daily_budget': USD_DAILY,
-            'credits_estimate': credits, 'credits_daily': CREDITS_DAILY,
+            'usd_estimate': round(usd, 4), 'usd_daily_budget': usd_daily,
+            'credits_estimate': credits, 'credits_daily': credits_daily,
+            'limits_source': 'rate-limit' if rate.get('credits_limit') else 'default',
+            'credits_remaining_today': credits_remaining,
             'unpaywall_requests': n, 'crossref_requests': n,
             'fits_in_one_day': days == 1, 'days_needed': days,
-            'per_day_limit_suggestion': (None if days == 1 else math.ceil(n / days))}
+            'per_day_limit_suggestion': (None if days == 1 else math.ceil(n / days)),
+            'fits_today': fits_today, 'today_limit_suggestion': today_limit}
 
 
 def _our_batches(cur):
@@ -319,8 +351,8 @@ def main(argv):
                          'country': args.country, 'core_only': args.core_only,
                          'limit': args.limit}}
     report['total_count'] = _total_count(config, args, to_date)
-    report['budget'] = budget_plan(report['total_count'], args.limit)
     report['rate_limit'] = _rate_limit_status(config)
+    report['budget'] = budget_plan(report['total_count'], args.limit, live=report['rate_limit'])
 
     print('[%s] OpenAlex mos ishlar: %s; limit: %d'
           % (report['mode'], report['total_count'], args.limit))
@@ -330,6 +362,16 @@ def main(argv):
     if not report['budget']['fits_in_one_day']:
         print('DIQQAT: kunlik budjetga sig\'maydi — %d kunga bo\'ling (kuniga ~%d).'
               % (report['budget']['days_needed'], report['budget']['per_day_limit_suggestion']))
+    if execute and not report['budget']['fits_today']:
+        # Bugungi qoldiqdan oshib ketsa, yarmida 429 bilan to'xtab qolmasin —
+        # boshlamaymiz. Skript idempotent: kichikroq --limit bilan bugun, qolganini
+        # ertaga xuddi shu buyruq bilan davom ettirish mumkin.
+        print("TO'XTADI: bugungi OpenAlex qoldig'i yetmaydi (kerak ~%s kredit, qoldi %s). "
+              "Bugun --limit %s bilan ishga tushiring, qolgani ertaga davom etadi."
+              % (report['budget']['credits_estimate'],
+                 report['budget']['credits_remaining_today'],
+                 report['budget']['today_limit_suggestion']), file=sys.stderr)
+        return 3
 
     exit_code = 0
     conn = psycopg2.connect(db_url)
