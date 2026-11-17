@@ -1,8 +1,8 @@
 # Issue'lar (2026-11-17)
 
 `olimlar_test` bazasida `TEST_DATABASE_URL` bilan DB-testlar ishga tushirilganda
-topildi. To'rttasi ham shu kuni branch'larda tuzatildi. Hech biri hali `main`'ga
-yoki prod'ga chiqmagan.
+topildi. 1–5-bandlar shu kuni branch'larda tuzatildi, 6-band ochiq. Hech biri
+hali `main`'ga yoki prod'ga chiqmagan.
 
 | # | Issue | Holat | Branch / commit |
 |---|---|---|---|
@@ -10,7 +10,8 @@ yoki prod'ga chiqmagan.
 | 2 | Qayta yo'naltirilgan juftlik ko'rib chiqilmasdan birlashadi | tuzatildi, (a) varianti | `fix/duplicate-merge-chain` ec1c8b23 |
 | 3 | `test_retraction_filter` fixture'i | tuzatildi, faqat test | `feat/articles-uz` bf3f4f73 |
 | 4 | Bo'sh bazada `dissertations.oak_id` yo'q | tuzatildi, migratsiya 026 | `feat/articles-uz` 4fa505c3 |
-| 5 | Sarlavhalarda HTML entity va LaTeX xom ko'rinadi | ochiq | — |
+| 5 | Sarlavhalarda HTML entity va teglar xom ko'rinadi | tuzatildi | `feat/articles-uz` (clean_title) |
+| 6 | Sarlavhalarda LaTeX xom ko'rinadi | ochiq, qaror kerak | — |
 
 `fix/duplicate-merge-chain` prod'ga alohida deploy bilan chiqadi. U maqolalar
 paketiga kirmaydi.
@@ -186,19 +187,40 @@ indeksi yaratilmaydi: `column "oak_id" does not exist`.
 - Bo'sh bazada `import app` muvaffaqiyatli bo'lishini tekshiradigan DB-test
   qo'shilsin.
 
-## 5. Maqola sarlavhalarida HTML entity va LaTeX xom ko'rinadi
+## 5. Maqola sarlavhalarida HTML entity va teglar xom ko'rinadi
 
-**Jiddiylik:** past, kosmetik. **Holat:** ochiq. "Nashrga tayyor" sahifasini
-sinashda topildi.
+**Jiddiylik:** past, kosmetik. "Nashrga tayyor" sahifasini sinashda topildi.
 
-**Belgi:**
-- OpenAlex'dan kelgan ba'zi sarlavhalar xom ko'rinadi, masalan `A &gt;200 Wh kg−1 …`.
-- Ba'zilarida LaTeX bor, masalan `$$\upmu \upmu \text{ b } …$$`.
-- Admin jadvalida ko'rinadi. Katalogda ham shunday bo'lishi ehtimoli bor.
+**Belgi:** OpenAlex'dan kelgan ba'zi sarlavhalar xom ko'rinadi, masalan
+`A &gt;200 Wh kg−1 …`. Manbada u ikki marta kodlangan (`&amp;gt;`), eski
+`clean_text` esa uni faqat bir marta ochardi.
 
-**Tuzatish yo'nalishi:**
-- Ingest paytida sarlavhaga bir marta `html.unescape` qo'llansin.
-- LaTeX'ni ko'rsatish yoki tozalash bo'yicha qaror kerak.
+**Holat: tuzatildi** (`feat/articles-uz`).
+- `services/article_metadata/normalizer.py` ga `clean_title()` qo'shildi:
+  - entity qolmaguncha, ko'pi bilan 3 marta `html.unescape`;
+  - inline teglar ruxsat ro'yxati bo'yicha olib tashlanadi, kodlangan holda
+    kelganlari ham (`&lt;i&gt;`). Ro'yxat bo'lgani uchun sarlavhadagi oddiy
+    `a < b > c` matni yo'qolmaydi;
+  - bo'shliqlar yig'iladi.
+- U quyidagi joylarda ishlatiladi:
+  - OpenAlex, Crossref va Unpaywall metadata;
+  - OpenAlex va Crossref discovery;
+  - admin formadagi `title` va `title_uz`.
+- Eski yozuvlar uchun `scripts/fix_article_titles.py` (standart rejim dry-run,
+  `--apply` bilan yozadi). Lokal bazada 196 tadan 1 ta maqolani (#166)
+  tuzatdi. Prod'da hozircha maqola yo'q.
+
+## 6. Maqola sarlavhalarida LaTeX xom ko'rinadi
+
+**Jiddiylik:** past. **Holat:** ochiq, qaror kerak.
+
+**Belgi:** `$$\upmu \upmu \text{ b } …$$`, `$\alpha$`. Lokal pilotda 196 tadan
+3 ta sarlavhada uchradi. `clean_title` LaTeX'ga ataylab tegmaydi.
+
+**Variantlar:**
+- KaTeX/MathJax bilan ko'rsatish (sahifa og'irlashadi);
+- oddiy matnga o'girish (`\alpha` → α);
+- xom holda qoldirish.
 
 ---
 
