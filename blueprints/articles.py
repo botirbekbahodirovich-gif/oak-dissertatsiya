@@ -46,6 +46,7 @@ from flask_login import current_user, login_required
 from data import get_connection
 from security import log_exception
 from services import article_sync
+from services.article_metadata.normalizer import clean_title
 from services.article_metadata import (MetadataLookupError, describe_configuration,
                                        fetch_article_metadata, flask_cache_adapters)
 from security_uploads import (MAX_PDF_BYTES, UploadValidationError,
@@ -1217,8 +1218,9 @@ def _form_values():
                                    or [''])[0].strip()[:32] or None,
         })
     return {
-        'title': get('title')[:500],
-        'title_uz': get('title_uz')[:500],
+        # Admin ko'chirib qo'ygan sarlavhada ham entity/teg qolmasin (clean_title).
+        'title': clean_title(get('title')) or '',
+        'title_uz': clean_title(get('title_uz')) or '',
         'abstract': get('abstract'),
         'keywords': get('keywords')[:500],
         'language': get('language') or 'uz',

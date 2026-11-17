@@ -24,7 +24,8 @@ from services.article_discovery.models import DiscoveryCandidate, DiscoverySearc
 from services.article_metadata.http import fetch_json
 from services.article_metadata.models import (INVALID_RESPONSE, NOT_CONFIGURED,
                                               OK, OPENALEX)
-from services.article_metadata.normalizer import (clean_text, openalex_short_id,
+from services.article_metadata.normalizer import (clean_text, clean_title,
+                                                  openalex_short_id,
                                                   parse_iso_date)
 from utils.article_rules import normalize_doi
 
@@ -201,7 +202,7 @@ def _extract_candidate(work):
     return DiscoveryCandidate(
         doi=doi,
         external_source_id=openalex_short_id(work.get('id')),
-        title=clean_text(work.get('title') or work.get('display_name'), 500),
+        title=clean_title(work.get('title') or work.get('display_name'), 500),
         publication_date=parse_iso_date(work.get('publication_date')),
         source_name=clean_text(source.get('display_name'), 300),
         is_retracted=bool(work.get('is_retracted')),

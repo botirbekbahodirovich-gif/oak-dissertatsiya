@@ -19,7 +19,7 @@ from services.article_metadata.http import fetch_json
 from services.article_metadata.models import CROSSREF, OK, ProviderResult
 from services.article_metadata.normalizer import (MAX_AFFILIATION, MAX_JOURNAL,
                                                   MAX_NAME, MAX_SHORT, MAX_TITLE,
-                                                  clean_abstract, clean_text,
+                                                  clean_abstract, clean_text, clean_title,
                                                   date_from_parts, map_license_url,
                                                   normalize_issn, normalize_orcid,
                                                   year_from_parts)
@@ -69,8 +69,8 @@ def extract(message):
     """
     warnings = []
 
-    title = _first_string(message.get('title'), MAX_TITLE)
-    subtitle = _first_string(message.get('subtitle'), MAX_TITLE)
+    title = _first_string(message.get('title'), MAX_TITLE, clean_title)
+    subtitle = _first_string(message.get('subtitle'), MAX_TITLE, clean_title)
     journal = _first_string(message.get('container-title'), MAX_JOURNAL)
 
     published = (message.get('published')
@@ -142,10 +142,10 @@ def extract(message):
     }, warnings
 
 
-def _first_string(value, max_length):
+def _first_string(value, max_length, cleaner=clean_text):
     if isinstance(value, list):
         value = value[0] if value else None
-    return clean_text(value, max_length)
+    return cleaner(value, max_length)
 
 
 def _int_or_none(value):

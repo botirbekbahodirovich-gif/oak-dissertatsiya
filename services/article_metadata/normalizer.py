@@ -53,6 +53,47 @@ def clean_text(raw, max_length=None):
     return text[:max_length] if max_length else text
 
 
+# Sarlavhadagi inline belgilash: noshirlar <i>, <sub>, <sup>, JATS/MathML
+# (<jats:italic>, <mml:math>) qo'yadi. ALLOWLIST — sarlavhadagi oddiy
+# "a < b > c" matni teg deb yutib yuborilmasin.
+_TITLE_TAG_RE = re.compile(
+    r'</?(?:[A-Za-z][\w.-]*:[\w.-]+|i|b|u|em|strong|sub|sup|sc|small|big|span|font|a|'
+    r'italic|bold|underline|scp|inline-formula|named-content|tt|code|q|abbr)'
+    r'(?:\s[^<>]*)?/?>', re.I)
+_TITLE_BREAK_RE = re.compile(r'<(?:br|p|/p|div|/div)(?:\s[^<>]*)?/?>', re.I)
+_ENTITY_RE = re.compile(r'&(?:#\d+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);')
+_TITLE_UNESCAPE_ROUNDS = 3
+
+
+def clean_title(raw, max_length=MAX_TITLE):
+    """Maqola sarlavhasi (title va title_uz): sof bir qatorli matn.
+
+    - HTML entity'lar ochiladi, ikki marta kodlangani ham ("&amp;gt;" -> ">"):
+      entity qolmaguncha, ko'pi bilan 3 marta.
+    - Inline teglar olib tashlanadi (<i>, <sub>, <sup>, <jats:italic>, ...),
+      jumladan kodlangan holda kelganlari ("&lt;i&gt;"); <br>/<p> bo'shliqqa
+      aylanadi.
+    - Bo'shliqlar (tab, yangi qator, NBSP) bitta bo'shliqqa yig'iladi.
+    - LaTeX ($...$, \\alpha) ATAYLAB o'zgarmaydi — alohida issue.
+    Idempotent: clean_title(clean_title(x)) == clean_title(x).
+    """
+    if raw is None:
+        return None
+    text = str(raw)
+    for _ in range(_TITLE_UNESCAPE_ROUNDS):
+        text = _TITLE_BREAK_RE.sub(' ', text)
+        text = _TITLE_TAG_RE.sub('', text)
+        if not _ENTITY_RE.search(text):
+            break
+        text = _unescape(text)
+    text = _TITLE_BREAK_RE.sub(' ', text)
+    text = _TITLE_TAG_RE.sub('', text)
+    text = _WS_RE.sub(' ', text).strip()
+    if not text:
+        return None
+    return text[:max_length].rstrip()
+
+
 def clean_abstract(raw, max_length=MAX_ABSTRACT):
     """Crossref abstrakti JATS XML bo'lishi mumkin — sof matnga aylantiriladi.
 

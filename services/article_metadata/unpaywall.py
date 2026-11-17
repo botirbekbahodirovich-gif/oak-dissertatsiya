@@ -22,7 +22,7 @@ from services.article_metadata.http import fetch_json
 from services.article_metadata.models import (NOT_CONFIGURED, OK, UNPAYWALL,
                                               ProviderResult)
 from services.article_metadata.normalizer import (MAX_JOURNAL, MAX_TITLE,
-                                                  clean_text, map_license_label,
+                                                  clean_text, clean_title, map_license_label,
                                                   parse_iso_date, valid_year)
 
 MAX_LOCATIONS = 6
@@ -88,7 +88,7 @@ def extract(payload):
 
     return {
         'doi': clean_text(payload.get('doi'), 255),
-        'title': clean_text(payload.get('title'), MAX_TITLE),
+        'title': clean_title(payload.get('title'), MAX_TITLE),
         'journal_name': clean_text(payload.get('journal_name'), MAX_JOURNAL),
         'publisher': clean_text(payload.get('publisher'), MAX_JOURNAL),
         'publication_year': valid_year(payload.get('year')),

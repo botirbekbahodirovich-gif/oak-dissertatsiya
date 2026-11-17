@@ -27,7 +27,7 @@ from services.article_metadata.http import fetch_json
 from services.article_metadata.models import (INVALID_RESPONSE, NOT_CONFIGURED,
                                               OK, OPENALEX, ProviderResult)
 from services.article_metadata.normalizer import (MAX_AFFILIATION, MAX_JOURNAL,
-                                                  MAX_NAME, MAX_TITLE, clean_text,
+                                                  MAX_NAME, MAX_TITLE, clean_text, clean_title,
                                                   normalize_issn, normalize_orcid,
                                                   openalex_author_id,
                                                   openalex_institution_id,
@@ -114,7 +114,7 @@ def extract(work):
     return {
         'openalex_id': openalex_short_id(work.get('id')),
         'doi': clean_text((work.get('doi') or '').replace('https://doi.org/', ''), 255),
-        'title': clean_text(work.get('title') or work.get('display_name'), MAX_TITLE),
+        'title': clean_title(work.get('title') or work.get('display_name'), MAX_TITLE),
         'publication_year': valid_year(work.get('publication_year')),
         'publication_date': _iso(parse_iso_date(work.get('publication_date'))),
         'work_type': clean_text(work.get('type'), 50),

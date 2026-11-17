@@ -49,7 +49,7 @@ from __future__ import annotations
 from services.article_discovery.models import DiscoveryCandidate, DiscoverySearchResult
 from services.article_metadata.http import fetch_json
 from services.article_metadata.models import CROSSREF, INVALID_RESPONSE, OK
-from services.article_metadata.normalizer import clean_text, date_from_parts
+from services.article_metadata.normalizer import clean_text, clean_title, date_from_parts
 from utils.article_rules import ArticleValidationError, validate_doi
 
 # Crossref "type" taksonomiyasi ko'p (journal-article, proceedings-article,
@@ -139,7 +139,7 @@ def _extract_candidate(work):
     if not doi:
         return None
 
-    title = _first_string(work.get('title'), 500)
+    title = _first_string(work.get('title'), 500, clean_title)
     journal = _first_string(work.get('container-title'), 300)
 
     published = (work.get('published')
@@ -168,10 +168,10 @@ def _extract_candidate(work):
     )
 
 
-def _first_string(value, max_length=500):
+def _first_string(value, max_length=500, cleaner=clean_text):
     if isinstance(value, list):
         value = value[0] if value else None
-    return clean_text(value, max_length)
+    return cleaner(value, max_length)
 
 
 def _int_or_zero(value):
