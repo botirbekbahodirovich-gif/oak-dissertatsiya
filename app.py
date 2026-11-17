@@ -1064,6 +1064,11 @@ def _run_startup_migrations():
                 cur.execute(
                     f"ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS {col} {typ}"
                 )
+            # oak_id must exist before idx_dissertations_oak_id below, otherwise
+            # a brand-new database rolls this whole transaction back. Same
+            # statement as migrations/026_dissertations_oak_id.sql (which also
+            # adds the UNIQUE index that ON CONFLICT (oak_id) needs).
+            cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS oak_id INTEGER")
             cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS photo_url TEXT")
             cur.execute("ALTER TABLE dissertations ADD COLUMN IF NOT EXISTS ilmiy_rahbar_photo_url TEXT")
             # Ma'lumotlar sifati belgisi — 'complete' (standart), 'missing_author',
