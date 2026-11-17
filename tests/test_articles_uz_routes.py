@@ -190,6 +190,18 @@ class PublishQueuePageTests(AdminTestCase):
         self.assertIn('name="article_ids" value="1"', html)
         self.assertIn('Tanlanganlarni nashr qilish', html)
 
+    def test_ready_queue_opens_unchecked_with_select_all_button(self):
+        self.login(is_admin=True)
+        with fake_db(FakeConnection(_store(**_draft()))):
+            html = self.client.get('/admin/articles?queue=ready').get_data(as_text=True)
+        row = html.split('name="article_ids" value="1"', 1)[1].split('>', 1)[0]
+        self.assertNotIn('checked', row)
+        head = html.split('data-mq-bulk-head', 1)[0].rsplit('<input', 1)[1]
+        self.assertNotIn('checked', head)
+        self.assertIn('Hammasini belgilash', html)
+        self.assertIn('data-mq-bulk-all', html)
+        self.assertIn('data-mq-bulk-submit disabled', html)
+
     def test_blocked_article_listed_with_reason(self):
         self.login(is_admin=True)
         store = _store(**_draft())

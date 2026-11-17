@@ -82,7 +82,7 @@ LICENSES = {
     'author_permission': 'Author Permission',
     'repository_permission': 'Repository Permission',
     'other': 'Other',
-    'unknown': 'Unknown',
+    'unknown': 'Litsenziya aniqlanmagan',
 }
 
 UNKNOWN_LICENSE = 'unknown'

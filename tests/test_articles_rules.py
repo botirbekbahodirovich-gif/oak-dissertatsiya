@@ -346,3 +346,17 @@ class PdfStorageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LicenseLabelTests(unittest.TestCase):
+    """Aniqlanmagan litsenziya foydalanuvchiga o'zbekcha ko'rinadi."""
+
+    def test_unknown_license_label_is_uzbek(self):
+        self.assertEqual(LICENSES['unknown'], 'Litsenziya aniqlanmagan')
+        self.assertNotIn('Unknown', LICENSES.values())
+
+    def test_decorate_falls_back_to_uzbek_label(self):
+        from blueprints.articles import _decorate
+        for license_type in ('unknown', None, 'not-a-licence'):
+            article = _decorate({'license_type': license_type, 'title': 'T'})
+            self.assertEqual(article['license_label'], 'Litsenziya aniqlanmagan')

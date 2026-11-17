@@ -128,18 +128,22 @@
       {% endif %}
     </p>
     {% if ready_articles %}
-    <form method="POST" action="/admin/articles/bulk-publish"
+    <form method="POST" action="/admin/articles/bulk-publish" data-mq-bulk
           onsubmit="return confirm('Tanlangan maqolalar nashr qilinsinmi?');">
       {{ csrf_token()|safe }}
+      <div class="mq-detail__actions">
+        <button type="button" class="ol-btn ol-btn--secondary" data-mq-bulk-all aria-pressed="false">
+          <i class="bi bi-check2-square" aria-hidden="true"></i><span data-mq-bulk-all-label>Hammasini belgilash</span></button>
+        <span class="ol-meta" data-mq-bulk-count aria-live="polite">Tanlangan: 0</span>
+      </div>
       <div class="ol-table-wrap">
         <table class="ol-table">
           <caption class="mq-sr-only">Nashrga tayyor maqolalar</caption>
           <thead>
             <tr>
               <th scope="col">
-                <label><input type="checkbox" checked
-                  onclick="document.querySelectorAll('input[name=article_ids]').forEach(function(c){c.checked=this.checked}.bind(this))">
-                  <span class="mq-sr-only">Barchasini tanlash</span></label>
+                <label><input type="checkbox" data-mq-bulk-head>
+                  <span class="mq-sr-only">Hammasini belgilash</span></label>
               </th>
               <th scope="col">Sarlavha</th>
               <th scope="col">Asosiy yo'nalish</th>
@@ -152,7 +156,7 @@
           <tbody>
             {% for a in ready_articles %}
             <tr>
-              <td><input type="checkbox" name="article_ids" value="{{ a.id }}" checked
+              <td><input type="checkbox" name="article_ids" value="{{ a.id }}"
                          aria-label="Tanlash: {{ a.display_title|truncate(60) }}"></td>
               <th scope="row" class="mq-table__title">
                 <a href="/admin/articles/{{ a.id }}/preview">{{ a.display_title }}</a></th>
@@ -167,7 +171,7 @@
         </table>
       </div>
       <div class="mq-detail__actions">
-        <button type="submit" class="ol-btn ol-btn--primary">
+        <button type="submit" class="ol-btn ol-btn--primary" data-mq-bulk-submit disabled>
           <i class="bi bi-check2-all" aria-hidden="true"></i>Tanlanganlarni nashr qilish</button>
       </div>
     </form>
@@ -290,4 +294,36 @@
   </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var form = document.querySelector('[data-mq-bulk]');
+  if (!form) return;
+  var boxes = Array.prototype.slice.call(form.querySelectorAll('input[name=article_ids]'));
+  var head = form.querySelector('[data-mq-bulk-head]');
+  var allBtn = form.querySelector('[data-mq-bulk-all]');
+  var allLabel = form.querySelector('[data-mq-bulk-all-label]');
+  var count = form.querySelector('[data-mq-bulk-count]');
+  var submit = form.querySelector('[data-mq-bulk-submit]');
+  function sync() {
+    var n = boxes.filter(function (c) { return c.checked; }).length;
+    var all = n > 0 && n === boxes.length;
+    head.checked = all;
+    head.indeterminate = n > 0 && !all;
+    allBtn.setAttribute('aria-pressed', all ? 'true' : 'false');
+    allLabel.textContent = all ? 'Belgilashni bekor qilish' : 'Hammasini belgilash';
+    count.textContent = 'Tanlangan: ' + n;
+    submit.disabled = n === 0;
+  }
+  function setAll(on) { boxes.forEach(function (c) { c.checked = on; }); sync(); }
+  allBtn.addEventListener('click', function () {
+    setAll(allBtn.getAttribute('aria-pressed') !== 'true');
+  });
+  head.addEventListener('change', function () { setAll(head.checked); });
+  boxes.forEach(function (c) { c.addEventListener('change', sync); });
+  sync();
+})();
+</script>
 {% endblock %}

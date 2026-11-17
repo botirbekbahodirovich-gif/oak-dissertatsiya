@@ -53,7 +53,7 @@ from security_uploads import (MAX_PDF_BYTES, UploadValidationError,
                               save_private_pdf, validate_pdf_upload)
 from utils.article_rules import (ACCESS_TYPES, LANGUAGES, LICENSE_URLS, LICENSES,
                                  PDF_ALLOWED_ACCESS_TYPES, PUBLICATION_STATUSES,
-                                 SOURCE_TYPES, VERIFICATION_STATUSES,
+                                 SOURCE_TYPES, UNKNOWN_LICENSE, VERIFICATION_STATUSES,
                                  VERSION_TYPES, ArticleValidationError,
                                  can_read_pdf, can_show_abstract, make_slug,
                                  pdf_block_reason, validate_article_rights,
@@ -397,7 +397,7 @@ def _decorate(article):
     article['pdf_block_reason'] = pdf_block_reason(article)
     article['access_label'] = ACCESS_TYPES.get(article.get('access_type'), '—')
     article['version_label'] = VERSION_TYPES.get(article.get('version_type'), '—')
-    article['license_label'] = LICENSES.get(article.get('license_type'), 'Unknown')
+    article['license_label'] = LICENSES.get(article.get('license_type'), LICENSES[UNKNOWN_LICENSE])
     article['source_type_label'] = SOURCE_TYPES.get(article.get('source_type'), '—')
     article['language_label'] = LANGUAGES.get(article.get('language'), article.get('language') or '—')
     article['verification_label'] = VERIFICATION_STATUSES.get(article.get('verification_status'), '—')
