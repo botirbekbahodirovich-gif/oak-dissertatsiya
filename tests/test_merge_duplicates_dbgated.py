@@ -59,6 +59,7 @@ class MergeDbGatedTests(unittest.TestCase):
         self._candidate_ids: list = []
         self._run_ids: list = []
         self._bookmark_user_ids: list = []
+        self._institution_ids: list = []
 
     def tearDown(self):
         """Delete order matters: specialty_notifications_log has a real,
@@ -84,6 +85,9 @@ class MergeDbGatedTests(unittest.TestCase):
             if self._diss_ids:
                 cur.execute("DELETE FROM dissertations WHERE id = ANY(%s)",
                            (self._diss_ids,))
+            if self._institution_ids:
+                cur.execute("DELETE FROM institutions WHERE id = ANY(%s)",
+                            (self._institution_ids,))
         self.conn.commit()
 
     def _make_dissertation(self, **fields) -> int:
@@ -275,6 +279,90 @@ class MergeDbGatedTests(unittest.TestCase):
             cur.execute("SELECT dissertation_id FROM specialty_notifications_log "
                        "WHERE dissertation_id = %s", (winner,))
             self.assertIsNotNone(cur.fetchone())
+
+    # -- dissertation_institutions (migration 021) -----------------------------
+    def _make_institution(self, name: str) -> int:
+        import uuid
+        key = "test-merge-%s-%s" % (name, uuid.uuid4().hex[:8])
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO institutions (canonical_name, normalized_name) "
+                        "VALUES (%s, %s) RETURNING id", (key, key))
+            iid = cur.fetchone()[0]
+        self.conn.commit()
+        self._institution_ids.append(iid)
+        return iid
+
+    def _link(self, diss_id: int, institution_id: int, source: str = "admin") -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO dissertation_institutions "
+                        "(dissertation_id, institution_id, source) VALUES (%s, %s, %s)",
+                        (diss_id, institution_id, source))
+        self.conn.commit()
+
+    def _links(self, diss_id: int) -> dict:
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT institution_id, source FROM dissertation_institutions "
+                        "WHERE dissertation_id = %s", (diss_id,))
+            rows = cur.fetchall()
+        self.conn.rollback()
+        return dict(rows)
+
+    def test_institution_links_move_to_the_winner(self):
+        winner = self._make_dissertation(mavzu="A")
+        loser = self._make_dissertation(mavzu="A")
+        x = self._make_institution("x")
+        self._link(loser, x, source="backfill")
+        cand_id = self._make_candidate(winner, loser)
+        run_id = self._make_run()
+
+        result = self._do_merge(cand_id, run_id, forced_winner=winner)
+
+        self.assertEqual((result.institution_links_repointed,
+                          result.institution_links_dropped), (1, 0))
+        self.assertEqual(self._links(winner), {x: "backfill"})   # source kept
+        self.assertEqual(self._links(loser), {})
+        with self.conn.cursor() as cur:
+            cur.execute("""SELECT record_id, value_before, value_after, issue_code
+                             FROM data_quality_fix_log
+                            WHERE run_id = %s AND table_name = 'dissertation_institutions'""",
+                        (run_id,))
+            self.assertEqual(cur.fetchall(),
+                             [(x, str(loser), str(winner), self.repo.MERGE_LINK_REPOINTED)])
+        self.conn.rollback()
+
+    def test_shared_institution_link_is_not_duplicated(self):
+        """Both records name co-owner X (PK collision): the winner keeps one X,
+        the loser's other link Y moves, nothing is left on the loser."""
+        winner = self._make_dissertation(mavzu="A")
+        loser = self._make_dissertation(mavzu="A")
+        x = self._make_institution("x")
+        y = self._make_institution("y")
+        self._link(winner, x, source="admin")
+        self._link(loser, x, source="backfill")
+        self._link(loser, y)
+        cand_id = self._make_candidate(winner, loser)
+
+        result = self._do_merge(cand_id, self._make_run(), forced_winner=winner)
+
+        self.assertEqual((result.institution_links_repointed,
+                          result.institution_links_dropped), (1, 1))
+        self.assertEqual(self._links(winner), {x: "admin", y: "admin"})
+        self.assertEqual(self._links(loser), {})
+
+    def test_link_to_the_winners_primary_institution_is_not_copied(self):
+        """A co-owner equal to the winner's own primary institution would list
+        the same organisation twice; institution_backfill never stores that."""
+        x = self._make_institution("x")
+        winner = self._make_dissertation(mavzu="A", institution_id=x)
+        loser = self._make_dissertation(mavzu="A")
+        self._link(loser, x)
+        cand_id = self._make_candidate(winner, loser)
+
+        result = self._do_merge(cand_id, self._make_run(), forced_winner=winner)
+
+        self.assertEqual(result.institution_links_dropped, 1)
+        self.assertEqual(self._links(winner), {})
+        self.assertEqual(self._links(loser), {})
 
     def test_other_duplicate_candidate_rows_are_repointed(self):
         """(loser, third) becomes (winner, third) once loser is retired."""

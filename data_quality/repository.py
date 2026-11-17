@@ -662,6 +662,7 @@ def _json(obj) -> str:
 KNOWN_FK_REFERENCES_TO_DISSERTATIONS: Tuple[Tuple[str, str], ...] = (
     ("user_bookmarks", "dissertation_id"),
     ("specialty_notifications_log", "dissertation_id"),
+    ("dissertation_institutions", "dissertation_id"),   # migration 021
 )
 
 # Columns fetched for a merge: every field the winner might need filled, plus
@@ -773,6 +774,9 @@ MERGE_PAIR_REPOINTED = "merge_pair_repointed"      # (loser, x) -> (winner, x)
 MERGE_PAIR_REQUEUED = "merge_pair_requeued"        # its review reset to pending
 MERGE_PAIR_DROPPED = "merge_pair_dropped"          # (winner, x) already recorded
 MERGE_PAIR_CLOSED = "merge_pair_closed"            # another row for this same pair
+# dissertation_institutions links of the loser (record_id = institution_id).
+MERGE_LINK_REPOINTED = "merge_link_repointed"      # now on the winner
+MERGE_LINK_DROPPED = "merge_link_dropped"          # winner already had it / primary
 # Statuses that record an admin decision about one specific pair; a pair whose
 # members change goes back to 'pending' from either. 'merged' rows are closed
 # history and keep their status.
@@ -791,13 +795,15 @@ class MergeResult:
     duplicate_rows_repointed: int = 0
     duplicate_rows_dropped: int = 0
     duplicate_rows_requeued: int = 0   # repointed pairs sent back to 'pending'
+    institution_links_repointed: int = 0
+    institution_links_dropped: int = 0  # winner already had it, or it is its primary
 
 
 def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
                         reviewed_by: Optional[int] = None) -> MergeResult:
     """Executes one merge plan. Every write in here belongs to ONE transaction
     — this function never calls commit() or rollback(); the caller does,
-    around the whole call, so all six steps below are atomic: either every one
+    around the whole call, so all steps below are atomic: either every one
     of them lands, or none does.
 
     Assumes the caller already validated the plan with
@@ -859,6 +865,44 @@ def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
         for log_id in log_ids:
             _log_fix(cur, run_id, log_id, "specialty_notifications_log",
                      "dissertation_id", loser_id, winner_id, applied_by)
+
+        # 3b. dissertation_institutions (migration 021): co-owner links,
+        #     PK (dissertation_id, institution_id), ON DELETE CASCADE. Copy the
+        #     loser's links to the winner with ON CONFLICT DO NOTHING (the
+        #     winner may already have the same co-owner), skipping a link to
+        #     the winner's own primary institution — institution_backfill.py
+        #     never stores the primary as a co-owner either. Then remove the
+        #     loser's links, so every link ends up on the winner exactly once.
+        #     Skipped on databases without migration 021.
+        cur.execute("SELECT to_regclass('public.dissertation_institutions') IS NOT NULL")
+        if cur.fetchone()[0]:
+            cur.execute(
+                """INSERT INTO dissertation_institutions
+                       (dissertation_id, institution_id, role, source, created_at)
+                   SELECT %s, l.institution_id, l.role, l.source, l.created_at
+                     FROM dissertation_institutions l
+                    WHERE l.dissertation_id = %s
+                      AND l.institution_id IS DISTINCT FROM
+                          (SELECT institution_id FROM dissertations WHERE id = %s)
+                   ON CONFLICT (dissertation_id, institution_id) DO NOTHING
+                   RETURNING institution_id""",
+                (winner_id, loser_id, winner_id))
+            moved = {r[0] for r in cur.fetchall()}
+            cur.execute(
+                """DELETE FROM dissertation_institutions
+                    WHERE dissertation_id = %s RETURNING institution_id""",
+                (loser_id,))
+            for institution_id in sorted(r[0] for r in cur.fetchall()):
+                if institution_id in moved:
+                    result.institution_links_repointed += 1
+                    _log_fix(cur, run_id, institution_id, "dissertation_institutions",
+                             "dissertation_id", loser_id, winner_id, applied_by,
+                             MERGE_LINK_REPOINTED)
+                else:
+                    result.institution_links_dropped += 1
+                    _log_fix(cur, run_id, institution_id, "dissertation_institutions",
+                             "dissertation_id", loser_id, None, applied_by,
+                             MERGE_LINK_DROPPED)
 
         # 4. duplicate_candidates: soft reference, UNIQUE(record_type,
         #    record_id_1, record_id_2), canonical id1 < id2. An admin's review

@@ -30,8 +30,9 @@ actually targets.
 |---|---|---|---|---|
 | `user_bookmarks.dissertation_id` | `REFERENCES dissertations(id)` (data.py, blueprints/saved.py, migrations/add_bookmark_notes.sql all lazily create the *same* table — verified byte-identical) | CASCADE | `UNIQUE(user_id, dissertation_id)` | Repoint loser→winner. A user may have bookmarked **both** records; the composite unique constraint would then reject a plain `UPDATE`. The merge deletes the now-redundant loser-side bookmark row first (`DELETE ... WHERE dissertation_id = loser AND EXISTS (... user already has winner)`), then updates the rest. |
 | `specialty_notifications_log.dissertation_id` | `REFERENCES dissertations(id)` (blueprints/subscriptions.py) | none (`NO ACTION`) | no | Plain `UPDATE`. No uniqueness, so no conflict is possible. This is a delivery-history log for the "ixtisoslik obunasi" feature; kept accurate so the log continues to read correctly after a merge. |
+| `dissertation_institutions.dissertation_id` | `REFERENCES dissertations(id)` (migration 021, co-owner institutions of a defence) | CASCADE | `PRIMARY KEY(dissertation_id, institution_id)` | Copy the loser's links to the winner with `INSERT … SELECT … ON CONFLICT DO NOTHING` (the winner may already list the same co-owner), skipping a link to the winner's own primary `dissertations.institution_id` (institution_backfill.py never stores the primary as a co-owner), then delete the loser's links. Each loser link is logged with `issue_code` `merge_link_repointed` or `merge_link_dropped` (`record_id` = institution id). Skipped where migration 021 is not applied. |
 
-Both are safe under `ON DELETE CASCADE`/`NO ACTION` regardless, because the
+All three are safe under `ON DELETE CASCADE`/`NO ACTION` regardless, because the
 merge **never deletes** the losing `dissertations` row — but the repoint still
 matters so a user's bookmark, or a subscription log entry, follows the record
 that is now the canonical one.
