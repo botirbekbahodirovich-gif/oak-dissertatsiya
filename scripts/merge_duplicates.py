@@ -338,7 +338,11 @@ def main(argv=None) -> int:
                     log_line(f"  [{i}/{len(candidates)}] #{candidate['id']} "
                              f"merged: winner=#{outcome.plan.winner_id} "
                              f"loser=#{outcome.plan.loser_id} "
-                             f"({len(outcome.plan.fills)} maydon to'ldirildi)")
+                             f"({len(outcome.plan.fills)} maydon to'ldirildi"
+                             + (f"; {outcome.result.duplicate_rows_requeued} ta "
+                                "juftlik qayta ko'rib chiqishga qaytdi"
+                                if outcome.result.duplicate_rows_requeued else "")
+                             + ")")
                 else:
                     conn.rollback()
                     log_line(f"  [{i}/{len(candidates)}] #{candidate['id']} "

@@ -27,6 +27,7 @@ TEST_DB = os.environ.get("TEST_DATABASE_URL")
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _REPO_ROOT)
+sys.path.insert(0, os.path.join(_REPO_ROOT, "scripts"))
 MIGRATION_004 = os.path.join(_REPO_ROOT, "migrations",
                              "004_create_data_quality_tables.sql")
 MIGRATION_006 = os.path.join(_REPO_ROOT, "migrations",
@@ -384,39 +385,169 @@ class MergeDbGatedTests(unittest.TestCase):
                              "step 1's fix_log insert must not survive a "
                              "rolled-back merge either")
 
-    # -- no re-merge -----------------------------------------------------------
-    def test_already_merged_record_cannot_be_merged_again(self):
-        from data_quality import merge_review as review
+    # -- chains: an admin's review covers only the exact pair they saw ---------
+    def _candidate(self, cand_id: int):
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT record_id_1, record_id_2, status, reviewed_at "
+                        "FROM duplicate_candidates WHERE id = %s", (cand_id,))
+            row = cur.fetchone()
+        self.conn.rollback()
+        if row is None:
+            return None
+        return {"ids": {row[0], row[1]}, "status": row[2], "reviewed_at": row[3]}
 
+    def _mark_reviewed(self, *cand_ids: int) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("UPDATE duplicate_candidates SET reviewed_at = NOW() "
+                        "WHERE id = ANY(%s)", (list(cand_ids),))
+        self.conn.commit()
+
+    def _log_codes(self, run_id: int, cand_id: int) -> dict:
+        with self.conn.cursor() as cur:
+            cur.execute("""SELECT issue_code, column_name, value_before, value_after
+                             FROM data_quality_fix_log
+                            WHERE run_id = %s AND table_name = 'duplicate_candidates'
+                              AND record_id = %s ORDER BY id""", (run_id, cand_id))
+            rows = cur.fetchall()
+        self.conn.rollback()
+        return {r[0]: r[1:] for r in rows}
+
+    def _plan(self, cand_id: int):
+        from data_quality import merge_review as review
+        candidate = self.repo.fetch_confirmed_candidates(
+            self.conn, candidate_id=cand_id)[0]
+        rows = self.repo.fetch_dissertation_rows(
+            self.conn, (candidate["record_id_1"], candidate["record_id_2"]))
+        plan, decision = review.plan_merge(
+            candidate, rows[candidate["record_id_1"]], rows[candidate["record_id_2"]])
+        self.conn.rollback()
+        return plan, decision
+
+    @staticmethod
+    def _pair(x: int, y: int) -> str:
+        return "%d,%d" % (min(x, y), max(x, y))
+
+    def test_chain_repointed_pair_goes_back_to_pending(self):
+        """(A,B)+(B,C) confirmed; merging B into A turns (B,C) into (A,C),
+        which nobody reviewed, so it must not stay confirmed."""
         a = self._make_dissertation(mavzu="A")
         b = self._make_dissertation(mavzu="A")
         c = self._make_dissertation(mavzu="A")
         cand_ab = self._make_candidate(a, b)
-        cand_bc = self._make_candidate(b, c)   # b will be retired by A/B first
+        cand_bc = self._make_candidate(b, c)
+        self._mark_reviewed(cand_ab, cand_bc)
         run_id = self._make_run()
 
-        self._do_merge(cand_ab, run_id, forced_winner=a)   # b -> merged into a
+        result = self._do_merge(cand_ab, run_id, forced_winner=a)
 
-        # cand_bc's own record_id_1/2 were live-repointed by the first merge's
-        # step 4 (b -> a), so re-fetch it fresh rather than trusting the ids
-        # captured before the first merge ran.
-        candidate = self.repo.fetch_confirmed_candidates(
-            self.conn, candidate_id=cand_bc)[0]
-        rows = self.repo.fetch_dissertation_rows(
-            self.conn, (candidate["record_id_1"], candidate["record_id_2"]),
-            for_update=True)
-        plan, decision = review.plan_merge(
-            candidate, rows[candidate["record_id_1"]], rows[candidate["record_id_2"]])
+        self.assertEqual(result.duplicate_rows_requeued, 1)
+        row = self._candidate(cand_bc)
+        self.assertEqual(row["ids"], {a, c})
+        self.assertEqual(row["status"], "pending")
+        self.assertIsNone(row["reviewed_at"])
+        log = self._log_codes(run_id, cand_bc)
+        self.assertEqual(log[self.repo.MERGE_PAIR_REPOINTED],
+                         ("record_id_1/record_id_2", self._pair(b, c), self._pair(a, c)))
+        self.assertEqual(log[self.repo.MERGE_PAIR_REQUEUED],
+                         ("status", "confirmed", "pending"))
+        plan, decision = self._plan(cand_bc)
+        self.assertIsNone(plan)
+        self.assertFalse(decision.ok)
+        self.assertIn("'pending'", decision.reason)
+
+    def test_chain_in_one_cli_run_does_not_merge_the_repointed_pair(self):
+        """The CLI lists every confirmed candidate up front; execute_one
+        re-reads each one under lock, so (A,C) is skipped in the same run."""
+        import merge_duplicates as MD
+        a = self._make_dissertation(mavzu="A")
+        b = self._make_dissertation(mavzu="A")
+        c = self._make_dissertation(mavzu="A")
+        cand_ab = self._make_candidate(a, b)
+        cand_bc = self._make_candidate(b, c)
+        run_id = self._make_run()
+
+        first = MD.execute_one(self.conn, run_id, cand_ab, a, "test")
+        self.assertTrue(first.merged, first.skipped_reason)
+        self.conn.commit()
+        second = MD.execute_one(self.conn, run_id, cand_bc, None, "test")
         self.conn.rollback()
+        self.assertFalse(second.merged)
+        self.assertIn("'pending'", second.skipped_reason)
+        self.assertIsNone(self._fetch(c)["merged_into_id"])
 
-        if candidate["status"] == "merged":
-            # step 4 already retired this exact pairing once (a, b) turned
-            # into (a, a) — either outcome proves the same thing: nothing can
-            # act on b a second time.
-            self.assertIsNone(plan)
-        else:
-            self.assertFalse(decision.ok)
-            self.assertIn("already merged", decision.reason)
+    def test_triangle_keeps_the_pair_the_admin_actually_reviewed(self):
+        """(A,B)+(B,C)+(A,C) confirmed: after B -> A, (B,C) duplicates the
+        reviewed (A,C) and is dropped; (A,C) keeps its own confirmation."""
+        a = self._make_dissertation(mavzu="A")
+        b = self._make_dissertation(mavzu="A")
+        c = self._make_dissertation(mavzu="A")
+        cand_ab = self._make_candidate(a, b)
+        cand_bc = self._make_candidate(b, c)
+        cand_ac = self._make_candidate(a, c)
+        run_id = self._make_run()
+
+        result = self._do_merge(cand_ab, run_id, forced_winner=a)
+
+        self.assertEqual(result.duplicate_rows_dropped, 1)
+        self.assertEqual(result.duplicate_rows_requeued, 0)
+        self.assertIsNone(self._candidate(cand_bc))
+        dropped = self._log_codes(run_id, cand_bc)[self.repo.MERGE_PAIR_DROPPED]
+        self.assertIn("status=confirmed", dropped[1])
+        self.assertIn("#%d" % cand_ac, dropped[2])
+        self.assertEqual(self._candidate(cand_ac)["status"], "confirmed")
+        _plan, decision = self._plan(cand_ac)
+        self.assertTrue(decision.ok, decision.reason)
+        self._do_merge(cand_ac, self._make_run(), forced_winner=a)
+        self.assertEqual(self._fetch(c)["merged_into_id"], a)
+
+    def test_reverse_order_winner_keeps_the_other_pair_untouched(self):
+        """(B,C) merged first with B surviving: (A,B) did not change, so the
+        admin's confirmation still applies and it merges normally."""
+        a = self._make_dissertation(mavzu="A")
+        b = self._make_dissertation(mavzu="A")
+        c = self._make_dissertation(mavzu="A")
+        cand_ab = self._make_candidate(a, b)
+        cand_bc = self._make_candidate(b, c)
+
+        result = self._do_merge(cand_bc, self._make_run(), forced_winner=b)
+
+        self.assertEqual(result.duplicate_rows_requeued, 0)
+        row = self._candidate(cand_ab)
+        self.assertEqual((row["ids"], row["status"]), ({a, b}, "confirmed"))
+        self._do_merge(cand_ab, self._make_run(), forced_winner=a)
+        self.assertEqual(self._fetch(b)["merged_into_id"], a)
+
+    def test_reverse_order_loser_requeues_the_other_pair(self):
+        """(B,C) merged first with C surviving: (A,B) becomes (A,C) and goes
+        back to pending."""
+        a = self._make_dissertation(mavzu="A")
+        b = self._make_dissertation(mavzu="A")
+        c = self._make_dissertation(mavzu="A")
+        cand_ab = self._make_candidate(a, b)
+        cand_bc = self._make_candidate(b, c)
+        run_id = self._make_run()
+
+        self._do_merge(cand_bc, run_id, forced_winner=c)
+
+        row = self._candidate(cand_ab)
+        self.assertEqual((row["ids"], row["status"]), ({a, c}, "pending"))
+        self.assertIn(self.repo.MERGE_PAIR_REQUEUED, self._log_codes(run_id, cand_ab))
+        self.assertFalse(self._plan(cand_ab)[1].ok)
+
+    def test_rejected_pair_whose_members_change_goes_back_to_pending(self):
+        """A rejection, like a confirmation, was about the exact pair seen."""
+        a = self._make_dissertation(mavzu="A")
+        b = self._make_dissertation(mavzu="A")
+        c = self._make_dissertation(mavzu="C")
+        cand_ab = self._make_candidate(a, b)
+        cand_bc = self._make_candidate(b, c, status="rejected")
+        run_id = self._make_run()
+
+        self._do_merge(cand_ab, run_id, forced_winner=a)
+
+        self.assertEqual(self._candidate(cand_bc)["status"], "pending")
+        self.assertEqual(self._log_codes(run_id, cand_bc)[self.repo.MERGE_PAIR_REQUEUED],
+                         ("status", "rejected", "pending"))
 
     def test_reconfirming_a_merged_candidate_id_is_refused(self):
         winner = self._make_dissertation(mavzu="A")

@@ -752,15 +752,31 @@ def fetch_dissertation_rows(conn, ids: Sequence[int], *,
 
 
 def _log_fix(cur, run_id: int, record_id: int, table_name: str, column_name: str,
-            value_before, value_after, applied_by: str) -> None:
+            value_before, value_after, applied_by: str,
+            issue_code: Optional[str] = None) -> None:
     cur.execute(
         """INSERT INTO data_quality_fix_log
                (run_id, record_id, table_name, column_name,
-                value_before, value_after, applied_by)
-           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                value_before, value_after, applied_by, issue_code)
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
         (run_id, record_id, table_name, column_name,
          None if value_before is None else str(value_before),
-         None if value_after is None else str(value_after), applied_by))
+         None if value_after is None else str(value_after), applied_by,
+         issue_code))
+
+
+# Reason codes written to data_quality_fix_log.issue_code when a merge touches
+# OTHER duplicate_candidates rows. An admin's review applies only to the exact
+# pair they looked at: once a merge changes a pair's members, that review no
+# longer covers it.
+MERGE_PAIR_REPOINTED = "merge_pair_repointed"      # (loser, x) -> (winner, x)
+MERGE_PAIR_REQUEUED = "merge_pair_requeued"        # its review reset to pending
+MERGE_PAIR_DROPPED = "merge_pair_dropped"          # (winner, x) already recorded
+MERGE_PAIR_CLOSED = "merge_pair_closed"            # another row for this same pair
+# Statuses that record an admin decision about one specific pair; a pair whose
+# members change goes back to 'pending' from either. 'merged' rows are closed
+# history and keep their status.
+_REVIEWED_PAIR_STATUSES = ("confirmed", "rejected")
 
 
 @dataclass
@@ -774,6 +790,7 @@ class MergeResult:
     subscriptions_repointed: int = 0
     duplicate_rows_repointed: int = 0
     duplicate_rows_dropped: int = 0
+    duplicate_rows_requeued: int = 0   # repointed pairs sent back to 'pending'
 
 
 def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
@@ -844,21 +861,30 @@ def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
                      "dissertation_id", loser_id, winner_id, applied_by)
 
         # 4. duplicate_candidates: soft reference, UNIQUE(record_type,
-        #    record_id_1, record_id_2), canonical id1 < id2. Any OTHER row
-        #    pairing the loser with a third record is repointed to the winner;
-        #    a row that already represents exactly (winner, loser) — i.e. this
-        #    candidate itself, or a stray duplicate of it — is retired here
-        #    too. A collision with an existing (winner, third) row means that
-        #    pairing is already recorded, so the now-redundant row is dropped
-        #    rather than erroring.
+        #    record_id_1, record_id_2), canonical id1 < id2. An admin's review
+        #    (confirmed / rejected) covers only the exact pair they looked at,
+        #    so no row may carry a review onto a pair nobody reviewed:
+        #    - (loser, third) is repointed to (winner, third) and, if it had
+        #      been confirmed or rejected, goes back to 'pending'. Otherwise a
+        #      chain (A,B)+(B,C) would turn into a "confirmed" (A,C) and merge
+        #      without anyone having compared A with C.
+        #    - if (winner, third) already exists, the loser-side row is dropped
+        #      rather than violating UNIQUE; the surviving row keeps its own
+        #      status, because its members did not change.
+        #    - a stray second row for (winner, loser) itself is closed as merged.
+        #    Every one of these is written to data_quality_fix_log with a
+        #    MERGE_PAIR_* reason code. Rows locked FOR UPDATE, ascending id.
         cur.execute(
-            """SELECT id, record_id_1, record_id_2 FROM duplicate_candidates
+            """SELECT id, record_id_1, record_id_2, status FROM duplicate_candidates
                 WHERE record_type = %s AND (record_id_1 = %s OR record_id_2 = %s)
-                  AND id <> %s""",
+                  AND id <> %s
+                ORDER BY id FOR UPDATE""",
             (DUP_TABLE_TYPE, loser_id, loser_id, plan.candidate_id))
-        for row_id, id1, id2 in cur.fetchall():
+        for row_id, id1, id2, status in cur.fetchall():
             third = id2 if id1 == loser_id else id1
             if third == winner_id:
+                _log_fix(cur, run_id, row_id, "duplicate_candidates", "status",
+                         status, "merged", applied_by, MERGE_PAIR_CLOSED)
                 cur.execute(
                     "UPDATE duplicate_candidates SET status = 'merged', "
                     "reviewed_at = NOW() WHERE id = %s", (row_id,))
@@ -866,21 +892,37 @@ def merge_dissertations(conn, run_id: int, plan: MergePlan, applied_by: str,
                 continue
             new1, new2 = (winner_id, third) if winner_id < third else (third, winner_id)
             cur.execute(
-                """SELECT 1 FROM duplicate_candidates
+                """SELECT id FROM duplicate_candidates
                     WHERE record_type = %s AND record_id_1 = %s AND record_id_2 = %s
                       AND id <> %s""",
                 (DUP_TABLE_TYPE, new1, new2, row_id))
-            if cur.fetchone():
+            existing = cur.fetchone()
+            if existing:
+                _log_fix(cur, run_id, row_id, "duplicate_candidates", "row",
+                         f"{id1},{id2} status={status}",
+                         f"dropped: pair {new1},{new2} is candidate #{existing[0]}",
+                         applied_by, MERGE_PAIR_DROPPED)
                 cur.execute("DELETE FROM duplicate_candidates WHERE id = %s", (row_id,))
                 result.duplicate_rows_dropped += 1
+                continue
+            _log_fix(cur, run_id, row_id, "duplicate_candidates",
+                     "record_id_1/record_id_2", f"{id1},{id2}",
+                     f"{new1},{new2}", applied_by, MERGE_PAIR_REPOINTED)
+            if status in _REVIEWED_PAIR_STATUSES:
+                _log_fix(cur, run_id, row_id, "duplicate_candidates", "status",
+                         status, "pending", applied_by, MERGE_PAIR_REQUEUED)
+                cur.execute(
+                    """UPDATE duplicate_candidates
+                           SET record_id_1 = %s, record_id_2 = %s,
+                               status = 'pending', reviewed_by = NULL,
+                               reviewed_at = NULL
+                         WHERE id = %s""", (new1, new2, row_id))
+                result.duplicate_rows_requeued += 1
             else:
-                _log_fix(cur, run_id, row_id, "duplicate_candidates",
-                         "record_id_1/record_id_2", f"{id1},{id2}",
-                         f"{new1},{new2}", applied_by)
                 cur.execute(
                     "UPDATE duplicate_candidates SET record_id_1 = %s, "
                     "record_id_2 = %s WHERE id = %s", (new1, new2, row_id))
-                result.duplicate_rows_repointed += 1
+            result.duplicate_rows_repointed += 1
 
         # 5. Retire the loser. NEVER deleted — merged_into_id is how a reader
         #    (or a future rollback) finds out this row was superseded.
