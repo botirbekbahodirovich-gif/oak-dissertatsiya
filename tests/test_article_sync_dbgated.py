@@ -246,13 +246,22 @@ class DashboardQueryDbTests(unittest.TestCase):
     def test_retraction_filter(self):
         from services.article_sync import persistence
         article_id = self.make_article('retraction-filter')
+        other_id = self.make_article('retraction-filter-other')
+        # The default (actionable) queue only shows checked, non-stale rows,
+        # so the fixture needs the article snapshot just like make_sync().
+        snapshot = persistence.get_article_updated_at(self.cur, article_id)
         self.cur.execute(
             """INSERT INTO article_metadata_syncs
-                  (article_id, checked_by, change_count, has_retraction_change)
-               VALUES (%s, -999, 1, TRUE) RETURNING id""", (article_id,))
+                  (article_id, checked_by, status, change_count,
+                   has_retraction_change, article_updated_at_snapshot)
+               VALUES (%s, -999, 'checked', 1, TRUE, %s) RETURNING id""",
+            (article_id, snapshot))
+        self.make_sync(other_id)   # actionable, but no retraction change
         rows, _total = persistence.list_dashboard(self.cur, has_retraction=True,
                                                    limit=50, offset=0)
-        self.assertTrue(any(r['article_id'] == article_id for r in rows))
+        ids = {r['article_id'] for r in rows}
+        self.assertIn(article_id, ids)
+        self.assertNotIn(other_id, ids)
 
 
 if __name__ == '__main__':
